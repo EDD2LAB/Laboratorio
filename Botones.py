@@ -21,7 +21,7 @@ import pygame
 import sys
 import os
 
-from logica_arboles import EstadoJuego
+from logica_juego import EstadoJuego
 
 pygame.init()
 
