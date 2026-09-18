@@ -8,7 +8,7 @@ como funciona el arbol por dentro.
 Este modulo depende de arboles.py (NodoDecision, construir_tablilla_*).
 """
 
-from arboles import (
+from Arboles import (
     construir_tablilla_rumor_politico,
     construir_tablilla_suceso_natural,
     construir_tablilla_acusacion,
