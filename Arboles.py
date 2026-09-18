@@ -21,10 +21,13 @@ class NodoDecision:
               Solo se usa cuando el nodo es una hoja (no tiene opciones).
     """
 
-    def __init__(self, texto, efecto=None):
+    def __init__(self, texto, efecto=None, categoria=None):
         self.texto = texto
         self.opciones = {}
         self.efecto = efecto or {}
+        # Solo se usa en la raiz de cada tablilla: indica a que rama
+        # del arbol de clasificacion (NodoCategoria) pertenece.
+        self.categoria = categoria
 
     def agregar_opcion(self, texto_opcion, nodo_hijo):
         """Inserta un nuevo nodo hijo bajo la opcion indicada."""
@@ -71,7 +74,10 @@ def construir_tablilla_rumor_politico():
     Tablilla: 'El Aspirante Kael quiere cerrar el puente norte'
     Arbol con 3 opciones en la raiz, una de ellas se ramifica de nuevo.
     """
-    raiz = NodoDecision("El Aspirante Kael quiere cerrar el puente norte")
+    raiz = NodoDecision(
+        "El Aspirante Kael quiere cerrar el puente norte",
+        categoria="Rumor Politico > Sobre un Aspirante",
+    )
 
     consultar = NodoDecision("¿Es verdadera esta tablilla?")
     consultar.agregar_opcion(
@@ -112,7 +118,10 @@ def construir_tablilla_suceso_natural():
     Tablilla: 'Anoche cayo un rayo cerca del Mirador Alto'
     Ejemplo con solo 2 opciones en la raiz (mas corto que el anterior).
     """
-    raiz = NodoDecision("Anoche cayo un rayo cerca del Mirador Alto")
+    raiz = NodoDecision(
+        "Anoche cayo un rayo cerca del Mirador Alto",
+        categoria="Suceso Natural > Clima",
+    )
     raiz.agregar_opcion(
         "Colgarla",
         NodoDecision(
@@ -135,7 +144,10 @@ def construir_tablilla_acusacion():
     Tablilla: 'La Aspirante Mira regalo comida a cambio de votos'
     Ejemplo con 4 opciones en la raiz para mostrar variedad de ramas.
     """
-    raiz = NodoDecision("La Aspirante Mira regalo comida a cambio de votos")
+    raiz = NodoDecision(
+        "La Aspirante Mira regalo comida a cambio de votos",
+        categoria="Acusacion Personal > Entre Aspirantes",
+    )
     raiz.agregar_opcion(
         "Colgarla",
         NodoDecision("El rumor crece rapido", efecto={"susurros_falsos": +6}),
