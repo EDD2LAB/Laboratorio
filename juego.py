@@ -53,7 +53,7 @@ def cargar_imagen(nombre_archivo, tamano=None):
 
 class Boton:
     """Boton rectangular simple con texto centrado."""
-
+    
     def __init__(self, rect, texto, fuente):
         self.rect = pygame.Rect(rect)
         self.texto = texto
