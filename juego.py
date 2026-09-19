@@ -434,8 +434,18 @@ def dibujar_pregunta_clasificacion(superficie, recursos, botones, mouse_pos):
     superficie.blit(recursos["tablilla"], rect)
     titulo = recursos["fuente_panel_titulo"].render("¿CÓMO CLASIFICARÍAS ESTA TABLILLA?", True, TINTA)
     superficie.blit(titulo, titulo.get_rect(center=(rect.centerx, rect.y + 190)))
-    detalle = recursos["fuente_mapa"].render("Elige la categoría que consideres correcta", True, TINTA)
-    superficie.blit(detalle, detalle.get_rect(center=(rect.centerx, rect.y + 245)))
+    # El texto de ayuda se ajusta al interior útil del pergamino para que no
+    # se salga por los bordes en ninguna resolución.
+    lineas = envolver_texto(
+        "Elige la categoría que consideres correcta",
+        recursos["fuente_panel"],
+        320,
+    )
+    y = rect.y + 238
+    for linea in lineas:
+        detalle = recursos["fuente_panel"].render(linea, True, TINTA)
+        superficie.blit(detalle, detalle.get_rect(center=(rect.centerx, y)))
+        y += 22
     for boton in botones:
         boton.dibujar(superficie, mouse_pos)
 
