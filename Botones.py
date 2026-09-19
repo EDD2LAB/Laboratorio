@@ -121,25 +121,38 @@ def construir_botones(opciones, imagenes, fuente):
     """Centra dos, tres o cuatro acciones sin perder la separación visual."""
     if not opciones:
         return []
-    separacion = 205 if len(opciones) <= 3 else 195
-    inicio = ANCHO // 2 - separacion * (len(opciones) - 1) // 2
-    return [Boton(opcion, buscar_imagen_para_opcion(opcion, imagenes), (inicio + i * separacion, 612), fuente) for i, opcion in enumerate(opciones)]
+    imagenes_opciones = [buscar_imagen_para_opcion(opcion, imagenes) for opcion in opciones]
+    anchos = [imagen.get_width() if imagen else max(158, fuente.size(opcion)[0] + 28) for opcion, imagen in zip(opciones, imagenes_opciones)]
+    separacion = 28
+    ancho_total = sum(anchos) + separacion * (len(opciones) - 1)
+    cursor = (ANCHO - ancho_total) / 2
+    botones = []
+    for opcion, imagen, ancho in zip(opciones, imagenes_opciones, anchos):
+        botones.append(Boton(opcion, imagen, (int(cursor + ancho / 2), 612), fuente))
+        cursor += ancho + separacion
+    return botones
 
 
 def dibujar_indicadores(superficie, indicadores, fuente):
-    panel = pygame.Rect(22, 20, 252, 150)
+    panel = pygame.Rect(22, 20, 326, 168)
     pygame.draw.rect(superficie, (20, 39, 28), panel, border_radius=14)
     pygame.draw.rect(superficie, (183, 133, 68), panel, width=2, border_radius=14)
     titulo = fuente.render("LA COPA", True, ORO)
     superficie.blit(titulo, (panel.x + 16, panel.y + 10))
 
     for indice, (nombre, valor) in enumerate(indicadores.items()):
-        y = panel.y + 43 + indice * 20
-        etiqueta = fuente.render(nombre.replace("_", " ").capitalize(), True, CREMA)
+        y = panel.y + 43 + indice * 22
+        nombres_visibles = {
+            "grietas_puentes": "Desinformación",
+            "desinformación": "Desinformación",
+        }
+        etiqueta = fuente.render(nombres_visibles.get(nombre, nombre.replace("_", " ").capitalize()), True, CREMA)
         superficie.blit(etiqueta, (panel.x + 14, y))
-        barra = pygame.Rect(panel.right - 84, y + 5, 62, 8)
+        numero = fuente.render(f"{valor}/100", True, CREMA)
+        superficie.blit(numero, numero.get_rect(midright=(panel.right - 82, y + 9)))
+        barra = pygame.Rect(panel.right - 72, y + 5, 58, 8)
         pygame.draw.rect(superficie, (9, 24, 17), barra, border_radius=4)
-        color = (196, 90, 54) if "susurros" in nombre or "grietas" in nombre else (104, 184, 104)
+        color = (196, 90, 54) if "susurros" in nombre or "desinformación" in nombre else (104, 184, 104)
         pygame.draw.rect(superficie, color, (barra.x, barra.y, int(barra.width * valor / 100), barra.height), border_radius=4)
 
 

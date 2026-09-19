@@ -29,7 +29,7 @@ class EstadoJuego:
             "confianza_consejo": 50,
             "armonia": 50,
             "susurros_falsos": 0,
-            "grietas_puentes": 0,
+            "desinformación": 0,
         }
 
         # Cola de tablillas pendientes. Cada elemento es la raiz

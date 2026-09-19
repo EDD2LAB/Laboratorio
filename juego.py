@@ -299,7 +299,7 @@ def dibujar_arbol_central(superficie, centro, fuente):
 
 
 def dibujar_indicadores(superficie, indicadores, fuente):
-    panel = pygame.Rect(18, 18, 260, 152)
+    panel = pygame.Rect(18, 18, 326, 168)
     fondo = superficie_con_alpha(panel.size, PANEL_OSCURO)
     superficie.blit(fondo, panel.topleft)
     pygame.draw.rect(superficie, (183, 133, 68), panel, width=2, border_radius=10)
@@ -307,12 +307,14 @@ def dibujar_indicadores(superficie, indicadores, fuente):
     superficie.blit(titulo, (panel.x + 15, panel.y + 10))
 
     for indice, (nombre, valor) in enumerate(indicadores.items()):
-        y = panel.y + 43 + indice * 20
+        y = panel.y + 43 + indice * 22
         etiqueta = fuente.render(nombre.replace("_", " ").capitalize(), True, CREMA)
         superficie.blit(etiqueta, (panel.x + 14, y))
-        barra = pygame.Rect(panel.right - 88, y + 5, 64, 8)
+        numero = fuente.render(f"{valor}/100", True, CREMA)
+        superficie.blit(numero, numero.get_rect(midright=(panel.right - 82, y + 9)))
+        barra = pygame.Rect(panel.right - 72, y + 5, 58, 8)
         pygame.draw.rect(superficie, (9, 24, 17), barra, border_radius=4)
-        color = (196, 90, 54) if "susurros" in nombre or "grietas" in nombre else (104, 184, 104)
+        color = (196, 90, 54) if "susurros" in nombre or "desinformación" in nombre else (104, 184, 104)
         pygame.draw.rect(superficie, color, (barra.x, barra.y, int(barra.width * valor / 100), barra.height), border_radius=4)
 
 
@@ -370,9 +372,17 @@ def buscar_imagen_para_opcion(texto, imagenes):
 def construir_botones(opciones, imagenes, fuente):
     if not opciones:
         return []
-    separacion = 205 if len(opciones) <= 3 else 188
-    inicio = ANCHO // 2 - separacion * (len(opciones) - 1) // 2
-    return [Boton(opcion, buscar_imagen_para_opcion(opcion, imagenes), (inicio + i * separacion, 635), fuente) for i, opcion in enumerate(opciones)]
+    imagenes_opciones = [buscar_imagen_para_opcion(opcion, imagenes) for opcion in opciones]
+    anchos = [imagen.get_width() if imagen else max(164, fuente.size(opcion)[0] + 28) for opcion, imagen in zip(opciones, imagenes_opciones)]
+    separacion = 28
+    ancho_total = sum(anchos) + separacion * (len(opciones) - 1)
+    cursor = (ANCHO - ancho_total) / 2
+    botones = []
+    for opcion, imagen, ancho in zip(opciones, imagenes_opciones, anchos):
+        centro = (int(cursor + ancho / 2), 635)
+        botones.append(Boton(opcion, imagen, centro, fuente))
+        cursor += ancho + separacion
+    return botones
 
 
 def dibujar_tablilla(superficie, tablilla, estado, fuente_texto, fuente_categoria):
@@ -399,7 +409,11 @@ def formatear_categoria(ruta):
 
 
 def nombre_indicador(nombre):
-    return nombre.replace("_", " ").capitalize()
+    nombres_visibles = {
+        "grietas_puentes": "Desinformación",
+        "desinformación": "Desinformación",
+    }
+    return nombres_visibles.get(nombre, nombre.replace("_", " ").capitalize())
 
 
 def lineas_efecto(efecto):
@@ -468,16 +482,23 @@ def dibujar_resultado_evento(superficie, recursos, estado):
         (43, 120, 55) if acerto else (170, 63, 43),
     )
     superficie.blit(respuesta, respuesta.get_rect(center=(rect.centerx, rect.y + 182)))
+    cambio_sabiduria = resultado.get("efecto_clasificacion", {}).get("sabiduria", 0)
+    efecto = recursos["fuente_panel"].render(
+        f"Sabiduría: {'+' if cambio_sabiduria > 0 else ''}{cambio_sabiduria} puntos",
+        True,
+        (43, 120, 55) if cambio_sabiduria > 0 else (170, 63, 43),
+    )
+    superficie.blit(efecto, efecto.get_rect(center=(rect.centerx, rect.y + 204)))
     introduccion = recursos["fuente_mapa"].render("En realidad era un", True, TINTA)
-    superficie.blit(introduccion, introduccion.get_rect(center=(rect.centerx, rect.y + 218)))
+    superficie.blit(introduccion, introduccion.get_rect(center=(rect.centerx, rect.y + 240)))
     categoria_texto = recursos["fuente_resultado"].render(categoria.upper(), True, (48, 121, 61))
-    superficie.blit(categoria_texto, categoria_texto.get_rect(center=(rect.centerx, rect.y + 266)))
+    superficie.blit(categoria_texto, categoria_texto.get_rect(center=(rect.centerx, rect.y + 288)))
     if subcategorias:
         detalle = recursos["fuente_panel"].render(f"Subcategoría: {' · '.join(subcategorias)}", True, TINTA)
-        superficie.blit(detalle, detalle.get_rect(center=(rect.centerx, rect.y + 306)))
+        superficie.blit(detalle, detalle.get_rect(center=(rect.centerx, rect.y + 328)))
 
     consecuencia = envolver_texto(resultado["resultado"], recursos["fuente_mapa"], rect.width - 150)
-    y = rect.y + 356
+    y = rect.y + 378
     for linea in consecuencia:
         texto = recursos["fuente_mapa"].render(linea, True, TINTA)
         superficie.blit(texto, texto.get_rect(center=(rect.centerx, y)))
@@ -591,7 +612,8 @@ def crear_mundo(recursos):
     arbol = (ANCHO // 2, 360)
     casa_guardian = (ANCHO // 2, 142)
     actores = [
-        Actor("aspirante", recursos["aspirante_quieto"], (178, 342), "Aspirante"),
+        Actor("aspirante", recursos["aspirante_quieto"], (178, 342), "Kael"),
+        Actor("mira", recursos["mira_quieta"], (700, 135), "Mira"),
         Actor("mensajero", recursos["mensajero_quieto"], (783, 342), "Mensajero"),
         Actor("habitante_1", recursos["tarek_quieto"], (220, 566), "Tarek"),
         Actor("habitante_2", recursos["luma_quieta"], (740, 566), "Luma"),
@@ -674,6 +696,7 @@ def main():
         "guardian_quieto": cargar_sprite("Fila 1 - 1. Guardian.png", (86, 86)),
         "guardian_caminando": cargar_spritesheet("Fila 2. Guardian.png", 8, (86, 86)),
         "aspirante_quieto": cargar_sprite("Fila 1 - 3. Aspirante_a_cacique-Idle.png", (78, 78)),
+        "mira_quieta": cargar_sprite("MujerAspirante Fila 1 - 8.png", (78, 78)),
         "mensajero_quieto": cargar_sprite(os.path.join("mensajero", "fila 1 - 7.png"), (78, 78)),
         "tarek_quieto": cargar_sprite("HabHombre Fila 1- 3.png", (76, 76)),
         "luma_quieta": cargar_sprite("HabMujer Fila 1 - 7.png", (76, 76)),

@@ -139,44 +139,77 @@ def construir_tablilla_suceso_natural():
     return raiz
 
 
-def construir_tablilla_acusacion():
+def construir_tablilla_acusacion(contexto=None):
     """
     Tablilla: 'La Aspirante Mira regalo comida a cambio de votos'
     Ejemplo con 4 opciones en la raiz para mostrar variedad de ramas.
     """
+    textos_contextuales = {
+        "trueno_colgado": "Tras anunciar el trueno, la Aspirante Mira propone reparar el puente norte",
+        "trueno_quemado": "Tras ocultar el trueno, la Aspirante Mira pide ayuda para reparar el puente norte",
+    }
     raiz = NodoDecision(
-        "La Aspirante Mira regalo comida a cambio de votos",
+        textos_contextuales.get(contexto, "La Aspirante Mira regalo comida a cambio de votos"),
         categoria=buscar_categoria(ARBOL_CATEGORIAS, "Acusacion Personal", "Entre Aspirantes"),
     )
+    efectos = {
+        "colgar": {"susurros_falsos": +30, "armonia": -15, "confianza_consejo": -12},
+        "consultar": {"sabiduria": +12, "susurros_falsos": -18, "confianza_consejo": +6},
+        "quemar": {"desinformación": -15, "armonia": +10},
+        "ignorar": {"susurros_falsos": +10, "desinformación": +8},
+    }
+    textos = {
+        "colgar": "El rumor crece rapido",
+        "consultar": "El Guardian confirma que es exagerado",
+        "quemar": "Se evita un conflicto innecesario",
+        "ignorar": "La tablilla se pierde entre otras",
+    }
+    if contexto == "trueno_colgado":
+        textos["consultar"] = "Mira acepta reparar el puente con ayuda del consejo"
+        efectos["consultar"] = {"sabiduria": +15, "susurros_falsos": -22, "confianza_consejo": +10, "desinformación": -12}
+    elif contexto == "trueno_quemado":
+        textos["colgar"] = "La falta de aviso hace crecer el rumor sobre Mira"
+        efectos["colgar"] = {"susurros_falsos": +36, "armonia": -18, "confianza_consejo": -16, "desinformación": +10}
+        efectos["consultar"] = {"sabiduria": +6, "susurros_falsos": -8, "confianza_consejo": +2}
     raiz.agregar_opcion(
         "Colgarla",
         NodoDecision(
-            "El rumor crece rapido",
-            efecto={"susurros_falsos": +30, "armonia": -15, "confianza_consejo": -12},
+            textos["colgar"],
+            efecto=efectos["colgar"],
         ),
     )
     raiz.agregar_opcion(
         "Consultar",
         NodoDecision(
-            "El Guardian confirma que es exagerado",
-            efecto={"sabiduria": +12, "susurros_falsos": -18, "confianza_consejo": +6},
+            textos["consultar"],
+            efecto=efectos["consultar"],
         ),
     )
     raiz.agregar_opcion(
         "Quemarla",
         NodoDecision(
-            "Se evita un conflicto innecesario",
-            efecto={"grietas_puentes": -15, "armonia": +10},
+            textos["quemar"],
+            efecto=efectos["quemar"],
         ),
     )
     raiz.agregar_opcion(
         "Ignorarla",
         NodoDecision(
-            "La tablilla se pierde entre otras",
-            efecto={"susurros_falsos": +10, "grietas_puentes": +8},
+            textos["ignorar"],
+            efecto=efectos["ignorar"],
         ),
     )
     return raiz
+
+
+def construir_tablilla_dia_tres(historial_decisiones):
+    """Construye el evento del dia 3 usando la decision del suceso natural."""
+    contexto = "trueno_quemado"
+    if historial_decisiones:
+        ultima = historial_decisiones[-1]
+        if ultima["categoria"][1] == "Suceso Natural" and ultima["camino"][-1] == "Colgarla":
+            contexto = "trueno_colgado"
+    return construir_tablilla_acusacion(contexto)
 
 
 # ---------------------------------------------------------------------------

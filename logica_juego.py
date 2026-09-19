@@ -11,7 +11,7 @@ Este modulo depende de arboles.py (NodoDecision, construir_tablilla_*).
 from Arboles import (
     construir_tablilla_rumor_politico,
     construir_tablilla_suceso_natural,
-    construir_tablilla_acusacion,
+    construir_tablilla_dia_tres,
 )
 
 
@@ -36,7 +36,7 @@ class EstadoJuego:
             "confianza_consejo": 50,
             "armonia": 50,
             "susurros_falsos": 0,
-            "grietas_puentes": 0,
+            "desinformación": 0,
         }
 
         # Cola de tablillas pendientes. Cada elemento es la raiz
@@ -44,7 +44,6 @@ class EstadoJuego:
         self.tablillas_pendientes = [
             construir_tablilla_rumor_politico(),
             construir_tablilla_suceso_natural(),
-            construir_tablilla_acusacion(),
         ]
         self.categorias_clasificadas = [
             tablilla.categoria for tablilla in self.tablillas_pendientes
@@ -113,10 +112,12 @@ class EstadoJuego:
         categoria_real = self.resultado_evento["categoria"][1]
         categoria_elegida = OPCIONES_CLASIFICACION[clasificacion]
         acerto = categoria_elegida == categoria_real
+        efecto_clasificacion = {"sabiduria": 5 if acerto else -5}
+        self._aplicar_efecto(efecto_clasificacion)
         self.resultado_evento.update({
             "clasificacion_jugador": clasificacion,
             "clasificacion_correcta": acerto,
-            "efecto_clasificacion": {},
+            "efecto_clasificacion": efecto_clasificacion,
         })
 
     def continuar_despues_resultado(self):
@@ -124,6 +125,10 @@ class EstadoJuego:
         if not self.evento_clasificado():
             return
         self.resultado_evento = None
+        if self.tablillas_resueltas == 2 and not self.tablillas_pendientes:
+            tablilla_dia_tres = construir_tablilla_dia_tres(self.historial_decisiones)
+            self.tablillas_pendientes.append(tablilla_dia_tres)
+            self.categorias_clasificadas.append(tablilla_dia_tres.categoria)
         self._cargar_siguiente_tablilla()
 
     def ruta_categoria_actual(self):
