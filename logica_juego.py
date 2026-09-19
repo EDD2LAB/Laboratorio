@@ -15,6 +15,13 @@ from Arboles import (
 )
 
 
+OPCIONES_CLASIFICACION = {
+    "Rumor Político": "Rumor Politico",
+    "Suceso Natural": "Suceso Natural",
+    "Acusación Personal": "Acusacion Personal",
+}
+
+
 class EstadoJuego:
     """
     Guarda todo lo que cambia durante una partida:
@@ -79,16 +86,42 @@ class EstadoJuego:
         return " > ".join(nodo.nombre for nodo in self.categoria_tablilla_actual.ruta_desde_raiz()[1:])
 
     def evento_resuelto(self):
-        """Indica que hay un resultado de clasificación pendiente de mostrar."""
+        """Indica que una decisión ya generó una consecuencia."""
         return self.resultado_evento is not None
+
+    def evento_clasificado(self):
+        """Indica que el jugador ya intentó clasificar el evento resuelto."""
+        return self.evento_resuelto() and self.resultado_evento["clasificacion_jugador"] is not None
 
     def resultado_evento_actual(self):
         """Devuelve la clasificación y consecuencia del evento recién cerrado."""
         return self.resultado_evento
 
+    def opciones_clasificacion_actuales(self):
+        """Categorías que el jugador puede elegir después de ver la consecuencia."""
+        if not self.evento_resuelto() or self.evento_clasificado():
+            return []
+        return list(OPCIONES_CLASIFICACION.keys())
+
+    def clasificar_evento(self, clasificacion):
+        """Evalúa la clasificación como trivia, sin alterar los efectos previos."""
+        if not self.evento_resuelto() or self.evento_clasificado():
+            return
+        if clasificacion not in OPCIONES_CLASIFICACION:
+            raise ValueError(f"Clasificación inválida: {clasificacion}")
+
+        categoria_real = self.resultado_evento["categoria"][1]
+        categoria_elegida = OPCIONES_CLASIFICACION[clasificacion]
+        acerto = categoria_elegida == categoria_real
+        self.resultado_evento.update({
+            "clasificacion_jugador": clasificacion,
+            "clasificacion_correcta": acerto,
+            "efecto_clasificacion": {},
+        })
+
     def continuar_despues_resultado(self):
         """Carga la siguiente tablilla después de que el jugador ve su clasificación."""
-        if not self.evento_resuelto():
+        if not self.evento_clasificado():
             return
         self.resultado_evento = None
         self._cargar_siguiente_tablilla()
@@ -142,7 +175,10 @@ class EstadoJuego:
                 "categoria": self.ruta_categoria_actual(),
                 "camino": list(self.camino_decision_actual),
                 "resultado": self.nodo_actual.texto,
-                "efecto": dict(self.nodo_actual.efecto),
+                "efecto_decision": dict(self.nodo_actual.efecto),
+                "clasificacion_jugador": None,
+                "clasificacion_correcta": None,
+                "efecto_clasificacion": {},
             }
             self.historial_decisiones.append(self.resultado_evento)
             self.tablillas_resueltas += 1

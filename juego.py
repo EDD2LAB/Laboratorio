@@ -32,6 +32,8 @@ PANEL_OSCURO = (16, 31, 25, 218)
 
 ESCENA_MAPA = "mapa"
 ESCENA_TABLILLA = "tablilla"
+ESCENA_CONSECUENCIA = "consecuencia"
+ESCENA_CLASIFICACION = "clasificacion"
 ESCENA_RESULTADO = "resultado"
 
 
@@ -184,7 +186,11 @@ class Boton:
         self.imagen = imagen
         self.centro = centro
         self.fuente = fuente
-        self.rect = imagen.get_rect(center=centro) if imagen else pygame.Rect(centro[0] - 82, centro[1] - 25, 164, 50)
+        if imagen:
+            self.rect = imagen.get_rect(center=centro)
+        else:
+            ancho = max(164, fuente.size(texto)[0] + 28)
+            self.rect = pygame.Rect(centro[0] - ancho // 2, centro[1] - 25, ancho, 50)
 
     def dibujar(self, superficie, mouse_pos):
         hover = self.rect.collidepoint(mouse_pos)
@@ -392,8 +398,50 @@ def formatear_categoria(ruta):
     return ruta_visible[0] if ruta_visible else "Sin clasificación", ruta_visible[1:]
 
 
+def nombre_indicador(nombre):
+    return nombre.replace("_", " ").capitalize()
+
+
+def lineas_efecto(efecto):
+    return [f"{'+' if valor > 0 else ''}{valor} {nombre_indicador(nombre)}" for nombre, valor in efecto.items()]
+
+
+def dibujar_consecuencia_evento(superficie, recursos, estado):
+    """Muestra la consecuencia de la decisión antes de preguntar la categoría."""
+    superficie.blit(recursos["fondo_tablilla"], (0, 0))
+    resultado = estado.resultado_evento_actual()
+    panel = pygame.Rect(178, 175, 604, 345)
+    fondo = superficie_con_alpha(panel.size, (18, 36, 29, 238))
+    superficie.blit(fondo, panel.topleft)
+    pygame.draw.rect(superficie, ORO, panel, width=3, border_radius=16)
+    titulo = recursos["fuente_panel_titulo"].render("CONSECUENCIA DE TU DECISIÓN", True, ORO)
+    superficie.blit(titulo, titulo.get_rect(center=(panel.centerx, panel.y + 52)))
+    for indice, linea in enumerate(envolver_texto(resultado["resultado"], recursos["fuente_mapa"], panel.width - 80)):
+        texto = recursos["fuente_mapa"].render(linea, True, CREMA)
+        superficie.blit(texto, texto.get_rect(center=(panel.centerx, panel.y + 112 + indice * 28)))
+    for indice, linea in enumerate(lineas_efecto(resultado["efecto_decision"])):
+        color = (112, 207, 120) if linea.startswith("+") else (225, 106, 84)
+        texto = recursos["fuente_panel"].render(linea, True, color)
+        superficie.blit(texto, texto.get_rect(center=(panel.centerx, panel.y + 190 + indice * 28)))
+    continuar = recursos["fuente_panel"].render("Haz clic para clasificar la tablilla", True, ORO)
+    superficie.blit(continuar, continuar.get_rect(center=(panel.centerx, panel.bottom - 42)))
+
+
+def dibujar_pregunta_clasificacion(superficie, recursos, botones, mouse_pos):
+    """Pide la clasificación sin mostrar cuál era la categoría real."""
+    superficie.blit(recursos["fondo_tablilla"], (0, 0))
+    rect = recursos["tablilla"].get_rect(center=(ANCHO // 2, 330))
+    superficie.blit(recursos["tablilla"], rect)
+    titulo = recursos["fuente_panel_titulo"].render("¿CÓMO CLASIFICARÍAS ESTA TABLILLA?", True, TINTA)
+    superficie.blit(titulo, titulo.get_rect(center=(rect.centerx, rect.y + 190)))
+    detalle = recursos["fuente_mapa"].render("Elige la categoría que consideres correcta", True, TINTA)
+    superficie.blit(detalle, detalle.get_rect(center=(rect.centerx, rect.y + 245)))
+    for boton in botones:
+        boton.dibujar(superficie, mouse_pos)
+
+
 def dibujar_resultado_evento(superficie, recursos, estado):
-    """Revela la clasificación solo cuando la decisión ya cerró el evento."""
+    """Compara la respuesta de trivia con la categoría real del árbol."""
     superficie.blit(recursos["fondo_tablilla"], (0, 0))
     resultado = estado.resultado_evento_actual()
     categoria, subcategorias = formatear_categoria(resultado["categoria"])
@@ -401,22 +449,31 @@ def dibujar_resultado_evento(superficie, recursos, estado):
     rect = marco.get_rect(center=(ANCHO // 2, 355))
     superficie.blit(marco, rect)
 
-    introduccion = recursos["fuente_mapa"].render("Esta tablilla era un", True, TINTA)
-    superficie.blit(introduccion, introduccion.get_rect(center=(rect.centerx, rect.y + 188)))
+    clasificacion = resultado["clasificacion_jugador"]
+    acerto = resultado["clasificacion_correcta"]
+    estado_respuesta = "CORRECTA" if acerto else "INCORRECTA"
+    respuesta = recursos["fuente_panel"].render(
+        f"Tu clasificación: {clasificacion} ({estado_respuesta})",
+        True,
+        (43, 120, 55) if acerto else (170, 63, 43),
+    )
+    superficie.blit(respuesta, respuesta.get_rect(center=(rect.centerx, rect.y + 182)))
+    introduccion = recursos["fuente_mapa"].render("En realidad era un", True, TINTA)
+    superficie.blit(introduccion, introduccion.get_rect(center=(rect.centerx, rect.y + 218)))
     categoria_texto = recursos["fuente_resultado"].render(categoria.upper(), True, (48, 121, 61))
-    superficie.blit(categoria_texto, categoria_texto.get_rect(center=(rect.centerx, rect.y + 240)))
+    superficie.blit(categoria_texto, categoria_texto.get_rect(center=(rect.centerx, rect.y + 266)))
     if subcategorias:
         detalle = recursos["fuente_panel"].render(f"Subcategoría: {' · '.join(subcategorias)}", True, TINTA)
-        superficie.blit(detalle, detalle.get_rect(center=(rect.centerx, rect.y + 286)))
+        superficie.blit(detalle, detalle.get_rect(center=(rect.centerx, rect.y + 306)))
 
     consecuencia = envolver_texto(resultado["resultado"], recursos["fuente_mapa"], rect.width - 150)
-    y = rect.y + 340
+    y = rect.y + 356
     for linea in consecuencia:
         texto = recursos["fuente_mapa"].render(linea, True, TINTA)
         superficie.blit(texto, texto.get_rect(center=(rect.centerx, y)))
         y += 27
     continuar = recursos["fuente_panel"].render("Haz clic para continuar", True, MADERA)
-    superficie.blit(continuar, continuar.get_rect(center=(rect.centerx, rect.bottom - 70)))
+    superficie.blit(continuar, continuar.get_rect(center=(rect.centerx, rect.bottom - 56)))
 
 
 def dibujar_arbol_clasificacion(superficie, estado, fuente_titulo, fuente):
@@ -646,6 +703,17 @@ def main():
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
                 escena = ESCENA_MAPA
                 inicio_escena = pygame.time.get_ticks()
+            elif escena == ESCENA_CONSECUENCIA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                botones = construir_botones(estado.opciones_clasificacion_actuales(), recursos, fuente_boton)
+                escena = ESCENA_CLASIFICACION
+            elif escena == ESCENA_CLASIFICACION and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                pos_lienzo = convertir_mouse_a_lienzo(evento.pos, rect_lienzo)
+                for boton in botones:
+                    if boton.fue_clickeado(pos_lienzo):
+                        estado.clasificar_evento(boton.texto)
+                        botones = []
+                        escena = ESCENA_RESULTADO
+                        break
             elif escena == ESCENA_TABLILLA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 pos_lienzo = convertir_mouse_a_lienzo(evento.pos, rect_lienzo)
                 for boton in botones:
@@ -653,7 +721,7 @@ def main():
                         estado.elegir_opcion(boton.texto)
                         botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
                         if estado.evento_resuelto():
-                            escena = ESCENA_RESULTADO
+                            escena = ESCENA_CONSECUENCIA
                         break
 
         if escena == ESCENA_MAPA and tiempo_ms - inicio_escena >= duracion_cinematica:
@@ -662,6 +730,10 @@ def main():
 
         if escena == ESCENA_MAPA:
             dibujar_mapa(lienzo, recursos, mundo, estado, tiempo_ms, inicio_escena)
+        elif escena == ESCENA_CONSECUENCIA:
+            dibujar_consecuencia_evento(lienzo, recursos, estado)
+        elif escena == ESCENA_CLASIFICACION:
+            dibujar_pregunta_clasificacion(lienzo, recursos, botones, mouse_pos)
         elif escena == ESCENA_RESULTADO:
             dibujar_resultado_evento(lienzo, recursos, estado)
         else:
