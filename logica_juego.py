@@ -8,7 +8,7 @@ como funciona el arbol por dentro.
 Este modulo depende de arboles.py (NodoDecision, construir_tablilla_*).
 """
 
-from Arboles import (
+from arboles import (
     construir_tablilla_rumor_politico,
     construir_tablilla_suceso_natural,
     construir_tablilla_acusacion,
@@ -39,10 +39,15 @@ class EstadoJuego:
             construir_tablilla_suceso_natural(),
             construir_tablilla_acusacion(),
         ]
+        self.categorias_clasificadas = [
+            tablilla.categoria for tablilla in self.tablillas_pendientes
+        ]
 
         self.tablillas_resueltas = 0
         self.nodo_actual = None
         self.categoria_tablilla_actual = None
+        self.camino_decision_actual = []
+        self.historial_decisiones = []
         self.terminado = False
 
         self._cargar_siguiente_tablilla()
@@ -59,11 +64,34 @@ class EstadoJuego:
 
     def categoria_actual(self):
         """
-        Categoria (del arbol de clasificacion) de la tablilla que se
-        esta jugando ahora mismo, sin importar en que nodo interno
-        se encuentre el jugador dentro de esa tablilla.
+        Nodo hoja (NodoCategoria) del arbol de clasificacion al que
+        pertenece la tablilla que se esta jugando ahora mismo, sin
+        importar en que nodo interno del arbol de decisiones se
+        encuentre el jugador dentro de esa tablilla.
         """
-        return self.categoria_tablilla_actual
+        if self.categoria_tablilla_actual is None:
+            return None
+        return " > ".join(nodo.nombre for nodo in self.categoria_tablilla_actual.ruta_desde_raiz()[1:])
+
+    def ruta_categoria_actual(self):
+        """
+        Recorrido real hacia la raiz del arbol de clasificacion:
+        devuelve la lista de nombres desde 'Tablilla' hasta la
+        categoria especifica de la tablilla actual, subiendo nodo
+        por nodo a traves de los punteros 'padre'. Devuelve una
+        lista vacia si no hay tablilla activa.
+        """
+        nodo_categoria = self.categoria_tablilla_actual
+        if nodo_categoria is None:
+            return []
+        return [nodo.nombre for nodo in nodo_categoria.ruta_desde_raiz()]
+
+    def rutas_categorias_clasificadas(self):
+        """Devuelve todas las rutas del catalogo usadas por las tablillas."""
+        return [
+            [nodo.nombre for nodo in categoria.ruta_desde_raiz()]
+            for categoria in self.categorias_clasificadas
+        ]
 
     def opciones_actuales(self):
         """
@@ -85,10 +113,17 @@ class EstadoJuego:
         if texto_opcion not in self.nodo_actual.opciones:
             raise ValueError(f"Opcion invalida: {texto_opcion}")
 
+        self.camino_decision_actual.append(texto_opcion)
         self.nodo_actual = self.nodo_actual.opciones[texto_opcion]
 
         if self.nodo_actual.es_hoja():
             self._aplicar_efecto(self.nodo_actual.efecto)
+            self.historial_decisiones.append({
+                "categoria": self.ruta_categoria_actual(),
+                "camino": list(self.camino_decision_actual),
+                "resultado": self.nodo_actual.texto,
+                "efecto": dict(self.nodo_actual.efecto),
+            })
             self.tablillas_resueltas += 1
             self._cargar_siguiente_tablilla()
 
@@ -112,6 +147,7 @@ class EstadoJuego:
         if self.tablillas_pendientes:
             self.nodo_actual = self.tablillas_pendientes.pop(0)
             self.categoria_tablilla_actual = getattr(self.nodo_actual, "categoria", None)
+            self.camino_decision_actual = []
         else:
             self.nodo_actual = None
             self.categoria_tablilla_actual = None

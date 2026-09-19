@@ -1,214 +1,624 @@
 """
-Alcalde Digital - La Copa
-Interfaz grafica en pygame que conecta con logica_juego.EstadoJuego.
+La Copa: Voces en las Alturas
+Interfaz grafica en pygame con mapa, personajes, cinematicas breves y tablilla.
 
-Estructura de archivos esperada en la misma carpeta:
-  arboles.py
-  logica_juego.py
-  juego.py            <- este archivo
-  assets/
-    fondo_aldea.png    (opcional, si no existe se usa un color solido)
-    guardian.png        (opcional, sprite del jugador)
-
-Si las imagenes no existen todavia, el juego corre igual usando
-rectangulos de color como marcador temporal (placeholder), asi que
-puedes empezar a probar la jugabilidad antes de tener los sprites
-finales.
+La logica de estructuras de datos queda en logica_juego.py y Arboles.py:
+- EstadoJuego administra la cola de tablillas y avanza por el arbol de decisiones.
+- Cada raiz de tablilla trae una categoria, tomada del arbol de clasificacion.
 """
 
 import os
 import sys
+import unicodedata
+
 import pygame
 
 from logica_juego import EstadoJuego
 
-# ---------------------------------------------------------------------------
-# CONFIGURACION GENERAL
-# ---------------------------------------------------------------------------
 
-ANCHO, ALTO = 960, 680
+ANCHO, ALTO = 960, 720
+RELACION_ASPECTO = ANCHO / ALTO
 FPS = 60
+RUTA_ASSETS = os.path.join(os.path.dirname(__file__), "Imagenes")
 
-CARPETA_ASSETS = os.path.join(os.path.dirname(__file__), "assets")
+CREMA = (255, 243, 210)
+TINTA = (61, 37, 25)
+MADERA = (111, 75, 43)
+MADERA_OSCURA = (55, 35, 24)
+ORO = (237, 185, 87)
+VERDE_PROFUNDO = (18, 45, 35)
+PANEL_OSCURO = (16, 31, 25, 218)
 
-COLOR_FONDO = (30, 40, 25)          # verde oscuro, placeholder si no hay imagen
-COLOR_PANEL = (40, 30, 20, 230)     # panel de texto (marron oscuro semitransparente)
-COLOR_BOTON = (90, 70, 40)
-COLOR_BOTON_HOVER = (130, 100, 55)
-COLOR_TEXTO = (240, 230, 210)
-COLOR_INDICADOR_FONDO = (20, 20, 20)
-COLOR_INDICADOR_BARRA = (200, 170, 60)
+ESCENA_MAPA = "mapa"
+ESCENA_TABLILLA = "tablilla"
 
 
-def cargar_imagen(nombre_archivo, tamano=None):
-    """Carga una imagen desde assets/. Si no existe, devuelve None."""
-    ruta = os.path.join(CARPETA_ASSETS, nombre_archivo)
-    if not os.path.isfile(ruta):
+def normalizar_ruta(ruta):
+    texto = ruta.replace("\\", "/").lower()
+    texto = unicodedata.normalize("NFD", texto)
+    return "".join(caracter for caracter in texto if unicodedata.category(caracter) != "Mn")
+
+
+def buscar_asset(nombre):
+    ruta = os.path.join(RUTA_ASSETS, nombre)
+    if os.path.isfile(ruta):
+        return ruta
+
+    objetivo = normalizar_ruta(nombre)
+    for carpeta, _, archivos in os.walk(RUTA_ASSETS):
+        for archivo in archivos:
+            ruta_real = os.path.join(carpeta, archivo)
+            relativa = os.path.relpath(ruta_real, RUTA_ASSETS)
+            if normalizar_ruta(relativa) == objetivo:
+                return ruta_real
+    return ruta
+
+
+def cargar_imagen(nombre, tamano=None, requerido=True):
+    """Carga una imagen desde Imagenes/. Si no es requerida, permite placeholder."""
+    ruta = buscar_asset(nombre)
+    try:
+        imagen = pygame.image.load(ruta).convert_alpha()
+    except (pygame.error, FileNotFoundError) as error:
+        if requerido:
+            raise RuntimeError(f"No se pudo cargar el recurso: {ruta}") from error
         return None
-    imagen = pygame.image.load(ruta).convert_alpha()
     if tamano:
-        imagen = pygame.transform.smoothscale(imagen, tamano)
+        imagen = pygame.transform.scale(imagen, tamano)
     return imagen
 
 
-class Boton:
-    """Boton rectangular simple con texto centrado."""
-    
-    def __init__(self, rect, texto, fuente):
-        self.rect = pygame.Rect(rect)
-        self.texto = texto
-        self.fuente = fuente
+def cargar_animacion_guardian():
+    nombres = [
+        "Fila 1 - 1. Guardian.png",
+        "Fila 1 - 2. Guardian.png",
+        "Fila 1 - 3. Guardian.png",
+        "Fila 1 - 4. Guardian.png",
+        "Fila 1 - 5. Guardian.png",
+        "Fila 1 - 6. Guardian.png",
+        "Fila 1 - 7. Guardian.png",
+        "Fila 1 - 8. Guardian.png",
+    ]
+    cuadros = []
+    for nombre in nombres:
+        # En Windows el archivo real usa tilde; si no coincide, usamos el retrato.
+        cuadro = cargar_imagen(nombre, (70, 70), requerido=False)
+        if cuadro:
+            cuadros.append(cuadro)
+    if cuadros:
+        return cuadros
+    return [cargar_imagen("Guardian.jpeg", (70, 70))]
 
-    def dibujar(self, superficie, mouse_pos):
-        hover = self.rect.collidepoint(mouse_pos)
-        color = COLOR_BOTON_HOVER if hover else COLOR_BOTON
-        pygame.draw.rect(superficie, color, self.rect, border_radius=8)
-        pygame.draw.rect(superficie, COLOR_TEXTO, self.rect, width=2, border_radius=8)
 
-        texto_render = self.fuente.render(self.texto, True, COLOR_TEXTO)
-        texto_rect = texto_render.get_rect(center=self.rect.center)
-        superficie.blit(texto_render, texto_rect)
+def cargar_sprite(nombre, tamano):
+    return cargar_imagen(nombre, tamano)
 
-    def clic_dentro(self, mouse_pos):
-        return self.rect.collidepoint(mouse_pos)
+
+def cargar_spritesheet(nombre, cantidad, tamano):
+    spritesheet = cargar_imagen(nombre)
+    ancho_frame = spritesheet.get_width() // cantidad
+    alto_frame = spritesheet.get_height()
+    frames = []
+    for indice in range(cantidad):
+        area = pygame.Rect(indice * ancho_frame, 0, ancho_frame, alto_frame)
+        frame = spritesheet.subsurface(area).copy()
+        frames.append(pygame.transform.scale(frame, tamano))
+    return frames
+
+
+def cargar_animacion_aspirante():
+    nombres = [
+        "Fila 1 - 1 . Aspirante_a_cacique-Idle .png",
+        "Fila 1 - 2. Aspirante_a_cacique-Idle.png",
+        "Fila 1 - 3. Aspirante_a_cacique-Idle.png",
+        "Fila 1 - 4. Aspirante_a_cacique-Idle.png",
+        "Fila 1 - 5. Aspirante_a_cacique-Idle.png",
+        "Fila 1- 6. Aspirante_a_cacique-Idle.png",
+        "Fila 1 - 7. Aspirante_a_cacique-Idle.png",
+        "Fila 1 - 8. Aspirante_a_cacique-Idle.png",
+    ]
+    cuadros = []
+    for nombre in nombres:
+        cuadro = cargar_imagen(nombre, (66, 66), requerido=False)
+        if cuadro:
+            cuadros.append(cuadro)
+    if cuadros:
+        return cuadros
+    return [cargar_imagen("Aspirante.jpeg", (66, 66))]
+
+
+def cargar_animacion_mensajero():
+    nombres = [
+        os.path.join("mensajero", "fila1 -1.png"),
+        os.path.join("mensajero", "fila 1- 2.png"),
+        os.path.join("mensajero", "fila 1- 3.png"),
+        os.path.join("mensajero", "fila 1- 4.png"),
+        os.path.join("mensajero", "fila 1 - 5.png"),
+        os.path.join("mensajero", "fila 1 - 6.png"),
+        os.path.join("mensajero", "fila 1 - 7.png"),
+        os.path.join("mensajero", "fila 1 - 8.png"),
+    ]
+    cuadros = []
+    for nombre in nombres:
+        cuadro = cargar_imagen(nombre, (66, 66), requerido=False)
+        if cuadro:
+            cuadros.append(cuadro)
+    if cuadros:
+        return cuadros
+    return [cargar_imagen("Mensajero.jpeg", (66, 66))]
+
+
+def superficie_con_alpha(tamano, color):
+    superficie = pygame.Surface(tamano, pygame.SRCALPHA)
+    superficie.fill(color)
+    return superficie
 
 
 def envolver_texto(texto, fuente, ancho_maximo):
-    """Divide un texto largo en varias lineas para que quepa en el panel."""
-    palabras = texto.split(" ")
-    lineas = []
-    linea_actual = ""
-
+    palabras, lineas, actual = texto.split(), [], ""
     for palabra in palabras:
-        prueba = f"{linea_actual} {palabra}".strip()
+        prueba = f"{actual} {palabra}".strip()
         if fuente.size(prueba)[0] <= ancho_maximo:
-            linea_actual = prueba
+            actual = prueba
         else:
-            lineas.append(linea_actual)
-            linea_actual = palabra
-    if linea_actual:
-        lineas.append(linea_actual)
+            if actual:
+                lineas.append(actual)
+            actual = palabra
+    if actual:
+        lineas.append(actual)
     return lineas
 
 
-def dibujar_indicadores(superficie, fuente, indicadores, x, y, ancho_barra=180):
-    """Dibuja una barra por cada indicador de la aldea."""
-    alto_fila = 26
-    for i, (nombre, valor) in enumerate(indicadores.items()):
-        fila_y = y + i * alto_fila
+class Boton:
+    def __init__(self, texto, imagen, centro, fuente):
+        self.texto = texto
+        self.imagen = imagen
+        self.centro = centro
+        self.fuente = fuente
+        self.rect = imagen.get_rect(center=centro) if imagen else pygame.Rect(centro[0] - 82, centro[1] - 25, 164, 50)
 
-        etiqueta = fuente.render(nombre.replace("_", " ").capitalize(), True, COLOR_TEXTO)
-        superficie.blit(etiqueta, (x, fila_y))
+    def dibujar(self, superficie, mouse_pos):
+        hover = self.rect.collidepoint(mouse_pos)
+        if self.imagen:
+            if hover:
+                brillo = self.imagen.copy()
+                brillo.fill((255, 238, 178, 50), special_flags=pygame.BLEND_RGBA_ADD)
+                superficie.blit(brillo, brillo.get_rect(center=self.centro))
+            superficie.blit(self.imagen, self.rect)
+            return
 
-        barra_x = x + 190
-        pygame.draw.rect(
-            superficie, COLOR_INDICADOR_FONDO, (barra_x, fila_y, ancho_barra, 16)
-        )
-        ancho_lleno = int(ancho_barra * (valor / 100))
-        pygame.draw.rect(
-            superficie, COLOR_INDICADOR_BARRA, (barra_x, fila_y, ancho_lleno, 16)
-        )
+        color = (126, 81, 45) if not hover else (166, 110, 58)
+        pygame.draw.rect(superficie, (42, 25, 17), self.rect.inflate(6, 6), border_radius=10)
+        pygame.draw.rect(superficie, color, self.rect, border_radius=8)
+        pygame.draw.rect(superficie, ORO, self.rect, width=2, border_radius=8)
+        etiqueta = self.fuente.render(self.texto, True, CREMA)
+        superficie.blit(etiqueta, etiqueta.get_rect(center=self.rect.center))
+
+    def fue_clickeado(self, posicion):
+        return self.rect.collidepoint(posicion)
+
+
+class Actor:
+    def __init__(self, nombre, imagen_quieto, posicion, etiqueta, escala_sombra=1.0):
+        self.nombre = nombre
+        self.imagen_quieto = imagen_quieto
+        self.posicion = pygame.Vector2(posicion)
+        self.etiqueta = etiqueta
+        self.escala_sombra = escala_sombra
+
+    def dibujar(self, superficie, fuente, posicion=None, imagen=None):
+        pos = pygame.Vector2(posicion) if posicion else self.posicion
+        imagen = imagen or self.imagen_quieto
+        sombra_w = int(50 * self.escala_sombra)
+        pygame.draw.ellipse(superficie, (0, 0, 0, 90), (pos.x - sombra_w // 2, pos.y + 42, sombra_w, 14))
+        rect = imagen.get_rect(midbottom=(int(pos.x), int(pos.y + 48)))
+        superficie.blit(imagen, rect)
+        texto = fuente.render(self.etiqueta, True, CREMA)
+        placa = texto.get_rect(center=(int(pos.x), int(pos.y - 27))).inflate(12, 7)
+        pygame.draw.rect(superficie, (19, 38, 30, 190), placa, border_radius=7)
+        superficie.blit(texto, texto.get_rect(center=placa.center))
+
+
+class Casa:
+    def __init__(self, nombre, centro, color, vieja=False):
+        self.nombre = nombre
+        self.centro = centro
+        self.color = color
+        self.vieja = vieja
+
+    def dibujar(self, superficie, fuente):
+        x, y = self.centro
+        ancho, alto = (112, 78) if self.vieja else (96, 66)
+        base = pygame.Rect(x - ancho // 2, y - alto // 2 + 12, ancho, alto)
+        techo = [(x - ancho // 2 - 8, base.y + 10), (x, base.y - 38), (x + ancho // 2 + 8, base.y + 10)]
+        pygame.draw.ellipse(superficie, (0, 0, 0, 80), (x - ancho // 2, base.bottom - 8, ancho, 18))
+        pygame.draw.rect(superficie, self.color, base, border_radius=8)
+        pygame.draw.polygon(superficie, MADERA_OSCURA if self.vieja else MADERA, techo)
+        pygame.draw.rect(superficie, (230, 190, 95), (x - 10, base.y + 28, 20, base.height - 28), border_radius=4)
+        pygame.draw.rect(superficie, (47, 29, 20), base, width=2, border_radius=8)
+        pygame.draw.polygon(superficie, (47, 29, 20), techo, width=2)
+        if self.vieja:
+            for dx in (-34, 0, 31):
+                pygame.draw.line(superficie, (74, 49, 32), (x + dx, base.y + 5), (x + dx - 8, base.bottom - 5), 2)
+
+        etiqueta = fuente.render(self.nombre, True, CREMA)
+        placa = etiqueta.get_rect(center=(x, base.bottom + 16)).inflate(12, 5)
+        pygame.draw.rect(superficie, (19, 38, 30, 178), placa, border_radius=6)
+        superficie.blit(etiqueta, etiqueta.get_rect(center=placa.center))
+
+
+def punto_intermedio(a, b, t):
+    return pygame.Vector2(a).lerp(pygame.Vector2(b), max(0.0, min(1.0, t)))
+
+
+def dibujar_puente(superficie, inicio, fin):
+    pygame.draw.line(superficie, (67, 43, 28), inicio, fin, 12)
+    pygame.draw.line(superficie, (157, 108, 62), inicio, fin, 7)
+    vector = pygame.Vector2(fin) - pygame.Vector2(inicio)
+    largo = vector.length()
+    if largo == 0:
+        return
+    direccion = vector.normalize()
+    normal = pygame.Vector2(-direccion.y, direccion.x)
+    pasos = max(3, int(largo // 44))
+    for i in range(1, pasos):
+        punto = pygame.Vector2(inicio).lerp(fin, i / pasos)
+        pygame.draw.line(superficie, (72, 47, 31), punto - normal * 8, punto + normal * 8, 2)
+
+
+def dibujar_arbol_central(superficie, centro, fuente):
+    x, y = centro
+    pygame.draw.ellipse(superficie, (0, 0, 0, 90), (x - 95, y + 58, 190, 25))
+    pygame.draw.rect(superficie, (92, 57, 33), (x - 21, y - 6, 42, 94), border_radius=18)
+    for radio, dx, dy, color in (
+        (76, -34, -54, (37, 102, 58)),
+        (88, 31, -60, (42, 118, 65)),
+        (94, 0, -105, (32, 91, 54)),
+        (66, 0, -34, (49, 132, 72)),
+    ):
+        pygame.draw.circle(superficie, color, (x + dx, y + dy), radio)
+    pygame.draw.circle(superficie, (240, 200, 93), (x + 35, y - 92), 5)
+    pygame.draw.circle(superficie, (240, 200, 93), (x - 45, y - 58), 4)
+    etiqueta = fuente.render("Arbol central", True, CREMA)
+    superficie.blit(etiqueta, etiqueta.get_rect(center=(x, y + 112)))
+
+
+def dibujar_indicadores(superficie, indicadores, fuente):
+    panel = pygame.Rect(18, 18, 260, 152)
+    fondo = superficie_con_alpha(panel.size, PANEL_OSCURO)
+    superficie.blit(fondo, panel.topleft)
+    pygame.draw.rect(superficie, (183, 133, 68), panel, width=2, border_radius=10)
+    titulo = fuente.render("LA COPA", True, ORO)
+    superficie.blit(titulo, (panel.x + 15, panel.y + 10))
+
+    for indice, (nombre, valor) in enumerate(indicadores.items()):
+        y = panel.y + 43 + indice * 20
+        etiqueta = fuente.render(nombre.replace("_", " ").capitalize(), True, CREMA)
+        superficie.blit(etiqueta, (panel.x + 14, y))
+        barra = pygame.Rect(panel.right - 88, y + 5, 64, 8)
+        pygame.draw.rect(superficie, (9, 24, 17), barra, border_radius=4)
+        color = (196, 90, 54) if "susurros" in nombre or "grietas" in nombre else (104, 184, 104)
+        pygame.draw.rect(superficie, color, (barra.x, barra.y, int(barra.width * valor / 100), barra.height), border_radius=4)
+
+
+def texto_cinematica(estado):
+    dia = estado.tablillas_resueltas + 1
+    if estado.juego_terminado():
+        return "Cierre del dia: el Guardian regresa al arbol central para revisar el resumen."
+    categoria = estado.categoria_actual() or "Sin categoria"
+    return f"Dia {dia}: el Guardian va en linea recta hacia la tablilla. Clasificacion: {categoria}."
+
+
+def dibujar_mensaje_mapa(superficie, fuente, texto):
+    panel = pygame.Rect(205, ALTO - 86, 550, 54)
+    fondo = superficie_con_alpha(panel.size, (20, 32, 27, 225))
+    superficie.blit(fondo, panel.topleft)
+    pygame.draw.rect(superficie, ORO, panel, width=2, border_radius=10)
+    lineas = envolver_texto(texto, fuente, panel.width - 28)
+    y = panel.y + 10
+    for linea in lineas[:2]:
+        render = fuente.render(linea, True, CREMA)
+        superficie.blit(render, (panel.x + 14, y))
+        y += 22
+
+
+def dibujar_mapa(superficie, recursos, mundo, estado, tiempo_ms, inicio_escena):
+    superficie.blit(recursos["mapa"], (0, 0))
+
+    for actor in mundo["actores"]:
+        actor.dibujar(superficie, recursos["fuente_etiqueta"])
+
+    progreso = (tiempo_ms - inicio_escena) / 3300
+    destino_guardian = (mundo["arbol"][0], mundo["arbol"][1] - 70)
+    pos_guardian = punto_intermedio(mundo["casa_guardian"], destino_guardian, progreso)
+    if progreso < 1:
+        indice_frame = (tiempo_ms // 120) % len(recursos["guardian_caminando"])
+        imagen_guardian = recursos["guardian_caminando"][indice_frame]
+    else:
+        imagen_guardian = recursos["guardian_quieto"]
+    mundo["guardian"].dibujar(superficie, recursos["fuente_etiqueta"], pos_guardian, imagen_guardian)
+
+    dibujar_indicadores(superficie, estado.indicadores, recursos["fuente_indicador"])
+    dibujar_mensaje_mapa(superficie, recursos["fuente_mapa"], texto_cinematica(estado))
+
+
+def buscar_imagen_para_opcion(texto, imagenes):
+    texto = texto.lower()
+    if "colgar" in texto:
+        return imagenes["colgar"]
+    if "consultar" in texto:
+        return imagenes["consultar"]
+    if "quemar" in texto:
+        return imagenes["quemar"]
+    return None
+
+
+def construir_botones(opciones, imagenes, fuente):
+    if not opciones:
+        return []
+    separacion = 205 if len(opciones) <= 3 else 188
+    inicio = ANCHO // 2 - separacion * (len(opciones) - 1) // 2
+    return [Boton(opcion, buscar_imagen_para_opcion(opcion, imagenes), (inicio + i * separacion, 635), fuente) for i, opcion in enumerate(opciones)]
+
+
+def dibujar_tablilla(superficie, tablilla, estado, fuente_texto, fuente_categoria):
+    rect = tablilla.get_rect(center=(ANCHO // 2, 330))
+    superficie.blit(tablilla, rect)
+
+    categoria = estado.categoria_actual()
+    if categoria:
+        cat = fuente_categoria.render(categoria.upper(), True, (116, 81, 47))
+        superficie.blit(cat, cat.get_rect(center=(rect.centerx, rect.y + 178)))
+
+    lineas = envolver_texto(estado.texto_actual(), fuente_texto, 365)
+    y = rect.y + 265 - len(lineas) * 31 // 2
+    for linea in lineas:
+        texto = fuente_texto.render(linea, True, TINTA)
+        superficie.blit(texto, texto.get_rect(center=(rect.centerx, y)))
+        y += 31
+
+
+def dibujar_arbol_clasificacion(superficie, estado, fuente_titulo, fuente):
+    panel = pygame.Rect(24, 174, 250, 214)
+    fondo = superficie_con_alpha(panel.size, PANEL_OSCURO)
+    superficie.blit(fondo, panel.topleft)
+    pygame.draw.rect(superficie, ORO, panel, width=2, border_radius=10)
+    titulo = fuente_titulo.render("Arbol de clasificacion", True, ORO)
+    superficie.blit(titulo, (panel.x + 12, panel.y + 10))
+
+    raiz = (panel.centerx, panel.y + 43)
+    ramas = {
+        "Rumor Politico": (panel.x + 52, panel.y + 93),
+        "Suceso Natural": (panel.centerx, panel.y + 93),
+        "Acusacion Personal": (panel.right - 52, panel.y + 93),
+    }
+    hojas = {
+        "Rumor Politico": ((panel.x + 35, panel.y + 157), (panel.x + 69, panel.y + 157),
+                           ("Aspirante", "Consejo")),
+        "Suceso Natural": ((panel.centerx - 17, panel.y + 157), (panel.centerx + 17, panel.y + 157),
+                           ("Clima", "Fauna")),
+        "Acusacion Personal": ((panel.right - 69, panel.y + 157), (panel.right - 35, panel.y + 157),
+                                ("Aspirantes", "Habitantes")),
+    }
+    ruta_actual = estado.ruta_categoria_actual()
+    pygame.draw.line(superficie, ORO, raiz, ramas["Rumor Politico"], 2)
+    pygame.draw.line(superficie, ORO, raiz, ramas["Suceso Natural"], 2)
+    pygame.draw.line(superficie, ORO, raiz, ramas["Acusacion Personal"], 2)
+    dibujar_nodo_clasificacion(superficie, raiz, "Tablilla", ORO, fuente)
+    for nombre, posicion in ramas.items():
+        color = (101, 184, 105) if nombre in ruta_actual else ORO
+        dibujar_nodo_clasificacion(superficie, posicion, nombre, color, fuente)
+        punto_a, punto_b, nombres_hoja = hojas[nombre]
+        pygame.draw.line(superficie, color, posicion, punto_a, 2)
+        pygame.draw.line(superficie, color, posicion, punto_b, 2)
+        for punto, nombre_hoja in zip((punto_a, punto_b), nombres_hoja):
+            color_hoja = (101, 184, 105) if nombre_hoja in ruta_actual else (219, 184, 96)
+            dibujar_nodo_clasificacion(superficie, punto, nombre_hoja, color_hoja, fuente)
+
+
+def dibujar_nodo_clasificacion(superficie, posicion, nombre, color, fuente):
+    pygame.draw.circle(superficie, color, posicion, 5)
+    etiqueta = fuente.render(nombre, True, CREMA)
+    rect = etiqueta.get_rect(midtop=(posicion[0], posicion[1] + 7))
+    superficie.blit(etiqueta, rect)
+
+
+def dibujar_arbol_decision(superficie, estado, fuente_titulo, fuente):
+    panel = pygame.Rect(682, 188, 248, 182)
+    fondo = superficie_con_alpha(panel.size, PANEL_OSCURO)
+    superficie.blit(fondo, panel.topleft)
+    pygame.draw.rect(superficie, ORO, panel, width=2, border_radius=10)
+    titulo = fuente_titulo.render("Arbol de decisiones", True, ORO)
+    superficie.blit(titulo, (panel.x + 12, panel.y + 10))
+
+    if estado.juego_terminado():
+        texto = fuente.render("Hoja final: resumen", True, CREMA)
+        superficie.blit(texto, (panel.x + 18, panel.y + 66))
+        return
+
+    raiz = (panel.centerx, panel.y + 64)
+    pygame.draw.circle(superficie, (219, 184, 96), raiz, 12)
+    nodo = fuente.render("Nodo actual", True, CREMA)
+    superficie.blit(nodo, nodo.get_rect(center=(raiz[0], raiz[1] - 28)))
+
+    opciones = estado.opciones_actuales()
+    if not opciones:
+        hoja = fuente.render("Hoja: efecto aplicado", True, CREMA)
+        superficie.blit(hoja, hoja.get_rect(center=(panel.centerx, panel.y + 120)))
+        return
+
+    ancho = min(190, 52 * max(1, len(opciones) - 1))
+    inicio_x = panel.centerx - ancho // 2
+    for i, opcion in enumerate(opciones):
+        x = inicio_x + int(i * (ancho / max(1, len(opciones) - 1)))
+        y = panel.y + 128
+        pygame.draw.line(superficie, (219, 184, 96), raiz, (x, y), 2)
+        pygame.draw.circle(superficie, (101, 159, 105), (x, y), 9)
+        etiqueta = opcion[:12]
+        texto = fuente.render(etiqueta, True, CREMA)
+        superficie.blit(texto, texto.get_rect(center=(x, y + 22)))
+
+
+def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos):
+    superficie.blit(recursos["fondo_tablilla"], (0, 0))
+    dibujar_indicadores(superficie, estado.indicadores, recursos["fuente_indicador"])
+    dibujar_tablilla(superficie, recursos["tablilla"], estado, recursos["fuente_texto"], recursos["fuente_categoria"])
+
+    if estado.juego_terminado():
+        aviso = recursos["fuente_boton"].render("Ronda terminada - Presiona ESC para salir", True, CREMA)
+        superficie.blit(aviso, aviso.get_rect(center=(ANCHO // 2, 635)))
+    else:
+        for boton in botones:
+            boton.dibujar(superficie, mouse_pos)
+
+
+def crear_fondo_tablilla(mapa):
+    fondo = mapa.copy()
+    velo = superficie_con_alpha((ANCHO, ALTO), (7, 18, 14, 178))
+    fondo.blit(velo, (0, 0))
+    return fondo
+
+
+def crear_mundo(recursos):
+    arbol = (ANCHO // 2, 360)
+    casa_guardian = (ANCHO // 2, 142)
+    actores = [
+        Actor("aspirante", recursos["aspirante_quieto"], (178, 342), "Aspirante"),
+        Actor("mensajero", recursos["mensajero_quieto"], (783, 342), "Mensajero"),
+        Actor("habitante_1", recursos["tarek_quieto"], (220, 566), "Tarek"),
+        Actor("habitante_2", recursos["luma_quieta"], (740, 566), "Luma"),
+    ]
+    return {
+        "arbol": arbol,
+        "casa_guardian": casa_guardian,
+        "actores": actores,
+        "guardian": Actor("guardian", recursos["guardian_quieto"], casa_guardian, "Guardian", escala_sombra=1.15),
+    }
+
+
+def tamano_ventana_inicial():
+    info = pygame.display.Info()
+    max_ancho = max(640, int(info.current_w * 0.92))
+    max_alto = max(480, int(info.current_h * 0.86))
+    if max_ancho / max_alto > RELACION_ASPECTO:
+        alto = max_alto
+        ancho = int(alto * RELACION_ASPECTO)
+    else:
+        ancho = max_ancho
+        alto = int(ancho / RELACION_ASPECTO)
+    return ancho, alto
+
+
+def rect_lienzo_en_ventana(tamano_ventana):
+    ancho_ventana, alto_ventana = tamano_ventana
+    escala = min(ancho_ventana / ANCHO, alto_ventana / ALTO)
+    ancho = int(ANCHO * escala)
+    alto = int(ALTO * escala)
+    x = (ancho_ventana - ancho) // 2
+    y = (alto_ventana - alto) // 2
+    return pygame.Rect(x, y, ancho, alto)
+
+
+def convertir_mouse_a_lienzo(posicion, rect_lienzo):
+    if not rect_lienzo.collidepoint(posicion):
+        return (-1, -1)
+    escala_x = ANCHO / rect_lienzo.width
+    escala_y = ALTO / rect_lienzo.height
+    x = int((posicion[0] - rect_lienzo.x) * escala_x)
+    y = int((posicion[1] - rect_lienzo.y) * escala_y)
+    return (x, y)
+
+
+def presentar_lienzo(pantalla, lienzo):
+    pantalla.fill((5, 12, 11))
+    rect_destino = rect_lienzo_en_ventana(pantalla.get_size())
+    escalado = pygame.transform.scale(lienzo, rect_destino.size)
+    pantalla.blit(escalado, rect_destino)
+    return rect_destino
 
 
 def main():
     pygame.init()
-    pantalla = pygame.display.set_mode((ANCHO, ALTO))
-    pygame.display.set_caption("Alcalde Digital - La Copa")
+    pantalla = pygame.display.set_mode(tamano_ventana_inicial(), pygame.RESIZABLE)
+    pygame.display.set_caption("La Copa: Voces en las Alturas")
     reloj = pygame.time.Clock()
+    lienzo = pygame.Surface((ANCHO, ALTO))
 
-    fuente_texto = pygame.font.SysFont("arial", 22)
-    fuente_boton = pygame.font.SysFont("arial", 20)
-    fuente_indicador = pygame.font.SysFont("arial", 16)
-    fuente_categoria = pygame.font.SysFont("arial", 16, italic=True)
+    fuente_texto = pygame.font.SysFont("georgia", 22, bold=True)
+    fuente_categoria = pygame.font.SysFont("arial", 13, bold=True)
+    fuente_boton = pygame.font.SysFont("georgia", 19, bold=True)
+    fuente_indicador = pygame.font.SysFont("arial", 14, bold=True)
+    fuente_etiqueta = pygame.font.SysFont("arial", 13, bold=True)
+    fuente_mapa = pygame.font.SysFont("georgia", 18, bold=True)
+    fuente_panel_titulo = pygame.font.SysFont("arial", 15, bold=True)
+    fuente_panel = pygame.font.SysFont("arial", 13)
 
-    fondo = cargar_imagen("fondo_aldea.png", tamano=(ANCHO, ALTO))
-    sprite_guardian = cargar_imagen("guardian.png", tamano=(64, 64))
+    mapa = cargar_imagen("Mapa.png", (ANCHO, ALTO))
+    recursos = {
+        "mapa": mapa,
+        "fondo_tablilla": crear_fondo_tablilla(mapa),
+        "tablilla": cargar_imagen("Tablilla.png", (460, 460)),
+        "colgar": cargar_imagen("Colgar.png", (190, 127)),
+        "consultar": cargar_imagen("Consultar.png", (190, 127)),
+        "quemar": cargar_imagen("Quemar.png", (190, 127)),
+        "guardian_quieto": cargar_sprite("Fila 1 - 1. Guardian.png", (86, 86)),
+        "guardian_caminando": cargar_spritesheet("Fila 2. Guardian.png", 8, (86, 86)),
+        "aspirante_quieto": cargar_sprite("Fila 1 - 3. Aspirante_a_cacique-Idle.png", (78, 78)),
+        "mensajero_quieto": cargar_sprite(os.path.join("mensajero", "fila 1 - 7.png"), (78, 78)),
+        "tarek_quieto": cargar_sprite("HabHombre Fila 1- 3.png", (76, 76)),
+        "luma_quieta": cargar_sprite("HabMujer Fila 1 - 7.png", (76, 76)),
+        "fuente_texto": fuente_texto,
+        "fuente_categoria": fuente_categoria,
+        "fuente_boton": fuente_boton,
+        "fuente_indicador": fuente_indicador,
+        "fuente_etiqueta": fuente_etiqueta,
+        "fuente_mapa": fuente_mapa,
+        "fuente_panel_titulo": fuente_panel_titulo,
+        "fuente_panel": fuente_panel,
+    }
 
     estado = EstadoJuego()
+    mundo = crear_mundo(recursos)
+    botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+    escena = ESCENA_MAPA
+    inicio_escena = pygame.time.get_ticks()
+    duracion_cinematica = 3900
 
-    # Posicion del jugador (Guardian) sobre una de las plataformas.
-    # Ajusta estas coordenadas segun donde caiga su plataforma en tu
-    # imagen de fondo real.
-    pos_jugador = (ANCHO // 2 - 32, ALTO // 2 - 32)
-
-    ejecutando = True
-    while ejecutando:
-        mouse_pos = pygame.mouse.get_pos()
-        clic_realizado = False
+    corriendo = True
+    while corriendo:
+        tiempo_ms = pygame.time.get_ticks()
+        rect_lienzo = rect_lienzo_en_ventana(pantalla.get_size())
+        mouse_pos = convertir_mouse_a_lienzo(pygame.mouse.get_pos(), rect_lienzo)
 
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
-                ejecutando = False
-            elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                clic_realizado = True
+                corriendo = False
+            elif evento.type == pygame.VIDEORESIZE:
+                pantalla = pygame.display.set_mode(evento.size, pygame.RESIZABLE)
             elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-                ejecutando = False
+                corriendo = False
+            elif escena == ESCENA_TABLILLA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                pos_lienzo = convertir_mouse_a_lienzo(evento.pos, rect_lienzo)
+                for boton in botones:
+                    if boton.fue_clickeado(pos_lienzo):
+                        resueltas_antes = estado.tablillas_resueltas
+                        estado.elegir_opcion(boton.texto)
+                        botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+                        if estado.tablillas_resueltas != resueltas_antes or estado.juego_terminado():
+                            escena = ESCENA_MAPA
+                            inicio_escena = pygame.time.get_ticks()
+                        break
 
-        # --- DIBUJAR FONDO ---
-        if fondo:
-            pantalla.blit(fondo, (0, 0))
+        if escena == ESCENA_MAPA and tiempo_ms - inicio_escena >= duracion_cinematica:
+            escena = ESCENA_TABLILLA
+            botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+
+        if escena == ESCENA_MAPA:
+            dibujar_mapa(lienzo, recursos, mundo, estado, tiempo_ms, inicio_escena)
         else:
-            pantalla.fill(COLOR_FONDO)
+            dibujar_escena_tablilla(lienzo, recursos, estado, botones, mouse_pos)
 
-        # --- DIBUJAR PERSONAJE DEL JUGADOR ---
-        if sprite_guardian:
-            pantalla.blit(sprite_guardian, pos_jugador)
-        else:
-            pygame.draw.rect(
-                pantalla, (180, 140, 90), (*pos_jugador, 64, 64), border_radius=10
-            )
-
-        # --- PANEL DE TEXTO (tablilla / resultado) ---
-        panel_rect = pygame.Rect(60, ALTO - 220, ANCHO - 120, 160)
-        panel_superficie = pygame.Surface(panel_rect.size, pygame.SRCALPHA)
-        panel_superficie.fill(COLOR_PANEL)
-        pantalla.blit(panel_superficie, panel_rect.topleft)
-
-        categoria = estado.categoria_actual()
-        y_texto = panel_rect.y + 12
-        if categoria:
-            texto_cat = fuente_categoria.render(f"Categoria: {categoria}", True, (200, 190, 160))
-            pantalla.blit(texto_cat, (panel_rect.x + 16, y_texto))
-            y_texto += 22
-
-        lineas = envolver_texto(estado.texto_actual(), fuente_texto, panel_rect.width - 32)
-        for linea in lineas:
-            render = fuente_texto.render(linea, True, COLOR_TEXTO)
-            pantalla.blit(render, (panel_rect.x + 16, y_texto))
-            y_texto += 28
-
-        # --- BOTONES DE OPCIONES ---
-        opciones = estado.opciones_actuales()
-        botones = []
-        if opciones:
-            ancho_boton = 200
-            alto_boton = 44
-            espacio = 20
-            total_ancho = len(opciones) * ancho_boton + (len(opciones) - 1) * espacio
-            x_inicial = (ANCHO - total_ancho) // 2
-            y_botones = panel_rect.y - alto_boton - 20
-
-            for i, texto_opcion in enumerate(opciones):
-                x = x_inicial + i * (ancho_boton + espacio)
-                boton = Boton((x, y_botones, ancho_boton, alto_boton), texto_opcion, fuente_boton)
-                boton.dibujar(pantalla, mouse_pos)
-                botones.append(boton)
-
-        # --- INDICADORES DE LA ALDEA ---
-        dibujar_indicadores(pantalla, fuente_indicador, estado.indicadores, 20, 20)
-
-        # --- MANEJAR CLIC EN BOTONES ---
-        if clic_realizado:
-            for boton in botones:
-                if boton.clic_dentro(mouse_pos):
-                    estado.elegir_opcion(boton.texto)
-                    break
-
-        # --- MENSAJE SI EL JUEGO TERMINO ---
-        if estado.juego_terminado():
-            aviso = fuente_boton.render("Presiona ESC para salir", True, (220, 200, 160))
-            pantalla.blit(aviso, (ANCHO // 2 - aviso.get_width() // 2, ALTO - 40))
-
+        presentar_lienzo(pantalla, lienzo)
         pygame.display.flip()
         reloj.tick(FPS)
 

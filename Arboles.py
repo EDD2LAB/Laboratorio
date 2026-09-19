@@ -76,7 +76,7 @@ def construir_tablilla_rumor_politico():
     """
     raiz = NodoDecision(
         "El Aspirante Kael quiere cerrar el puente norte",
-        categoria="Rumor Politico > Sobre un Aspirante",
+        categoria=buscar_categoria(ARBOL_CATEGORIAS, "Rumor Politico", "Sobre un Aspirante"),
     )
 
     consultar = NodoDecision("¿Es verdadera esta tablilla?")
@@ -120,7 +120,7 @@ def construir_tablilla_suceso_natural():
     """
     raiz = NodoDecision(
         "Anoche cayo un rayo cerca del Mirador Alto",
-        categoria="Suceso Natural > Clima",
+        categoria=buscar_categoria(ARBOL_CATEGORIAS, "Suceso Natural", "Clima"),
     )
     raiz.agregar_opcion(
         "Colgarla",
@@ -146,7 +146,7 @@ def construir_tablilla_acusacion():
     """
     raiz = NodoDecision(
         "La Aspirante Mira regalo comida a cambio de votos",
-        categoria="Acusacion Personal > Entre Aspirantes",
+        categoria=buscar_categoria(ARBOL_CATEGORIAS, "Acusacion Personal", "Entre Aspirantes"),
     )
     raiz.agregar_opcion(
         "Colgarla",
@@ -180,12 +180,22 @@ class NodoCategoria:
     de tablilla que puede generar el juego.
     """
 
-    def __init__(self, nombre):
+    def __init__(self, nombre, padre=None):
         self.nombre = nombre
         self.subcategorias = []
+        self.padre = padre
 
     def agregar_subcategoria(self, nodo_hijo):
         self.subcategorias.append(nodo_hijo)
+        nodo_hijo.padre = self
+
+    def ruta_desde_raiz(self):
+        ruta = []
+        nodo = self
+        while nodo is not None:
+            ruta.append(nodo)
+            nodo = nodo.padre
+        return list(reversed(ruta))
 
     def es_hoja(self):
         return len(self.subcategorias) == 0
@@ -215,6 +225,18 @@ def construir_arbol_categorias():
     raiz.agregar_subcategoria(suceso_natural)
     raiz.agregar_subcategoria(acusacion)
     return raiz
+
+
+def buscar_categoria(raiz, *nombres):
+    nodo = raiz
+    for nombre in nombres:
+        nodo = next((hijo for hijo in nodo.subcategorias if hijo.nombre == nombre), None)
+        if nodo is None:
+            raise ValueError(f"Categoria inexistente: {' > '.join(nombres)}")
+    return nodo
+
+
+ARBOL_CATEGORIAS = construir_arbol_categorias()
 
 
 # ---------------------------------------------------------------------------
