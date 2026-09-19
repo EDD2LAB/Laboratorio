@@ -84,14 +84,14 @@ def construir_tablilla_rumor_politico():
         "Si",
         NodoDecision(
             "Colgaste una verdad confirmada",
-            efecto={"sabiduria": +5, "confianza_consejo": +2},
+            efecto={"sabiduria": +15, "confianza_consejo": +10},
         ),
     )
     consultar.agregar_opcion(
         "No",
         NodoDecision(
             "Quemaste un rumor falso a tiempo",
-            efecto={"susurros_falsos": -5, "armonia": +3},
+            efecto={"susurros_falsos": -18, "armonia": +10},
         ),
     )
 
@@ -99,7 +99,7 @@ def construir_tablilla_rumor_politico():
         "Colgarla",
         NodoDecision(
             "La tablilla se propaga sin verificar",
-            efecto={"susurros_falsos": +4, "confianza_consejo": -2},
+            efecto={"susurros_falsos": +25, "confianza_consejo": -15, "armonia": -8},
         ),
     )
     raiz.agregar_opcion("Consultar", consultar)
@@ -107,7 +107,7 @@ def construir_tablilla_rumor_politico():
         "Quemarla",
         NodoDecision(
             "La tablilla desaparece, pero pudo ser verdad",
-            efecto={"sabiduria": -2},
+            efecto={"sabiduria": -10, "confianza_consejo": -6},
         ),
     )
     return raiz
@@ -126,14 +126,14 @@ def construir_tablilla_suceso_natural():
         "Colgarla",
         NodoDecision(
             "La aldea se entera del suceso natural",
-            efecto={"armonia": +1},
+            efecto={"armonia": +12, "confianza_consejo": +5},
         ),
     )
     raiz.agregar_opcion(
         "Quemarla",
         NodoDecision(
             "Se ignora informacion util para la aldea",
-            efecto={"confianza_consejo": -1},
+            efecto={"confianza_consejo": -12, "armonia": -8},
         ),
     )
     return raiz
@@ -150,22 +150,31 @@ def construir_tablilla_acusacion():
     )
     raiz.agregar_opcion(
         "Colgarla",
-        NodoDecision("El rumor crece rapido", efecto={"susurros_falsos": +6}),
+        NodoDecision(
+            "El rumor crece rapido",
+            efecto={"susurros_falsos": +30, "armonia": -15, "confianza_consejo": -12},
+        ),
     )
     raiz.agregar_opcion(
         "Consultar",
         NodoDecision(
             "El Guardian confirma que es exagerado",
-            efecto={"sabiduria": +3, "susurros_falsos": -2},
+            efecto={"sabiduria": +12, "susurros_falsos": -18, "confianza_consejo": +6},
         ),
     )
     raiz.agregar_opcion(
         "Quemarla",
-        NodoDecision("Se evita un conflicto innecesario", efecto={"grietas_puentes": -1}),
+        NodoDecision(
+            "Se evita un conflicto innecesario",
+            efecto={"grietas_puentes": -15, "armonia": +10},
+        ),
     )
     raiz.agregar_opcion(
         "Ignorarla",
-        NodoDecision("La tablilla se pierde entre otras", efecto={}),
+        NodoDecision(
+            "La tablilla se pierde entre otras",
+            efecto={"susurros_falsos": +10, "grietas_puentes": +8},
+        ),
     )
     return raiz
 

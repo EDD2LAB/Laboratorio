@@ -397,29 +397,26 @@ def dibujar_resultado_evento(superficie, recursos, estado):
     superficie.blit(recursos["fondo_tablilla"], (0, 0))
     resultado = estado.resultado_evento_actual()
     categoria, subcategorias = formatear_categoria(resultado["categoria"])
-    panel = pygame.Rect(145, 158, 670, 390)
-    fondo = superficie_con_alpha(panel.size, (18, 36, 29, 238))
-    superficie.blit(fondo, panel.topleft)
-    pygame.draw.rect(superficie, ORO, panel, width=3, border_radius=16)
+    marco = recursos["fondo_clasificacion"]
+    rect = marco.get_rect(center=(ANCHO // 2, 355))
+    superficie.blit(marco, rect)
 
-    titulo = recursos["fuente_panel_titulo"].render("CLASIFICACIÓN COMPLETADA", True, ORO)
-    superficie.blit(titulo, titulo.get_rect(center=(panel.centerx, panel.y + 55)))
-    introduccion = recursos["fuente_mapa"].render("Esta tablilla era un", True, CREMA)
-    superficie.blit(introduccion, introduccion.get_rect(center=(panel.centerx, panel.y + 112)))
-    categoria_texto = recursos["fuente_resultado"].render(categoria.upper(), True, (116, 203, 121))
-    superficie.blit(categoria_texto, categoria_texto.get_rect(center=(panel.centerx, panel.y + 165)))
+    introduccion = recursos["fuente_mapa"].render("Esta tablilla era un", True, TINTA)
+    superficie.blit(introduccion, introduccion.get_rect(center=(rect.centerx, rect.y + 188)))
+    categoria_texto = recursos["fuente_resultado"].render(categoria.upper(), True, (48, 121, 61))
+    superficie.blit(categoria_texto, categoria_texto.get_rect(center=(rect.centerx, rect.y + 240)))
     if subcategorias:
-        detalle = recursos["fuente_panel"].render(f"Subcategoría: {' · '.join(subcategorias)}", True, CREMA)
-        superficie.blit(detalle, detalle.get_rect(center=(panel.centerx, panel.y + 211)))
+        detalle = recursos["fuente_panel"].render(f"Subcategoría: {' · '.join(subcategorias)}", True, TINTA)
+        superficie.blit(detalle, detalle.get_rect(center=(rect.centerx, rect.y + 286)))
 
-    consecuencia = envolver_texto(resultado["resultado"], recursos["fuente_mapa"], panel.width - 90)
-    y = panel.y + 265
+    consecuencia = envolver_texto(resultado["resultado"], recursos["fuente_mapa"], rect.width - 150)
+    y = rect.y + 340
     for linea in consecuencia:
-        texto = recursos["fuente_mapa"].render(linea, True, CREMA)
-        superficie.blit(texto, texto.get_rect(center=(panel.centerx, y)))
+        texto = recursos["fuente_mapa"].render(linea, True, TINTA)
+        superficie.blit(texto, texto.get_rect(center=(rect.centerx, y)))
         y += 27
-    continuar = recursos["fuente_panel"].render("Haz clic para continuar", True, ORO)
-    superficie.blit(continuar, continuar.get_rect(center=(panel.centerx, panel.bottom - 42)))
+    continuar = recursos["fuente_panel"].render("Haz clic para continuar", True, MADERA)
+    superficie.blit(continuar, continuar.get_rect(center=(rect.centerx, rect.bottom - 70)))
 
 
 def dibujar_arbol_clasificacion(superficie, estado, fuente_titulo, fuente):
@@ -602,6 +599,7 @@ def main():
     recursos = {
         "mapa": mapa,
         "fondo_tablilla": crear_fondo_tablilla(mapa),
+        "fondo_clasificacion": cargar_imagen("FondoClasificacion.png", (860, 505)),
         "tablilla": cargar_imagen("Tablilla.png", (460, 460)),
         "colgar": cargar_imagen("Colgar.png", (190, 127)),
         "consultar": cargar_imagen("Consultar.png", (190, 127)),
