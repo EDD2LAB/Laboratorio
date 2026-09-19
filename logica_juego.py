@@ -8,7 +8,7 @@ como funciona el arbol por dentro.
 Este modulo depende de arboles.py (NodoDecision, construir_tablilla_*).
 """
 
-from arboles import (
+from Arboles import (
     construir_tablilla_rumor_politico,
     construir_tablilla_suceso_natural,
     construir_tablilla_acusacion,
@@ -48,6 +48,9 @@ class EstadoJuego:
         self.categoria_tablilla_actual = None
         self.camino_decision_actual = []
         self.historial_decisiones = []
+        # La clasificación se guarda como resultado: no se revela mientras
+        # el jugador todavía está tomando decisiones sobre la tablilla.
+        self.resultado_evento = None
         self.terminado = False
 
         self._cargar_siguiente_tablilla()
@@ -60,6 +63,8 @@ class EstadoJuego:
         """Texto que debe mostrarse en pantalla ahora mismo."""
         if self.terminado:
             return self._texto_resumen_final()
+        if self.evento_resuelto():
+            return self.resultado_evento["resultado"]
         return self.nodo_actual.texto
 
     def categoria_actual(self):
@@ -72,6 +77,21 @@ class EstadoJuego:
         if self.categoria_tablilla_actual is None:
             return None
         return " > ".join(nodo.nombre for nodo in self.categoria_tablilla_actual.ruta_desde_raiz()[1:])
+
+    def evento_resuelto(self):
+        """Indica que hay un resultado de clasificación pendiente de mostrar."""
+        return self.resultado_evento is not None
+
+    def resultado_evento_actual(self):
+        """Devuelve la clasificación y consecuencia del evento recién cerrado."""
+        return self.resultado_evento
+
+    def continuar_despues_resultado(self):
+        """Carga la siguiente tablilla después de que el jugador ve su clasificación."""
+        if not self.evento_resuelto():
+            return
+        self.resultado_evento = None
+        self._cargar_siguiente_tablilla()
 
     def ruta_categoria_actual(self):
         """
@@ -98,7 +118,7 @@ class EstadoJuego:
         Lista de textos de opciones para dibujar como botones.
         Devuelve una lista vacia si el juego termino.
         """
-        if self.terminado or self.nodo_actual is None:
+        if self.terminado or self.evento_resuelto() or self.nodo_actual is None:
             return []
         return list(self.nodo_actual.opciones.keys())
 
@@ -118,14 +138,15 @@ class EstadoJuego:
 
         if self.nodo_actual.es_hoja():
             self._aplicar_efecto(self.nodo_actual.efecto)
-            self.historial_decisiones.append({
+            self.resultado_evento = {
                 "categoria": self.ruta_categoria_actual(),
                 "camino": list(self.camino_decision_actual),
                 "resultado": self.nodo_actual.texto,
                 "efecto": dict(self.nodo_actual.efecto),
-            })
+            }
+            self.historial_decisiones.append(self.resultado_evento)
             self.tablillas_resueltas += 1
-            self._cargar_siguiente_tablilla()
+            self.nodo_actual = None
 
     def juego_terminado(self):
         return self.terminado

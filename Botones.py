@@ -15,6 +15,7 @@ from logica_juego import EstadoJuego
 ANCHO, ALTO = 960, 720
 FPS = 60
 RUTA_ASSETS = os.path.join(os.path.dirname(__file__), "Imagenes")
+RUTA_FUENTE = os.path.join(os.path.dirname(__file__), "Fuentes", "determination.ttf")
 
 CREMA = (255, 243, 210)
 TINTA = (61, 37, 25)
@@ -31,6 +32,10 @@ def cargar_imagen(nombre, tamano=None):
     except (pygame.error, FileNotFoundError) as error:
         raise RuntimeError(f"No se pudo cargar el recurso: {ruta}") from error
     return pygame.transform.scale(imagen, tamano) if tamano else imagen
+
+
+def cargar_fuente(tamano):
+    return pygame.font.Font(RUTA_FUENTE, tamano)
 
 
 def crear_fondo():
@@ -142,9 +147,9 @@ def dibujar_tablilla(superficie, tablilla, estado, fuente_texto, fuente_categori
     rect = tablilla.get_rect(center=(ANCHO // 2, 330))
     superficie.blit(tablilla, rect)
 
-    categoria = estado.categoria_actual()
-    if categoria:
-        cat = fuente_categoria.render(categoria.upper(), True, (116, 81, 47))
+    if estado.evento_resuelto():
+        categoria = estado.categoria_actual().split(" > ")[0].upper()
+        cat = fuente_categoria.render(f"ESTA TABLILLA ERA UN {categoria}", True, (116, 81, 47))
         superficie.blit(cat, cat.get_rect(center=(rect.centerx, rect.y + 178)))
 
     # Área interior del pergamino: deja libres el título y el icono decorativo.
@@ -162,10 +167,10 @@ def main():
     pygame.display.set_caption("La Copa — Tablilla del Guardián")
     reloj = pygame.time.Clock()
 
-    fuente_texto = pygame.font.SysFont("georgia", 22, bold=True)
-    fuente_categoria = pygame.font.SysFont("arial", 13, bold=True)
-    fuente_boton = pygame.font.SysFont("georgia", 19, bold=True)
-    fuente_indicador = pygame.font.SysFont("arial", 14, bold=True)
+    fuente_texto = cargar_fuente(22)
+    fuente_categoria = cargar_fuente(13)
+    fuente_boton = cargar_fuente(19)
+    fuente_indicador = cargar_fuente(14)
     tablilla = cargar_imagen("Tablilla.png", (460, 460))
     imagenes = {
         "colgar": cargar_imagen("Colgar.png", (190, 127)),
@@ -185,11 +190,15 @@ def main():
             elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
                 corriendo = False
             elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                for boton in botones:
-                    if boton.fue_clickeado(evento.pos):
-                        estado.elegir_opcion(boton.texto)
-                        botones = construir_botones(estado.opciones_actuales(), imagenes, fuente_boton)
-                        break
+                if estado.evento_resuelto():
+                    estado.continuar_despues_resultado()
+                    botones = construir_botones(estado.opciones_actuales(), imagenes, fuente_boton)
+                else:
+                    for boton in botones:
+                        if boton.fue_clickeado(evento.pos):
+                            estado.elegir_opcion(boton.texto)
+                            botones = construir_botones(estado.opciones_actuales(), imagenes, fuente_boton)
+                            break
 
         pantalla.blit(fondo, (0, 0))
         dibujar_indicadores(pantalla, estado.indicadores, fuente_indicador)
@@ -200,6 +209,9 @@ def main():
         else:
             for boton in botones:
                 boton.dibujar(pantalla, mouse_pos)
+            if estado.evento_resuelto():
+                aviso = fuente_boton.render("Haz clic para continuar", True, CREMA)
+                pantalla.blit(aviso, aviso.get_rect(center=(ANCHO // 2, 620)))
 
         pygame.display.flip()
         reloj.tick(FPS)

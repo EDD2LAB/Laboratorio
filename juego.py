@@ -20,6 +20,7 @@ ANCHO, ALTO = 960, 720
 RELACION_ASPECTO = ANCHO / ALTO
 FPS = 60
 RUTA_ASSETS = os.path.join(os.path.dirname(__file__), "Imagenes")
+RUTA_FUENTE = os.path.join(os.path.dirname(__file__), "Fuentes", "determination.ttf")
 
 CREMA = (255, 243, 210)
 TINTA = (61, 37, 25)
@@ -31,6 +32,7 @@ PANEL_OSCURO = (16, 31, 25, 218)
 
 ESCENA_MAPA = "mapa"
 ESCENA_TABLILLA = "tablilla"
+ESCENA_RESULTADO = "resultado"
 
 
 def normalizar_ruta(ruta):
@@ -66,6 +68,13 @@ def cargar_imagen(nombre, tamano=None, requerido=True):
     if tamano:
         imagen = pygame.transform.scale(imagen, tamano)
     return imagen
+
+
+def cargar_fuente(tamano):
+    """Usa la tipografía pixel-art incluida con el proyecto."""
+    if not os.path.isfile(RUTA_FUENTE):
+        raise RuntimeError(f"No se encontró la fuente del juego: {RUTA_FUENTE}")
+    return pygame.font.Font(RUTA_FUENTE, tamano)
 
 
 def cargar_animacion_guardian():
@@ -305,8 +314,7 @@ def texto_cinematica(estado):
     dia = estado.tablillas_resueltas + 1
     if estado.juego_terminado():
         return "Cierre del dia: el Guardian regresa al arbol central para revisar el resumen."
-    categoria = estado.categoria_actual() or "Sin categoria"
-    return f"Dia {dia}: el Guardian va en linea recta hacia la tablilla. Clasificacion: {categoria}."
+    return f"Dia {dia}: el Guardian va en linea recta hacia una nueva tablilla."
 
 
 def dibujar_mensaje_mapa(superficie, fuente, texto):
@@ -365,17 +373,53 @@ def dibujar_tablilla(superficie, tablilla, estado, fuente_texto, fuente_categori
     rect = tablilla.get_rect(center=(ANCHO // 2, 330))
     superficie.blit(tablilla, rect)
 
-    categoria = estado.categoria_actual()
-    if categoria:
-        cat = fuente_categoria.render(categoria.upper(), True, (116, 81, 47))
-        superficie.blit(cat, cat.get_rect(center=(rect.centerx, rect.y + 178)))
-
     lineas = envolver_texto(estado.texto_actual(), fuente_texto, 365)
     y = rect.y + 265 - len(lineas) * 31 // 2
     for linea in lineas:
         texto = fuente_texto.render(linea, True, TINTA)
         superficie.blit(texto, texto.get_rect(center=(rect.centerx, y)))
         y += 31
+
+
+def formatear_categoria(ruta):
+    """Convierte la ruta interna del árbol en texto natural para el jugador."""
+    nombres = {
+        "Rumor Politico": "Rumor Político",
+        "Suceso Natural": "Suceso Natural",
+        "Acusacion Personal": "Acusación Personal",
+    }
+    ruta_visible = [nombres.get(nombre, nombre) for nombre in ruta if nombre != "Tablilla"]
+    return ruta_visible[0] if ruta_visible else "Sin clasificación", ruta_visible[1:]
+
+
+def dibujar_resultado_evento(superficie, recursos, estado):
+    """Revela la clasificación solo cuando la decisión ya cerró el evento."""
+    superficie.blit(recursos["fondo_tablilla"], (0, 0))
+    resultado = estado.resultado_evento_actual()
+    categoria, subcategorias = formatear_categoria(resultado["categoria"])
+    panel = pygame.Rect(145, 158, 670, 390)
+    fondo = superficie_con_alpha(panel.size, (18, 36, 29, 238))
+    superficie.blit(fondo, panel.topleft)
+    pygame.draw.rect(superficie, ORO, panel, width=3, border_radius=16)
+
+    titulo = recursos["fuente_panel_titulo"].render("CLASIFICACIÓN COMPLETADA", True, ORO)
+    superficie.blit(titulo, titulo.get_rect(center=(panel.centerx, panel.y + 55)))
+    introduccion = recursos["fuente_mapa"].render("Esta tablilla era un", True, CREMA)
+    superficie.blit(introduccion, introduccion.get_rect(center=(panel.centerx, panel.y + 112)))
+    categoria_texto = recursos["fuente_resultado"].render(categoria.upper(), True, (116, 203, 121))
+    superficie.blit(categoria_texto, categoria_texto.get_rect(center=(panel.centerx, panel.y + 165)))
+    if subcategorias:
+        detalle = recursos["fuente_panel"].render(f"Subcategoría: {' · '.join(subcategorias)}", True, CREMA)
+        superficie.blit(detalle, detalle.get_rect(center=(panel.centerx, panel.y + 211)))
+
+    consecuencia = envolver_texto(resultado["resultado"], recursos["fuente_mapa"], panel.width - 90)
+    y = panel.y + 265
+    for linea in consecuencia:
+        texto = recursos["fuente_mapa"].render(linea, True, CREMA)
+        superficie.blit(texto, texto.get_rect(center=(panel.centerx, y)))
+        y += 27
+    continuar = recursos["fuente_panel"].render("Haz clic para continuar", True, ORO)
+    superficie.blit(continuar, continuar.get_rect(center=(panel.centerx, panel.bottom - 42)))
 
 
 def dibujar_arbol_clasificacion(superficie, estado, fuente_titulo, fuente):
@@ -544,14 +588,15 @@ def main():
     reloj = pygame.time.Clock()
     lienzo = pygame.Surface((ANCHO, ALTO))
 
-    fuente_texto = pygame.font.SysFont("georgia", 22, bold=True)
-    fuente_categoria = pygame.font.SysFont("arial", 13, bold=True)
-    fuente_boton = pygame.font.SysFont("georgia", 19, bold=True)
-    fuente_indicador = pygame.font.SysFont("arial", 14, bold=True)
-    fuente_etiqueta = pygame.font.SysFont("arial", 13, bold=True)
-    fuente_mapa = pygame.font.SysFont("georgia", 18, bold=True)
-    fuente_panel_titulo = pygame.font.SysFont("arial", 15, bold=True)
-    fuente_panel = pygame.font.SysFont("arial", 13)
+    fuente_texto = cargar_fuente(22)
+    fuente_categoria = cargar_fuente(13)
+    fuente_boton = cargar_fuente(19)
+    fuente_indicador = cargar_fuente(14)
+    fuente_etiqueta = cargar_fuente(13)
+    fuente_mapa = cargar_fuente(18)
+    fuente_panel_titulo = cargar_fuente(16)
+    fuente_panel = cargar_fuente(13)
+    fuente_resultado = cargar_fuente(28)
 
     mapa = cargar_imagen("Mapa.png", (ANCHO, ALTO))
     recursos = {
@@ -575,6 +620,7 @@ def main():
         "fuente_mapa": fuente_mapa,
         "fuente_panel_titulo": fuente_panel_titulo,
         "fuente_panel": fuente_panel,
+        "fuente_resultado": fuente_resultado,
     }
 
     estado = EstadoJuego()
@@ -597,16 +643,19 @@ def main():
                 pantalla = pygame.display.set_mode(evento.size, pygame.RESIZABLE)
             elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
                 corriendo = False
+            elif escena == ESCENA_RESULTADO and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                estado.continuar_despues_resultado()
+                botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+                escena = ESCENA_MAPA
+                inicio_escena = pygame.time.get_ticks()
             elif escena == ESCENA_TABLILLA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 pos_lienzo = convertir_mouse_a_lienzo(evento.pos, rect_lienzo)
                 for boton in botones:
                     if boton.fue_clickeado(pos_lienzo):
-                        resueltas_antes = estado.tablillas_resueltas
                         estado.elegir_opcion(boton.texto)
                         botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
-                        if estado.tablillas_resueltas != resueltas_antes or estado.juego_terminado():
-                            escena = ESCENA_MAPA
-                            inicio_escena = pygame.time.get_ticks()
+                        if estado.evento_resuelto():
+                            escena = ESCENA_RESULTADO
                         break
 
         if escena == ESCENA_MAPA and tiempo_ms - inicio_escena >= duracion_cinematica:
@@ -615,6 +664,8 @@ def main():
 
         if escena == ESCENA_MAPA:
             dibujar_mapa(lienzo, recursos, mundo, estado, tiempo_ms, inicio_escena)
+        elif escena == ESCENA_RESULTADO:
+            dibujar_resultado_evento(lienzo, recursos, estado)
         else:
             dibujar_escena_tablilla(lienzo, recursos, estado, botones, mouse_pos)
 
