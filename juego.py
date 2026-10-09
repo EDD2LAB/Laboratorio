@@ -189,7 +189,7 @@ def cargar_efecto_tablilla(nombre):
         limites = cuadro.get_bounding_rect()
         if limites.width and limites.height:
             cuadro = cuadro.subsurface(limites).copy()
-            escala = min(260 / cuadro.get_width(), 250 / cuadro.get_height(), 1)
+            escala = min(390 / cuadro.get_width(), 360 / cuadro.get_height(), 1)
             cuadro = pygame.transform.smoothscale(
                 cuadro, (max(1, round(cuadro.get_width() * escala)), max(1, round(cuadro.get_height() * escala)))
             )
@@ -787,14 +787,12 @@ def dibujar_pociones(superficie, recursos, usos, animacion, mouse_pos):
     rectangulos = rectangulos_pociones(recursos)
     for clave, rect in rectangulos.items():
         imagen = recursos["pociones"][clave].copy()
-        if usos[clave] <= 0:
-            imagen.fill((80, 80, 80, 180), special_flags=pygame.BLEND_RGBA_MULT)
         superficie.blit(imagen, rect)
-        contador = recursos["fuente_categoria"].render(str(usos[clave]), True, CREMA)
+        contador = recursos["fuente_categoria"].render("∞", True, CREMA)
         superficie.blit(contador, contador.get_rect(bottomright=(rect.right + 3, rect.bottom + 3)))
         if rect.collidepoint(mouse_pos):
             aviso = recursos["fuente_categoria"].render(
-                f"Poción de {nombres[clave]}: se usa al tomar esa decisión", True, CREMA
+                f"Poción de {nombres[clave]}: se activa al tomar esa decisión", True, CREMA
             )
             fondo = superficie_con_alpha((aviso.get_width() + 16, 26), (14, 31, 23, 225))
             posicion = (ANCHO - fondo.get_width() - 14, 122)
@@ -805,7 +803,19 @@ def dibujar_pociones(superficie, recursos, usos, animacion, mouse_pos):
         cuadros = recursos["efectos_decision"][animacion["clave"]]
         indice = min(len(cuadros) - 1, int(progreso * len(cuadros)))
         cuadro = cuadros[indice]
-        superficie.blit(cuadro, cuadro.get_rect(center=(CENTRO_TABLILLA[0], CENTRO_TABLILLA[1] + 15)))
+        colores = {
+            "colgar": (248, 202, 76),
+            "consultar": (80, 181, 255),
+            "quemar": (255, 77, 35),
+            "ignorar": (179, 97, 230),
+        }
+        color = colores[animacion["clave"]]
+        intensidad = int(52 * (1 - abs(progreso * 2 - 1)))
+        halo = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        pygame.draw.circle(halo, (*color, intensidad), (CENTRO_TABLILLA[0], CENTRO_TABLILLA[1] + 15), 150)
+        superficie.blit(halo, (0, 0))
+        temblor = int(8 * (1 - progreso) * (-1 if indice % 2 else 1))
+        superficie.blit(cuadro, cuadro.get_rect(center=(CENTRO_TABLILLA[0] + temblor, CENTRO_TABLILLA[1] + 15)))
     return rectangulos
 
 
@@ -1170,15 +1180,7 @@ def main():
                     escena = ESCENA_RESULTADO
                 elif opcion_teclado and escena == ESCENA_TABLILLA:
                     clave = clave_pocion(opcion_teclado)
-                    if usos_pociones[clave] > 0:
-                        usos_pociones[clave] -= 1
-                        pocion_animacion = {"clave": clave, "opcion": opcion_teclado, "restante": 0.72, "duracion": 0.72}
-                    else:
-                        estado.elegir_opcion(opcion_teclado)
-                        botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
-                        grupo_botones.reemplazar(botones)
-                        if estado.evento_resuelto():
-                            escena = ESCENA_CONSECUENCIA
+                    pocion_animacion = {"clave": clave, "opcion": opcion_teclado, "restante": 0.88, "duracion": 0.88}
             elif escena == ESCENA_RESULTADO and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 estado.continuar_despues_resultado()
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
@@ -1208,15 +1210,7 @@ def main():
                     for boton in botones:
                         if boton.fue_clickeado(pos_lienzo):
                             clave = clave_pocion(boton.texto)
-                            if usos_pociones[clave] > 0:
-                                usos_pociones[clave] -= 1
-                                pocion_animacion = {"clave": clave, "opcion": boton.texto, "restante": 0.72, "duracion": 0.72}
-                            else:
-                                estado.elegir_opcion(boton.texto)
-                                botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
-                                grupo_botones.reemplazar(botones)
-                                if estado.evento_resuelto():
-                                    escena = ESCENA_CONSECUENCIA
+                            pocion_animacion = {"clave": clave, "opcion": boton.texto, "restante": 0.88, "duracion": 0.88}
                             break
 
         mundo["guardian"].actualizar(delta_ms)
