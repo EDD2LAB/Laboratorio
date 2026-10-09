@@ -178,6 +178,25 @@ def cargar_frame_caldero(nombre, indice=1):
     return pygame.transform.scale(spritesheet.subsurface(area).copy(), (72, 72))
 
 
+def cargar_efecto_tablilla(nombre):
+    """Convierte un spritesheet horizontal de 12 pasos en fotogramas útiles."""
+    spritesheet = cargar_imagen(nombre)
+    cantidad = 12
+    ancho_frame = spritesheet.get_width() // cantidad
+    cuadros = []
+    for indice in range(cantidad):
+        cuadro = spritesheet.subsurface((indice * ancho_frame, 0, ancho_frame, spritesheet.get_height())).copy()
+        limites = cuadro.get_bounding_rect()
+        if limites.width and limites.height:
+            cuadro = cuadro.subsurface(limites).copy()
+            escala = min(260 / cuadro.get_width(), 250 / cuadro.get_height(), 1)
+            cuadro = pygame.transform.smoothscale(
+                cuadro, (max(1, round(cuadro.get_width() * escala)), max(1, round(cuadro.get_height() * escala)))
+            )
+        cuadros.append(cuadro)
+    return cuadros
+
+
 def cargar_animacion_aspirante():
     nombres = [
         "Fila 1 - 1 . Aspirante_a_cacique-Idle .png",
@@ -782,14 +801,11 @@ def dibujar_pociones(superficie, recursos, usos, animacion, mouse_pos):
             superficie.blit(fondo, posicion)
             superficie.blit(aviso, (posicion[0] + 8, posicion[1] + 5))
     if animacion:
-        progreso = 1 - animacion["restante"] / 0.52
-        origen = rectangulos[animacion["clave"]].center
-        destino = (CENTRO_TABLILLA[0], CENTRO_TABLILLA[1] + 30)
-        x = round(origen[0] + (destino[0] - origen[0]) * progreso)
-        y = round(origen[1] + (destino[1] - origen[1]) * progreso)
-        tamano = 42 + round(18 * progreso)
-        imagen = pygame.transform.smoothscale(recursos["pociones"][animacion["clave"]], (tamano, tamano))
-        superficie.blit(imagen, imagen.get_rect(center=(x, y)))
+        progreso = 1 - animacion["restante"] / animacion["duracion"]
+        cuadros = recursos["efectos_decision"][animacion["clave"]]
+        indice = min(len(cuadros) - 1, int(progreso * len(cuadros)))
+        cuadro = cuadros[indice]
+        superficie.blit(cuadro, cuadro.get_rect(center=(CENTRO_TABLILLA[0], CENTRO_TABLILLA[1] + 15)))
     return rectangulos
 
 
@@ -959,6 +975,12 @@ def main():
             "consultar": cargar_imagen(os.path.join("Pociones", "pocion_azul.png"), (42, 42)),
             "quemar": cargar_imagen(os.path.join("Pociones", "pocion_roja.png"), (42, 42)),
             "ignorar": cargar_imagen(os.path.join("Pociones", "pocion_morada.png"), (42, 42)),
+        },
+        "efectos_decision": {
+            "colgar": cargar_efecto_tablilla("Colgar_tablilla.png"),
+            "consultar": cargar_efecto_tablilla("Consultar_tablilla.png"),
+            "quemar": cargar_efecto_tablilla("Quemar_tablilla.png"),
+            "ignorar": cargar_efecto_tablilla("Ignorar_tablilla.png"),
         },
         "final_positivo": cargar_imagen(os.path.join("Finales", "Final_positivo.jpeg"), (ANCHO, ALTO)),
         "final_negativo": cargar_imagen(os.path.join("Finales", "Game_over.jpeg"), (ANCHO, ALTO)),
@@ -1150,7 +1172,7 @@ def main():
                     clave = clave_pocion(opcion_teclado)
                     if usos_pociones[clave] > 0:
                         usos_pociones[clave] -= 1
-                        pocion_animacion = {"clave": clave, "opcion": opcion_teclado, "restante": 0.52}
+                        pocion_animacion = {"clave": clave, "opcion": opcion_teclado, "restante": 0.72, "duracion": 0.72}
                     else:
                         estado.elegir_opcion(opcion_teclado)
                         botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
@@ -1188,7 +1210,7 @@ def main():
                             clave = clave_pocion(boton.texto)
                             if usos_pociones[clave] > 0:
                                 usos_pociones[clave] -= 1
-                                pocion_animacion = {"clave": clave, "opcion": boton.texto, "restante": 0.52}
+                                pocion_animacion = {"clave": clave, "opcion": boton.texto, "restante": 0.72, "duracion": 0.72}
                             else:
                                 estado.elegir_opcion(boton.texto)
                                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
