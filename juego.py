@@ -110,15 +110,15 @@ def cargar_icono_hud(nombre):
     # distintos. Estos límites separan el medallón de la etiqueta de texto de
     # cada recurso antes de normalizarlo a una misma medida.
     proporcion_icono = {
-        "Barra_sabiduría.png": 1.10,
-        "Barra_confianza.png": 0.82,
-        "Barra_armonía.png": 0.95,
-        "Barra_susurros_falsos.png": 0.95,
+        "Barra_sabiduría.png": 1.15,
+        "Barra_confianza.png": 0.88,
+        "Barra_armonía.png": 0.98,
+        "Barra_susurros_falsos.png": 0.98,
         "Barra_desinformación.png": 1.30,
     }.get(nombre, 1.0)
     ancho_icono = min(imagen.get_width(), round(imagen.get_height() * proporcion_icono))
     icono = imagen.subsurface((0, 0, ancho_icono, imagen.get_height())).copy()
-    return pygame.transform.smoothscale(icono, (54, 54))
+    return pygame.transform.smoothscale(icono, (60, 60))
 
 
 def cargar_animacion_guardian():
@@ -477,8 +477,6 @@ def buscar_imagen_para_opcion(texto, imagenes):
         return imagenes["consultar"]
     if "quemar" in texto:
         return imagenes["quemar"]
-    if "ignorar" in texto:
-        return imagenes["ignorar"]
     return None
 
 
@@ -835,7 +833,6 @@ def main():
         "colgar": cargar_imagen("Colgar.png", (190, 127)),
         "consultar": cargar_imagen("Consultar.png", (190, 127)),
         "quemar": cargar_imagen("Quemar.png", (190, 127)),
-        "ignorar": cargar_imagen("Ignorar_tablilla.png", (190, 127)),
         "guardian_quieto": cargar_sprite("Fila 1 - 1. Guardian.png", (86, 86)),
         "guardian_caminando": cargar_spritesheet("Fila 2. Guardian.png", 8, (86, 86)),
         "guardian_hablando": [cargar_imagen("Guardian_hablando.png", (86, 86), requerido=False) or cargar_imagen("Guardian.jpeg", (86, 86))],

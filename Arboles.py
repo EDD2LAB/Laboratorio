@@ -116,8 +116,8 @@ def construir_tablilla_rumor_politico():
 def construir_tablilla_suceso_natural():
     """
     Tablilla: 'Anoche cayo un rayo cerca del Mirador Alto'
-    Incluye las cuatro decisiones principales para mantener la interfaz y el
-    aprendizaje consistentes en todas las tablillas.
+    Incluye la consulta adicional sin introducir una opción visual no
+    disponible para esta tablilla.
     """
     raiz = NodoDecision(
         "Anoche cayo un rayo cerca del Mirador Alto",
@@ -142,13 +142,6 @@ def construir_tablilla_suceso_natural():
         NodoDecision(
             "El Guardián confirma el suceso y avisa a las plataformas cercanas",
             efecto={"sabiduria": +12, "confianza_consejo": +8, "armonia": +6},
-        ),
-    )
-    raiz.agregar_opcion(
-        "Ignorarla",
-        NodoDecision(
-            "El aviso llega tarde y algunas rutas quedan sin preparar",
-            efecto={"confianza_consejo": -8, "desinformación": +10},
         ),
     )
     return raiz
