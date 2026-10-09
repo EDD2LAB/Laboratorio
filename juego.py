@@ -770,28 +770,41 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
         "ignorar": (179, 97, 230),
     }
     color = colores[clave]
-    frente_quema = []
+    borde_quema = []
 
     # La textura también ocurre sobre la tablilla: no se trata de un icono
     # superpuesto sino del objeto del juego respondiendo a la elección.
     velo = pygame.Surface(tablilla.get_size(), pygame.SRCALPHA)
     pulso = math.sin(progreso * math.pi)
     if clave == "quemar":
-        # El fuego avanza desde la base y el lado izquierdo con un borde
-        # irregular. Todo lo que queda detrás se vuelve transparente.
+        # El fuego cierra desde todos los bordes, conservando un trozo central
+        # cada vez menor de pergamino.
         ancho_tablilla, alto_tablilla = tablilla.get_size()
-        for indice in range(17):
-            fraccion = indice / 16
-            lateral = (1 - fraccion) * .22
-            variacion = ((indice * 19) % 31 - 15) * min(.7, progreso * 1.25)
-            avance = min(1, progreso * (1.05 + lateral) + (indice % 3) * .018)
-            frente_quema.append((int(fraccion * ancho_tablilla), max(0, min(alto_tablilla, int(alto_tablilla * (1 - avance) + variacion)))))
         mascara = pygame.Surface(tablilla.get_size(), pygame.SRCALPHA)
-        mascara.fill((255, 255, 255, 255))
-        zona_consumida = [(0, alto_tablilla), (ancho_tablilla, alto_tablilla), *reversed(frente_quema)]
-        pygame.draw.polygon(mascara, (0, 0, 0, 0), zona_consumida)
-        pygame.draw.lines(velo, (70, 14, 4, 210), False, frente_quema, 16)
-        pygame.draw.lines(velo, (255, 112, 18, 235), False, frente_quema, 7)
+        mascara.fill((0, 0, 0, 0))
+        if progreso < .985:
+            inset_x = ancho_tablilla * progreso * .50
+            inset_y = alto_tablilla * progreso * .50
+            amplitud = 22 * progreso
+            for indice in range(6):
+                x = inset_x + (ancho_tablilla - inset_x * 2) * indice / 5
+                y = inset_y + math.sin(indice * 2.7) * amplitud
+                borde_quema.append((int(x), int(y)))
+            for indice in range(1, 6):
+                x = ancho_tablilla - inset_x + math.cos(indice * 2.1) * amplitud
+                y = inset_y + (alto_tablilla - inset_y * 2) * indice / 5
+                borde_quema.append((int(x), int(y)))
+            for indice in range(1, 6):
+                x = ancho_tablilla - inset_x - (ancho_tablilla - inset_x * 2) * indice / 5
+                y = alto_tablilla - inset_y + math.sin(indice * 2.2 + 1) * amplitud
+                borde_quema.append((int(x), int(y)))
+            for indice in range(1, 5):
+                x = inset_x + math.cos(indice * 2.4 + 1) * amplitud
+                y = alto_tablilla - inset_y - (alto_tablilla - inset_y * 2) * indice / 5
+                borde_quema.append((int(x), int(y)))
+            pygame.draw.polygon(mascara, (255, 255, 255, 255), borde_quema)
+            pygame.draw.lines(velo, (48, 20, 10, 230), True, borde_quema, 14)
+            pygame.draw.lines(velo, (230, 86, 18, 245), True, borde_quema, 5)
     elif clave == "consultar":
         linea_y = int((tablilla.get_height() + 54) * progreso) - 27
         pygame.draw.rect(velo, (*color, 56), (0, linea_y - 28, tablilla.get_width(), 56))
@@ -835,19 +848,33 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
     superficie.blit(halo, (0, 0))
     superficie.blit(tablilla, rect)
 
-    if clave == "quemar":
+    if clave == "quemar" and borde_quema:
         # Un borde carbonizado rompe la tablilla y los trozos caen: no hay una
         # capa de llamas decorativa cubriendo el pergamino.
         fragmentos = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
         borde_global = [
             (rect.left + int(x / recursos["tablilla"].get_width() * rect.width), rect.top + int(y / recursos["tablilla"].get_height() * rect.height))
-            for x, y in frente_quema
+            for x, y in borde_quema
         ]
         for indice, (x, base) in enumerate(borde_global):
             if indice < len(borde_global) - 1:
                 siguiente = borde_global[indice + 1]
                 pygame.draw.line(fragmentos, (34, 18, 11, 238), (x, base), siguiente, 10)
                 pygame.draw.line(fragmentos, (182, 73, 27, 215), (x, base), siguiente, 3)
+            # Pequeñas lenguas de fuego adheridas a todo el contorno, no solo
+            # al borde inferior. Apuntan hacia fuera del pergamino.
+            if indice % 2 == 0:
+                dx, dy = x - rect.centerx, base - rect.centery
+                distancia = max(1, math.hypot(dx, dy))
+                nx, ny = dx / distancia, dy / distancia
+                tx, ty = -ny, nx
+                largo = int(13 + 20 * pulso + indice % 4 * 4)
+                punta = (int(x + nx * largo), int(base + ny * largo))
+                izquierda = (int(x + tx * 7), int(base + ty * 7))
+                derecha = (int(x - tx * 7), int(base - ty * 7))
+                pygame.draw.polygon(fragmentos, (226, 62, 10, 235), [izquierda, derecha, punta])
+                punta_interior = (int(x + nx * (largo * .62)), int(base + ny * (largo * .62)))
+                pygame.draw.polygon(fragmentos, (255, 178, 28, 245), [(x, base), izquierda, punta_interior, derecha])
             if indice % 2 == 0:
                 caida = int(16 + progreso * (42 + indice * 4))
                 tamano = 5 + indice % 5
@@ -859,8 +886,11 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
                 )
         for indice in range(16):
             x, borde_y = borde_global[indice % len(borde_global)]
-            y = borde_y + int(18 + (indice % 5) * 16 * progreso)
-            pygame.draw.circle(fragmentos, (55, 38, 30, int(190 * (1 - progreso * .25))), (x, y), 2 + indice % 3)
+            dx, dy = x - rect.centerx, borde_y - rect.centery
+            distancia = max(1, math.hypot(dx, dy))
+            y = borde_y + int(dy / distancia * (18 + (indice % 5) * 12 * progreso))
+            x += int(dx / distancia * (18 + (indice % 5) * 12 * progreso))
+            pygame.draw.circle(fragmentos, (72, 42, 26, int(190 * (1 - progreso * .25))), (x, y), 2 + indice % 3)
         superficie.blit(fragmentos, (0, 0))
     elif clave == "consultar":
         brillo = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
