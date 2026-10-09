@@ -836,39 +836,32 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
     superficie.blit(tablilla, rect)
 
     if clave == "quemar":
-        # Llamas y brasa recorren el borde que está consumiendo LA tablilla.
-        fuego = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        # Un borde carbonizado rompe la tablilla y los trozos caen: no hay una
+        # capa de llamas decorativa cubriendo el pergamino.
+        fragmentos = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
         borde_global = [
             (rect.left + int(x / recursos["tablilla"].get_width() * rect.width), rect.top + int(y / recursos["tablilla"].get_height() * rect.height))
             for x, y in frente_quema
         ]
         for indice, (x, base) in enumerate(borde_global):
-            alto_llama = int(18 + (indice % 5) * 9 + 26 * pulso)
+            if indice < len(borde_global) - 1:
+                siguiente = borde_global[indice + 1]
+                pygame.draw.line(fragmentos, (34, 18, 11, 238), (x, base), siguiente, 10)
+                pygame.draw.line(fragmentos, (182, 73, 27, 215), (x, base), siguiente, 3)
             if indice % 2 == 0:
-                pygame.draw.polygon(fuego, (235, 55, 10, 240), [(x - 12, base + 7), (x + 12, base + 7), (x, base - alto_llama)])
-                pygame.draw.polygon(fuego, (255, 171, 25, 245), [(x - 6, base + 4), (x + 6, base + 4), (x, base - alto_llama * .58)])
-                pygame.draw.circle(fuego, (255, 225, 103, 245), (x, base), 5)
-            if indice % 3 == 0:
-                pygame.draw.polygon(fuego, (244, 69, 12, 225), [(rect.left - 5, base + 8), (rect.left + 8, base + 3), (rect.left - 2, base - alto_llama)])
-        for indice in range(20):
+                caida = int(16 + progreso * (42 + indice * 4))
+                tamano = 5 + indice % 5
+                deriva = int(math.sin(progreso * 9 + indice) * (10 + indice % 3 * 5))
+                pygame.draw.polygon(
+                    fragmentos,
+                    (202, 133, 79, int(235 * (1 - progreso * .35))),
+                    [(x - tamano, base + 3), (x + tamano, base + 5), (x + deriva + 2, base + caida), (x + deriva - 5, base + caida - 3)],
+                )
+        for indice in range(16):
             x, borde_y = borde_global[indice % len(borde_global)]
-            y = borde_y - int(18 + (indice % 6) * 18 * pulso)
-            pygame.draw.circle(fuego, (255, 191, 64, int(220 * (1 - progreso * .35))), (x, y), 2 + indice % 3)
-        for indice in range(7):
-            x, borde_y = borde_global[(indice * 2) % len(borde_global)]
-            y = borde_y - int(30 + progreso * (30 + indice * 10))
-            pygame.draw.circle(fuego, (46, 40, 42, int(96 * progreso)), (x, y), 14 + indice % 3 * 6)
-        superficie.blit(fuego, (0, 0))
-
-        # Capa de llama ilustrada: conserva un centro transparente para que el
-        # mensaje siga viéndose hasta que el fuego alcance esa zona.
-        entrada = min(1, progreso * 5)
-        salida = min(1, (1 - progreso) * 8)
-        llamas = recursos["fuego_tablilla"].copy()
-        llamas.set_alpha(int(255 * min(entrada, salida)))
-        elevacion = int(18 * math.sin(progreso * math.pi))
-        rect_llamas = llamas.get_rect(center=(rect.centerx, rect.bottom - 118 - elevacion))
-        superficie.blit(llamas, rect_llamas)
+            y = borde_y + int(18 + (indice % 5) * 16 * progreso)
+            pygame.draw.circle(fragmentos, (55, 38, 30, int(190 * (1 - progreso * .25))), (x, y), 2 + indice % 3)
+        superficie.blit(fragmentos, (0, 0))
     elif clave == "consultar":
         brillo = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
         y_scan = rect.top + int(rect.height * progreso)
@@ -1151,7 +1144,6 @@ def main():
             "quemar": cargar_efecto_tablilla("Quemar_tablilla.png"),
             "ignorar": cargar_efecto_tablilla("Ignorar_tablilla.png"),
         },
-        "fuego_tablilla": cargar_imagen(os.path.join("Decisiones tablilla", "Fuego_tablilla_v2.png"), (540, 360)),
         "final_positivo": cargar_imagen(os.path.join("Finales", "Final_positivo.jpeg"), (ANCHO, ALTO)),
         "final_negativo": cargar_imagen(os.path.join("Finales", "Game_over.jpeg"), (ANCHO, ALTO)),
         "guardian_quieto": cargar_sprite("Fila 1 - 1. Guardian.png", (86, 86)),
