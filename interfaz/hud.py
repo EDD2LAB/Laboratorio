@@ -44,7 +44,7 @@ class HUDIndicadores:
 
     def dibujar(self, superficie, x=14, y=12):
         nombres = list(self.objetivos)
-        alto_fila = 68
+        alto_fila = 70
         panel = pygame.Rect(x - 6, y - 5, 270, max(70, len(nombres) * alto_fila + 12))
         velo = pygame.Surface(panel.size, pygame.SRCALPHA)
         velo.fill((10, 27, 20, 182))

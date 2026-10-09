@@ -118,7 +118,12 @@ def cargar_icono_hud(nombre):
     }.get(nombre, 1.0)
     ancho_icono = min(imagen.get_width(), round(imagen.get_height() * proporcion_icono))
     icono = imagen.subsurface((0, 0, ancho_icono, imagen.get_height())).copy()
-    return pygame.transform.smoothscale(icono, (60, 60))
+    # Se deja aire transparente alrededor del emblema. Así las hojas y los
+    # adornos no quedan pegados ni parecen cortados por el borde del HUD.
+    icono_escalado = pygame.transform.smoothscale(icono, (58, 58))
+    contenedor = pygame.Surface((66, 66), pygame.SRCALPHA)
+    contenedor.blit(icono_escalado, (4, 4))
+    return contenedor
 
 
 def cargar_animacion_guardian():
@@ -477,6 +482,10 @@ def buscar_imagen_para_opcion(texto, imagenes):
         return imagenes["consultar"]
     if "quemar" in texto:
         return imagenes["quemar"]
+    # Ignorar se representa como botón de texto: su recurso de imagen es una
+    # lámina de sprites y no un botón individual.
+    if "ignorar" in texto:
+        return None
     return None
 
 

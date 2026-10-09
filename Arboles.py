@@ -144,6 +144,13 @@ def construir_tablilla_suceso_natural():
             efecto={"sabiduria": +12, "confianza_consejo": +8, "armonia": +6},
         ),
     )
+    raiz.agregar_opcion(
+        "Ignorarla",
+        NodoDecision(
+            "El aviso llega tarde y algunas rutas quedan sin preparar",
+            efecto={"confianza_consejo": -8, "desinformación": +10},
+        ),
+    )
     return raiz
 
 
