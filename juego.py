@@ -762,8 +762,8 @@ def rectangulos_pociones(recursos):
     }
 
 
-def dibujar_pociones(superficie, recursos, usos, seleccionada, mouse_pos):
-    """Inventario compacto: una poción por decisión, con un único uso."""
+def dibujar_pociones(superficie, recursos, usos, animacion, mouse_pos):
+    """Inventario compacto: cada decisión lanza automáticamente su pócima."""
     nombres = {"colgar": "Colgar", "consultar": "Consultar", "quemar": "Quemar", "ignorar": "Ignorar"}
     rectangulos = rectangulos_pociones(recursos)
     for clave, rect in rectangulos.items():
@@ -771,18 +771,25 @@ def dibujar_pociones(superficie, recursos, usos, seleccionada, mouse_pos):
         if usos[clave] <= 0:
             imagen.fill((80, 80, 80, 180), special_flags=pygame.BLEND_RGBA_MULT)
         superficie.blit(imagen, rect)
-        if clave == seleccionada:
-            pygame.draw.rect(superficie, ORO, rect.inflate(6, 6), 2, border_radius=8)
         contador = recursos["fuente_categoria"].render(str(usos[clave]), True, CREMA)
         superficie.blit(contador, contador.get_rect(bottomright=(rect.right + 3, rect.bottom + 3)))
         if rect.collidepoint(mouse_pos):
             aviso = recursos["fuente_categoria"].render(
-                f"Poción de {nombres[clave]}: selecciónala antes de decidir", True, CREMA
+                f"Poción de {nombres[clave]}: se usa al tomar esa decisión", True, CREMA
             )
             fondo = superficie_con_alpha((aviso.get_width() + 16, 26), (14, 31, 23, 225))
             posicion = (ANCHO - fondo.get_width() - 14, 122)
             superficie.blit(fondo, posicion)
             superficie.blit(aviso, (posicion[0] + 8, posicion[1] + 5))
+    if animacion:
+        progreso = 1 - animacion["restante"] / 0.52
+        origen = rectangulos[animacion["clave"]].center
+        destino = (CENTRO_TABLILLA[0], CENTRO_TABLILLA[1] + 30)
+        x = round(origen[0] + (destino[0] - origen[0]) * progreso)
+        y = round(origen[1] + (destino[1] - origen[1]) * progreso)
+        tamano = 42 + round(18 * progreso)
+        imagen = pygame.transform.smoothscale(recursos["pociones"][animacion["clave"]], (tamano, tamano))
+        superficie.blit(imagen, imagen.get_rect(center=(x, y)))
     return rectangulos
 
 
@@ -1031,7 +1038,7 @@ def main():
     ]
     indice_conversacion = 0
     usos_pociones = {"colgar": 1, "consultar": 1, "quemar": 1, "ignorar": 1}
-    pocion_seleccionada = None
+    pocion_animacion = None
     escena = ESCENA_MAPA
     escena_anterior = ESCENA_MAPA
     inicio_escena = pygame.time.get_ticks()
@@ -1105,7 +1112,7 @@ def main():
                     botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
                     grupo_botones.reemplazar(botones)
                     usos_pociones = {"colgar": 1, "consultar": 1, "quemar": 1, "ignorar": 1}
-                    pocion_seleccionada = None
+                    pocion_animacion = None
                     escena = ESCENA_MAPA
                     inicio_escena = pygame.time.get_ticks()
                     iniciar_cinematica_mapa(mundo)
@@ -1140,11 +1147,16 @@ def main():
                     grupo_botones.reemplazar(botones)
                     escena = ESCENA_RESULTADO
                 elif opcion_teclado and escena == ESCENA_TABLILLA:
-                    estado.elegir_opcion(opcion_teclado)
-                    botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
-                    grupo_botones.reemplazar(botones)
-                    if estado.evento_resuelto():
-                        escena = ESCENA_CONSECUENCIA
+                    clave = clave_pocion(opcion_teclado)
+                    if usos_pociones[clave] > 0:
+                        usos_pociones[clave] -= 1
+                        pocion_animacion = {"clave": clave, "opcion": opcion_teclado, "restante": 0.52}
+                    else:
+                        estado.elegir_opcion(opcion_teclado)
+                        botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+                        grupo_botones.reemplazar(botones)
+                        if estado.evento_resuelto():
+                            escena = ESCENA_CONSECUENCIA
             elif escena == ESCENA_RESULTADO and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 estado.continuar_despues_resultado()
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
@@ -1170,28 +1182,35 @@ def main():
                         break
             elif escena == ESCENA_TABLILLA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 pos_lienzo = convertir_mouse_a_lienzo(evento.pos, rect_lienzo)
-                for clave, rect in rectangulos_pociones(recursos).items():
-                    if rect.collidepoint(pos_lienzo) and usos_pociones[clave] > 0:
-                        pocion_seleccionada = None if pocion_seleccionada == clave else clave
-                        break
-                else:
+                if not pocion_animacion:
                     for boton in botones:
                         if boton.fue_clickeado(pos_lienzo):
                             clave = clave_pocion(boton.texto)
-                            if pocion_seleccionada == clave and usos_pociones[clave] > 0:
+                            if usos_pociones[clave] > 0:
                                 usos_pociones[clave] -= 1
-                                pocion_seleccionada = None
-                            estado.elegir_opcion(boton.texto)
-                            botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
-                            grupo_botones.reemplazar(botones)
-                            if estado.evento_resuelto():
-                                escena = ESCENA_CONSECUENCIA
+                                pocion_animacion = {"clave": clave, "opcion": boton.texto, "restante": 0.52}
+                            else:
+                                estado.elegir_opcion(boton.texto)
+                                botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+                                grupo_botones.reemplazar(botones)
+                                if estado.evento_resuelto():
+                                    escena = ESCENA_CONSECUENCIA
                             break
 
         mundo["guardian"].actualizar(delta_ms)
         for actor in mundo["actores"]:
             actor.actualizar(delta_ms)
         hud.actualizar(estado.indicadores, delta_segundos)
+
+        if pocion_animacion:
+            pocion_animacion["restante"] -= delta_segundos
+            if pocion_animacion["restante"] <= 0:
+                estado.elegir_opcion(pocion_animacion["opcion"])
+                botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+                grupo_botones.reemplazar(botones)
+                pocion_animacion = None
+                if estado.evento_resuelto():
+                    escena = ESCENA_CONSECUENCIA
 
         if escena == ESCENA_MAPA and tiempo_ms - inicio_escena >= duracion_cinematica:
             escena = ESCENA_TABLILLA
@@ -1239,7 +1258,7 @@ def main():
             dibujar_final(lienzo, recursos, estado, mouse_pos)
         else:
             dibujar_escena_tablilla(lienzo, recursos, estado, botones, mouse_pos, hud)
-            dibujar_pociones(lienzo, recursos, usos_pociones, pocion_seleccionada, mouse_pos)
+            dibujar_pociones(lienzo, recursos, usos_pociones, pocion_animacion, mouse_pos)
 
         presentar_lienzo(pantalla, lienzo)
         pygame.display.flip()
