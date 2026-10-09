@@ -44,10 +44,28 @@ class MenuModal:
         pygame.draw.rect(superficie, (237, 185, 87), panel, width=3, border_radius=18)
         texto_titulo = self.fuente_titulo.render(titulo, True, (237, 185, 87))
         superficie.blit(texto_titulo, texto_titulo.get_rect(center=(panel.centerx, panel.y + 48)))
-        y = panel.y + 100
+        # Las explicaciones de ayuda pueden ser más largas que una etiqueta.
+        # Se dividen aquí (en vez de depender de cada llamador) para que nunca
+        # atraviesen el borde del modal.
+        lineas_ajustadas = []
+        ancho_util = panel.width - 70
         for linea in lineas:
+            palabras = linea.split()
+            actual = ""
+            for palabra in palabras:
+                prueba = f"{actual} {palabra}".strip()
+                if not actual or self.fuente_texto.size(prueba)[0] <= ancho_util:
+                    actual = prueba
+                else:
+                    lineas_ajustadas.append(actual)
+                    actual = palabra
+            if actual:
+                lineas_ajustadas.append(actual)
+
+        y = panel.y + 100
+        for linea in lineas_ajustadas:
             texto = self.fuente_texto.render(linea, True, (255, 243, 210))
             superficie.blit(texto, texto.get_rect(center=(panel.centerx, y)))
-            y += 28
+            y += 25
         for boton in self.botones:
             boton.dibujar(superficie, mouse_pos)

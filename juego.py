@@ -786,13 +786,25 @@ def convertir_mouse_a_lienzo(posicion, rect_lienzo):
     return (x, y)
 
 
-def presentar_lienzo(pantalla, lienzo):
-    # En monitores panorámicos el lienzo 4:3 conserva proporción, pero el
-    # paisaje atenuado llena las bandas laterales en vez de dejarlas negras.
-    fondo_ampliado = pygame.transform.smoothscale(lienzo, pantalla.get_size())
+def presentar_lienzo(pantalla, lienzo, fondo):
+    """Presenta el lienzo sin deformarlo y extiende solamente el paisaje.
+
+    El HUD y los botones pertenecen al lienzo de juego; usarlos también como
+    fondo provocaba una segunda interfaz gigante en los laterales.
+    """
+    ancho_pantalla, alto_pantalla = pantalla.get_size()
+    escala_fondo = max(ancho_pantalla / fondo.get_width(), alto_pantalla / fondo.get_height())
+    fondo_escalado = pygame.transform.smoothscale(
+        fondo,
+        (round(fondo.get_width() * escala_fondo), round(fondo.get_height() * escala_fondo)),
+    )
     velo = pygame.Surface(pantalla.get_size(), pygame.SRCALPHA)
     velo.fill((3, 12, 10, 132))
-    pantalla.blit(fondo_ampliado, (0, 0))
+    pantalla.blit(
+        fondo_escalado,
+        ((ancho_pantalla - fondo_escalado.get_width()) // 2,
+         (alto_pantalla - fondo_escalado.get_height()) // 2),
+    )
     pantalla.blit(velo, (0, 0))
     rect_destino = rect_lienzo_en_ventana(pantalla.get_size())
     escalado = pygame.transform.scale(lienzo, rect_destino.size)
@@ -1050,7 +1062,7 @@ def main():
         else:
             dibujar_escena_tablilla(lienzo, recursos, estado, botones, mouse_pos, hud)
 
-        presentar_lienzo(pantalla, lienzo)
+        presentar_lienzo(pantalla, lienzo, recursos["mapa"])
         pygame.display.flip()
     pygame.quit()
     sys.exit()

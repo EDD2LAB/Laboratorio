@@ -75,7 +75,11 @@ class HUDIndicadores:
 
         # El marco tiene un canal negro opaco; por eso se pinta primero y el
         # relleno se coloca encima, exactamente dentro de su abertura.
-        canal = pygame.Rect(x + 111, y + int(25 * escala_y), 133, int(14 * escala_y))
+        # El canal ilustrado ocupa casi todo el tramo entre el emblema y el
+        # remate derecho.  Antes empezaba demasiado tarde, por lo que un 60%
+        # parecía visualmente mucho menor. Conservamos el borde dorado y
+        # aprovechamos toda la cavidad útil.
+        canal = pygame.Rect(x + 91, y + int(25 * escala_y), 153, int(14 * escala_y))
         if es_negativo:
             color = (221, 82, 68) if valor >= 55 else (215, 159, 69)
         else:
@@ -89,7 +93,7 @@ class HUDIndicadores:
             superficie.blit(texto, (x + 6, y + 20))
             pygame.draw.rect(superficie, (237, 185, 87), canal, width=2, border_radius=7)
 
-        interior = canal.inflate(-8, -8)
+        interior = canal.inflate(-6, -8)
         pygame.draw.rect(superficie, (25, 22, 18), interior, border_radius=4)
         ancho = int(interior.width * valor / 100)
         if ancho:
