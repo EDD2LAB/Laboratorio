@@ -18,6 +18,7 @@ from interfaz.boton import Boton, GrupoBotones
 from interfaz.dialogo import ControladorDialogo
 from interfaz.hud import HUDIndicadores
 from interfaz.menu import MenuModal
+from interfaz.mensaje_privado import ControladorMensajePrivado
 from logica_juego import EstadoJuego
 
 ANCHO, ALTO = 960, 720
@@ -40,6 +41,7 @@ ESCENA_CONSECUENCIA = "consecuencia"
 ESCENA_CLASIFICACION = "clasificacion"
 ESCENA_RESULTADO = "resultado"
 ESCENA_DIALOGO = "dialogo"
+ESCENA_MENSAJE = "mensaje_privado"
 ESCENA_PAUSA = "pausa"
 ESCENA_AYUDA = "ayuda"
 CENTRO_TABLILLA = (565, 330)
@@ -736,6 +738,16 @@ def dibujar_escena_dialogo(superficie, recursos, mundo, estado, dialogos, mouse_
     dialogos.dibujar(superficie, mouse_pos, ANCHO, ALTO)
 
 
+def dibujar_escena_mensaje(superficie, recursos, mundo, mensajes, mouse_pos, hud):
+    """El pergamino se presenta sobre el mapa y bloquea las demás acciones."""
+    superficie.blit(recursos["mapa"], (0, 0))
+    for actor in mundo["actores"]:
+        actor.dibujar(superficie, recursos["fuente_etiqueta"])
+    mundo["guardian"].dibujar(superficie, recursos["fuente_etiqueta"])
+    hud.dibujar(superficie)
+    mensajes.dibujar(superficie, mouse_pos)
+
+
 def crear_fondo_tablilla(mapa):
     fondo = mapa.copy()
     velo = superficie_con_alpha((ANCHO, ALTO), (7, 18, 14, 178))
@@ -845,6 +857,7 @@ def main():
         "colgar": cargar_imagen("Colgar.png", (190, 127)),
         "consultar": cargar_imagen("Consultar.png", (190, 127)),
         "quemar": cargar_imagen("Quemar.png", (190, 127)),
+        "pergamino_mensaje": cargar_imagen("Mensaje_privado.png", (570, 410)),
         "guardian_quieto": cargar_sprite("Fila 1 - 1. Guardian.png", (86, 86)),
         "guardian_caminando": cargar_spritesheet("Fila 2. Guardian.png", 8, (86, 86)),
         "guardian_hablando": [cargar_imagen("Guardian_hablando.png", (86, 86), requerido=False) or cargar_imagen("Guardian.jpeg", (86, 86))],
@@ -900,6 +913,9 @@ def main():
     botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
     grupo_botones = GrupoBotones(botones)
     dialogos = ControladorDialogo(fuente_texto, fuente_panel_titulo, fuente_boton)
+    mensajes = ControladorMensajePrivado(
+        fuente_panel_titulo, fuente_panel, fuente_boton, recursos["pergamino_mensaje"]
+    )
     hud = HUDIndicadores(fuente_indicador, iconos_hud)
     pausa = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
     ayuda = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
@@ -958,6 +974,21 @@ def main():
                     evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
                 )
                 if resultado_dialogo:
+                    tipo, respuesta = resultado_dialogo
+                    if tipo == "respuesta" and respuesta == "Te ayudaré":
+                        mensajes.abrir({
+                            "remitente": "Sabio de las Raíces",
+                            "destinatario": "Guardián",
+                            "texto": "El puente norte necesita una revisión. Consulta a quienes vieron el rayo antes de compartir la tablilla.",
+                        })
+                        escena = ESCENA_MENSAJE
+                    else:
+                        escena = ESCENA_MAPA
+                        inicio_escena = pygame.time.get_ticks()
+            elif escena == ESCENA_MENSAJE:
+                if mensajes.manejar_evento(
+                    evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
+                ):
                     escena = ESCENA_MAPA
                     inicio_escena = pygame.time.get_ticks()
             elif evento.type == pygame.KEYDOWN and evento.key in (pygame.K_ESCAPE, pygame.K_p):
@@ -977,6 +1008,13 @@ def main():
                     "respuestas": ["Te ayudaré", "Necesito más pruebas"],
                 }, retratos_dialogo)
                 escena = ESCENA_DIALOGO
+            elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_m and escena == ESCENA_MAPA:
+                mensajes.abrir({
+                    "remitente": "Mensajero",
+                    "destinatario": "Guardián",
+                    "texto": "Tengo un mensaje del Sabio. Reúne testimonios antes de decidir el destino de una tablilla.",
+                })
+                escena = ESCENA_MENSAJE
             elif evento.type == pygame.KEYDOWN:
                 opcion_teclado = grupo_botones.manejar_teclado(evento)
                 if opcion_teclado and escena == ESCENA_CLASIFICACION:
@@ -1059,6 +1097,9 @@ def main():
         elif escena == ESCENA_DIALOGO:
             dialogos.actualizar(delta_segundos)
             dibujar_escena_dialogo(lienzo, recursos, mundo, estado, dialogos, mouse_pos, hud)
+        elif escena == ESCENA_MENSAJE:
+            mensajes.actualizar(delta_segundos)
+            dibujar_escena_mensaje(lienzo, recursos, mundo, mensajes, mouse_pos, hud)
         elif escena == ESCENA_CONSECUENCIA:
             dibujar_consecuencia_evento(lienzo, recursos, estado)
         elif escena == ESCENA_CLASIFICACION:
