@@ -44,7 +44,9 @@ class HUDIndicadores:
 
     def dibujar(self, superficie, x=14, y=12):
         nombres = list(self.objetivos)
-        panel = pygame.Rect(x - 6, y - 5, 294, max(70, len(nombres) * 59 + 12))
+        alto_marco = max((marco.get_height() for marco in self.marcos.values()), default=55)
+        alto_fila = alto_marco + 7
+        panel = pygame.Rect(x - 6, y - 5, 294, max(70, len(nombres) * alto_fila + 12))
         velo = pygame.Surface(panel.size, pygame.SRCALPHA)
         velo.fill((10, 27, 20, 182))
         superficie.blit(velo, panel.topleft)
@@ -53,21 +55,27 @@ class HUDIndicadores:
         for indice, nombre in enumerate(nombres):
             valor = self.valores[nombre]
             objetivo = self.objetivos[nombre]
-            fila_y = y + indice * 59
+            fila_y = y + indice * alto_fila
             self._dibujar_barra(superficie, nombre, valor, objetivo, x, fila_y)
         self._dibujar_avisos(superficie, panel.right + 10, y + 18)
 
     def _dibujar_barra(self, superficie, nombre, valor, objetivo, x, y):
         marco = self.marcos.get(nombre)
+        escala_y = marco.get_height() / 55 if marco else 1
         es_negativo = nombre in NEGATIVOS
         critico = objetivo >= 75 if es_negativo else objetivo <= 25
         if critico:
             intensidad = int(80 + 50 * abs(pygame.math.Vector2(1, 0).rotate(self.tiempo * 360).x))
-            pygame.draw.rect(superficie, (220, 82, 64, intensidad), (x + 93, y + 20, 167, 25), border_radius=10)
+            pygame.draw.rect(
+                superficie,
+                (220, 82, 64, intensidad),
+                (x + 93, y + int(20 * escala_y), 167, int(25 * escala_y)),
+                border_radius=10,
+            )
 
         # El marco tiene un canal negro opaco; por eso se pinta primero y el
         # relleno se coloca encima, exactamente dentro de su abertura.
-        canal = pygame.Rect(x + 111, y + 25, 133, 14)
+        canal = pygame.Rect(x + 111, y + int(25 * escala_y), 133, int(14 * escala_y))
         if es_negativo:
             color = (221, 82, 68) if valor >= 55 else (215, 159, 69)
         else:
@@ -93,7 +101,7 @@ class HUDIndicadores:
             )
 
         numero = self.fuente.render(str(round(valor)), True, (255, 243, 210))
-        superficie.blit(numero, numero.get_rect(midleft=(x + 251, y + 32)))
+        superficie.blit(numero, numero.get_rect(midleft=(x + 251, y + int(32 * escala_y))))
 
     def _dibujar_avisos(self, superficie, x, y):
         for indice, aviso in enumerate(self.avisos[-4:]):

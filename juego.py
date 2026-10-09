@@ -43,6 +43,7 @@ ESCENA_DIALOGO = "dialogo"
 ESCENA_PAUSA = "pausa"
 ESCENA_AYUDA = "ayuda"
 CENTRO_TABLILLA = (565, 330)
+CENTRO_TABLILLA_CENTRADA = (ANCHO // 2, 330)
 
 
 def normalizar_ruta(ruta):
@@ -100,7 +101,9 @@ def cargar_marco_hud(nombre):
     limites = imagen.get_bounding_rect()
     if limites.width and limites.height:
         imagen = imagen.subsurface(limites).copy()
-    return pygame.transform.smoothscale(imagen, (280, 55))
+    ancho = 280
+    alto = max(1, round(imagen.get_height() * ancho / imagen.get_width()))
+    return pygame.transform.smoothscale(imagen, (ancho, alto))
 
 
 def cargar_animacion_guardian():
@@ -538,7 +541,8 @@ def dibujar_consecuencia_evento(superficie, recursos, estado):
 def dibujar_pregunta_clasificacion(superficie, recursos, botones, mouse_pos):
     """Pide la clasificación sin mostrar cuál era la categoría real."""
     superficie.blit(recursos["fondo_tablilla"], (0, 0))
-    rect = recursos["tablilla"].get_rect(center=CENTRO_TABLILLA)
+    # En clasificación el HUD no se muestra: la tablilla recupera el centro.
+    rect = recursos["tablilla"].get_rect(center=CENTRO_TABLILLA_CENTRADA)
     superficie.blit(recursos["tablilla"], rect)
     titulo = recursos["fuente_panel_titulo"].render("¿CÓMO CLASIFICARÍAS ESTA TABLILLA?", True, TINTA)
     superficie.blit(titulo, titulo.get_rect(center=(rect.centerx, rect.y + 190)))
@@ -783,7 +787,13 @@ def convertir_mouse_a_lienzo(posicion, rect_lienzo):
 
 
 def presentar_lienzo(pantalla, lienzo):
-    pantalla.fill((5, 12, 11))
+    # En monitores panorámicos el lienzo 4:3 conserva proporción, pero el
+    # paisaje atenuado llena las bandas laterales en vez de dejarlas negras.
+    fondo_ampliado = pygame.transform.smoothscale(lienzo, pantalla.get_size())
+    velo = pygame.Surface(pantalla.get_size(), pygame.SRCALPHA)
+    velo.fill((3, 12, 10, 132))
+    pantalla.blit(fondo_ampliado, (0, 0))
+    pantalla.blit(velo, (0, 0))
     rect_destino = rect_lienzo_en_ventana(pantalla.get_size())
     escalado = pygame.transform.scale(lienzo, rect_destino.size)
     pantalla.blit(escalado, rect_destino)
@@ -792,7 +802,7 @@ def presentar_lienzo(pantalla, lienzo):
 
 def main():
     pygame.init()
-    pantalla_completa = False
+    pantalla_completa = True
     pantalla = crear_ventana(pantalla_completa)
     pygame.display.set_caption("La Copa: Voces en las Alturas")
     reloj = pygame.time.Clock()
