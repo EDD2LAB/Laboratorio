@@ -170,6 +170,14 @@ def cargar_spritesheet(nombre, cantidad, tamano):
     return frames
 
 
+def cargar_frame_caldero(nombre, indice=1):
+    """Extrae un solo fotograma del spritesheet horizontal del Caldero."""
+    spritesheet = cargar_imagen(nombre)
+    ancho_frame = spritesheet.get_width() // 4
+    area = pygame.Rect(ancho_frame * indice, 0, ancho_frame, spritesheet.get_height())
+    return pygame.transform.scale(spritesheet.subsurface(area).copy(), (72, 72))
+
+
 def cargar_animacion_aspirante():
     nombres = [
         "Fila 1 - 1 . Aspirante_a_cacique-Idle .png",
@@ -468,7 +476,7 @@ def dibujar_mapa(superficie, recursos, mundo, estado, tiempo_ms, inicio_escena, 
     positivos = sum(estado.indicadores[nombre] for nombre in ("sabiduria", "confianza_consejo", "armonia")) / 3
     indice_caldero = 3 if desinformacion >= 100 else 2 if desinformacion >= 55 else 0 if positivos >= 65 else 1
     caldero = recursos["calderos"][indice_caldero]
-    superficie.blit(caldero, caldero.get_rect(center=(ANCHO // 2, 366)))
+    superficie.blit(caldero, caldero.get_rect(center=(ANCHO // 2, 350)))
 
     for actor in mundo["actores"]:
         actor.dibujar(superficie, recursos["fuente_etiqueta"])
@@ -936,7 +944,7 @@ def main():
         "quemar": cargar_imagen("Quemar.png", (190, 127)),
         "pergamino_mensaje": cargar_imagen("Mensaje_privado.png", (570, 410)),
         "calderos": [
-            cargar_imagen(os.path.join("Caldero", f"Caldero-ecos-fila{indice}.png"), (108, 108))
+            cargar_frame_caldero(os.path.join("Caldero", f"Caldero-ecos-fila{indice}.png"))
             for indice in range(1, 5)
         ],
         "pociones": {

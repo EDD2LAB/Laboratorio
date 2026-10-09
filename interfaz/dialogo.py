@@ -112,12 +112,18 @@ class ControladorDialogo:
         respuestas = self.dialogo["respuestas"]
         if not respuestas:
             return
-        separacion = 190
-        inicio = 480 - separacion * (len(respuestas) - 1) // 2
-        self.botones = [
-            Boton(texto, centro=(inicio + i * separacion, 640), fuente=self.fuente_boton, identificador=texto)
-            for i, texto in enumerate(respuestas[:3])
-        ]
+        respuestas = respuestas[:3]
+        anchos = [max(170, self.fuente_boton.size(texto)[0] + 44) for texto in respuestas]
+        separacion = 30
+        ancho_total = sum(anchos) + separacion * (len(respuestas) - 1)
+        cursor = (960 - ancho_total) // 2
+        self.botones = []
+        for texto, ancho in zip(respuestas, anchos):
+            centro = (cursor + ancho // 2, 640)
+            self.botones.append(
+                Boton(texto, centro=centro, fuente=self.fuente_boton, tamano=(ancho, 50), identificador=texto)
+            )
+            cursor += ancho + separacion
         self.grupo.reemplazar(self.botones)
 
     def _elegir(self, respuesta):
