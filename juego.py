@@ -101,7 +101,10 @@ def cargar_marco_hud(nombre):
     limites = imagen.get_bounding_rect()
     if limites.width and limites.height:
         imagen = imagen.subsurface(limites).copy()
-    ancho = 280
+    # En pantalla completa el lienzo se adapta a todo el monitor.  Estos
+    # marcos parten compactos para que el HUD conserve protagonismo sin cubrir
+    # la escena.
+    ancho = 170
     alto = max(1, round(imagen.get_height() * ancho / imagen.get_width()))
     return pygame.transform.smoothscale(imagen, (ancho, alto))
 
@@ -767,13 +770,10 @@ def crear_ventana(pantalla_completa):
 
 
 def rect_lienzo_en_ventana(tamano_ventana):
-    ancho_ventana, alto_ventana = tamano_ventana
-    escala = min(ancho_ventana / ANCHO, alto_ventana / ALTO)
-    ancho = int(ANCHO * escala)
-    alto = int(ALTO * escala)
-    x = (ancho_ventana - ancho) // 2
-    y = (alto_ventana - alto) // 2
-    return pygame.Rect(x, y, ancho, alto)
+    # La interfaz ocupa el monitor completo.  La conversión del mouse usa los
+    # dos ejes por separado, así que los botones mantienen sus hitboxes aunque
+    # la relación del monitor sea distinta a la del lienzo base.
+    return pygame.Rect((0, 0), tamano_ventana)
 
 
 def convertir_mouse_a_lienzo(posicion, rect_lienzo):
@@ -786,26 +786,8 @@ def convertir_mouse_a_lienzo(posicion, rect_lienzo):
     return (x, y)
 
 
-def presentar_lienzo(pantalla, lienzo, fondo):
-    """Presenta el lienzo sin deformarlo y extiende solamente el paisaje.
-
-    El HUD y los botones pertenecen al lienzo de juego; usarlos también como
-    fondo provocaba una segunda interfaz gigante en los laterales.
-    """
-    ancho_pantalla, alto_pantalla = pantalla.get_size()
-    escala_fondo = max(ancho_pantalla / fondo.get_width(), alto_pantalla / fondo.get_height())
-    fondo_escalado = pygame.transform.smoothscale(
-        fondo,
-        (round(fondo.get_width() * escala_fondo), round(fondo.get_height() * escala_fondo)),
-    )
-    velo = pygame.Surface(pantalla.get_size(), pygame.SRCALPHA)
-    velo.fill((3, 12, 10, 132))
-    pantalla.blit(
-        fondo_escalado,
-        ((ancho_pantalla - fondo_escalado.get_width()) // 2,
-         (alto_pantalla - fondo_escalado.get_height()) // 2),
-    )
-    pantalla.blit(velo, (0, 0))
+def presentar_lienzo(pantalla, lienzo):
+    """Amplía el juego a toda la pantalla, sin bandas ni fondos auxiliares."""
     rect_destino = rect_lienzo_en_ventana(pantalla.get_size())
     escalado = pygame.transform.scale(lienzo, rect_destino.size)
     pantalla.blit(escalado, rect_destino)
@@ -1062,7 +1044,7 @@ def main():
         else:
             dibujar_escena_tablilla(lienzo, recursos, estado, botones, mouse_pos, hud)
 
-        presentar_lienzo(pantalla, lienzo, recursos["mapa"])
+        presentar_lienzo(pantalla, lienzo)
         pygame.display.flip()
     pygame.quit()
     sys.exit()
