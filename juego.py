@@ -95,18 +95,30 @@ def cargar_fuente(tamano):
     return pygame.font.Font(RUTA_FUENTE, tamano)
 
 
-def cargar_marco_hud(nombre):
-    """Recorta transparencias de los marcos ilustrados y los vuelve compactos."""
+def cargar_icono_hud(nombre):
+    """Extrae el emblema de una barra ilustrada sin deformar su proporción.
+
+    Los cinco recursos no comparten el mismo formato: el de Desinformación es
+    mucho más bajo. Usar la tira completa producía un HUD desigual; el icono
+    sí conserva una zona cuadrada consistente en todos los recursos.
+    """
     imagen = cargar_imagen(nombre)
     limites = imagen.get_bounding_rect()
     if limites.width and limites.height:
         imagen = imagen.subsurface(limites).copy()
-    # En pantalla completa el lienzo se adapta a todo el monitor.  Estos
-    # marcos parten compactos para que el HUD conserve protagonismo sin cubrir
-    # la escena.
-    ancho = 170
-    alto = max(1, round(imagen.get_height() * ancho / imagen.get_width()))
-    return pygame.transform.smoothscale(imagen, (ancho, alto))
+    # Las composiciones provienen de archivos exportados con lienzos muy
+    # distintos. Estos límites separan el medallón de la etiqueta de texto de
+    # cada recurso antes de normalizarlo a una misma medida.
+    proporcion_icono = {
+        "Barra_sabiduría.png": 1.00,
+        "Barra_confianza.png": 0.72,
+        "Barra_armonía.png": 0.85,
+        "Barra_susurros_falsos.png": 0.85,
+        "Barra_desinformación.png": 1.17,
+    }.get(nombre, 1.0)
+    ancho_icono = min(imagen.get_width(), round(imagen.get_height() * proporcion_icono))
+    icono = imagen.subsurface((0, 0, ancho_icono, imagen.get_height())).copy()
+    return pygame.transform.smoothscale(icono, (54, 54))
 
 
 def cargar_animacion_guardian():
@@ -841,12 +853,12 @@ def main():
         "fuente_resultado": fuente_resultado,
     }
 
-    marcos_hud = {
-        "sabiduria": cargar_marco_hud("Barra_sabiduría.png"),
-        "confianza_consejo": cargar_marco_hud("Barra_confianza.png"),
-        "armonia": cargar_marco_hud("Barra_armonía.png"),
-        "susurros_falsos": cargar_marco_hud("Barra_susurros_falsos.png"),
-        "desinformación": cargar_marco_hud("Barra_desinformación.png"),
+    iconos_hud = {
+        "sabiduria": cargar_icono_hud("Barra_sabiduría.png"),
+        "confianza_consejo": cargar_icono_hud("Barra_confianza.png"),
+        "armonia": cargar_icono_hud("Barra_armonía.png"),
+        "susurros_falsos": cargar_icono_hud("Barra_susurros_falsos.png"),
+        "desinformación": cargar_icono_hud("Barra_desinformación.png"),
     }
 
     estado = EstadoJuego()
@@ -876,7 +888,7 @@ def main():
     botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
     grupo_botones = GrupoBotones(botones)
     dialogos = ControladorDialogo(fuente_texto, fuente_panel_titulo, fuente_boton)
-    hud = HUDIndicadores(fuente_indicador, marcos_hud)
+    hud = HUDIndicadores(fuente_indicador, iconos_hud)
     pausa = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
     ayuda = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
     retratos_dialogo = {
