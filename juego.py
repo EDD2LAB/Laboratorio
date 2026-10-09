@@ -42,6 +42,7 @@ ESCENA_CLASIFICACION = "clasificacion"
 ESCENA_RESULTADO = "resultado"
 ESCENA_DIALOGO = "dialogo"
 ESCENA_MENSAJE = "mensaje_privado"
+ESCENA_FINAL = "final"
 ESCENA_PAUSA = "pausa"
 ESCENA_AYUDA = "ayuda"
 CENTRO_TABLILLA = (565, 330)
@@ -462,6 +463,13 @@ def dibujar_mensaje_mapa(superficie, fuente, texto):
 def dibujar_mapa(superficie, recursos, mundo, estado, tiempo_ms, inicio_escena, hud):
     superficie.blit(recursos["mapa"], (0, 0))
 
+    # El Caldero expresa visualmente la salud informativa de la aldea.
+    desinformacion = estado.indicadores["desinformación"] + estado.indicadores["susurros_falsos"]
+    positivos = sum(estado.indicadores[nombre] for nombre in ("sabiduria", "confianza_consejo", "armonia")) / 3
+    indice_caldero = 3 if desinformacion >= 100 else 2 if desinformacion >= 55 else 0 if positivos >= 65 else 1
+    caldero = recursos["calderos"][indice_caldero]
+    superficie.blit(caldero, caldero.get_rect(center=(ANCHO // 2, 366)))
+
     for actor in mundo["actores"]:
         actor.dibujar(superficie, recursos["fuente_etiqueta"])
 
@@ -728,6 +736,75 @@ def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos, hu
             boton.dibujar(superficie, mouse_pos)
 
 
+def clave_pocion(opcion):
+    opcion = opcion.lower()
+    if "colgar" in opcion:
+        return "colgar"
+    if "consultar" in opcion:
+        return "consultar"
+    if "quemar" in opcion:
+        return "quemar"
+    return "ignorar"
+
+
+def rectangulos_pociones(recursos):
+    return {
+        clave: recursos["pociones"][clave].get_rect(center=(744 + indice * 52, 88))
+        for indice, clave in enumerate(("colgar", "consultar", "quemar", "ignorar"))
+    }
+
+
+def dibujar_pociones(superficie, recursos, usos, seleccionada, mouse_pos):
+    """Inventario compacto: una poción por decisión, con un único uso."""
+    nombres = {"colgar": "Colgar", "consultar": "Consultar", "quemar": "Quemar", "ignorar": "Ignorar"}
+    rectangulos = rectangulos_pociones(recursos)
+    for clave, rect in rectangulos.items():
+        imagen = recursos["pociones"][clave].copy()
+        if usos[clave] <= 0:
+            imagen.fill((80, 80, 80, 180), special_flags=pygame.BLEND_RGBA_MULT)
+        superficie.blit(imagen, rect)
+        if clave == seleccionada:
+            pygame.draw.rect(superficie, ORO, rect.inflate(6, 6), 2, border_radius=8)
+        contador = recursos["fuente_categoria"].render(str(usos[clave]), True, CREMA)
+        superficie.blit(contador, contador.get_rect(bottomright=(rect.right + 3, rect.bottom + 3)))
+        if rect.collidepoint(mouse_pos):
+            aviso = recursos["fuente_categoria"].render(
+                f"Poción de {nombres[clave]}: selecciónala antes de decidir", True, CREMA
+            )
+            fondo = superficie_con_alpha((aviso.get_width() + 16, 26), (14, 31, 23, 225))
+            posicion = (ANCHO - fondo.get_width() - 14, 122)
+            superficie.blit(fondo, posicion)
+            superficie.blit(aviso, (posicion[0] + 8, posicion[1] + 5))
+    return rectangulos
+
+
+def dibujar_final(superficie, recursos, estado, mouse_pos):
+    positivos = sum(estado.indicadores[nombre] for nombre in ("sabiduria", "confianza_consejo", "armonia")) / 3
+    negativo = estado.indicadores["susurros_falsos"] + estado.indicadores["desinformación"]
+    victoria = positivos >= 55 and negativo < 100
+    fondo = recursos["final_positivo"] if victoria else recursos["final_negativo"]
+    superficie.blit(fondo, (0, 0))
+    velo = superficie_con_alpha((ANCHO, ALTO), (6, 18, 12, 94))
+    superficie.blit(velo, (0, 0))
+    titulo = recursos["fuente_resultado"].render("LA COPA FLORECE" if victoria else "LA COPA SE CUBRE DE HUMO", True, CREMA)
+    superficie.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 160)))
+    detalle = recursos["fuente_texto"].render(
+        "Mira será la nueva Cacique" if victoria else "El Consejo deberá recomponer la confianza", True, CREMA
+    )
+    superficie.blit(detalle, detalle.get_rect(center=(ANCHO // 2, 205)))
+    resumen = [
+        f"Sabiduría: {estado.indicadores['sabiduria']}",
+        f"Confianza: {estado.indicadores['confianza_consejo']}",
+        f"Armonía: {estado.indicadores['armonia']}",
+        f"Desinformación: {estado.indicadores['desinformación']}",
+    ]
+    for indice, linea in enumerate(resumen):
+        texto = recursos["fuente_panel"].render(linea, True, CREMA)
+        superficie.blit(texto, texto.get_rect(center=(ANCHO // 2, 270 + indice * 30)))
+    instruccion = recursos["fuente_boton"].render("R: reiniciar    ESC: salir", True, ORO)
+    superficie.blit(instruccion, instruccion.get_rect(center=(ANCHO // 2, 600)))
+
+
 def dibujar_escena_dialogo(superficie, recursos, mundo, estado, dialogos, mouse_pos, hud):
     """El diálogo se superpone al mapa y bloquea sus demás interacciones."""
     superficie.blit(recursos["mapa"], (0, 0))
@@ -858,6 +935,18 @@ def main():
         "consultar": cargar_imagen("Consultar.png", (190, 127)),
         "quemar": cargar_imagen("Quemar.png", (190, 127)),
         "pergamino_mensaje": cargar_imagen("Mensaje_privado.png", (570, 410)),
+        "calderos": [
+            cargar_imagen(os.path.join("Caldero", f"Caldero-ecos-fila{indice}.png"), (108, 108))
+            for indice in range(1, 5)
+        ],
+        "pociones": {
+            "colgar": cargar_imagen(os.path.join("Pociones", "pocion_amarilla.png"), (42, 42)),
+            "consultar": cargar_imagen(os.path.join("Pociones", "pocion_azul.png"), (42, 42)),
+            "quemar": cargar_imagen(os.path.join("Pociones", "pocion_roja.png"), (42, 42)),
+            "ignorar": cargar_imagen(os.path.join("Pociones", "pocion_morada.png"), (42, 42)),
+        },
+        "final_positivo": cargar_imagen(os.path.join("Finales", "Final_positivo.jpeg"), (ANCHO, ALTO)),
+        "final_negativo": cargar_imagen(os.path.join("Finales", "Game_over.jpeg"), (ANCHO, ALTO)),
         "guardian_quieto": cargar_sprite("Fila 1 - 1. Guardian.png", (86, 86)),
         "guardian_caminando": cargar_spritesheet("Fila 2. Guardian.png", 8, (86, 86)),
         "guardian_hablando": [cargar_imagen("Guardian_hablando.png", (86, 86), requerido=False) or cargar_imagen("Guardian.jpeg", (86, 86))],
@@ -926,6 +1015,15 @@ def main():
         "Luma": recursos["luma_quieta"],
         "Guardián": recursos["guardian_quieto"],
     }
+    conversaciones = [
+        {"personaje": "Mira", "texto": "Guardián, escuché un rumor sobre el puente norte. Antes de compartirlo, necesitamos pruebas.", "respuestas": ["Te ayudaré", "Necesito más pruebas"]},
+        {"personaje": "Tarek", "texto": "Yo vi el rayo cerca del Mirador Alto. No escuché que el puente se hubiera cerrado.", "respuestas": ["Gracias por tu testimonio"]},
+        {"personaje": "Luma", "texto": "Los Ecos de Troncos repiten la noticia muy rápido. Una tablilla sin verificar puede confundir a toda la aldea.", "respuestas": ["Lo tendré en cuenta"]},
+        {"personaje": "Mensajero", "texto": "Puedo llevar un mensaje privado entre plataformas. La ruta más corta no siempre es la más segura.", "respuestas": ["Entrega el mensaje"]},
+    ]
+    indice_conversacion = 0
+    usos_pociones = {"colgar": 1, "consultar": 1, "quemar": 1, "ignorar": 1}
+    pocion_seleccionada = None
     escena = ESCENA_MAPA
     escena_anterior = ESCENA_MAPA
     inicio_escena = pygame.time.get_ticks()
@@ -991,6 +1089,20 @@ def main():
                 ):
                     escena = ESCENA_MAPA
                     inicio_escena = pygame.time.get_ticks()
+            elif escena == ESCENA_FINAL:
+                if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
+                    estado = EstadoJuego()
+                    mundo = crear_mundo(recursos)
+                    guardian = mundo["guardian"]
+                    botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+                    grupo_botones.reemplazar(botones)
+                    usos_pociones = {"colgar": 1, "consultar": 1, "quemar": 1, "ignorar": 1}
+                    pocion_seleccionada = None
+                    escena = ESCENA_MAPA
+                    inicio_escena = pygame.time.get_ticks()
+                    iniciar_cinematica_mapa(mundo)
+                elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+                    corriendo = False
             elif evento.type == pygame.KEYDOWN and evento.key in (pygame.K_ESCAPE, pygame.K_p):
                 escena_anterior = escena
                 pausa.configurar([
@@ -1002,11 +1114,8 @@ def main():
             elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_d and escena == ESCENA_MAPA:
                 # Punto de integración temporal: B podrá iniciar este mismo
                 # controlador desde un hitbox o una conversación desbloqueada.
-                dialogos.iniciar({
-                    "personaje": "Mira",
-                    "texto": "Guardián, escuché un rumor sobre el puente norte. Antes de compartirlo, necesitamos pruebas.",
-                    "respuestas": ["Te ayudaré", "Necesito más pruebas"],
-                }, retratos_dialogo)
+                dialogos.iniciar(conversaciones[indice_conversacion], retratos_dialogo)
+                indice_conversacion = (indice_conversacion + 1) % len(conversaciones)
                 escena = ESCENA_DIALOGO
             elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_m and escena == ESCENA_MAPA:
                 mensajes.abrir({
@@ -1032,9 +1141,12 @@ def main():
                 estado.continuar_despues_resultado()
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
                 grupo_botones.reemplazar(botones)
-                escena = ESCENA_MAPA
-                inicio_escena = pygame.time.get_ticks()
-                iniciar_cinematica_mapa(mundo)
+                if estado.juego_terminado():
+                    escena = ESCENA_FINAL
+                else:
+                    escena = ESCENA_MAPA
+                    inicio_escena = pygame.time.get_ticks()
+                    iniciar_cinematica_mapa(mundo)
             elif escena == ESCENA_CONSECUENCIA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 botones = construir_botones(estado.opciones_clasificacion_actuales(), recursos, fuente_boton)
                 grupo_botones.reemplazar(botones)
@@ -1050,14 +1162,23 @@ def main():
                         break
             elif escena == ESCENA_TABLILLA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 pos_lienzo = convertir_mouse_a_lienzo(evento.pos, rect_lienzo)
-                for boton in botones:
-                    if boton.fue_clickeado(pos_lienzo):
-                        estado.elegir_opcion(boton.texto)
-                        botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
-                        grupo_botones.reemplazar(botones)
-                        if estado.evento_resuelto():
-                            escena = ESCENA_CONSECUENCIA
+                for clave, rect in rectangulos_pociones(recursos).items():
+                    if rect.collidepoint(pos_lienzo) and usos_pociones[clave] > 0:
+                        pocion_seleccionada = None if pocion_seleccionada == clave else clave
                         break
+                else:
+                    for boton in botones:
+                        if boton.fue_clickeado(pos_lienzo):
+                            clave = clave_pocion(boton.texto)
+                            if pocion_seleccionada == clave and usos_pociones[clave] > 0:
+                                usos_pociones[clave] -= 1
+                                pocion_seleccionada = None
+                            estado.elegir_opcion(boton.texto)
+                            botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+                            grupo_botones.reemplazar(botones)
+                            if estado.evento_resuelto():
+                                escena = ESCENA_CONSECUENCIA
+                            break
 
         mundo["guardian"].actualizar(delta_ms)
         for actor in mundo["actores"]:
@@ -1106,8 +1227,11 @@ def main():
             dibujar_pregunta_clasificacion(lienzo, recursos, botones, mouse_pos)
         elif escena == ESCENA_RESULTADO:
             dibujar_resultado_evento(lienzo, recursos, estado)
+        elif escena == ESCENA_FINAL:
+            dibujar_final(lienzo, recursos, estado, mouse_pos)
         else:
             dibujar_escena_tablilla(lienzo, recursos, estado, botones, mouse_pos, hud)
+            dibujar_pociones(lienzo, recursos, usos_pociones, pocion_seleccionada, mouse_pos)
 
         presentar_lienzo(pantalla, lienzo)
         pygame.display.flip()
