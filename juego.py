@@ -10,6 +10,7 @@ La logica de estructuras de datos queda en logica_juego.py y Arboles.py:
 import os
 import sys
 import unicodedata
+import math
 
 import pygame
 
@@ -773,37 +774,38 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
     # La textura también ocurre sobre la tablilla: no se trata de un icono
     # superpuesto sino del objeto del juego respondiendo a la elección.
     velo = pygame.Surface(tablilla.get_size(), pygame.SRCALPHA)
+    pulso = math.sin(progreso * math.pi)
     if clave == "quemar":
-        altura = int(tablilla.get_height() * progreso)
-        pygame.draw.rect(velo, (70, 12, 4, int(70 + 105 * progreso)), (0, tablilla.get_height() - altura, tablilla.get_width(), altura))
+        altura = int(tablilla.get_height() * min(1, progreso * 1.28))
+        pygame.draw.rect(velo, (62, 10, 3, int(78 + 130 * progreso)), (0, tablilla.get_height() - altura, tablilla.get_width(), altura))
         for indice in range(11):
             x = 18 + (indice * 41) % (tablilla.get_width() - 36)
-            y = tablilla.get_height() - int(progreso * (40 + (indice % 4) * 22))
+            y = tablilla.get_height() - int(progreso * (65 + (indice % 4) * 28))
             pygame.draw.circle(velo, (255, 130 + (indice % 2) * 60, 20, 170), (x, y), 8 + indice % 5)
     elif clave == "consultar":
         linea_y = int((tablilla.get_height() + 54) * progreso) - 27
-        pygame.draw.rect(velo, (*color, 42), (0, linea_y - 20, tablilla.get_width(), 40))
-        pygame.draw.line(velo, (*color, 235), (18, linea_y), (tablilla.get_width() - 18, linea_y), 4)
-        pygame.draw.rect(velo, (*color, 80), velo.get_rect(), width=5, border_radius=16)
+        pygame.draw.rect(velo, (*color, 56), (0, linea_y - 28, tablilla.get_width(), 56))
+        pygame.draw.line(velo, (*color, 255), (18, linea_y), (tablilla.get_width() - 18, linea_y), 5)
+        pygame.draw.rect(velo, (*color, int(85 + 70 * pulso)), velo.get_rect(), width=5, border_radius=16)
     elif clave == "ignorar":
-        pygame.draw.rect(velo, (36, 20, 55, int(165 * progreso)), velo.get_rect(), border_radius=18)
+        pygame.draw.rect(velo, (28, 18, 47, int(188 * progreso)), velo.get_rect(), border_radius=18)
     else:  # colgar
         pygame.draw.rect(velo, (*color, int(68 * (1 - progreso))), velo.get_rect(), width=7, border_radius=18)
     tablilla.blit(velo, (0, 0))
     escala, angulo, desplazamiento, alfa = 1.0, 0, (0, 0), 255
     if clave == "quemar":
-        escala = 1 - 0.18 * progreso
-        angulo = -10 * progreso
-        alfa = int(255 * (1 - 0.30 * progreso))
+        escala = 1 - 0.28 * progreso
+        angulo = -12 * progreso + math.sin(progreso * 38) * (1 - progreso) * 3
+        alfa = int(255 * (1 - 0.70 * progreso))
     elif clave == "consultar":
         escala = 1 + 0.05 * abs(pygame.math.Vector2(1, 0).rotate(progreso * 720).x)
     elif clave == "colgar":
-        desplazamiento = (0, -42 * progreso)
-        escala = 1 - 0.08 * progreso
+        desplazamiento = (0, -86 * progreso)
+        escala = 1 - 0.12 * progreso
     elif clave == "ignorar":
-        desplazamiento = (72 * progreso, 26 * progreso)
-        alfa = int(255 * (1 - 0.72 * progreso))
-        angulo = 8 * progreso
+        desplazamiento = (122 * progreso, 38 * progreso)
+        alfa = int(255 * (1 - 0.90 * progreso))
+        angulo = 12 * progreso
 
     ancho = max(1, round(tablilla.get_width() * escala))
     alto = max(1, round(tablilla.get_height() * escala))
@@ -816,32 +818,69 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
 
     # Resplandor grande detrás de la tablilla, limitado para no tapar el mapa.
     halo = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
-    radio = int(120 + 75 * (1 - abs(progreso * 2 - 1)))
-    pygame.draw.circle(halo, (*color, 34), centro, radio)
+    radio = int(135 + 95 * pulso)
+    pygame.draw.circle(halo, (*color, int(24 + 42 * pulso)), centro, radio)
+    pygame.draw.circle(halo, (*color, int(28 + 34 * pulso)), centro, max(20, radio - 36))
     superficie.blit(halo, (0, 0))
     superficie.blit(tablilla, rect)
 
     if clave == "quemar":
-        # Llamas y chispas recorren el borde inferior de LA tablilla.
+        # Llamas, brasa y humo salen del borde de LA tablilla.
         fuego = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
-        for indice in range(13):
-            x = rect.left + 20 + (indice * 31) % max(1, rect.width - 40)
-            alto_llama = int(18 + progreso * (30 + (indice % 4) * 13))
+        for indice in range(18):
+            x = rect.left + 18 + (indice * 27) % max(1, rect.width - 36)
+            alto_llama = int(22 + progreso * (46 + (indice % 5) * 14))
             base = rect.bottom - 10 - (indice % 3) * 6
-            pygame.draw.polygon(fuego, (255, 70, 15, 230), [(x - 10, base), (x + 10, base), (x, base - alto_llama)])
-            pygame.draw.circle(fuego, (255, 201, 48, 235), (x, base - 5), 7)
+            pygame.draw.polygon(fuego, (241, 54, 12, 238), [(x - 12, base), (x + 12, base), (x, base - alto_llama)])
+            pygame.draw.polygon(fuego, (255, 170, 23, 245), [(x - 6, base), (x + 6, base), (x, base - alto_llama * 0.60)])
+            pygame.draw.circle(fuego, (255, 221, 92, 245), (x, base - 5), 6)
+        for indice in range(20):
+            x = rect.left + 14 + (indice * 43) % max(1, rect.width - 28)
+            y = rect.bottom - 16 - int(progreso * (40 + (indice % 6) * 30))
+            pygame.draw.circle(fuego, (255, 191, 64, int(220 * (1 - progreso * .35))), (x, y), 2 + indice % 3)
+        for indice in range(7):
+            x = rect.centerx - 80 + indice * 28
+            y = rect.top + 80 - int(progreso * (35 + indice * 9))
+            pygame.draw.circle(fuego, (46, 40, 42, int(96 * progreso)), (x, y), 14 + indice % 3 * 6)
         superficie.blit(fuego, (0, 0))
     elif clave == "consultar":
         brillo = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
         y_scan = rect.top + int(rect.height * progreso)
         pygame.draw.line(brillo, (*color, 255), (rect.left + 22, y_scan), (rect.right - 22, y_scan), 4)
         pygame.draw.rect(brillo, (*color, 165), rect, width=3, border_radius=18)
+        # Retícula que inspecciona directamente el contenido de la tablilla.
+        x_lente = rect.left + int(rect.width * (0.18 + progreso * .64))
+        radio_lente = int(27 + 8 * pulso)
+        pygame.draw.circle(brillo, (*color, 72), (x_lente, y_scan), radio_lente)
+        pygame.draw.circle(brillo, (*color, 245), (x_lente, y_scan), radio_lente, 3)
+        pygame.draw.line(brillo, (*color, 230), (x_lente + radio_lente // 2, y_scan + radio_lente // 2), (x_lente + radio_lente + 16, y_scan + radio_lente + 16), 4)
+        for indice in range(7):
+            px = rect.left + 30 + (indice * 53) % max(1, rect.width - 60)
+            pygame.draw.circle(brillo, (*color, 180), (px, y_scan), 3)
         superficie.blit(brillo, (0, 0))
     elif clave == "colgar":
         cuerdas = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
         for x in (rect.left + rect.width // 3, rect.right - rect.width // 3):
-            pygame.draw.line(cuerdas, (247, 210, 116, 220), (x, 0), (x, rect.top + 18), 4)
+            pygame.draw.line(cuerdas, (104, 59, 31, 255), (x + 2, 0), (x + 2, rect.top + 20), 7)
+            pygame.draw.line(cuerdas, (247, 210, 116, 230), (x, 0), (x, rect.top + 18), 3)
+        for indice in range(10):
+            angulo_destello = progreso * 6.5 + indice * math.tau / 10
+            distancia = 105 + indice % 3 * 22
+            x = int(rect.centerx + math.cos(angulo_destello) * distancia)
+            y = int(rect.centery + math.sin(angulo_destello) * distancia * .65)
+            pygame.draw.circle(cuerdas, (255, 224, 120, int(210 * pulso)), (x, y), 3 + indice % 3)
         superficie.blit(cuerdas, (0, 0))
+    else:  # ignorar
+        sombra = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        for indice in range(4):
+            distancia = (indice + 1) * 18 * progreso
+            sombra_rect = rect.move(-distancia, -distancia // 3)
+            pygame.draw.rect(sombra, (*color, int(40 * (1 - indice / 5))), sombra_rect, width=3, border_radius=18)
+        for indice in range(14):
+            x = rect.left + (indice * 37) % max(1, rect.width)
+            y = rect.top + (indice * 61) % max(1, rect.height)
+            pygame.draw.circle(sombra, (*color, int(110 * progreso)), (x, y), 3 + indice % 3)
+        superficie.blit(sombra, (0, 0))
 
 
 def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos, hud, animacion=None):
