@@ -125,9 +125,9 @@ def cargar_icono_hud(nombre):
     icono = imagen.subsurface((0, 0, ancho_icono, imagen.get_height())).copy()
     # Se deja aire transparente alrededor del emblema. Así las hojas y los
     # adornos no quedan pegados ni parecen cortados por el borde del HUD.
-    icono_escalado = pygame.transform.smoothscale(icono, (58, 58))
-    contenedor = pygame.Surface((66, 66), pygame.SRCALPHA)
-    contenedor.blit(icono_escalado, (4, 4))
+    icono_escalado = pygame.transform.smoothscale(icono, (42, 42))
+    contenedor = pygame.Surface((48, 48), pygame.SRCALPHA)
+    contenedor.blit(icono_escalado, (3, 3))
     return contenedor
 
 
@@ -841,7 +841,7 @@ def main():
     fuente_texto = cargar_fuente(22)
     fuente_categoria = cargar_fuente(13)
     fuente_boton = cargar_fuente(19)
-    fuente_indicador = cargar_fuente(14)
+    fuente_indicador = cargar_fuente(11)
     fuente_etiqueta = cargar_fuente(13)
     fuente_mapa = cargar_fuente(18)
     fuente_panel_titulo = cargar_fuente(16)

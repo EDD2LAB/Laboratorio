@@ -78,7 +78,7 @@ class ControladorMensajePrivado:
 
         # El PNG conserva un margen transparente sobre el pergamino; el
         # contenido comienza más abajo, dentro de la zona clara del papel.
-        titulo = self.fuente_titulo.render("MENSAJE PRIVADO", True, (73, 43, 28))
+        titulo = self.fuente_texto.render("MENSAJE PRIVADO", True, (73, 43, 28))
         superficie.blit(titulo, titulo.get_rect(center=(480, rect.y + 132)))
         remitente = self.fuente_texto.render(f"De: {self.mensaje_actual['remitente']}", True, (91, 54, 31))
         destinatario = self.fuente_texto.render(f"Para: {self.mensaje_actual['destinatario']}", True, (91, 54, 31))

@@ -44,8 +44,8 @@ class HUDIndicadores:
 
     def dibujar(self, superficie, x=14, y=12):
         nombres = list(self.objetivos)
-        alto_fila = 70
-        panel = pygame.Rect(x - 6, y - 5, 270, max(70, len(nombres) * alto_fila + 12))
+        alto_fila = 52
+        panel = pygame.Rect(x - 5, y - 4, 216, max(58, len(nombres) * alto_fila + 10))
         velo = pygame.Surface(panel.size, pygame.SRCALPHA)
         velo.fill((10, 27, 20, 182))
         superficie.blit(velo, panel.topleft)
@@ -63,7 +63,7 @@ class HUDIndicadores:
         critico = objetivo >= 75 if es_negativo else objetivo <= 25
         icono = self.iconos.get(nombre)
         etiqueta = nombre.replace("_", " ").capitalize()
-        canal = pygame.Rect(x + 72, y + 33, 161, 15)
+        canal = pygame.Rect(x + 54, y + 25, 128, 12)
 
         if critico:
             intensidad = int(80 + 50 * abs(pygame.math.Vector2(1, 0).rotate(self.tiempo * 360).x))
@@ -80,9 +80,9 @@ class HUDIndicadores:
             color = (102, 200, 112) if valor >= 35 else (225, 171, 69)
 
         if icono:
-            superficie.blit(icono, (x, y + 2))
+            superficie.blit(icono, (x, y + 1))
         texto = self.fuente.render(etiqueta, True, (255, 243, 210))
-        superficie.blit(texto, (x + 72, y + 7))
+        superficie.blit(texto, (x + 54, y + 5))
         marco = canal.inflate(5, 5)
         pygame.draw.rect(superficie, (87, 45, 28), marco, border_radius=8)
         pygame.draw.rect(superficie, (237, 185, 87), marco, width=2, border_radius=8)
@@ -99,7 +99,7 @@ class HUDIndicadores:
             )
 
         numero = self.fuente.render(str(round(valor)), True, (255, 243, 210))
-        superficie.blit(numero, numero.get_rect(midleft=(canal.right + 7, canal.centery)))
+        superficie.blit(numero, numero.get_rect(midleft=(canal.right + 5, canal.centery)))
 
     def _dibujar_avisos(self, superficie, x, y):
         for indice, aviso in enumerate(self.avisos[-4:]):
