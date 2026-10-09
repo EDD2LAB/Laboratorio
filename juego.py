@@ -47,17 +47,24 @@ def normalizar_ruta(ruta):
 
 
 def buscar_asset(nombre):
+    """Busca tanto rutas históricas como recursos reubicados por carpetas."""
     ruta = os.path.join(RUTA_ASSETS, nombre)
     if os.path.isfile(ruta):
         return ruta
 
     objetivo = normalizar_ruta(nombre)
+    objetivo_nombre = normalizar_ruta(os.path.basename(nombre))
+    coincidencia_por_nombre = None
     for carpeta, _, archivos in os.walk(RUTA_ASSETS):
         for archivo in archivos:
             ruta_real = os.path.join(carpeta, archivo)
             relativa = os.path.relpath(ruta_real, RUTA_ASSETS)
             if normalizar_ruta(relativa) == objetivo:
                 return ruta_real
+            if coincidencia_por_nombre is None and normalizar_ruta(archivo) == objetivo_nombre:
+                coincidencia_por_nombre = ruta_real
+    if coincidencia_por_nombre:
+        return coincidencia_por_nombre
     return ruta
 
 
