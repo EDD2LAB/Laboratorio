@@ -770,18 +770,28 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
         "ignorar": (179, 97, 230),
     }
     color = colores[clave]
+    frente_quema = []
 
     # La textura también ocurre sobre la tablilla: no se trata de un icono
     # superpuesto sino del objeto del juego respondiendo a la elección.
     velo = pygame.Surface(tablilla.get_size(), pygame.SRCALPHA)
     pulso = math.sin(progreso * math.pi)
     if clave == "quemar":
-        altura = int(tablilla.get_height() * min(1, progreso * 1.28))
-        pygame.draw.rect(velo, (62, 10, 3, int(78 + 130 * progreso)), (0, tablilla.get_height() - altura, tablilla.get_width(), altura))
-        for indice in range(11):
-            x = 18 + (indice * 41) % (tablilla.get_width() - 36)
-            y = tablilla.get_height() - int(progreso * (65 + (indice % 4) * 28))
-            pygame.draw.circle(velo, (255, 130 + (indice % 2) * 60, 20, 170), (x, y), 8 + indice % 5)
+        # El fuego avanza desde la base y el lado izquierdo con un borde
+        # irregular. Todo lo que queda detrás se vuelve transparente.
+        ancho_tablilla, alto_tablilla = tablilla.get_size()
+        for indice in range(17):
+            fraccion = indice / 16
+            lateral = (1 - fraccion) * .22
+            variacion = ((indice * 19) % 31 - 15) * min(.7, progreso * 1.25)
+            avance = min(1, progreso * (1.05 + lateral) + (indice % 3) * .018)
+            frente_quema.append((int(fraccion * ancho_tablilla), max(0, min(alto_tablilla, int(alto_tablilla * (1 - avance) + variacion)))))
+        mascara = pygame.Surface(tablilla.get_size(), pygame.SRCALPHA)
+        mascara.fill((255, 255, 255, 255))
+        zona_consumida = [(0, alto_tablilla), (ancho_tablilla, alto_tablilla), *reversed(frente_quema)]
+        pygame.draw.polygon(mascara, (0, 0, 0, 0), zona_consumida)
+        pygame.draw.lines(velo, (70, 14, 4, 210), False, frente_quema, 16)
+        pygame.draw.lines(velo, (255, 112, 18, 235), False, frente_quema, 7)
     elif clave == "consultar":
         linea_y = int((tablilla.get_height() + 54) * progreso) - 27
         pygame.draw.rect(velo, (*color, 56), (0, linea_y - 28, tablilla.get_width(), 56))
@@ -792,11 +802,12 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
     else:  # colgar
         pygame.draw.rect(velo, (*color, int(68 * (1 - progreso))), velo.get_rect(), width=7, border_radius=18)
     tablilla.blit(velo, (0, 0))
+    if clave == "quemar":
+        tablilla.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     escala, angulo, desplazamiento, alfa = 1.0, 0, (0, 0), 255
     if clave == "quemar":
-        escala = 1 - 0.28 * progreso
-        angulo = -12 * progreso + math.sin(progreso * 38) * (1 - progreso) * 3
-        alfa = int(255 * (1 - 0.70 * progreso))
+        # La desaparición la controla la máscara de fuego, no un fundido.
+        angulo = math.sin(progreso * 36) * (1 - progreso) * 1.5
     elif clave == "consultar":
         escala = 1 + 0.05 * abs(pygame.math.Vector2(1, 0).rotate(progreso * 720).x)
     elif clave == "colgar":
@@ -825,22 +836,27 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
     superficie.blit(tablilla, rect)
 
     if clave == "quemar":
-        # Llamas, brasa y humo salen del borde de LA tablilla.
+        # Llamas y brasa recorren el borde que está consumiendo LA tablilla.
         fuego = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
-        for indice in range(18):
-            x = rect.left + 18 + (indice * 27) % max(1, rect.width - 36)
-            alto_llama = int(22 + progreso * (46 + (indice % 5) * 14))
-            base = rect.bottom - 10 - (indice % 3) * 6
-            pygame.draw.polygon(fuego, (241, 54, 12, 238), [(x - 12, base), (x + 12, base), (x, base - alto_llama)])
-            pygame.draw.polygon(fuego, (255, 170, 23, 245), [(x - 6, base), (x + 6, base), (x, base - alto_llama * 0.60)])
-            pygame.draw.circle(fuego, (255, 221, 92, 245), (x, base - 5), 6)
+        borde_global = [
+            (rect.left + int(x / recursos["tablilla"].get_width() * rect.width), rect.top + int(y / recursos["tablilla"].get_height() * rect.height))
+            for x, y in frente_quema
+        ]
+        for indice, (x, base) in enumerate(borde_global):
+            alto_llama = int(18 + (indice % 5) * 9 + 26 * pulso)
+            if indice % 2 == 0:
+                pygame.draw.polygon(fuego, (235, 55, 10, 240), [(x - 12, base + 7), (x + 12, base + 7), (x, base - alto_llama)])
+                pygame.draw.polygon(fuego, (255, 171, 25, 245), [(x - 6, base + 4), (x + 6, base + 4), (x, base - alto_llama * .58)])
+                pygame.draw.circle(fuego, (255, 225, 103, 245), (x, base), 5)
+            if indice % 3 == 0:
+                pygame.draw.polygon(fuego, (244, 69, 12, 225), [(rect.left - 5, base + 8), (rect.left + 8, base + 3), (rect.left - 2, base - alto_llama)])
         for indice in range(20):
-            x = rect.left + 14 + (indice * 43) % max(1, rect.width - 28)
-            y = rect.bottom - 16 - int(progreso * (40 + (indice % 6) * 30))
+            x, borde_y = borde_global[indice % len(borde_global)]
+            y = borde_y - int(18 + (indice % 6) * 18 * pulso)
             pygame.draw.circle(fuego, (255, 191, 64, int(220 * (1 - progreso * .35))), (x, y), 2 + indice % 3)
         for indice in range(7):
-            x = rect.centerx - 80 + indice * 28
-            y = rect.top + 80 - int(progreso * (35 + indice * 9))
+            x, borde_y = borde_global[(indice * 2) % len(borde_global)]
+            y = borde_y - int(30 + progreso * (30 + indice * 10))
             pygame.draw.circle(fuego, (46, 40, 42, int(96 * progreso)), (x, y), 14 + indice % 3 * 6)
         superficie.blit(fuego, (0, 0))
     elif clave == "consultar":
@@ -908,6 +924,13 @@ def clave_pocion(opcion):
     if "quemar" in opcion:
         return "quemar"
     return "ignorar"
+
+
+def iniciar_animacion_decision(opcion):
+    """La quema necesita tiempo suficiente para consumir toda la tablilla."""
+    clave = clave_pocion(opcion)
+    duracion = 1.65 if clave == "quemar" else 1.25
+    return {"clave": clave, "opcion": opcion, "restante": duracion, "duracion": duracion}
 
 
 def rectangulos_pociones(recursos):
@@ -1301,8 +1324,7 @@ def main():
                     grupo_botones.reemplazar(botones)
                     escena = ESCENA_RESULTADO
                 elif opcion_teclado and escena == ESCENA_TABLILLA:
-                    clave = clave_pocion(opcion_teclado)
-                    pocion_animacion = {"clave": clave, "opcion": opcion_teclado, "restante": 1.25, "duracion": 1.25}
+                    pocion_animacion = iniciar_animacion_decision(opcion_teclado)
             elif escena == ESCENA_RESULTADO and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 estado.continuar_despues_resultado()
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
@@ -1331,8 +1353,7 @@ def main():
                 if not pocion_animacion:
                     for boton in botones:
                         if boton.fue_clickeado(pos_lienzo):
-                            clave = clave_pocion(boton.texto)
-                            pocion_animacion = {"clave": clave, "opcion": boton.texto, "restante": 1.25, "duracion": 1.25}
+                            pocion_animacion = iniciar_animacion_decision(boton.texto)
                             break
 
         mundo["guardian"].actualizar(delta_ms)
