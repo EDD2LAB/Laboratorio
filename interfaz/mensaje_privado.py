@@ -80,18 +80,23 @@ class ControladorMensajePrivado:
         # contenido comienza más abajo, dentro de la zona clara del papel.
         titulo = self.fuente_titulo.render("MENSAJE PRIVADO", True, (73, 43, 28))
         superficie.blit(titulo, titulo.get_rect(center=(480, rect.y + 132)))
-        meta = self.fuente_texto.render(
-            f"De: {self.mensaje_actual['remitente']}   Para: {self.mensaje_actual['destinatario']}",
-            True,
-            (91, 54, 31),
-        )
-        superficie.blit(meta, meta.get_rect(center=(480, rect.y + 162)))
+        remitente = self.fuente_texto.render(f"De: {self.mensaje_actual['remitente']}", True, (91, 54, 31))
+        destinatario = self.fuente_texto.render(f"Para: {self.mensaje_actual['destinatario']}", True, (91, 54, 31))
+        superficie.blit(remitente, remitente.get_rect(center=(480, rect.y + 160)))
+        superficie.blit(destinatario, destinatario.get_rect(center=(480, rect.y + 181)))
 
-        y = rect.y + 202
-        for linea in _envolver(self.mensaje_actual["texto"], self.fuente_texto, rect.width - 130):
+        # Este rectángulo coincide con la parte clara central del pergamino.
+        # Además de envolver a un ancho conservador, se aplica como clip para
+        # impedir que cualquier línea futura atraviese los rollos laterales.
+        area_texto = pygame.Rect(rect.x + 112, rect.y + 202, rect.width - 224, 92)
+        clip_anterior = superficie.get_clip()
+        superficie.set_clip(area_texto)
+        y = area_texto.y + 12
+        for linea in _envolver(self.mensaje_actual["texto"], self.fuente_texto, area_texto.width):
             render = self.fuente_texto.render(linea, True, (69, 42, 28))
-            superficie.blit(render, render.get_rect(center=(480, y)))
-            y += 24
+            superficie.blit(render, render.get_rect(center=(area_texto.centerx, y)))
+            y += 23
+        superficie.set_clip(clip_anterior)
         self.boton_cerrar.dibujar(superficie, mouse_pos)
 
 
