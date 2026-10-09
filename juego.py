@@ -103,18 +103,21 @@ def cargar_icono_hud(nombre):
     sí conserva una zona cuadrada consistente en todos los recursos.
     """
     imagen = cargar_imagen(nombre)
-    limites = imagen.get_bounding_rect()
-    if limites.width and limites.height:
-        imagen = imagen.subsurface(limites).copy()
+    # Algunos PNG tienen píxeles semitransparentes aislados fuera del dibujo.
+    # La máscara con umbral localiza el bloque real del arte y evita que esos
+    # píxeles falsos alteren el cálculo del recorte.
+    componentes = pygame.mask.from_surface(imagen, 32).get_bounding_rects()
+    limites = max(componentes, key=lambda rect: rect.width * rect.height) if componentes else imagen.get_rect()
+    imagen = imagen.subsurface(limites).copy()
     # Las composiciones provienen de archivos exportados con lienzos muy
     # distintos. Estos límites separan el medallón de la etiqueta de texto de
     # cada recurso antes de normalizarlo a una misma medida.
     proporcion_icono = {
-        "Barra_sabiduría.png": 1.15,
-        "Barra_confianza.png": 0.88,
-        "Barra_armonía.png": 0.98,
-        "Barra_susurros_falsos.png": 0.98,
-        "Barra_desinformación.png": 1.30,
+        "Barra_sabiduría.png": 1.20,
+        "Barra_confianza.png": 1.20,
+        "Barra_armonía.png": 1.05,
+        "Barra_susurros_falsos.png": 1.08,
+        "Barra_desinformación.png": 1.35,
     }.get(nombre, 1.0)
     ancho_icono = min(imagen.get_width(), round(imagen.get_height() * proporcion_icono))
     icono = imagen.subsurface((0, 0, ancho_icono, imagen.get_height())).copy()
