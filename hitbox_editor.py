@@ -158,12 +158,31 @@ def choose_image_from_console(project_root):
     return os.path.join("Imagenes", "Fondos", "Salon(1).jpg")
 
 
+def _resolve_game_personaje_class(project_root):
+    """Busca Personaje en rutas del proyecto sin provocar errores de importación estáticos."""
+    candidates = [project_root]
+    fuentes_root = os.path.join(project_root, "Fuentes")
+    if os.path.isdir(fuentes_root):
+        candidates.append(fuentes_root)
+
+    for candidate in candidates:
+        if candidate not in sys.path:
+            sys.path.insert(0, candidate)
+
+    try:
+        module = __import__("Movimiento.Personaje", fromlist=["Personaje"])
+        return getattr(module, "Personaje", None)
+    except Exception:
+        return None
+
+
 def build_dummy_from_game_logic(project_root, img_rect):
     default = pygame.Rect(img_rect.centerx - 14, img_rect.centery - 14, 28, 28)
     try:
-        if project_root not in sys.path:
-            sys.path.insert(0, project_root)
-        from Movimiento.Personaje import Personaje
+        Personaje = _resolve_game_personaje_class(project_root)
+        if Personaje is None:
+            return default
+
         rutas = os.path.join(project_root, "Imagenes", "Personajes", "personaje_main")
         personaje = Personaje(
             img_rect.width // 2 - 14, img_rect.height // 2 - 14,
