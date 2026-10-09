@@ -13,8 +13,8 @@ import unicodedata
 
 import pygame
 
+from animaciones import ControladorAnimaciones
 from logica_juego import EstadoJuego
-
 
 ANCHO, ALTO = 960, 720
 RELACION_ASPECTO = ANCHO / ALTO
@@ -214,25 +214,127 @@ class Boton:
 
 
 class Actor:
-    def __init__(self, nombre, imagen_quieto, posicion, etiqueta, escala_sombra=1.0):
+    def __init__(
+        self,
+        nombre,
+        imagen_quieto,
+        posicion,
+        etiqueta,
+        escala_sombra=1.0,
+    ):
         self.nombre = nombre
-        self.imagen_quieto = imagen_quieto
         self.posicion = pygame.Vector2(posicion)
         self.etiqueta = etiqueta
         self.escala_sombra = escala_sombra
 
+        self.animaciones = ControladorAnimaciones()
+        self.animaciones.agregar(
+            "idle",
+            [imagen_quieto],
+            duracion_frame=200,
+            repetir=True,
+        )
+
+        self.destino = None
+        self.velocidad = 100
+        self.en_movimiento = False
+
+    def agregar_animacion(
+        self,
+        nombre,
+        frames,
+        duracion_frame=120,
+        repetir=True,
+        siguiente_estado="idle",
+    ):
+        self.animaciones.agregar(
+            nombre,
+            frames,
+            duracion_frame,
+            repetir,
+            siguiente_estado,
+        )
+
+    def cambiar_estado(self, estado, reiniciar=False):
+        return self.animaciones.cambiar_estado(estado, reiniciar)
+
+    def mover_hacia(self, destino, velocidad=100, estado="caminar"):
+        self.destino = pygame.Vector2(destino)
+        self.velocidad = velocidad
+        self.en_movimiento = True
+
+        if self.destino.x < self.posicion.x:
+            self.animaciones.establecer_direccion("izquierda")
+        else:
+            self.animaciones.establecer_direccion("derecha")
+
+        if self.animaciones.tiene(estado):
+            self.cambiar_estado(estado)
+
+    def detener(self):
+        self.destino = None
+        self.en_movimiento = False
+        self.cambiar_estado("idle")
+
+    def actualizar(self, delta_ms):
+        if self.en_movimiento and self.destino is not None:
+            desplazamiento = self.destino - self.posicion
+            distancia = desplazamiento.length()
+
+            avance = self.velocidad * delta_ms / 1000
+
+            if distancia <= avance:
+                self.posicion = self.destino
+                self.detener()
+            elif distancia > 0:
+                self.posicion += desplazamiento.normalize() * avance
+
+        self.animaciones.actualizar(delta_ms)
+
     def dibujar(self, superficie, fuente, posicion=None, imagen=None):
         pos = pygame.Vector2(posicion) if posicion else self.posicion
-        imagen = imagen or self.imagen_quieto
-        sombra_w = int(50 * self.escala_sombra)
-        pygame.draw.ellipse(superficie, (0, 0, 0, 90), (pos.x - sombra_w // 2, pos.y + 42, sombra_w, 14))
-        rect = imagen.get_rect(midbottom=(int(pos.x), int(pos.y + 48)))
-        superficie.blit(imagen, rect)
-        texto = fuente.render(self.etiqueta, True, CREMA)
-        placa = texto.get_rect(center=(int(pos.x), int(pos.y - 27))).inflate(12, 7)
-        pygame.draw.rect(superficie, (19, 38, 30, 190), placa, border_radius=7)
-        superficie.blit(texto, texto.get_rect(center=placa.center))
 
+        if imagen is None:
+            imagen = self.animaciones.imagen_actual()
+
+        if imagen is None:
+            return
+
+        sombra_w = int(50 * self.escala_sombra)
+
+        sombra = pygame.Surface((sombra_w, 14), pygame.SRCALPHA)
+        pygame.draw.ellipse(
+            sombra,
+            (0, 0, 0, 90),
+            sombra.get_rect(),
+        )
+        superficie.blit(
+            sombra,
+            (int(pos.x - sombra_w / 2), int(pos.y + 42)),
+        )
+
+        rect = imagen.get_rect(
+            midbottom=(int(pos.x), int(pos.y + 48))
+        )
+        superficie.blit(imagen, rect)
+
+        texto = fuente.render(self.etiqueta, True, CREMA)
+        placa = texto.get_rect(
+            center=(int(pos.x), int(pos.y - 27))
+        ).inflate(12, 7)
+
+        fondo_placa = pygame.Surface(placa.size, pygame.SRCALPHA)
+        pygame.draw.rect(
+            fondo_placa,
+            (19, 38, 30, 190),
+            fondo_placa.get_rect(),
+            border_radius=7,
+        )
+        superficie.blit(fondo_placa, placa.topleft)
+        superficie.blit(
+            texto,
+            texto.get_rect(center=placa.center),
+        )
 
 class Casa:
     def __init__(self, nombre, centro, color, vieja=False):
@@ -626,6 +728,18 @@ def crear_mundo(recursos):
     }
 
 
+def iniciar_cinematica_mapa(mundo):
+    destino = (
+        mundo["arbol"][0],
+        mundo["arbol"][1] - 70,
+    )
+    mundo["guardian"].mover_hacia(
+        destino,
+        velocidad=95,
+        estado="caminar",
+    )
+
+
 def tamano_ventana_inicial():
     info = pygame.display.Info()
     max_ancho = max(640, int(info.current_w * 0.92))
@@ -695,6 +809,8 @@ def main():
         "quemar": cargar_imagen("Quemar.png", (190, 127)),
         "guardian_quieto": cargar_sprite("Fila 1 - 1. Guardian.png", (86, 86)),
         "guardian_caminando": cargar_spritesheet("Fila 2. Guardian.png", 8, (86, 86)),
+        "guardian_hablando": [cargar_imagen("Guardian_hablando.png", (86, 86), requerido=False) or cargar_imagen("Guardian.jpeg", (86, 86))],
+        "guardian_consultando": [cargar_imagen("Guardian_consultando.png", (86, 86), requerido=False) or cargar_imagen("Guardian.jpeg", (86, 86))],
         "aspirante_quieto": cargar_sprite("Fila 1 - 3. Aspirante_a_cacique-Idle.png", (78, 78)),
         "mira_quieta": cargar_sprite("MujerAspirante Fila 1 - 8.png", (78, 78)),
         "mensajero_quieto": cargar_sprite(os.path.join("mensajero", "fila 1 - 7.png"), (78, 78)),
@@ -713,13 +829,37 @@ def main():
 
     estado = EstadoJuego()
     mundo = crear_mundo(recursos)
+    guardian = mundo["guardian"]
+
+    guardian.agregar_animacion(
+        "caminar",
+        recursos["guardian_caminando"],
+        duracion_frame=120,
+        repetir=True,
+    )
+    guardian.agregar_animacion(
+        "hablar",
+        recursos["guardian_hablando"],
+        duracion_frame=140,
+        repetir=True,
+    )
+    guardian.agregar_animacion(
+        "consultar",
+        recursos["guardian_consultando"],
+        duracion_frame=120,
+        repetir=False,
+        siguiente_estado="idle",
+    )
+
     botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
     escena = ESCENA_MAPA
     inicio_escena = pygame.time.get_ticks()
+    iniciar_cinematica_mapa(mundo)
     duracion_cinematica = 3900
 
     corriendo = True
     while corriendo:
+        delta_ms = reloj.tick(FPS)
         tiempo_ms = pygame.time.get_ticks()
         rect_lienzo = rect_lienzo_en_ventana(pantalla.get_size())
         mouse_pos = convertir_mouse_a_lienzo(pygame.mouse.get_pos(), rect_lienzo)
@@ -736,6 +876,7 @@ def main():
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
                 escena = ESCENA_MAPA
                 inicio_escena = pygame.time.get_ticks()
+                iniciar_cinematica_mapa(mundo)
             elif escena == ESCENA_CONSECUENCIA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 botones = construir_botones(estado.opciones_clasificacion_actuales(), recursos, fuente_boton)
                 escena = ESCENA_CLASIFICACION
@@ -757,6 +898,10 @@ def main():
                             escena = ESCENA_CONSECUENCIA
                         break
 
+        mundo["guardian"].actualizar(delta_ms)
+        for actor in mundo["actores"]:
+            actor.actualizar(delta_ms)
+
         if escena == ESCENA_MAPA and tiempo_ms - inicio_escena >= duracion_cinematica:
             escena = ESCENA_TABLILLA
             botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
@@ -774,8 +919,6 @@ def main():
 
         presentar_lienzo(pantalla, lienzo)
         pygame.display.flip()
-        reloj.tick(FPS)
-
     pygame.quit()
     sys.exit()
 
