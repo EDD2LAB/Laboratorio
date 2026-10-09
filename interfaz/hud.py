@@ -65,16 +65,13 @@ class HUDIndicadores:
             intensidad = int(80 + 50 * abs(pygame.math.Vector2(1, 0).rotate(self.tiempo * 360).x))
             pygame.draw.rect(superficie, (220, 82, 64, intensidad), (x + 93, y + 20, 167, 25), border_radius=10)
 
-        # Canal y relleno antes del marco para respetar el borde ilustrado.
+        # El marco tiene un canal negro opaco; por eso se pinta primero y el
+        # relleno se coloca encima, exactamente dentro de su abertura.
         canal = pygame.Rect(x + 111, y + 25, 133, 14)
-        pygame.draw.rect(superficie, (16, 21, 20), canal, border_radius=7)
         if es_negativo:
             color = (221, 82, 68) if valor >= 55 else (215, 159, 69)
         else:
             color = (102, 200, 112) if valor >= 35 else (225, 171, 69)
-        ancho = int(canal.width * valor / 100)
-        if ancho:
-            pygame.draw.rect(superficie, color, (canal.x, canal.y, ancho, canal.height), border_radius=7)
 
         if marco:
             superficie.blit(marco, (x, y))
@@ -83,6 +80,17 @@ class HUDIndicadores:
             texto = self.fuente.render(etiqueta, True, (255, 243, 210))
             superficie.blit(texto, (x + 6, y + 20))
             pygame.draw.rect(superficie, (237, 185, 87), canal, width=2, border_radius=7)
+
+        interior = canal.inflate(-8, -8)
+        pygame.draw.rect(superficie, (25, 22, 18), interior, border_radius=4)
+        ancho = int(interior.width * valor / 100)
+        if ancho:
+            pygame.draw.rect(
+                superficie,
+                color,
+                (interior.x, interior.y, ancho, interior.height),
+                border_radius=4,
+            )
 
         numero = self.fuente.render(str(round(valor)), True, (255, 243, 210))
         superficie.blit(numero, numero.get_rect(midleft=(x + 251, y + 32)))

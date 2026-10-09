@@ -42,6 +42,7 @@ ESCENA_RESULTADO = "resultado"
 ESCENA_DIALOGO = "dialogo"
 ESCENA_PAUSA = "pausa"
 ESCENA_AYUDA = "ayuda"
+CENTRO_TABLILLA = (565, 330)
 
 
 def normalizar_ruta(ruta):
@@ -478,7 +479,8 @@ def construir_botones(opciones, imagenes, fuente):
 
 
 def dibujar_tablilla(superficie, tablilla, estado, fuente_texto, fuente_categoria):
-    rect = tablilla.get_rect(center=(ANCHO // 2, 330))
+    # Se desplaza a la derecha para reservar un margen real al HUD.
+    rect = tablilla.get_rect(center=CENTRO_TABLILLA)
     superficie.blit(tablilla, rect)
 
     lineas = envolver_texto(estado.texto_actual(), fuente_texto, 365)
@@ -536,7 +538,7 @@ def dibujar_consecuencia_evento(superficie, recursos, estado):
 def dibujar_pregunta_clasificacion(superficie, recursos, botones, mouse_pos):
     """Pide la clasificación sin mostrar cuál era la categoría real."""
     superficie.blit(recursos["fondo_tablilla"], (0, 0))
-    rect = recursos["tablilla"].get_rect(center=(ANCHO // 2, 330))
+    rect = recursos["tablilla"].get_rect(center=CENTRO_TABLILLA)
     superficie.blit(recursos["tablilla"], rect)
     titulo = recursos["fuente_panel_titulo"].render("¿CÓMO CLASIFICARÍAS ESTA TABLILLA?", True, TINTA)
     superficie.blit(titulo, titulo.get_rect(center=(rect.centerx, rect.y + 190)))
@@ -753,6 +755,13 @@ def tamano_ventana_inicial():
     return ancho, alto
 
 
+def crear_ventana(pantalla_completa):
+    """Crea ventana redimensionable o pantalla completa sin estirar el lienzo."""
+    if pantalla_completa:
+        return pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+    return pygame.display.set_mode(tamano_ventana_inicial(), pygame.RESIZABLE)
+
+
 def rect_lienzo_en_ventana(tamano_ventana):
     ancho_ventana, alto_ventana = tamano_ventana
     escala = min(ancho_ventana / ANCHO, alto_ventana / ALTO)
@@ -783,7 +792,8 @@ def presentar_lienzo(pantalla, lienzo):
 
 def main():
     pygame.init()
-    pantalla = pygame.display.set_mode(tamano_ventana_inicial(), pygame.RESIZABLE)
+    pantalla_completa = False
+    pantalla = crear_ventana(pantalla_completa)
     pygame.display.set_caption("La Copa: Voces en las Alturas")
     reloj = pygame.time.Clock()
     lienzo = pygame.Surface((ANCHO, ALTO))
@@ -890,7 +900,14 @@ def main():
             if evento.type == pygame.QUIT:
                 corriendo = False
             elif evento.type == pygame.VIDEORESIZE:
-                pantalla = pygame.display.set_mode(evento.size, pygame.RESIZABLE)
+                if not pantalla_completa:
+                    pantalla = pygame.display.set_mode(evento.size, pygame.RESIZABLE)
+            elif evento.type == pygame.KEYDOWN and (
+                evento.key == pygame.K_F11
+                or (evento.key == pygame.K_RETURN and getattr(evento, "mod", 0) & pygame.KMOD_ALT)
+            ):
+                pantalla_completa = not pantalla_completa
+                pantalla = crear_ventana(pantalla_completa)
             elif escena == ESCENA_PAUSA:
                 accion = pausa.manejar_evento(
                     evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
