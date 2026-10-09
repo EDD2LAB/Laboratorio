@@ -750,10 +750,107 @@ def dibujar_arbol_decision(superficie, estado, fuente_titulo, fuente):
         superficie.blit(texto, texto.get_rect(center=(x, y + 22)))
 
 
-def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos, hud):
+def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
+    """Anima la tablilla real para que la decisión afecte al objeto, no a un icono."""
+    progreso = 1 - animacion["restante"] / animacion["duracion"]
+    tablilla = recursos["tablilla"].copy()
+    lineas = envolver_texto(estado.texto_actual(), recursos["fuente_texto"], 365)
+    y = 265 - len(lineas) * 31 // 2
+    for linea in lineas:
+        texto = recursos["fuente_texto"].render(linea, True, TINTA)
+        tablilla.blit(texto, texto.get_rect(center=(tablilla.get_width() // 2, y)))
+        y += 31
+
+    clave = animacion["clave"]
+    colores = {
+        "colgar": (248, 202, 76),
+        "consultar": (80, 181, 255),
+        "quemar": (255, 77, 35),
+        "ignorar": (179, 97, 230),
+    }
+    color = colores[clave]
+
+    # La textura también ocurre sobre la tablilla: no se trata de un icono
+    # superpuesto sino del objeto del juego respondiendo a la elección.
+    velo = pygame.Surface(tablilla.get_size(), pygame.SRCALPHA)
+    if clave == "quemar":
+        altura = int(tablilla.get_height() * progreso)
+        pygame.draw.rect(velo, (70, 12, 4, int(70 + 105 * progreso)), (0, tablilla.get_height() - altura, tablilla.get_width(), altura))
+        for indice in range(11):
+            x = 18 + (indice * 41) % (tablilla.get_width() - 36)
+            y = tablilla.get_height() - int(progreso * (40 + (indice % 4) * 22))
+            pygame.draw.circle(velo, (255, 130 + (indice % 2) * 60, 20, 170), (x, y), 8 + indice % 5)
+    elif clave == "consultar":
+        linea_y = int((tablilla.get_height() + 54) * progreso) - 27
+        pygame.draw.rect(velo, (*color, 42), (0, linea_y - 20, tablilla.get_width(), 40))
+        pygame.draw.line(velo, (*color, 235), (18, linea_y), (tablilla.get_width() - 18, linea_y), 4)
+        pygame.draw.rect(velo, (*color, 80), velo.get_rect(), width=5, border_radius=16)
+    elif clave == "ignorar":
+        pygame.draw.rect(velo, (36, 20, 55, int(165 * progreso)), velo.get_rect(), border_radius=18)
+    else:  # colgar
+        pygame.draw.rect(velo, (*color, int(68 * (1 - progreso))), velo.get_rect(), width=7, border_radius=18)
+    tablilla.blit(velo, (0, 0))
+    escala, angulo, desplazamiento, alfa = 1.0, 0, (0, 0), 255
+    if clave == "quemar":
+        escala = 1 - 0.18 * progreso
+        angulo = -10 * progreso
+        alfa = int(255 * (1 - 0.30 * progreso))
+    elif clave == "consultar":
+        escala = 1 + 0.05 * abs(pygame.math.Vector2(1, 0).rotate(progreso * 720).x)
+    elif clave == "colgar":
+        desplazamiento = (0, -42 * progreso)
+        escala = 1 - 0.08 * progreso
+    elif clave == "ignorar":
+        desplazamiento = (72 * progreso, 26 * progreso)
+        alfa = int(255 * (1 - 0.72 * progreso))
+        angulo = 8 * progreso
+
+    ancho = max(1, round(tablilla.get_width() * escala))
+    alto = max(1, round(tablilla.get_height() * escala))
+    tablilla = pygame.transform.smoothscale(tablilla, (ancho, alto))
+    if angulo:
+        tablilla = pygame.transform.rotate(tablilla, angulo)
+    tablilla.set_alpha(alfa)
+    centro = (CENTRO_TABLILLA[0] + desplazamiento[0], CENTRO_TABLILLA[1] + desplazamiento[1])
+    rect = tablilla.get_rect(center=centro)
+
+    # Resplandor grande detrás de la tablilla, limitado para no tapar el mapa.
+    halo = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+    radio = int(120 + 75 * (1 - abs(progreso * 2 - 1)))
+    pygame.draw.circle(halo, (*color, 34), centro, radio)
+    superficie.blit(halo, (0, 0))
+    superficie.blit(tablilla, rect)
+
+    if clave == "quemar":
+        # Llamas y chispas recorren el borde inferior de LA tablilla.
+        fuego = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        for indice in range(13):
+            x = rect.left + 20 + (indice * 31) % max(1, rect.width - 40)
+            alto_llama = int(18 + progreso * (30 + (indice % 4) * 13))
+            base = rect.bottom - 10 - (indice % 3) * 6
+            pygame.draw.polygon(fuego, (255, 70, 15, 230), [(x - 10, base), (x + 10, base), (x, base - alto_llama)])
+            pygame.draw.circle(fuego, (255, 201, 48, 235), (x, base - 5), 7)
+        superficie.blit(fuego, (0, 0))
+    elif clave == "consultar":
+        brillo = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        y_scan = rect.top + int(rect.height * progreso)
+        pygame.draw.line(brillo, (*color, 255), (rect.left + 22, y_scan), (rect.right - 22, y_scan), 4)
+        pygame.draw.rect(brillo, (*color, 165), rect, width=3, border_radius=18)
+        superficie.blit(brillo, (0, 0))
+    elif clave == "colgar":
+        cuerdas = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        for x in (rect.left + rect.width // 3, rect.right - rect.width // 3):
+            pygame.draw.line(cuerdas, (247, 210, 116, 220), (x, 0), (x, rect.top + 18), 4)
+        superficie.blit(cuerdas, (0, 0))
+
+
+def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos, hud, animacion=None):
     superficie.blit(recursos["fondo_tablilla"], (0, 0))
     hud.dibujar(superficie)
-    dibujar_tablilla(superficie, recursos["tablilla"], estado, recursos["fuente_texto"], recursos["fuente_categoria"])
+    if animacion:
+        dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion)
+    else:
+        dibujar_tablilla(superficie, recursos["tablilla"], estado, recursos["fuente_texto"], recursos["fuente_categoria"])
 
     if estado.juego_terminado():
         aviso = recursos["fuente_boton"].render("Ronda terminada - Presiona ESC para salir", True, CREMA)
@@ -799,23 +896,9 @@ def dibujar_pociones(superficie, recursos, usos, animacion, mouse_pos):
             superficie.blit(fondo, posicion)
             superficie.blit(aviso, (posicion[0] + 8, posicion[1] + 5))
     if animacion:
-        progreso = 1 - animacion["restante"] / animacion["duracion"]
-        cuadros = recursos["efectos_decision"][animacion["clave"]]
-        indice = min(len(cuadros) - 1, int(progreso * len(cuadros)))
-        cuadro = cuadros[indice]
-        colores = {
-            "colgar": (248, 202, 76),
-            "consultar": (80, 181, 255),
-            "quemar": (255, 77, 35),
-            "ignorar": (179, 97, 230),
-        }
-        color = colores[animacion["clave"]]
-        intensidad = int(52 * (1 - abs(progreso * 2 - 1)))
-        halo = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
-        pygame.draw.circle(halo, (*color, intensidad), (CENTRO_TABLILLA[0], CENTRO_TABLILLA[1] + 15), 150)
-        superficie.blit(halo, (0, 0))
-        temblor = int(8 * (1 - progreso) * (-1 if indice % 2 else 1))
-        superficie.blit(cuadro, cuadro.get_rect(center=(CENTRO_TABLILLA[0] + temblor, CENTRO_TABLILLA[1] + 15)))
+        # El efecto se dibuja dentro de dibujar_tablilla_en_efecto. Aquí se
+        # evita mostrar la mini-tablilla de la hoja de sprites como adorno.
+        pass
     return rectangulos
 
 
@@ -1180,7 +1263,7 @@ def main():
                     escena = ESCENA_RESULTADO
                 elif opcion_teclado and escena == ESCENA_TABLILLA:
                     clave = clave_pocion(opcion_teclado)
-                    pocion_animacion = {"clave": clave, "opcion": opcion_teclado, "restante": 0.88, "duracion": 0.88}
+                    pocion_animacion = {"clave": clave, "opcion": opcion_teclado, "restante": 1.25, "duracion": 1.25}
             elif escena == ESCENA_RESULTADO and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 estado.continuar_despues_resultado()
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
@@ -1210,7 +1293,7 @@ def main():
                     for boton in botones:
                         if boton.fue_clickeado(pos_lienzo):
                             clave = clave_pocion(boton.texto)
-                            pocion_animacion = {"clave": clave, "opcion": boton.texto, "restante": 0.88, "duracion": 0.88}
+                            pocion_animacion = {"clave": clave, "opcion": boton.texto, "restante": 1.25, "duracion": 1.25}
                             break
 
         mundo["guardian"].actualizar(delta_ms)
@@ -1273,7 +1356,7 @@ def main():
         elif escena == ESCENA_FINAL:
             dibujar_final(lienzo, recursos, estado, mouse_pos)
         else:
-            dibujar_escena_tablilla(lienzo, recursos, estado, botones, mouse_pos, hud)
+            dibujar_escena_tablilla(lienzo, recursos, estado, botones, mouse_pos, hud, pocion_animacion)
             dibujar_pociones(lienzo, recursos, usos_pociones, pocion_animacion, mouse_pos)
 
         presentar_lienzo(pantalla, lienzo)
