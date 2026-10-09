@@ -14,6 +14,8 @@ import unicodedata
 import pygame
 
 from animaciones import ControladorAnimaciones
+from interfaz.boton import Boton, GrupoBotones
+from interfaz.dialogo import ControladorDialogo
 from logica_juego import EstadoJuego
 
 ANCHO, ALTO = 960, 720
@@ -35,6 +37,7 @@ ESCENA_TABLILLA = "tablilla"
 ESCENA_CONSECUENCIA = "consecuencia"
 ESCENA_CLASIFICACION = "clasificacion"
 ESCENA_RESULTADO = "resultado"
+ESCENA_DIALOGO = "dialogo"
 
 
 def normalizar_ruta(ruta):
@@ -178,39 +181,6 @@ def envolver_texto(texto, fuente, ancho_maximo):
     if actual:
         lineas.append(actual)
     return lineas
-
-
-class Boton:
-    def __init__(self, texto, imagen, centro, fuente):
-        self.texto = texto
-        self.imagen = imagen
-        self.centro = centro
-        self.fuente = fuente
-        if imagen:
-            self.rect = imagen.get_rect(center=centro)
-        else:
-            ancho = max(164, fuente.size(texto)[0] + 28)
-            self.rect = pygame.Rect(centro[0] - ancho // 2, centro[1] - 25, ancho, 50)
-
-    def dibujar(self, superficie, mouse_pos):
-        hover = self.rect.collidepoint(mouse_pos)
-        if self.imagen:
-            if hover:
-                brillo = self.imagen.copy()
-                brillo.fill((255, 238, 178, 50), special_flags=pygame.BLEND_RGBA_ADD)
-                superficie.blit(brillo, brillo.get_rect(center=self.centro))
-            superficie.blit(self.imagen, self.rect)
-            return
-
-        color = (126, 81, 45) if not hover else (166, 110, 58)
-        pygame.draw.rect(superficie, (42, 25, 17), self.rect.inflate(6, 6), border_radius=10)
-        pygame.draw.rect(superficie, color, self.rect, border_radius=8)
-        pygame.draw.rect(superficie, ORO, self.rect, width=2, border_radius=8)
-        etiqueta = self.fuente.render(self.texto, True, CREMA)
-        superficie.blit(etiqueta, etiqueta.get_rect(center=self.rect.center))
-
-    def fue_clickeado(self, posicion):
-        return self.rect.collidepoint(posicion)
 
 
 class Actor:
@@ -703,6 +673,16 @@ def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos):
             boton.dibujar(superficie, mouse_pos)
 
 
+def dibujar_escena_dialogo(superficie, recursos, mundo, estado, dialogos, mouse_pos):
+    """El diálogo se superpone al mapa y bloquea sus demás interacciones."""
+    superficie.blit(recursos["mapa"], (0, 0))
+    for actor in mundo["actores"]:
+        actor.dibujar(superficie, recursos["fuente_etiqueta"])
+    mundo["guardian"].dibujar(superficie, recursos["fuente_etiqueta"])
+    dibujar_indicadores(superficie, estado.indicadores, recursos["fuente_indicador"])
+    dialogos.dibujar(superficie, mouse_pos, ANCHO, ALTO)
+
+
 def crear_fondo_tablilla(mapa):
     fondo = mapa.copy()
     velo = superficie_con_alpha((ANCHO, ALTO), (7, 18, 14, 178))
@@ -852,6 +832,15 @@ def main():
     )
 
     botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+    grupo_botones = GrupoBotones(botones)
+    dialogos = ControladorDialogo(fuente_texto, fuente_panel_titulo, fuente_boton)
+    retratos_dialogo = {
+        "Mira": recursos["aspirante_quieto"],
+        "Mensajero": recursos["mensajero_quieto"],
+        "Tarek": recursos["tarek_quieto"],
+        "Luma": recursos["luma_quieta"],
+        "Guardián": recursos["guardian_quieto"],
+    }
     escena = ESCENA_MAPA
     inicio_escena = pygame.time.get_ticks()
     iniciar_cinematica_mapa(mundo)
@@ -860,6 +849,7 @@ def main():
     corriendo = True
     while corriendo:
         delta_ms = reloj.tick(FPS)
+        delta_segundos = delta_ms / 1000
         tiempo_ms = pygame.time.get_ticks()
         rect_lienzo = rect_lienzo_en_ventana(pantalla.get_size())
         mouse_pos = convertir_mouse_a_lienzo(pygame.mouse.get_pos(), rect_lienzo)
@@ -869,16 +859,47 @@ def main():
                 corriendo = False
             elif evento.type == pygame.VIDEORESIZE:
                 pantalla = pygame.display.set_mode(evento.size, pygame.RESIZABLE)
+            elif escena == ESCENA_DIALOGO:
+                resultado_dialogo = dialogos.manejar_evento(
+                    evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
+                )
+                if resultado_dialogo:
+                    escena = ESCENA_MAPA
+                    inicio_escena = pygame.time.get_ticks()
             elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
                 corriendo = False
+            elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_d and escena == ESCENA_MAPA:
+                # Punto de integración temporal: B podrá iniciar este mismo
+                # controlador desde un hitbox o una conversación desbloqueada.
+                dialogos.iniciar({
+                    "personaje": "Mira",
+                    "texto": "Guardián, escuché un rumor sobre el puente norte. Antes de compartirlo, necesitamos pruebas.",
+                    "respuestas": ["Te ayudaré", "Necesito más pruebas"],
+                }, retratos_dialogo)
+                escena = ESCENA_DIALOGO
+            elif evento.type == pygame.KEYDOWN:
+                opcion_teclado = grupo_botones.manejar_teclado(evento)
+                if opcion_teclado and escena == ESCENA_CLASIFICACION:
+                    estado.clasificar_evento(opcion_teclado)
+                    botones = []
+                    grupo_botones.reemplazar(botones)
+                    escena = ESCENA_RESULTADO
+                elif opcion_teclado and escena == ESCENA_TABLILLA:
+                    estado.elegir_opcion(opcion_teclado)
+                    botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+                    grupo_botones.reemplazar(botones)
+                    if estado.evento_resuelto():
+                        escena = ESCENA_CONSECUENCIA
             elif escena == ESCENA_RESULTADO and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 estado.continuar_despues_resultado()
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+                grupo_botones.reemplazar(botones)
                 escena = ESCENA_MAPA
                 inicio_escena = pygame.time.get_ticks()
                 iniciar_cinematica_mapa(mundo)
             elif escena == ESCENA_CONSECUENCIA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 botones = construir_botones(estado.opciones_clasificacion_actuales(), recursos, fuente_boton)
+                grupo_botones.reemplazar(botones)
                 escena = ESCENA_CLASIFICACION
             elif escena == ESCENA_CLASIFICACION and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 pos_lienzo = convertir_mouse_a_lienzo(evento.pos, rect_lienzo)
@@ -886,6 +907,7 @@ def main():
                     if boton.fue_clickeado(pos_lienzo):
                         estado.clasificar_evento(boton.texto)
                         botones = []
+                        grupo_botones.reemplazar(botones)
                         escena = ESCENA_RESULTADO
                         break
             elif escena == ESCENA_TABLILLA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
@@ -894,6 +916,7 @@ def main():
                     if boton.fue_clickeado(pos_lienzo):
                         estado.elegir_opcion(boton.texto)
                         botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+                        grupo_botones.reemplazar(botones)
                         if estado.evento_resuelto():
                             escena = ESCENA_CONSECUENCIA
                         break
@@ -905,9 +928,13 @@ def main():
         if escena == ESCENA_MAPA and tiempo_ms - inicio_escena >= duracion_cinematica:
             escena = ESCENA_TABLILLA
             botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
+            grupo_botones.reemplazar(botones)
 
         if escena == ESCENA_MAPA:
             dibujar_mapa(lienzo, recursos, mundo, estado, tiempo_ms, inicio_escena)
+        elif escena == ESCENA_DIALOGO:
+            dialogos.actualizar(delta_segundos)
+            dibujar_escena_dialogo(lienzo, recursos, mundo, estado, dialogos, mouse_pos)
         elif escena == ESCENA_CONSECUENCIA:
             dibujar_consecuencia_evento(lienzo, recursos, estado)
         elif escena == ESCENA_CLASIFICACION:
