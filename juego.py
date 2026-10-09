@@ -16,6 +16,8 @@ import pygame
 from animaciones import ControladorAnimaciones
 from interfaz.boton import Boton, GrupoBotones
 from interfaz.dialogo import ControladorDialogo
+from interfaz.hud import HUDIndicadores
+from interfaz.menu import MenuModal
 from logica_juego import EstadoJuego
 
 ANCHO, ALTO = 960, 720
@@ -38,6 +40,8 @@ ESCENA_CONSECUENCIA = "consecuencia"
 ESCENA_CLASIFICACION = "clasificacion"
 ESCENA_RESULTADO = "resultado"
 ESCENA_DIALOGO = "dialogo"
+ESCENA_PAUSA = "pausa"
+ESCENA_AYUDA = "ayuda"
 
 
 def normalizar_ruta(ruta):
@@ -87,6 +91,15 @@ def cargar_fuente(tamano):
     if not os.path.isfile(RUTA_FUENTE):
         raise RuntimeError(f"No se encontró la fuente del juego: {RUTA_FUENTE}")
     return pygame.font.Font(RUTA_FUENTE, tamano)
+
+
+def cargar_marco_hud(nombre):
+    """Recorta transparencias de los marcos ilustrados y los vuelve compactos."""
+    imagen = cargar_imagen(nombre)
+    limites = imagen.get_bounding_rect()
+    if limites.width and limites.height:
+        imagen = imagen.subsurface(limites).copy()
+    return pygame.transform.smoothscale(imagen, (280, 55))
 
 
 def cargar_animacion_guardian():
@@ -417,7 +430,7 @@ def dibujar_mensaje_mapa(superficie, fuente, texto):
         y += 22
 
 
-def dibujar_mapa(superficie, recursos, mundo, estado, tiempo_ms, inicio_escena):
+def dibujar_mapa(superficie, recursos, mundo, estado, tiempo_ms, inicio_escena, hud):
     superficie.blit(recursos["mapa"], (0, 0))
 
     for actor in mundo["actores"]:
@@ -433,7 +446,7 @@ def dibujar_mapa(superficie, recursos, mundo, estado, tiempo_ms, inicio_escena):
         imagen_guardian = recursos["guardian_quieto"]
     mundo["guardian"].dibujar(superficie, recursos["fuente_etiqueta"], pos_guardian, imagen_guardian)
 
-    dibujar_indicadores(superficie, estado.indicadores, recursos["fuente_indicador"])
+    hud.dibujar(superficie)
     dibujar_mensaje_mapa(superficie, recursos["fuente_mapa"], texto_cinematica(estado))
 
 
@@ -667,9 +680,9 @@ def dibujar_arbol_decision(superficie, estado, fuente_titulo, fuente):
         superficie.blit(texto, texto.get_rect(center=(x, y + 22)))
 
 
-def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos):
+def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos, hud):
     superficie.blit(recursos["fondo_tablilla"], (0, 0))
-    dibujar_indicadores(superficie, estado.indicadores, recursos["fuente_indicador"])
+    hud.dibujar(superficie)
     dibujar_tablilla(superficie, recursos["tablilla"], estado, recursos["fuente_texto"], recursos["fuente_categoria"])
 
     if estado.juego_terminado():
@@ -680,13 +693,13 @@ def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos):
             boton.dibujar(superficie, mouse_pos)
 
 
-def dibujar_escena_dialogo(superficie, recursos, mundo, estado, dialogos, mouse_pos):
+def dibujar_escena_dialogo(superficie, recursos, mundo, estado, dialogos, mouse_pos, hud):
     """El diálogo se superpone al mapa y bloquea sus demás interacciones."""
     superficie.blit(recursos["mapa"], (0, 0))
     for actor in mundo["actores"]:
         actor.dibujar(superficie, recursos["fuente_etiqueta"])
     mundo["guardian"].dibujar(superficie, recursos["fuente_etiqueta"])
-    dibujar_indicadores(superficie, estado.indicadores, recursos["fuente_indicador"])
+    hud.dibujar(superficie)
     dialogos.dibujar(superficie, mouse_pos, ANCHO, ALTO)
 
 
@@ -814,6 +827,14 @@ def main():
         "fuente_resultado": fuente_resultado,
     }
 
+    marcos_hud = {
+        "sabiduria": cargar_marco_hud("Barra_sabiduría.png"),
+        "confianza_consejo": cargar_marco_hud("Barra_confianza.png"),
+        "armonia": cargar_marco_hud("Barra_armonía.png"),
+        "susurros_falsos": cargar_marco_hud("Barra_susurros_falsos.png"),
+        "desinformación": cargar_marco_hud("Barra_desinformación.png"),
+    }
+
     estado = EstadoJuego()
     mundo = crear_mundo(recursos)
     guardian = mundo["guardian"]
@@ -841,6 +862,9 @@ def main():
     botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
     grupo_botones = GrupoBotones(botones)
     dialogos = ControladorDialogo(fuente_texto, fuente_panel_titulo, fuente_boton)
+    hud = HUDIndicadores(fuente_indicador, marcos_hud)
+    pausa = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
+    ayuda = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
     retratos_dialogo = {
         "Mira": recursos["aspirante_quieto"],
         "Mensajero": recursos["mensajero_quieto"],
@@ -849,6 +873,7 @@ def main():
         "Guardián": recursos["guardian_quieto"],
     }
     escena = ESCENA_MAPA
+    escena_anterior = ESCENA_MAPA
     inicio_escena = pygame.time.get_ticks()
     iniciar_cinematica_mapa(mundo)
     duracion_cinematica = 3900
@@ -866,6 +891,23 @@ def main():
                 corriendo = False
             elif evento.type == pygame.VIDEORESIZE:
                 pantalla = pygame.display.set_mode(evento.size, pygame.RESIZABLE)
+            elif escena == ESCENA_PAUSA:
+                accion = pausa.manejar_evento(
+                    evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
+                )
+                if accion in ("continuar", "volver"):
+                    escena = escena_anterior
+                elif accion == "ayuda":
+                    ayuda.configurar([("volver", "Volver")])
+                    escena = ESCENA_AYUDA
+                elif accion == "salir":
+                    corriendo = False
+            elif escena == ESCENA_AYUDA:
+                accion = ayuda.manejar_evento(
+                    evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
+                )
+                if accion:
+                    escena = ESCENA_PAUSA
             elif escena == ESCENA_DIALOGO:
                 resultado_dialogo = dialogos.manejar_evento(
                     evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
@@ -873,8 +915,14 @@ def main():
                 if resultado_dialogo:
                     escena = ESCENA_MAPA
                     inicio_escena = pygame.time.get_ticks()
-            elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-                corriendo = False
+            elif evento.type == pygame.KEYDOWN and evento.key in (pygame.K_ESCAPE, pygame.K_p):
+                escena_anterior = escena
+                pausa.configurar([
+                    ("continuar", "Continuar"),
+                    ("ayuda", "Ayuda"),
+                    ("salir", "Salir"),
+                ])
+                escena = ESCENA_PAUSA
             elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_d and escena == ESCENA_MAPA:
                 # Punto de integración temporal: B podrá iniciar este mismo
                 # controlador desde un hitbox o una conversación desbloqueada.
@@ -931,6 +979,7 @@ def main():
         mundo["guardian"].actualizar(delta_ms)
         for actor in mundo["actores"]:
             actor.actualizar(delta_ms)
+        hud.actualizar(estado.indicadores, delta_segundos)
 
         if escena == ESCENA_MAPA and tiempo_ms - inicio_escena >= duracion_cinematica:
             escena = ESCENA_TABLILLA
@@ -938,10 +987,33 @@ def main():
             grupo_botones.reemplazar(botones)
 
         if escena == ESCENA_MAPA:
-            dibujar_mapa(lienzo, recursos, mundo, estado, tiempo_ms, inicio_escena)
+            dibujar_mapa(lienzo, recursos, mundo, estado, tiempo_ms, inicio_escena, hud)
+        elif escena == ESCENA_PAUSA:
+            dibujar_mapa(lienzo, recursos, mundo, estado, tiempo_ms, inicio_escena, hud)
+            pausa.dibujar(
+                lienzo,
+                "PAUSA",
+                ["La Red de Ecos espera tu decisión.", "ESC o P: continuar"],
+                mouse_pos,
+            )
+        elif escena == ESCENA_AYUDA:
+            dibujar_mapa(lienzo, recursos, mundo, estado, tiempo_ms, inicio_escena, hud)
+            ayuda.dibujar(
+                lienzo,
+                "AYUDA",
+                [
+                    "Tablillas: decide si colgar, consultar, quemar o ignorar.",
+                    "Diálogos: reúne testimonios antes de actuar.",
+                    "Ecos y Mensajero: comparten pistas entre plataformas.",
+                    "Pócimas: anticipan consecuencias; úsalas con cuidado.",
+                    "Mantén Sabiduría, Confianza y Armonía saludables.",
+                    "Evita que Susurros Falsos y Desinformación crezcan.",
+                ],
+                mouse_pos,
+            )
         elif escena == ESCENA_DIALOGO:
             dialogos.actualizar(delta_segundos)
-            dibujar_escena_dialogo(lienzo, recursos, mundo, estado, dialogos, mouse_pos)
+            dibujar_escena_dialogo(lienzo, recursos, mundo, estado, dialogos, mouse_pos, hud)
         elif escena == ESCENA_CONSECUENCIA:
             dibujar_consecuencia_evento(lienzo, recursos, estado)
         elif escena == ESCENA_CLASIFICACION:
@@ -949,7 +1021,7 @@ def main():
         elif escena == ESCENA_RESULTADO:
             dibujar_resultado_evento(lienzo, recursos, estado)
         else:
-            dibujar_escena_tablilla(lienzo, recursos, estado, botones, mouse_pos)
+            dibujar_escena_tablilla(lienzo, recursos, estado, botones, mouse_pos, hud)
 
         presentar_lienzo(pantalla, lienzo)
         pygame.display.flip()
