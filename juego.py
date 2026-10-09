@@ -859,6 +859,16 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
             y = borde_y - int(30 + progreso * (30 + indice * 10))
             pygame.draw.circle(fuego, (46, 40, 42, int(96 * progreso)), (x, y), 14 + indice % 3 * 6)
         superficie.blit(fuego, (0, 0))
+
+        # Capa de llama ilustrada: conserva un centro transparente para que el
+        # mensaje siga viéndose hasta que el fuego alcance esa zona.
+        entrada = min(1, progreso * 5)
+        salida = min(1, (1 - progreso) * 8)
+        llamas = recursos["fuego_tablilla"].copy()
+        llamas.set_alpha(int(255 * min(entrada, salida)))
+        elevacion = int(18 * math.sin(progreso * math.pi))
+        rect_llamas = llamas.get_rect(center=(rect.centerx, rect.bottom - 118 - elevacion))
+        superficie.blit(llamas, rect_llamas)
     elif clave == "consultar":
         brillo = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
         y_scan = rect.top + int(rect.height * progreso)
@@ -873,6 +883,9 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
         for indice in range(7):
             px = rect.left + 30 + (indice * 53) % max(1, rect.width - 60)
             pygame.draw.circle(brillo, (*color, 180), (px, y_scan), 3)
+        for indice in range(3):
+            radio_onda = int(42 + progreso * 105 + indice * 30)
+            pygame.draw.circle(brillo, (*color, max(0, 120 - indice * 32)), rect.center, radio_onda, 2)
         superficie.blit(brillo, (0, 0))
     elif clave == "colgar":
         cuerdas = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
@@ -881,7 +894,7 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
             pygame.draw.line(cuerdas, (247, 210, 116, 230), (x, 0), (x, rect.top + 18), 3)
         for indice in range(10):
             angulo_destello = progreso * 6.5 + indice * math.tau / 10
-            distancia = 105 + indice % 3 * 22
+            distancia = 125 + indice % 3 * 28
             x = int(rect.centerx + math.cos(angulo_destello) * distancia)
             y = int(rect.centery + math.sin(angulo_destello) * distancia * .65)
             pygame.draw.circle(cuerdas, (255, 224, 120, int(210 * pulso)), (x, y), 3 + indice % 3)
@@ -896,6 +909,7 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
             x = rect.left + (indice * 37) % max(1, rect.width)
             y = rect.top + (indice * 61) % max(1, rect.height)
             pygame.draw.circle(sombra, (*color, int(110 * progreso)), (x, y), 3 + indice % 3)
+        pygame.draw.rect(sombra, (12, 8, 24, int(105 * progreso)), rect, width=7, border_radius=18)
         superficie.blit(sombra, (0, 0))
 
 
@@ -1137,6 +1151,7 @@ def main():
             "quemar": cargar_efecto_tablilla("Quemar_tablilla.png"),
             "ignorar": cargar_efecto_tablilla("Ignorar_tablilla.png"),
         },
+        "fuego_tablilla": cargar_imagen(os.path.join("Decisiones tablilla", "Fuego_tablilla_v2.png"), (540, 360)),
         "final_positivo": cargar_imagen(os.path.join("Finales", "Final_positivo.jpeg"), (ANCHO, ALTO)),
         "final_negativo": cargar_imagen(os.path.join("Finales", "Game_over.jpeg"), (ANCHO, ALTO)),
         "guardian_quieto": cargar_sprite("Fila 1 - 1. Guardian.png", (86, 86)),
