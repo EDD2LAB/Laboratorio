@@ -100,7 +100,7 @@ def save_hitboxes(out_path, hitboxes, img_rect, image_path,
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     abs_image_path = os.path.abspath(image_path)
     project_root = PROJECT_ROOT
-    abs_images_root = os.path.abspath(os.path.join(project_root, "Imagenes"))
+    abs_images_root = os.path.abspath(os.path.join(project_root, "Imagenes/Fondos"))
     try:
         is_project_image = os.path.commonpath(
             [abs_image_path, abs_images_root]
@@ -110,7 +110,7 @@ def save_hitboxes(out_path, hitboxes, img_rect, image_path,
     if is_project_image:
         image_rel = os.path.relpath(abs_image_path, project_root)
     else:
-        image_rel = os.path.join("Imagenes", os.path.basename(image_path))
+        image_rel = os.path.join("Imagenes/Fondos", os.path.basename(image_path))
     image_rel = image_rel.replace("\\", "/")
     payload = {
         "image": image_rel,
@@ -147,15 +147,15 @@ def load_hitboxes(in_path):
 
 
 def choose_image_from_console(project_root):
-    print("Ruta de imagen dentro de Imagenes (Enter = buscar automaticamente):")
+    print("Ruta de imagen dentro de Imagenes/Fondos (Enter = buscar automaticamente):")
     user = input().strip().strip('"')
     if user:
         return user
-    for root, _, files in os.walk(os.path.join(project_root, "Imagenes")):
+    for root, _, files in os.walk(os.path.join(project_root, "Imagenes/Fondos")):
         for name in files:
             if name.lower() == "salon(1).jpg":
                 return os.path.relpath(os.path.join(root, name), project_root)
-    return os.path.join("Imagenes", "Fondos", "Salon(1).jpg")
+    return os.path.join("Imagenes/Fondos", "Fondos", "Salon(1).jpg")
 
 
 def _resolve_game_personaje_class(project_root):
@@ -183,7 +183,7 @@ def build_dummy_from_game_logic(project_root, img_rect):
         if Personaje is None:
             return default
 
-        rutas = os.path.join(project_root, "Imagenes", "Personajes", "personaje_main")
+        rutas = os.path.join(project_root, "Imagenes/Fondos", "Personajes", "personaje_main")
         personaje = Personaje(
             img_rect.width // 2 - 14, img_rect.height // 2 - 14,
             rutas, velocidad=4, fps_animacion=8
@@ -432,7 +432,7 @@ def migrate_all_objetos_to_hitboxes(project_root):
             else:
                 os.makedirs(hitboxes_dir, exist_ok=True)
                 hb_payload = {
-                    "image": obj_payload.get("image", f"Imagenes/Fondos/{image_base}.jpg"),
+                    "image": obj_payload.get("image", f"Imagenes/Fondos/Fondos/{image_base}.jpg"),
                     "image_size": obj_payload.get("image_size", [1920, 1200]),
                     "hitboxes": [],
                     "spawn": {},
@@ -462,7 +462,7 @@ def main():
         if not os.path.isabs(image_path):
             image_path = os.path.join(project_root, image_path)
     else:
-        images_dir = os.path.join(project_root, "Imagenes")
+        images_dir = os.path.join(project_root, "Imagenes/Fondos")
         image_path = choose_image_gui(images_dir,
                                       "Elegir imagen de espacio — Editor de Hitboxes  (doble clic o Enter)")
         if image_path is None:
@@ -550,7 +550,7 @@ def main():
         return (wx - camera_x + viewport_rect.x, wy - camera_y + viewport_rect.y)
 
     # ── Available images for door targets and spawn rules ────────────────────
-    images_dir = os.path.join(project_root, "Imagenes")
+    images_dir = os.path.join(project_root, "Imagenes/Fondos")
     valid_ext = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
     available_backgrounds = []
     if os.path.isdir(images_dir):
@@ -771,7 +771,7 @@ def main():
         return False
 
     # ── NPC character / animation system ─────────────────────────────────────
-    personajes_dir = os.path.join(project_root, "Imagenes")
+    personajes_dir = os.path.join(project_root, "Imagenes/Fondos")
     npc_character_options = []
     if os.path.isdir(personajes_dir):
         npc_character_options = sorted(
@@ -857,9 +857,9 @@ def main():
         return img
 
     # ── Object / decoracion system ────────────────────────────────────────────
-    imagenes_dir     = os.path.join(project_root, "Imagenes")
-    interactables_dir = os.path.join(project_root, "Imagenes", "Interactuables")
-    personajes_img_dir = os.path.join(project_root, "Imagenes", "Personajes")
+    imagenes_dir     = os.path.join(project_root, "Imagenes/Fondos")
+    interactables_dir = os.path.join(project_root, "Imagenes/Fondos", "Interactuables")
+    personajes_img_dir = os.path.join(project_root, "Imagenes/Fondos", "Personajes")
     valid_obj_ext = {".png", ".jpg", ".jpeg"}
     available_objects = []
     # Objetos del directorio Interactuables (sin prefijo, como siempre)
@@ -876,7 +876,7 @@ def main():
                 continue
             for fn in sorted(os.listdir(char_path)):
                 if os.path.splitext(fn)[1].lower() in valid_obj_ext:
-                    # clave relativa a Imagenes/ → "Personajes/Profesor1/Profesor1_idle_down.png"
+                    # clave relativa a Imagenes/Fondos/ → "Personajes/Profesor1/Profesor1_idle_down.png"
                     available_objects.append(
                         os.path.join("Personajes", char_folder, fn).replace("\\", "/"))
     current_object_idx = 0
@@ -898,14 +898,14 @@ def main():
 
     def load_object_image(obj_name):
         """Carga imagen de objeto/decoración.
-        Busca primero en Interactuables/, luego en Imagenes/<obj_name>
+        Busca primero en Interactuables/, luego en Imagenes/Fondos/<obj_name>
         (para sprites de personajes guardados como 'Personajes/Xxx/archivo.png')."""
         if obj_name in object_cache:
             return object_cache[obj_name]
         # Ruta 1: Interactuables/<nombre> (objetos clásicos)
         path = os.path.join(interactables_dir, obj_name)
         if not os.path.isfile(path):
-            # Ruta 2: Imagenes/<nombre> (sprites de personajes con prefijo)
+            # Ruta 2: Imagenes/Fondos/<nombre> (sprites de personajes con prefijo)
             path = os.path.join(imagenes_dir, obj_name.replace("/", os.sep))
         try:
             img = pygame.image.load(path).convert_alpha()
