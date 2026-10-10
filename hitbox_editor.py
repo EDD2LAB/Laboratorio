@@ -1146,10 +1146,6 @@ def main():
             if not isinstance(pasted, dict) or "name" not in pasted:
                 return
             copied = copy.deepcopy(pasted)
-            r = get_deco_world_rect(copied)
-            nx = min(world_rect.width - r.width, r.x + 18)
-            ny = min(world_rect.height - r.height, r.y + 18)
-            copied.update(normalize_deco(nx, ny, r.width, r.height))
             decoracion.append(copied)
             selected_deco_idx = len(decoracion) - 1
             push_deco_history()
@@ -1323,25 +1319,36 @@ def main():
         history.append(copy.deepcopy(hitboxes))
         history_index += 1
 
-    def copy_walls_to_clipboard():
-        copied = [copy.deepcopy(h) for h in hitboxes if h.get("role") == "wall"]
+    def copy_all_hitboxes_to_clipboard():
+        copied = copy.deepcopy(hitboxes)
         try:
             with open(clipboard_path, "w", encoding="utf-8") as fh:
                 json.dump(copied, fh, indent=2)
-            print(f"{len(copied)} hitboxes pared copiadas.")
+            print(f"{len(copied)} hitboxes copiadas (todos los roles y formas).")
         except Exception as e:
             print(f"Error copiando: {e}")
 
-    def paste_walls_from_clipboard():
+    def paste_all_hitboxes_from_clipboard():
+        nonlocal selected_hitbox_idx
         if not os.path.exists(clipboard_path):
             return
         try:
             with open(clipboard_path, "r", encoding="utf-8") as fh:
                 pasted = json.load(fh)
-            if isinstance(pasted, list):
-                hitboxes.extend(copy.deepcopy(pasted))
-                push_history()
-                print(f"{len(pasted)} hitboxes pegadas.")
+            if not isinstance(pasted, list):
+                print("Error pegando: el portapapeles no contiene una lista de hitboxes.")
+                return
+            copied_hitboxes = [h for h in pasted if isinstance(h, dict)]
+            if not copied_hitboxes:
+                print("No hay hitboxes para pegar.")
+                return
+            new_hitboxes = copy.deepcopy(copied_hitboxes)
+            start_idx = len(hitboxes)
+            hitboxes.extend(new_hitboxes)
+            selected_hitbox_idx = len(hitboxes) - 1
+            selected_set.clear()
+            push_history()
+            print(f"{len(hitboxes) - start_idx} hitboxes pegadas (todos los roles y formas).")
         except Exception as e:
             print(f"Error pegando: {e}")
 
@@ -2020,7 +2027,7 @@ def main():
                     if editor_mode == "object":
                         copy_all_deco()
                     else:
-                        copy_walls_to_clipboard()
+                        copy_all_hitboxes_to_clipboard()
                 elif event.key == pygame.K_v and ctrl and shift:
                     if editor_mode == "object":
                         paste_selected_deco()
@@ -2030,7 +2037,7 @@ def main():
                     if editor_mode == "object":
                         paste_all_deco()
                     else:
-                        paste_walls_from_clipboard()
+                        paste_all_hitboxes_from_clipboard()
                 elif event.key == pygame.K_l and ctrl:
                     do_load()
 
@@ -2655,7 +2662,7 @@ def main():
             ("Puentes: U o boton Puentes > elige variante > clic mapa para colocar | NPC: Elegir NPC > personaje > animacion > clic mapa | Volver a hitboxes: boton u O", (210, 210, 160)),
             ("N=personaje y B=animacion de la proxima hitbox NPC | Hitboxes: arrastra=crear | F=forma | I=pared/interactuable | K=puerta/NPC", (235, 235, 235)),
             ("Clic derecho=borrar | M=mover | T=prueba | P=spawn; Shift+P=crear spawn | WASD=camara | J/H=imagen o destino | G=cuadricula | L=etiquetas | +/-=tamano", (190, 195, 210)),
-            ("Enter=guardar | Ctrl+L=cargar | Ctrl+Z/Y=deshacer/rehacer | Ctrl+D=duplicar | Ctrl+C/V=copiar/pegar | R=recortar objeto | C=limpiar hitboxes | Esc=salir", (175, 185, 205)),
+            ("Ctrl+C/V: hitboxes en modo hitbox; objetos, personajes y puentes en modo objeto. Ctrl+Shift+C/V: seleccionado. Ctrl+D=duplicar | Enter=guardar | Ctrl+L=cargar | Ctrl+Z/Y=deshacer/rehacer | Esc=salir", (175, 185, 205)),
         ]
         for line_txt, line_col in lines:
             ui_y = draw_wrapped_text(screen, line_txt, tiny, line_col,

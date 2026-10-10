@@ -211,6 +211,20 @@ class GestorAudio:
             self._resultado_final = None
             self.actualizar_estado_caldero("estable")
             self.reproducir_musica("ambiente", en_bucle=True)
+        elif (
+            escena_nueva == "mapa"
+            and escena_anterior is not None
+            and escena_anterior not in grupo_pausa
+        ):
+            self._introduccion_activa = False
+            self.reproducir_musica("ambiente", en_bucle=True)
+
+    def actualizar(self):
+        if not self._introduccion_activa or self._canal_musica_actual is None:
+            return
+        if not self._canal_musica_actual.get_busy():
+            self._introduccion_activa = False
+            self.reproducir_musica("ambiente", en_bucle=True)
 
     def reproducir_efecto(self, identificador, canal=CANAL_EVENTOS):
         sonido = self.efectos.get(identificador)
