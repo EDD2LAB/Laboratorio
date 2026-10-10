@@ -1,0 +1,23 @@
+{
+  "image": "Imagenes/Fondos/Mapas/Pr1Sinpuentes.png",
+  "image_size": [
+    928,
+    518
+  ],
+  "hitboxes": [
+    {
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.16702586206896552,
+      "ry": 0.3359073359073359,
+      "rw": 0.034482758620689655,
+      "rh": 0.02702702702702703
+    }
+  ],
+  "spawn": {
+    "default": null,
+    "by_origin": {}
+  },
+  "npc_positions": {},
+  "decoracion": []
+}

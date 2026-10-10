@@ -100,7 +100,7 @@ def save_hitboxes(out_path, hitboxes, img_rect, image_path,
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     abs_image_path = os.path.abspath(image_path)
     project_root = PROJECT_ROOT
-    abs_images_root = os.path.abspath(os.path.join(project_root, "Imagenes/Fondos"))
+    abs_images_root = os.path.abspath(os.path.join(project_root, "Imagenes"))
     try:
         is_project_image = os.path.commonpath(
             [abs_image_path, abs_images_root]
@@ -110,7 +110,7 @@ def save_hitboxes(out_path, hitboxes, img_rect, image_path,
     if is_project_image:
         image_rel = os.path.relpath(abs_image_path, project_root)
     else:
-        image_rel = os.path.join("Imagenes/Fondos", os.path.basename(image_path))
+        image_rel = os.path.join("Imagenes", os.path.basename(image_path))
     image_rel = image_rel.replace("\\", "/")
     payload = {
         "image": image_rel,
@@ -183,7 +183,7 @@ def build_dummy_from_game_logic(project_root, img_rect):
         if Personaje is None:
             return default
 
-        rutas = os.path.join(project_root, "Imagenes/Fondos", "Personajes", "personaje_main")
+        rutas = os.path.join(project_root, "Imagenes", "Personajes", "personaje_main")
         personaje = Personaje(
             img_rect.width // 2 - 14, img_rect.height // 2 - 14,
             rutas, velocidad=4, fps_animacion=8
@@ -771,7 +771,8 @@ def main():
         return False
 
     # ── NPC character / animation system ─────────────────────────────────────
-    personajes_dir = os.path.join(project_root, "Imagenes/Fondos")
+    images_root = os.path.join(project_root, "Imagenes")
+    personajes_dir = images_root
     npc_character_options = []
     if os.path.isdir(personajes_dir):
         npc_character_options = sorted(
@@ -857,28 +858,28 @@ def main():
         return img
 
     # ── Object / decoracion system ────────────────────────────────────────────
-    imagenes_dir     = os.path.join(project_root, "Imagenes/Fondos")
-    interactables_dir = os.path.join(project_root, "Imagenes/Fondos", "Interactuables")
-    personajes_img_dir = os.path.join(project_root, "Imagenes/Fondos", "Personajes")
+    images_root = os.path.join(project_root, "Imagenes")
+    backgrounds_dir = os.path.join(images_root, "Fondos")
+    imagenes_dir = images_root
+    interactables_dir = images_root
+    personajes_img_dir = images_root
     valid_obj_ext = {".png", ".jpg", ".jpeg"}
     available_objects = []
-    # Objetos del directorio Interactuables (sin prefijo, como siempre)
-    if os.path.isdir(interactables_dir):
-        available_objects = sorted([f for f in os.listdir(interactables_dir)
-                                    if os.path.splitext(f)[1].lower() in valid_obj_ext
-                                    and os.path.isfile(os.path.join(interactables_dir, f))])
-    # Sprites de personajes: guardados con prefijo "Personajes/<Carpeta>/<archivo>"
-    # para distinguirlos de los interactuables en el JSON.
-    if os.path.isdir(personajes_img_dir):
-        for char_folder in sorted(os.listdir(personajes_img_dir)):
-            char_path = os.path.join(personajes_img_dir, char_folder)
-            if not os.path.isdir(char_path):
+
+    # Los fondos viven en Imagenes/Fondos; el resto de assets deben acceder a Imagenes/ completa.
+    if os.path.isdir(images_root):
+        for root, _, files in os.walk(images_root):
+            rel_root = os.path.relpath(root, images_root)
+            if rel_root == "Fondos":
                 continue
-            for fn in sorted(os.listdir(char_path)):
-                if os.path.splitext(fn)[1].lower() in valid_obj_ext:
-                    # clave relativa a Imagenes/Fondos/ → "Personajes/Profesor1/Profesor1_idle_down.png"
-                    available_objects.append(
-                        os.path.join("Personajes", char_folder, fn).replace("\\", "/"))
+            for fn in sorted(files):
+                if os.path.splitext(fn)[1].lower() not in valid_obj_ext:
+                    continue
+                full_path = os.path.join(root, fn)
+                if os.path.isfile(full_path):
+                    rel = os.path.relpath(full_path, images_root).replace("\\", "/")
+                    if rel not in available_objects:
+                        available_objects.append(rel)
     current_object_idx = 0
     pending_placement_frames = 1   # frames que se asignarán al próximo objeto colocado
     object_cache = {}
@@ -897,16 +898,27 @@ def main():
     deco_crop_current = None
 
     def load_object_image(obj_name):
-        """Carga imagen de objeto/decoración.
-        Busca primero en Interactuables/, luego en Imagenes/Fondos/<obj_name>
-        (para sprites de personajes guardados como 'Personajes/Xxx/archivo.png')."""
+        """Carga imagen de objeto/decoración desde Imagenes/ completa.
+        Sigue aceptando rutas legacy de la forma "Personajes/..." o "Interactuables/..."."""
         if obj_name in object_cache:
             return object_cache[obj_name]
-        # Ruta 1: Interactuables/<nombre> (objetos clásicos)
-        path = os.path.join(interactables_dir, obj_name)
-        if not os.path.isfile(path):
-            # Ruta 2: Imagenes/Fondos/<nombre> (sprites de personajes con prefijo)
-            path = os.path.join(imagenes_dir, obj_name.replace("/", os.sep))
+
+        normalized = str(obj_name).replace("\\", "/")
+        search_roots = [images_root, backgrounds_dir]
+        path = None
+        for root in search_roots:
+            candidate = os.path.join(root, normalized.replace("/", os.sep))
+            if os.path.isfile(candidate):
+                path = candidate
+                break
+            if normalized and os.path.isfile(os.path.join(root, os.path.basename(normalized))):
+                path = os.path.join(root, os.path.basename(normalized))
+                break
+
+        if path is None:
+            object_cache[obj_name] = None
+            return None
+
         try:
             img = pygame.image.load(path).convert_alpha()
             object_cache[obj_name] = img
@@ -1336,7 +1348,7 @@ def main():
     def _panel_click(mouse_y):
         nonlocal selected_hitbox_idx, selected_deco_idx, panel_scroll, editor_mode
         items = _panel_items()
-        list_top = panel_rect.y + 80   # after the toggle buttons
+        list_top = panel_rect.y + 28
         row = (mouse_y - list_top + panel_scroll) // PANEL_ROW_H
         if 0 <= row < len(items):
             label, color, kind, real_idx = items[row]
@@ -1506,24 +1518,8 @@ def main():
             # ── Panel click ───────────────────────────────────────────────────
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
-                # Toggle buttons at top of panel
                 if panel_rect.collidepoint(mx, my):
-                    btn_y = panel_rect.y + 30
-                    btn_h = 20
-                    # W toggle
-                    if pygame.Rect(panel_rect.x + 4, btn_y, 60, btn_h).collidepoint(mx, my):
-                        show_walls = not show_walls
-                        continue
-                    # I toggle
-                    if pygame.Rect(panel_rect.x + 70, btn_y, 60, btn_h).collidepoint(mx, my):
-                        show_interactables = not show_interactables
-                        continue
-                    # O toggle
-                    if pygame.Rect(panel_rect.x + 140, btn_y, 60, btn_h).collidepoint(mx, my):
-                        show_objects = not show_objects
-                        continue
-                    # List area
-                    if my > panel_rect.y + 80:
+                    if my > panel_rect.y + 24:
                         _panel_click(my)
                         continue
 
@@ -2338,21 +2334,6 @@ def main():
         panel_title = small.render("Elementos", True, (200, 200, 220))
         screen.blit(panel_title, (px, py))
         py += 22
-
-        # Toggle buttons
-        def draw_toggle(rect, label, active):
-            col = (60, 120, 60) if active else (80, 40, 40)
-            pygame.draw.rect(screen, col, rect, border_radius=4)
-            pygame.draw.rect(screen, (120, 120, 140), rect, 1, border_radius=4)
-            lbl = tiny.render(label, True, (230, 230, 230))
-            screen.blit(lbl, lbl.get_rect(center=rect.center))
-
-        draw_toggle(pygame.Rect(px, py, 58, 18), f"W({sum(1 for h in hitboxes if h.get('role')=='wall')})",
-                    show_walls)
-        draw_toggle(pygame.Rect(px + 62, py, 58, 18),
-                    f"I({sum(1 for h in hitboxes if h.get('role')=='interactable')})", show_interactables)
-        draw_toggle(pygame.Rect(px + 124, py, 58, 18), f"O({len(decoracion)})", show_objects)
-        py += 26
 
         pygame.draw.line(screen, (60, 60, 80), (panel_rect.x, py), (panel_rect.right, py), 1)
         py += 4
