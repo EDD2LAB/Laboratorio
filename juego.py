@@ -15,6 +15,7 @@ import math
 import pygame
 
 from animaciones import ControladorAnimaciones
+from audio_manager import GestorAudio
 from interfaz.boton import Boton, GrupoBotones
 from interfaz.dialogo import ControladorDialogo
 from interfaz.hud import HUDIndicadores
@@ -582,6 +583,31 @@ def lineas_efecto(efecto):
     return [f"{'+' if valor > 0 else ''}{valor} {nombre_indicador(nombre)}" for nombre, valor in efecto.items()]
 
 
+def estado_caldero(estado):
+    desinformacion = estado.indicadores["desinformación"] + estado.indicadores["susurros_falsos"]
+    if desinformacion >= 100:
+        return "critico"
+    if desinformacion >= 55:
+        return "peligroso"
+    return "estable"
+
+
+def sincronizar_audio_caldero(gestor_audio, estado, estado_anterior):
+    estado_actual = estado_caldero(estado)
+    if estado_actual != estado_anterior:
+        gestor_audio.procesar_evento({"tipo": "caldero", "estado": estado_actual})
+    return estado_actual
+
+
+def reproducir_audio_clasificacion(gestor_audio, estado):
+    resultado = estado.resultado_evento_actual()
+    if resultado and resultado["clasificacion_jugador"] is not None:
+        gestor_audio.procesar_evento({
+            "tipo": "clasificacion",
+            "correcta": resultado["clasificacion_correcta"],
+        })
+
+
 def dibujar_consecuencia_evento(superficie, recursos, estado):
     """Muestra la consecuencia de la decisión antes de preguntar la categoría."""
     superficie.blit(recursos["fondo_tablilla"], (0, 0))
@@ -963,6 +989,14 @@ def clave_pocion(opcion):
     return "ignorar"
 
 
+def accion_tablilla(opcion):
+    texto = normalizar_ruta(opcion)
+    for accion in ("colgar", "consultar", "quemar", "ignorar"):
+        if accion in texto:
+            return accion
+    return None
+
+
 def iniciar_animacion_decision(opcion):
     """La quema necesita tiempo suficiente para consumir toda la tablilla."""
     clave = clave_pocion(opcion)
@@ -1001,10 +1035,14 @@ def dibujar_pociones(superficie, recursos, usos, animacion, mouse_pos):
     return rectangulos
 
 
-def dibujar_final(superficie, recursos, estado, mouse_pos):
+def determinar_resultado_final(estado):
     positivos = sum(estado.indicadores[nombre] for nombre in ("sabiduria", "confianza_consejo", "armonia")) / 3
     negativo = estado.indicadores["susurros_falsos"] + estado.indicadores["desinformación"]
-    victoria = positivos >= 55 and negativo < 100
+    return "victoria" if positivos >= 55 and negativo < 100 else "game_over"
+
+
+def dibujar_final(superficie, recursos, estado, mouse_pos):
+    victoria = determinar_resultado_final(estado) == "victoria"
     fondo = recursos["final_positivo"] if victoria else recursos["final_negativo"]
     superficie.blit(fondo, (0, 0))
     velo = superficie_con_alpha((ANCHO, ALTO), (6, 18, 12, 94))
@@ -1132,6 +1170,7 @@ def presentar_lienzo(pantalla, lienzo):
 
 def main():
     pygame.init()
+    gestor_audio = GestorAudio(os.path.dirname(__file__))
     pantalla_completa = True
     pantalla = crear_ventana(pantalla_completa)
     pygame.display.set_caption("La Copa: Voces en las Alturas")
@@ -1258,6 +1297,10 @@ def main():
     inicio_escena = pygame.time.get_ticks()
     iniciar_cinematica_mapa(mundo)
     duracion_cinematica = 3900
+    gestor_audio.al_cambiar_escena(None, escena)
+    escena_audio_anterior = escena
+    estado_caldero_anterior = estado_caldero(estado)
+    estado_caldero_actual = estado_caldero_anterior
 
     corriendo = True
     while corriendo:
@@ -1321,6 +1364,10 @@ def main():
             elif escena == ESCENA_FINAL:
                 if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
                     estado = EstadoJuego()
+                    estado_caldero_anterior = estado_caldero_actual
+                    estado_caldero_actual = sincronizar_audio_caldero(
+                        gestor_audio, estado, estado_caldero_anterior
+                    )
                     mundo = crear_mundo(recursos)
                     guardian = mundo["guardian"]
                     botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
@@ -1357,6 +1404,11 @@ def main():
                 opcion_teclado = grupo_botones.manejar_teclado(evento)
                 if opcion_teclado and escena == ESCENA_CLASIFICACION:
                     estado.clasificar_evento(opcion_teclado)
+                    reproducir_audio_clasificacion(gestor_audio, estado)
+                    estado_caldero_anterior = estado_caldero_actual
+                    estado_caldero_actual = sincronizar_audio_caldero(
+                        gestor_audio, estado, estado_caldero_anterior
+                    )
                     botones = []
                     grupo_botones.reemplazar(botones)
                     escena = ESCENA_RESULTADO
@@ -1381,6 +1433,11 @@ def main():
                 for boton in botones:
                     if boton.fue_clickeado(pos_lienzo):
                         estado.clasificar_evento(boton.texto)
+                        reproducir_audio_clasificacion(gestor_audio, estado)
+                        estado_caldero_anterior = estado_caldero_actual
+                        estado_caldero_actual = sincronizar_audio_caldero(
+                            gestor_audio, estado, estado_caldero_anterior
+                        )
                         botones = []
                         grupo_botones.reemplazar(botones)
                         escena = ESCENA_RESULTADO
@@ -1401,7 +1458,19 @@ def main():
         if pocion_animacion:
             pocion_animacion["restante"] -= delta_segundos
             if pocion_animacion["restante"] <= 0:
-                estado.elegir_opcion(pocion_animacion["opcion"])
+                opcion = pocion_animacion["opcion"]
+                if opcion in estado.opciones_actuales():
+                    estado.elegir_opcion(opcion)
+                    accion = accion_tablilla(opcion)
+                    if accion:
+                        gestor_audio.procesar_evento({
+                            "tipo": "decision_tablilla",
+                            "accion": accion,
+                        })
+                    estado_caldero_anterior = estado_caldero_actual
+                    estado_caldero_actual = sincronizar_audio_caldero(
+                        gestor_audio, estado, estado_caldero_anterior
+                    )
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
                 grupo_botones.reemplazar(botones)
                 pocion_animacion = None
@@ -1412,6 +1481,11 @@ def main():
             escena = ESCENA_TABLILLA
             botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
             grupo_botones.reemplazar(botones)
+
+        if escena != escena_audio_anterior:
+            resultado_audio = determinar_resultado_final(estado) if escena == ESCENA_FINAL else None
+            gestor_audio.al_cambiar_escena(escena_audio_anterior, escena, resultado_audio)
+            escena_audio_anterior = escena
 
         if escena == ESCENA_MAPA:
             dibujar_mapa(lienzo, recursos, mundo, estado, tiempo_ms, inicio_escena, hud)
@@ -1458,6 +1532,7 @@ def main():
 
         presentar_lienzo(pantalla, lienzo)
         pygame.display.flip()
+    gestor_audio.detener_todo()
     pygame.quit()
     sys.exit()
 
