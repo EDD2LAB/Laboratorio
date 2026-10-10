@@ -613,6 +613,19 @@ def main():
     panel_hovered = None
     PANEL_ROW_H = 22
     EYE_W = 24
+    panel_button_y = panel_rect.y + 28
+    panel_button_h = 22
+    panel_button_w = (panel_rect.width - 12) // 2
+    npc_button_rect = pygame.Rect(panel_rect.x + 4, panel_button_y,
+                                  panel_button_w, panel_button_h)
+    bridge_button_rect = pygame.Rect(
+        npc_button_rect.right + 4, panel_button_y, panel_button_w, panel_button_h
+    )
+    hitbox_button_y = panel_button_y + panel_button_h + 4
+    hitbox_button_rect = pygame.Rect(
+        panel_rect.x + 4, hitbox_button_y, panel_rect.width - 8, panel_button_h
+    )
+    panel_list_top = hitbox_button_y + panel_button_h + 6
 
     # ── Spawn system ──────────────────────────────────────────────────────────
     hb_template = build_dummy_from_game_logic(project_root, world_rect)
@@ -772,26 +785,41 @@ def main():
 
     # ── NPC character / animation system ─────────────────────────────────────
     images_root = os.path.join(project_root, "Imagenes")
-    personajes_dir = images_root
-    npc_character_options = []
+    personajes_dir = os.path.join(images_root, "NPCS")
+    npc_character_dirs = {}
+    npc_image_ext = {".png", ".jpg", ".jpeg", ".webp", ".bmp"}
     if os.path.isdir(personajes_dir):
-        npc_character_options = sorted(
-            e for e in os.listdir(personajes_dir)
-            if e.casefold() in CHARACTER_FOLDERS
-            and os.path.isdir(os.path.join(personajes_dir, e))
-        )
-    if not npc_character_options:
-        npc_character_options = ["Sara", "Diego"]
+        for root, _, files in os.walk(personajes_dir):
+            if not any(os.path.splitext(name)[1].lower() in npc_image_ext for name in files):
+                continue
+            rel_dir = os.path.relpath(root, personajes_dir)
+            character_name = os.path.basename(root)
+            if character_name in npc_character_dirs:
+                character_name = rel_dir.replace("\\", "/")
+            npc_character_dirs[character_name] = root
+    if not npc_character_dirs:
+        for character_name in CHARACTER_FOLDERS:
+            legacy_dir = os.path.join(images_root, character_name)
+            if os.path.isdir(legacy_dir):
+                npc_character_dirs[character_name] = legacy_dir
+    npc_character_options = sorted(npc_character_dirs, key=str.casefold)
     current_npc_character_idx = 0
 
     def _animations_for_character(char_name):
-        char_dir = os.path.join(personajes_dir, char_name)
+        char_dir = npc_character_dirs.get(
+            char_name, os.path.join(images_root, char_name))
         if not os.path.isdir(char_dir):
-            return ["idle_down.png"]
-        opts = sorted([fn for fn in os.listdir(char_dir) if fn.lower().endswith(".png")])
-        return opts or ["idle_down.png"]
+            return []
+        return sorted(
+            fn for fn in os.listdir(char_dir)
+            if os.path.splitext(fn)[1].lower() in npc_image_ext
+            and os.path.isfile(os.path.join(char_dir, fn))
+        )
 
-    current_npc_animation_options = _animations_for_character(npc_character_options[0])
+    current_npc_animation_options = (
+        _animations_for_character(npc_character_options[0])
+        if npc_character_options else []
+    )
     current_npc_animation_idx = 0
     npc_preview_cache = {}
 
@@ -799,7 +827,9 @@ def main():
         key = (str(character_name), str(animation_file))
         if key in npc_preview_cache:
             return npc_preview_cache[key]
-        anim_path = os.path.join(personajes_dir, str(character_name), str(animation_file))
+        char_dir = npc_character_dirs.get(
+            str(character_name), os.path.join(images_root, str(character_name)))
+        anim_path = os.path.join(char_dir, str(animation_file))
         frames = []
         try:
             sheet = pygame.image.load(anim_path).convert_alpha()
@@ -822,7 +852,7 @@ def main():
     npc_anim_modal_selected = 0
     npc_modal_scroll = 0
     npc_anim_scroll = 0
-    npc_modal_source = "hitbox"   # "hitbox" | "deco"
+    npc_modal_source = "hitbox"   # "hitbox" | "deco" | "placement"
     thumbnail_cache = {}
     THUMB = 72
     THUMB_COLS = 3
@@ -842,9 +872,10 @@ def main():
                     s = min(THUMB / fw, THUMB / fh, 1.0)
                     img = pygame.transform.smoothscale(f, (max(1, int(fw * s)), max(1, int(fh * s))))
             else:
-                char_dir = os.path.join(personajes_dir, char_name)
+                char_dir = npc_character_dirs.get(
+                    char_name, os.path.join(images_root, char_name))
                 for fn in sorted(os.listdir(char_dir)):
-                    if fn.lower().endswith(".png"):
+                    if os.path.splitext(fn)[1].lower() in npc_image_ext:
                         frames = _load_npc_preview_frames(char_name, fn)
                         if frames:
                             f = frames[0]
@@ -857,20 +888,30 @@ def main():
         thumbnail_cache[key] = img
         return img
 
+    def _animation_display_name(animation_file):
+        stem = os.path.splitext(animation_file)[0]
+        normalized = stem.casefold()
+        if any(word in normalized for word in ("frente", "frontal", "front", "down", "abajo")):
+            return "Frente"
+        if any(word in normalized for word in ("atras", "atrás", "back", "up")):
+            return "Atras"
+        if any(word in normalized for word in ("izquierda", "left")):
+            return "Izquierda"
+        if any(word in normalized for word in ("derecha", "right")):
+            return "Derecha"
+        return stem[:12]
+
     # ── Object / decoracion system ────────────────────────────────────────────
-    images_root = os.path.join(project_root, "Imagenes")
     backgrounds_dir = os.path.join(images_root, "Fondos")
-    imagenes_dir = images_root
-    interactables_dir = images_root
-    personajes_img_dir = images_root
-    valid_obj_ext = {".png", ".jpg", ".jpeg"}
+    bridges_dir = os.path.join(images_root, "Puentes")
+    valid_obj_ext = npc_image_ext
     available_objects = []
 
     # Los fondos viven en Imagenes/Fondos; el resto de assets deben acceder a Imagenes/ completa.
     if os.path.isdir(images_root):
         for root, _, files in os.walk(images_root):
             rel_root = os.path.relpath(root, images_root)
-            if rel_root == "Fondos":
+            if rel_root == "Fondos" or rel_root.startswith("Fondos" + os.sep):
                 continue
             for fn in sorted(files):
                 if os.path.splitext(fn)[1].lower() not in valid_obj_ext:
@@ -953,6 +994,38 @@ def main():
         if rounded >= 2 and abs(ratio - rounded) < 0.15:
             return rounded
         return 1
+
+    def _confirm_npc_animation(animation_idx):
+        nonlocal current_npc_animation_idx, current_object_idx
+        nonlocal pending_placement_frames, editor_mode, selected_deco_idx
+        nonlocal deco_crop_mode, npc_anim_modal
+        nonlocal spawn_status_message, spawn_status_timer
+        if not (0 <= animation_idx < len(current_npc_animation_options)):
+            return
+        current_npc_animation_idx = animation_idx
+        animation_file = current_npc_animation_options[animation_idx]
+        character_name = npc_character_options[current_npc_character_idx]
+
+        if npc_modal_source == "deco" and selected_deco_idx is not None:
+            decoracion[selected_deco_idx]["npc_animation"] = animation_file
+            push_deco_history()
+        elif npc_modal_source == "placement":
+            char_dir = npc_character_dirs[character_name]
+            animation_path = os.path.join(char_dir, animation_file)
+            object_name = os.path.relpath(animation_path, images_root).replace("\\", "/")
+            if object_name not in available_objects:
+                available_objects.append(object_name)
+            current_object_idx = available_objects.index(object_name)
+            frames = _load_npc_preview_frames(character_name, animation_file)
+            pending_placement_frames = max(1, len(frames))
+            selected_deco_idx = None
+            editor_mode = "object"
+            deco_crop_mode = False
+            spawn_status_message = (
+                f"{character_name}: {animation_file}. Haz clic en el mapa para colocar."
+            )
+            spawn_status_timer = 240
+        npc_anim_modal = False
 
     def get_initial_deco_size(obj_img):
         frames = detect_sprite_frames(obj_img)
@@ -1095,6 +1168,28 @@ def main():
         deco_history = deco_history[:deco_history_index + 1]
         deco_history.append(copy.deepcopy(decoracion))
         deco_history_index += 1
+
+    def _confirm_npc_character(character_idx):
+        nonlocal current_npc_character_idx, current_npc_animation_options
+        nonlocal current_npc_animation_idx, npc_char_modal, npc_anim_modal
+        nonlocal npc_anim_modal_selected, spawn_status_message, spawn_status_timer
+        if not (0 <= character_idx < len(npc_character_options)):
+            return
+        current_npc_character_idx = character_idx
+        character_name = npc_character_options[character_idx]
+        current_npc_animation_options = _animations_for_character(character_name)
+        current_npc_animation_idx = 0
+        if npc_modal_source == "deco" and selected_deco_idx is not None:
+            decoracion[selected_deco_idx]["npc_owner"] = character_name
+            push_deco_history()
+        npc_char_modal = False
+        if npc_modal_source == "placement":
+            if current_npc_animation_options:
+                npc_anim_modal_selected = 0
+                npc_anim_modal = True
+            else:
+                spawn_status_message = "Este NPC no tiene imagenes de animacion."
+                spawn_status_timer = 240
 
     def scale_selected_deco(factor):
         if selected_deco_idx is None or not (0 <= selected_deco_idx < len(decoracion)):
@@ -1309,8 +1404,14 @@ def main():
             if current_interactable_action == "puerta":
                 payload["target_image"] = available_backgrounds[current_target_bg_idx]
             elif current_interactable_action == "npc":
-                payload["npc_character"] = npc_character_options[current_npc_character_idx]
-                payload["npc_animation"] = current_npc_animation_options[current_npc_animation_idx]
+                payload["npc_character"] = (
+                    npc_character_options[current_npc_character_idx]
+                    if npc_character_options else "Sara"
+                )
+                payload["npc_animation"] = (
+                    current_npc_animation_options[current_npc_animation_idx]
+                    if current_npc_animation_options else ""
+                )
         return payload
 
     def _interactable_label(action):
@@ -1341,15 +1442,14 @@ def main():
             items.append((label, color, "hitbox", i))
         if show_objects:
             for j, obj in enumerate(decoracion):
-                name = obj.get("name", "?")[:14]
+                name = os.path.basename(obj.get("name", "?"))[:14]
                 items.append((f"D{j+1} {name}", (120, 220, 120), "deco", j))
         return items
 
     def _panel_click(mouse_y):
         nonlocal selected_hitbox_idx, selected_deco_idx, panel_scroll, editor_mode
         items = _panel_items()
-        list_top = panel_rect.y + 28
-        row = (mouse_y - list_top + panel_scroll) // PANEL_ROW_H
+        row = (mouse_y - panel_list_top + panel_scroll) // PANEL_ROW_H
         if 0 <= row < len(items):
             label, color, kind, real_idx = items[row]
             if kind == "hitbox":
@@ -1397,6 +1497,36 @@ def main():
             print(f"Recargado desde: {out_path}")
         except Exception as e:
             print(f"Error recargando: {e}")
+
+    def choose_bridge():
+        nonlocal screen, current_object_idx, pending_placement_frames
+        nonlocal selected_deco_idx, moving_deco_idx, editor_mode, deco_crop_mode
+        nonlocal deco_crop_dragging, spawn_status_message, spawn_status_timer
+        bridge_path = choose_image_gui(
+            bridges_dir, "Elegir imagen de puente para colocar"
+        )
+        screen = pygame.display.set_mode((win_w, win_h), pygame.NOFRAME)
+        pygame.display.set_caption("Editor de Hitboxes")
+        if bridge_path is None:
+            spawn_status_message = "Seleccion de puente cancelada."
+            spawn_status_timer = 120
+            return
+
+        bridge_name = os.path.relpath(bridge_path, images_root).replace("\\", "/")
+        if bridge_name not in available_objects:
+            available_objects.append(bridge_name)
+        current_object_idx = available_objects.index(bridge_name)
+        pending_placement_frames = 1
+        selected_deco_idx = None
+        moving_deco_idx = None
+        editor_mode = "object"
+        deco_crop_mode = False
+        deco_crop_dragging = False
+        spawn_status_message = (
+            f"Puente {os.path.basename(bridge_name)} listo; "
+            "haz clic en el mapa para colocarlo."
+        )
+        spawn_status_timer = 240
 
     # ── Main loop ─────────────────────────────────────────────────────────────
     running = True
@@ -1465,14 +1595,7 @@ def main():
                     if event.key == pygame.K_ESCAPE:
                         npc_char_modal = False
                     elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                        current_npc_character_idx = npc_modal_selected
-                        current_npc_animation_options = _animations_for_character(
-                            npc_character_options[current_npc_character_idx])
-                        current_npc_animation_idx = 0
-                        if npc_modal_source == "deco" and selected_deco_idx is not None:
-                            decoracion[selected_deco_idx]["npc_owner"] = npc_character_options[npc_modal_selected]
-                            push_deco_history()
-                        npc_char_modal = False
+                        _confirm_npc_character(npc_modal_selected)
                     elif event.key == pygame.K_RIGHT:
                         npc_modal_selected = (npc_modal_selected + 1) % len(npc_character_options)
                     elif event.key == pygame.K_LEFT:
@@ -1483,8 +1606,26 @@ def main():
                     elif event.key == pygame.K_UP:
                         npc_modal_selected = max(0, npc_modal_selected - THUMB_COLS)
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    # hit detection on modal cells is done in rendering pass (done below)
-                    pass
+                    cols = THUMB_COLS
+                    cell = THUMB + THUMB_GAP
+                    modal_w = cols * cell + THUMB_GAP * 2 + 20
+                    rows_count = math.ceil(len(npc_character_options) / cols)
+                    modal_h = min(win_h - 80, rows_count * cell + 80)
+                    modal_x = (win_w - modal_w) // 2
+                    modal_y = (win_h - modal_h) // 2
+                    mx0 = modal_x + THUMB_GAP
+                    my0 = modal_y + 42
+                    for ci in range(len(npc_character_options)):
+                        cell_rect = pygame.Rect(
+                            mx0 + (ci % cols) * cell,
+                            my0 + (ci // cols) * cell,
+                            THUMB + 4,
+                            THUMB + 18,
+                        )
+                        if cell_rect.collidepoint(event.pos):
+                            npc_modal_selected = ci
+                            _confirm_npc_character(ci)
+                            break
                 continue
 
             # ── NPC animation selector modal ──────────────────────────────────
@@ -1493,11 +1634,7 @@ def main():
                     if event.key == pygame.K_ESCAPE:
                         npc_anim_modal = False
                     elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                        current_npc_animation_idx = npc_anim_modal_selected
-                        if npc_modal_source == "deco" and selected_deco_idx is not None:
-                            decoracion[selected_deco_idx]["npc_animation"] = current_npc_animation_options[npc_anim_modal_selected]
-                            push_deco_history()
-                        npc_anim_modal = False
+                        _confirm_npc_animation(npc_anim_modal_selected)
                     elif event.key == pygame.K_RIGHT:
                         npc_anim_modal_selected = (npc_anim_modal_selected + 1) % len(current_npc_animation_options)
                     elif event.key == pygame.K_LEFT:
@@ -1507,6 +1644,27 @@ def main():
                                                       npc_anim_modal_selected + THUMB_COLS)
                     elif event.key == pygame.K_UP:
                         npc_anim_modal_selected = max(0, npc_anim_modal_selected - THUMB_COLS)
+                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    cols = THUMB_COLS
+                    cell = THUMB + THUMB_GAP
+                    modal_w = cols * cell + THUMB_GAP * 2 + 20
+                    rows_count = math.ceil(len(current_npc_animation_options) / cols)
+                    modal_h = min(win_h - 80, rows_count * cell + 80)
+                    modal_x = (win_w - modal_w) // 2
+                    modal_y = (win_h - modal_h) // 2
+                    mx0 = modal_x + THUMB_GAP
+                    my0 = modal_y + 42
+                    for ai in range(len(current_npc_animation_options)):
+                        cell_rect = pygame.Rect(
+                            mx0 + (ai % cols) * cell,
+                            my0 + (ai // cols) * cell,
+                            THUMB + 4,
+                            THUMB + 18,
+                        )
+                        if cell_rect.collidepoint(event.pos):
+                            npc_anim_modal_selected = ai
+                            _confirm_npc_animation(ai)
+                            break
                 continue
 
             # ── Panel scroll ──────────────────────────────────────────────────
@@ -1519,7 +1677,29 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
                 if panel_rect.collidepoint(mx, my):
-                    if my > panel_rect.y + 24:
+                    if npc_button_rect.collidepoint(mx, my):
+                        if npc_character_options:
+                            npc_modal_source = "placement"
+                            npc_modal_selected = min(
+                                current_npc_character_idx,
+                                len(npc_character_options) - 1,
+                            )
+                            npc_char_modal = True
+                        else:
+                            spawn_status_message = "No hay personajes en Imagenes/NPCS."
+                            spawn_status_timer = 240
+                        continue
+                    if bridge_button_rect.collidepoint(mx, my):
+                        choose_bridge()
+                        continue
+                    if hitbox_button_rect.collidepoint(mx, my):
+                        editor_mode = "hitbox"
+                        selected_deco_idx = None
+                        moving_deco_idx = None
+                        deco_crop_mode = False
+                        deco_crop_dragging = False
+                        continue
+                    if my >= panel_list_top:
                         _panel_click(my)
                         continue
 
@@ -1871,8 +2051,12 @@ def main():
                     print("Grid snap:", "ON" if grid_snap else "OFF")
 
                 elif event.key == pygame.K_o:
-                    editor_mode = "object" if editor_mode == "hitbox" else "hitbox"
-                    print("Modo:", editor_mode.upper())
+                    editor_mode = "hitbox"
+                    selected_deco_idx = None
+                    moving_deco_idx = None
+                    deco_crop_mode = False
+                    deco_crop_dragging = False
+                    print("Volviste al modo HITBOX.")
 
                 elif event.key == pygame.K_f:
                     shapes = ["rect", "circle", "line"]
@@ -1899,8 +2083,14 @@ def main():
                     idx = interactable_actions.index(current_interactable_action)
                     current_interactable_action = interactable_actions[(idx + 1) % len(interactable_actions)]
 
+                elif event.key == pygame.K_u:
+                    choose_bridge()
+
                 elif event.key == pygame.K_n:
-                    if editor_mode == "object" and selected_deco_idx is not None:
+                    if not npc_character_options:
+                        spawn_status_message = "No hay personajes en Imagenes/NPCS."
+                        spawn_status_timer = 240
+                    elif editor_mode == "object" and selected_deco_idx is not None:
                         obj = decoracion[selected_deco_idx]
                         if "pupitre" in obj.get("name", "").lower():
                             npc_modal_source = "deco"
@@ -1914,10 +2104,13 @@ def main():
                     else:
                         npc_modal_source = "hitbox"
                         npc_modal_selected = current_npc_character_idx
-                    npc_char_modal = True
+                    npc_char_modal = bool(npc_character_options)
 
                 elif event.key == pygame.K_b:
-                    if editor_mode == "object" and selected_deco_idx is not None:
+                    if not npc_character_options or not current_npc_animation_options:
+                        spawn_status_message = "Selecciona primero un NPC con imagenes."
+                        spawn_status_timer = 240
+                    elif editor_mode == "object" and selected_deco_idx is not None:
                         obj = decoracion[selected_deco_idx]
                         if "pupitre" in obj.get("name", "").lower():
                             npc_modal_source = "deco"
@@ -1937,7 +2130,7 @@ def main():
                     else:
                         npc_modal_source = "hitbox"
                         npc_anim_modal_selected = current_npc_animation_idx
-                    npc_anim_modal = True
+                    npc_anim_modal = bool(current_npc_animation_options)
 
                 elif event.key == pygame.K_m:
                     move_mode = not move_mode
@@ -2127,7 +2320,8 @@ def main():
                         crop_tag  = " [C]" if "crop" in obj else ""
                         anim_tag  = f" [{frames}f]" if frames > 1 else ""
                         owner_tag = f" [{obj['npc_owner']}]" if obj.get("npc_owner") else ""
-                        lbl = tiny.render(f"D{j+1} {obj['name'][:12]}{crop_tag}{anim_tag}{owner_tag}", True, (130, 240, 130))
+                        object_label = os.path.basename(obj["name"])[:12]
+                        lbl = tiny.render(f"D{j+1} {object_label}{crop_tag}{anim_tag}{owner_tag}", True, (130, 240, 130))
                         screen.blit(lbl, (sr.x + 2, sr.y + 2))
 
         # Crop drag preview
@@ -2258,11 +2452,7 @@ def main():
                                 (mx_pt[0] - 10, mx_pt[1] - 10))
 
         # Dragging preview
-        if current_rect is not None:
-            pr = clamp_rect_to_image(current_rect, world_rect)
-            pr = pr.move(-camera_x + viewport_rect.x, -camera_y + viewport_rect.y)
-            pygame.draw.rect(screen, (120, 200, 255), pr, 2)
-        elif dragging and current_shape == "circle" and mouse_world:
+        if dragging and current_shape == "circle" and mouse_world:
             dx = mouse_world[0] - start_pos[0]
             dy = mouse_world[1] - start_pos[1]
             rr = math.hypot(dx, dy)
@@ -2272,6 +2462,10 @@ def main():
             ss = world_to_screen(start_pos)
             sm = world_to_screen(mouse_world)
             pygame.draw.line(screen, (120, 200, 255), ss, sm, current_line_thickness_px)
+        elif dragging and current_shape == "rect" and current_rect is not None:
+            pr = clamp_rect_to_image(current_rect, world_rect)
+            pr = pr.move(-camera_x + viewport_rect.x, -camera_y + viewport_rect.y)
+            pygame.draw.rect(screen, (120, 200, 255), pr, 2)
 
         # Test player
         if test_mode:
@@ -2333,12 +2527,24 @@ def main():
         py = panel_rect.y + 6
         panel_title = small.render("Elementos", True, (200, 200, 220))
         screen.blit(panel_title, (px, py))
-        py += 22
+        pygame.draw.rect(screen, (45, 85, 125), npc_button_rect, border_radius=4)
+        pygame.draw.rect(screen, (120, 150, 180), npc_button_rect, 1, border_radius=4)
+        npc_button_label = tiny.render("Elegir NPC", True, (240, 245, 255))
+        screen.blit(npc_button_label, npc_button_label.get_rect(center=npc_button_rect.center))
+        pygame.draw.rect(screen, (85, 105, 65), bridge_button_rect, border_radius=4)
+        pygame.draw.rect(screen, (140, 160, 110), bridge_button_rect, 1, border_radius=4)
+        bridge_button_label = tiny.render("Puentes (U)", True, (240, 245, 230))
+        screen.blit(bridge_button_label,
+                    bridge_button_label.get_rect(center=bridge_button_rect.center))
+        pygame.draw.rect(screen, (65, 65, 80), hitbox_button_rect, border_radius=4)
+        pygame.draw.rect(screen, (120, 120, 140), hitbox_button_rect, 1, border_radius=4)
+        hitbox_button_label = tiny.render("Volver a hitboxes (O)", True, (240, 240, 245))
+        screen.blit(hitbox_button_label,
+                    hitbox_button_label.get_rect(center=hitbox_button_rect.center))
+        pygame.draw.line(screen, (60, 60, 80), (panel_rect.x, panel_list_top - 4),
+                         (panel_rect.right, panel_list_top - 4), 1)
 
-        pygame.draw.line(screen, (60, 60, 80), (panel_rect.x, py), (panel_rect.right, py), 1)
-        py += 4
-
-        list_top = py
+        list_top = panel_list_top
         list_h = panel_rect.bottom - list_top
         panel_clip = pygame.Rect(panel_rect.x, list_top, panel_rect.width, list_h)
 
@@ -2373,10 +2579,16 @@ def main():
         pygame.draw.rect(screen, (22, 22, 32), status_rect_layout)
         pygame.draw.line(screen, (60, 60, 80), status_rect_layout.topleft,
                          (status_rect_layout.right, status_rect_layout.y), 1)
-        npc_char = npc_character_options[current_npc_character_idx] if npc_character_options else "?"
+        npc_char = (
+            npc_character_options[current_npc_character_idx]
+            if npc_character_options else "sin NPCs"
+        )
         npc_anim = (current_npc_animation_options[current_npc_animation_idx]
                     if current_npc_animation_options else "?")
         mode_str = editor_mode.upper()
+        if (editor_mode == "object" and selected_deco_idx is None and available_objects
+                and available_objects[current_object_idx].startswith("NPCS/")):
+            mode_str = "COLOCAR NPC"
         tool_str = (f"{current_shape}/{current_role}/{current_interactable_action}"
                     if editor_mode == "hitbox" else
                     (available_objects[current_object_idx] if available_objects else "sin objetos"))
@@ -2440,8 +2652,10 @@ def main():
         max_txt_w = win_w - panel_rect.width - padding * 2 - 8
 
         lines = [
-            ("HITBOX: arrastra=crear | WASD=camara | F=forma | I=wall/inter | K=accion | M=mover | T=test | P/Shift+P=spawn | click-der=borrar | C=limpiar | ENTER=guardar | Ctrl+L=cargar | ESC=salir", (235, 235, 235)),
-            ("O=modo objeto | J/H=obj/imagen | N=selector NPC | B=selector anim | G=grid | L=etiquetas | +/-=escala | Ctrl++/-=solo ancho | Alt++/-=solo alto | [/]=frames- / frames+ | Ctrl+D=dup | Ctrl+A=sel-todo | Ctrl+C/V=copiar/pegar todos | Ctrl+Shift+C/V=sel individual | R=recortar obj | Shift+R=quitar recorte", (210, 210, 160)),
+            ("Puentes: U o boton Puentes > elige variante > clic mapa para colocar | NPC: Elegir NPC > personaje > animacion > clic mapa | Volver a hitboxes: boton u O", (210, 210, 160)),
+            ("N=personaje y B=animacion de la proxima hitbox NPC | Hitboxes: arrastra=crear | F=forma | I=pared/interactuable | K=puerta/NPC", (235, 235, 235)),
+            ("Clic derecho=borrar | M=mover | T=prueba | P=spawn; Shift+P=crear spawn | WASD=camara | J/H=imagen o destino | G=cuadricula | L=etiquetas | +/-=tamano", (190, 195, 210)),
+            ("Enter=guardar | Ctrl+L=cargar | Ctrl+Z/Y=deshacer/rehacer | Ctrl+D=duplicar | Ctrl+C/V=copiar/pegar | R=recortar objeto | C=limpiar hitboxes | Esc=salir", (175, 185, 205)),
         ]
         for line_txt, line_col in lines:
             ui_y = draw_wrapped_text(screen, line_txt, tiny, line_col,
@@ -2488,7 +2702,7 @@ def main():
             screen.blit(dim, (0, 0))
             pygame.draw.rect(screen, (40, 40, 55), modal, border_radius=10)
             pygame.draw.rect(screen, (120, 120, 160), modal, 2, border_radius=10)
-            screen.blit(font.render("Elegir personaje NPC  (Flechas + Enter / ESC)",
+            screen.blit(font.render("Elegir personaje  (Flechas + Enter / ESC)",
                                     True, (220, 220, 240)), (modal.x + 10, modal.y + 10))
             mx0 = modal.x + THUMB_GAP
             my0 = modal.y + 42
@@ -2506,16 +2720,6 @@ def main():
                     screen.blit(thumb, (cx + (THUMB - tw) // 2 + 2, cy + 2))
                 screen.blit(tiny.render(char_name[:12], True, (220, 220, 240)),
                             (cx + 2, cy + THUMB + 4))
-                # Mouse click detection
-                if pygame.mouse.get_pressed()[0] and cell_rect.collidepoint(pygame.mouse.get_pos()):
-                    npc_modal_selected = ci
-                    current_npc_character_idx = ci
-                    current_npc_animation_options = _animations_for_character(npc_character_options[ci])
-                    current_npc_animation_idx = 0
-                    if npc_modal_source == "deco" and selected_deco_idx is not None:
-                        decoracion[selected_deco_idx]["npc_owner"] = npc_character_options[ci]
-                        push_deco_history()
-                    npc_char_modal = False
 
         # ── NPC animation modal ───────────────────────────────────────────────
         if npc_anim_modal and current_npc_animation_options:
@@ -2547,15 +2751,8 @@ def main():
                 if thumb:
                     tw, th = thumb.get_size()
                     screen.blit(thumb, (cx + (THUMB - tw) // 2 + 2, cy + 2))
-                screen.blit(tiny.render(anim_file[:12], True, (220, 220, 240)),
+                screen.blit(tiny.render(_animation_display_name(anim_file), True, (220, 220, 240)),
                             (cx + 2, cy + THUMB + 4))
-                if pygame.mouse.get_pressed()[0] and cell_rect.collidepoint(pygame.mouse.get_pos()):
-                    npc_anim_modal_selected = ai
-                    current_npc_animation_idx = ai
-                    if npc_modal_source == "deco" and selected_deco_idx is not None:
-                        decoracion[selected_deco_idx]["npc_animation"] = current_npc_animation_options[ai]
-                        push_deco_history()
-                    npc_anim_modal = False
 
         pygame.display.flip()
 
