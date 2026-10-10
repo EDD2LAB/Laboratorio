@@ -858,10 +858,7 @@ def determinar_resultado_final(estado):
 def dibujar_final(superficie, recursos, estado):
     victoria = determinar_resultado_final(estado) == "victoria"
     ilustracion = recursos["final_positivo"] if victoria else recursos["final_negativo"]
-    superficie.blit(recursos["mapa"], (0, 0))
-    velo = superficie_con_alpha((ANCHO, ALTO), (6, 18, 12, 94))
-    superficie.blit(velo, (0, 0))
-    superficie.blit(ilustracion, ilustracion.get_rect(center=(ANCHO // 2, 347)))
+    superficie.blit(ilustracion, (0, 0))
     titulo = recursos["fuente_resultado"].render("LA COPA FLORECE" if victoria else "LA COPA SE CUBRE DE HUMO", True, CREMA)
     superficie.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 88)))
     detalle = recursos["fuente_texto"].render(
@@ -1011,8 +1008,8 @@ def main():
             "quemar": cargar_efecto_tablilla("Quemar_tablilla.png"),
             "ignorar": cargar_efecto_tablilla("Ignorar_tablilla.png"),
         },
-        "final_positivo": cargar_imagen(os.path.join("Finales", "Final_positivo.jpeg"), (520, 293)),
-        "final_negativo": cargar_imagen(os.path.join("Finales", "Game_over.jpeg"), (520, 293)),
+        "final_positivo": cargar_imagen(os.path.join("Finales", "Final_positivo.jpeg"), (ANCHO, ALTO)),
+        "final_negativo": cargar_imagen(os.path.join("Finales", "Game_over.jpeg"), (ANCHO, ALTO)),
         "fuente_texto": fuente_texto,
         "fuente_categoria": fuente_categoria,
         "fuente_boton": fuente_boton,
