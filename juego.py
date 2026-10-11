@@ -16,12 +16,14 @@ import unicodedata
 import pygame
 
 from audio_manager import GestorAudio
+from conversaciones import construir_conversacion
 from interfaz.boton import Boton, GrupoBotones
 from interfaz.dialogo import ControladorDialogo
 from interfaz.hud import HUDIndicadores
 from interfaz.menu import MenuModal
 from interfaz.mensaje_privado import ControladorMensajePrivado
 from logica_juego import EstadoJuego
+from particulas import SistemaParticulas
 
 ANCHO, ALTO = 960, 720
 RELACION_ASPECTO = ANCHO / ALTO
@@ -50,7 +52,12 @@ ESCENA_AYUDA = "ayuda"
 CENTRO_TABLILLA = (ANCHO // 2, 330)
 CENTRO_TABLILLA_CENTRADA = (ANCHO // 2, 330)
 CENTRO_CALDERO = (ANCHO // 2, 380)
-HITBOX_CALDERO = pygame.Rect(CENTRO_CALDERO[0] - 52, CENTRO_CALDERO[1] - 48, 104, 96)
+HITBOX_CALDERO = pygame.Rect(CENTRO_CALDERO[0] - 26, CENTRO_CALDERO[1] - 22, 52, 44)
+AREA_INTERACCION_CALDERO = pygame.Rect(CENTRO_CALDERO[0] - 28, CENTRO_CALDERO[1] - 28, 56, 56)
+TAMANO_HITBOX_PIES = (12, 8)
+VELOCIDAD_GUARDIAN = 155
+DISTANCIA_INTERACCION = 58
+ESCENA_ECO = "eco_tronco"
 
 
 def normalizar_ruta(ruta):
@@ -109,9 +116,56 @@ def personaje_de_decoracion(nombre):
         return "Mira"
     if "/naira/" in ruta:
         return "Naira"
+    if "/odran/" in ruta:
+        return "Sabio de las Raíces"
     if "aspirante hombre" in ruta:
         return "Kael"
     return None
+
+
+def cargar_spritesheet_frames(nombre, cantidad=8):
+    imagen = cargar_imagen(nombre, requerido=False)
+    if imagen is None:
+        print(f"[advertencia] No se encontró la hoja de sprites: {nombre}")
+        return []
+    ancho_frame = imagen.get_width() // cantidad
+    if ancho_frame < 1:
+        print(f"[advertencia] Spritesheet inválido (sin {cantidad} frames): {nombre}")
+        return []
+    return [
+        imagen.subsurface(pygame.Rect(indice * ancho_frame, 0, ancho_frame, imagen.get_height())).copy()
+        for indice in range(cantidad)
+    ]
+
+
+def cargar_frames_tronco_eco():
+    frames = []
+    for indice_fila in range(1, 5):
+        frames.extend(cargar_spritesheet_frames(
+            os.path.join("Tronco ecos", f"Tronco-ecos-fila{indice_fila}.png"),
+            cantidad=4,
+        ))
+    return frames
+
+
+def cargar_frames_idle_guardian():
+    orientaciones = (
+        "abajo",
+        "abajo_derecha",
+        "derecha",
+        "arriba_derecha",
+        "arriba",
+        "arriba_izquierda",
+        "izquierda",
+        "abajo_izquierda",
+    )
+    return {
+        orientacion: cargar_imagen(
+            os.path.join("NPCS", "Guardian", f"Fila 1 - {indice}. Guardián.png"),
+            requerido=False,
+        )
+        for indice, orientacion in enumerate(orientaciones, start=1)
+    }
 
 
 def cargar_mapa_principal():
@@ -155,35 +209,67 @@ def cargar_mapa_principal():
             "hitbox": hitbox,
             "imagen": imagen,
             "puente": normalizar_ruta(objeto["name"]).startswith("puentes/"),
+            "tronco_eco": normalizar_ruta(objeto["name"]).startswith("tronco ecos/"),
         })
 
     decoraciones.sort(key=lambda objeto: objeto["puente"], reverse=True)
     for objeto in decoraciones:
-        mapa.blit(objeto["imagen"], objeto["rect"])
+        if objeto["personaje"] != "Guardián" and not objeto["tronco_eco"]:
+            mapa.blit(objeto["imagen"], objeto["rect"])
 
     interacciones = []
-    for hitbox in datos.get("hitboxes", []):
+    hitboxes = datos.get("hitboxes", [])
+    for indice, hitbox in enumerate(hitboxes):
         if hitbox.get("role") != "interactable":
             continue
-        if hitbox.get("type", "rect") == "rect":
+        tipo_forma = hitbox.get("type", "rect")
+        if tipo_forma == "rect":
             rect = pygame.Rect(
                 round(hitbox["rx"] * ANCHO),
                 round(hitbox["ry"] * ALTO),
                 max(1, round(hitbox["rw"] * ANCHO)),
                 max(1, round(hitbox["rh"] * ALTO)),
             )
+        elif tipo_forma == "circle":
+            cx = round(hitbox["cx"] * ANCHO)
+            cy = round(hitbox["cy"] * ALTO)
+            radio = max(1, round(hitbox["r"] * ANCHO))
+            rect = pygame.Rect(cx - radio, cy - radio, radio * 2, radio * 2)
         else:
             continue
         interaccion = {
+            "id": hitbox.get("id", f"interaccion_{indice + 1}"),
+            "tipo": "eco_tronco" if hitbox.get("action") == "usar_eco_tronco" else hitbox.get("action", "interaccion"),
             "rect": rect,
             "accion": hitbox.get("action"),
+            "personaje": hitbox.get("npc_character"),
             "destino": hitbox.get("target_image"),
+            "plataforma": hitbox.get("plataforma", ""),
+            "activo": hitbox.get("activo", True),
         }
         if interaccion["accion"] == "puerta" and interaccion["destino"]:
             interaccion["imagen_destino"] = cargar_imagen(interaccion["destino"], (ANCHO, ALTO))
         interacciones.append(interaccion)
 
-    return mapa, decoraciones, interacciones
+    for indice, objeto in enumerate(decoraciones):
+        if not objeto["tronco_eco"]:
+            continue
+        interacciones.append({
+            "id": f"eco_tronco_decoracion_{indice + 1}",
+            "tipo": "eco_tronco",
+            "accion": "usar_eco_tronco",
+            "rect": objeto["rect"],
+            "activo": True,
+            "frames": cargar_spritesheet_frames(objeto["nombre"], cantidad=4),
+        })
+
+    guardian = next(
+        (objeto for objeto in decoraciones if objeto["personaje"] == "Guardián"),
+        None,
+    )
+    if guardian is None:
+        print("[advertencia] No se encontró la decoración del Guardián; usando posición inicial central.")
+    return mapa, decoraciones, interacciones, hitboxes, guardian
 
 
 def cargar_fuente(tamano):
@@ -289,11 +375,18 @@ def dibujar_mensaje_mapa(superficie, fuente, texto):
 
 
 def interaccion_en_mapa(posicion, mundo):
-    if HITBOX_CALDERO.collidepoint(posicion):
-        return {"accion": "tablilla", "rect": HITBOX_CALDERO}
+    if AREA_INTERACCION_CALDERO.collidepoint(posicion):
+        return {
+            "id": "caldero_eco",
+            "accion": "tablilla",
+            "rect": AREA_INTERACCION_CALDERO,
+        }
 
     for objeto in reversed(mundo["decoraciones"]):
-        if objeto["personaje"] and objeto["hitbox"].collidepoint(posicion):
+        if (
+            objeto["personaje"] and objeto["personaje"] != "Guardián"
+            and objeto["hitbox"].collidepoint(posicion)
+        ):
             return {
                 "accion": "npc",
                 "personaje": objeto["personaje"],
@@ -302,7 +395,7 @@ def interaccion_en_mapa(posicion, mundo):
             }
 
     for interaccion in mundo["interacciones"]:
-        if interaccion["rect"].collidepoint(posicion):
+        if interaccion.get("activo", True) and interaccion["rect"].collidepoint(posicion):
             return interaccion
     return None
 
@@ -327,7 +420,387 @@ def dibujar_brillo_interaccion(superficie, imagen, rect, cache):
     superficie.blit(imagen, rect)
 
 
-def dibujar_mapa(superficie, recursos, mundo, estado, mouse_pos, hud, resaltar=True):
+def crear_jugador_local(recursos):
+    decoracion = recursos.get("guardian")
+    if decoracion:
+        sprite_rect = decoracion["rect"].copy()
+        imagen_idle = decoracion["imagen"]
+    else:
+        sprite_rect = pygame.Rect(ANCHO // 2, ALTO // 2, 36, 58)
+        imagen_idle = None
+    pies = pygame.Rect(0, 0, *TAMANO_HITBOX_PIES)
+    pies.midbottom = sprite_rect.midbottom
+    frames_caminar = recursos.get("guardian_walk_frames")
+    if not isinstance(frames_caminar, dict):
+        frames_caminar = {}
+    return {
+        "id": "guardian",
+        "rect": sprite_rect,
+        "pies": pies,
+        "posicion_x": float(pies.x),
+        "posicion_y": float(pies.y),
+        "imagen_idle": imagen_idle,
+        "frames_idle": recursos.get("guardian_idle_frames", {}),
+        "frames_caminar": frames_caminar,
+        "frames_hablar": recursos.get("guardian_talk_frames", []),
+        "frames_eco": recursos.get("guardian_eco_frames", []),
+        "tiempo_animacion": 0.0,
+        "indice_frame": 0,
+        "estado_visual": "idle",
+        "direccion": "abajo",
+        "en_movimiento": False,
+    }
+
+
+def _rect_hits_line(rect, x1, y1, x2, y2, grosor):
+    dx, dy = x2 - x1, y2 - y1
+    longitud_cuadrada = dx * dx + dy * dy
+    if longitud_cuadrada == 0:
+        px, py = x1, y1
+    else:
+        t = max(0, min(1, ((rect.centerx - x1) * dx + (rect.centery - y1) * dy) / longitud_cuadrada))
+        px, py = x1 + t * dx, y1 + t * dy
+    radio = math.hypot(rect.width, rect.height) / 2 + grosor / 2
+    return (rect.centerx - px) ** 2 + (rect.centery - py) ** 2 <= radio * radio
+
+
+def colision_hitbox_mapa(rect, hitbox):
+    tipo = hitbox.get("type", "rect")
+    if tipo == "rect":
+        obstaculo = pygame.Rect(
+            round(hitbox.get("rx", 0) * ANCHO),
+            round(hitbox.get("ry", 0) * ALTO),
+            max(1, round(hitbox.get("rw", 0) * ANCHO)),
+            max(1, round(hitbox.get("rh", 0) * ALTO)),
+        )
+        return rect.colliderect(obstaculo)
+    if tipo == "circle":
+        cx, cy = hitbox.get("cx", 0) * ANCHO, hitbox.get("cy", 0) * ALTO
+        radio = max(4, hitbox.get("r", 0) * ANCHO)
+        nx = max(rect.left, min(cx, rect.right))
+        ny = max(rect.top, min(cy, rect.bottom))
+        return (cx - nx) ** 2 + (cy - ny) ** 2 <= radio * radio
+    if tipo == "line":
+        return _rect_hits_line(
+            rect,
+            hitbox.get("x1", 0) * ANCHO,
+            hitbox.get("y1", 0) * ALTO,
+            hitbox.get("x2", 0) * ANCHO,
+            hitbox.get("y2", 0) * ALTO,
+            max(2, hitbox.get("thickness", 0.008) * ANCHO),
+        )
+    return False
+
+
+def contiene_zona_caminable(rect, hitbox):
+    if hitbox.get("type", "rect") == "rect":
+        zona = pygame.Rect(
+            round(hitbox.get("rx", 0) * ANCHO),
+            round(hitbox.get("ry", 0) * ALTO),
+            max(1, round(hitbox.get("rw", 0) * ANCHO)),
+            max(1, round(hitbox.get("rh", 0) * ALTO)),
+        )
+        return zona.contains(rect)
+    if hitbox.get("type") == "circle":
+        cx, cy = hitbox.get("cx", 0) * ANCHO, hitbox.get("cy", 0) * ALTO
+        radio = hitbox.get("r", 0) * ANCHO
+        return all((x - cx) ** 2 + (y - cy) ** 2 <= radio * radio for x, y in (
+            rect.topleft, rect.topright, rect.bottomleft, rect.bottomright
+        ))
+    return False
+
+
+def jugador_bloqueado(rect, mundo):
+    if not pygame.Rect(0, 0, ANCHO, ALTO).contains(rect):
+        return True
+    if any(
+        hitbox.get("role", "wall") == "wall" and colision_hitbox_mapa(rect, hitbox)
+        for hitbox in mundo["hitboxes"]
+    ):
+        return True
+    zonas_caminables = [
+        hitbox for hitbox in mundo["hitboxes"]
+        if hitbox.get("role") == "walkable"
+    ]
+    if zonas_caminables and not any(
+        contiene_zona_caminable(rect, zona) for zona in zonas_caminables
+    ):
+        return True
+    return rect.colliderect(HITBOX_CALDERO) or any(
+        personaje["rect"].colliderect(rect) for personaje in mundo["personajes"]
+    )
+
+
+def ajustar_inicio_jugador(jugador, mundo):
+    origen = jugador["pies"]
+    if not jugador_bloqueado(origen, mundo):
+        return
+
+    for distancia in range(1, 65):
+        for desplazamiento_y in range(-distancia, distancia + 1):
+            desplazamiento_x = distancia - abs(desplazamiento_y)
+            desplazamientos = (
+                [(0, desplazamiento_y)]
+                if desplazamiento_x == 0
+                else [(-desplazamiento_x, desplazamiento_y), (desplazamiento_x, desplazamiento_y)]
+            )
+            for dx, dy in desplazamientos:
+                candidato = origen.move(dx, dy)
+                if jugador_bloqueado(candidato, mundo):
+                    continue
+                if any(
+                    jugador_bloqueado(candidato.move(paso_x, paso_y), mundo)
+                    for paso in range(1, 4)
+                    for paso_x, paso_y in (
+                        (-paso, 0), (paso, 0), (0, -paso), (0, paso)
+                    )
+                ):
+                    continue
+                jugador["pies"] = candidato
+                jugador["posicion_x"] = float(candidato.x)
+                jugador["posicion_y"] = float(candidato.y)
+                jugador["rect"].midbottom = candidato.midbottom
+                return
+
+    raise RuntimeError("No se encontró una posición inicial libre para el Guardián.")
+
+
+def _posicion_interaccion(jugador, interactuable):
+    rect = interactuable["rect"]
+    x = max(rect.left, min(jugador["pies"].centerx, rect.right))
+    y = max(rect.top, min(jugador["pies"].centery, rect.bottom))
+    return math.hypot(jugador["pies"].centerx - x, jugador["pies"].centery - y)
+
+
+def buscar_interactuable_cercano(jugador, mundo):
+    candidatos = [
+        {
+            "id": "caldero_eco",
+            "tipo": "caldero",
+            "accion": "tablilla",
+            "personaje": "Caldero",
+            "rect": AREA_INTERACCION_CALDERO,
+            "activo": True,
+            "distancia": 18,
+        },
+        *mundo["personajes"],
+        *mundo["interacciones"],
+    ]
+    cercanos = [
+        (distancia, objeto)
+        for objeto in candidatos
+        if objeto.get("activo", True)
+        and (distancia := _posicion_interaccion(jugador, objeto)) <= objeto.get("distancia", DISTANCIA_INTERACCION)
+    ]
+    cercanos.sort(key=lambda elemento: elemento[0])
+    if not cercanos:
+        mundo["interacciones_cercanas"] = []
+        mundo["interaccion_seleccionada"] = None
+        return None, None
+    mundo["interacciones_cercanas"] = cercanos
+    ids = [objeto.get("id", objeto.get("personaje", objeto["accion"])) for _, objeto in cercanos]
+    seleccionada = mundo.get("interaccion_seleccionada")
+    if seleccionada not in ids:
+        seleccionada = ids[0]
+        mundo["interaccion_seleccionada"] = seleccionada
+    indice = ids.index(seleccionada)
+    distancia, interactuable = cercanos[indice]
+    interactuable["alternativas_cercanas"] = len(cercanos)
+    interactuable["indice_alternativa"] = indice + 1
+    return interactuable, distancia
+
+
+def alternar_interactuable_cercano(mundo, sentido=1):
+    cercanos = mundo.get("interacciones_cercanas", [])
+    if len(cercanos) < 2:
+        return
+    ids = [objeto.get("id", objeto.get("personaje", objeto["accion"])) for _, objeto in cercanos]
+    actual = mundo.get("interaccion_seleccionada")
+    indice = ids.index(actual) if actual in ids else 0
+    mundo["interaccion_seleccionada"] = ids[(indice + sentido) % len(ids)]
+
+
+def reiniciar_jugador_en_casa(mundo):
+    jugador = mundo["jugador"]
+    jugador["pies"] = mundo["posicion_casa"].copy()
+    jugador["posicion_x"] = float(jugador["pies"].x)
+    jugador["posicion_y"] = float(jugador["pies"].y)
+    jugador["rect"].midbottom = jugador["pies"].midbottom
+    jugador["direccion"] = "abajo"
+    jugador["en_movimiento"] = False
+    jugador["estado_visual"] = "idle"
+    jugador["indice_frame"] = 0
+    jugador["tiempo_animacion"] = 0.0
+    mundo["interaccion_seleccionada"] = None
+
+
+def mover_jugador(jugador, mundo, teclas, delta_ms):
+    dx = int(teclas[pygame.K_d] or teclas[pygame.K_RIGHT]) - int(teclas[pygame.K_a] or teclas[pygame.K_LEFT])
+    dy = int(teclas[pygame.K_s] or teclas[pygame.K_DOWN]) - int(teclas[pygame.K_w] or teclas[pygame.K_UP])
+    movimiento = dx != 0 or dy != 0
+    jugador["en_movimiento"] = movimiento
+    if not movimiento:
+        return
+    direcciones_diagonales = {
+        (1, 1): "abajo_derecha",
+        (1, -1): "arriba_derecha",
+        (-1, -1): "arriba_izquierda",
+        (-1, 1): "abajo_izquierda",
+    }
+    direccion = direcciones_diagonales.get((dx, dy))
+    if direccion is None:
+        direccion = "arriba" if dy < 0 else "abajo" if dy > 0 else (
+            "derecha" if dx > 0 else "izquierda"
+        )
+    if direccion != jugador["direccion"]:
+        jugador["direccion"] = direccion
+        jugador["indice_frame"] = 0
+    if dx and dy:
+        direccion_movimiento = "derecha" if dx > 0 else "izquierda"
+    else:
+        direccion_movimiento = direccion
+    jugador["direccion_movimiento"] = direccion_movimiento
+    if dx and dy:
+        dx *= math.sqrt(0.5)
+        dy *= math.sqrt(0.5)
+    delta = min(max(delta_ms, 0), 100) / 1000
+    pasos = max(1, math.ceil(VELOCIDAD_GUARDIAN * delta / 3))
+    paso_x = dx * VELOCIDAD_GUARDIAN * delta / pasos
+    paso_y = dy * VELOCIDAD_GUARDIAN * delta / pasos
+    posicion_x = jugador.get("posicion_x", float(jugador["pies"].x))
+    posicion_y = jugador.get("posicion_y", float(jugador["pies"].y))
+    jugador["tiempo_animacion"] += delta_ms
+    while jugador["tiempo_animacion"] >= 110:
+        jugador["tiempo_animacion"] -= 110
+        frames_direccion = jugador["frames_caminar"].get(
+            jugador.get("direccion_movimiento", jugador["direccion"]), []
+        )
+        if frames_direccion:
+            jugador["indice_frame"] = (jugador["indice_frame"] + 1) % len(frames_direccion)
+
+    for _ in range(pasos):
+        for eje, movimiento_eje in (("x", paso_x), ("y", paso_y)):
+            if not movimiento_eje:
+                continue
+            pies = jugador["pies"].copy()
+            candidato = (posicion_x if eje == "x" else posicion_y) + movimiento_eje
+            setattr(pies, eje, round(candidato))
+            if not pygame.Rect(0, 0, ANCHO, ALTO).contains(pies):
+                continue
+            if not jugador_bloqueado(pies, mundo):
+                jugador["pies"] = pies
+                if eje == "x":
+                    posicion_x = candidato
+                else:
+                    posicion_y = candidato
+    jugador["posicion_x"] = posicion_x
+    jugador["posicion_y"] = posicion_y
+    jugador["rect"].midbottom = jugador["pies"].midbottom
+
+
+def dibujar_debug_mapa(
+    superficie, mundo, jugador, interactuable, distancia, particulas, estado_control
+):
+    for hitbox in mundo["hitboxes"]:
+        if hitbox.get("role") == "walkable":
+            if hitbox.get("type", "rect") == "rect":
+                rect = pygame.Rect(
+                    round(hitbox.get("rx", 0) * ANCHO),
+                    round(hitbox.get("ry", 0) * ALTO),
+                    max(1, round(hitbox.get("rw", 0) * ANCHO)),
+                    max(1, round(hitbox.get("rh", 0) * ALTO)),
+                )
+                pygame.draw.rect(superficie, (100, 220, 140), rect, 1)
+            elif hitbox.get("type") == "circle":
+                centro = (round(hitbox["cx"] * ANCHO), round(hitbox["cy"] * ALTO))
+                pygame.draw.circle(superficie, (100, 220, 140), centro, round(hitbox["r"] * ANCHO), 1)
+            continue
+        if hitbox.get("role") != "wall":
+            continue
+        if hitbox.get("type", "rect") == "rect":
+            rect = pygame.Rect(
+                round(hitbox.get("rx", 0) * ANCHO),
+                round(hitbox.get("ry", 0) * ALTO),
+                max(1, round(hitbox.get("rw", 0) * ANCHO)),
+                max(1, round(hitbox.get("rh", 0) * ALTO)),
+            )
+            pygame.draw.rect(superficie, (60, 140, 255), rect, 1)
+        elif hitbox.get("type") == "line":
+            pygame.draw.line(
+                superficie, (60, 140, 255),
+                (round(hitbox["x1"] * ANCHO), round(hitbox["y1"] * ALTO)),
+                (round(hitbox["x2"] * ANCHO), round(hitbox["y2"] * ALTO)),
+                max(1, round(hitbox.get("thickness", 0.008) * ANCHO)),
+            )
+        elif hitbox.get("type") == "circle":
+            pygame.draw.circle(
+                superficie,
+                (60, 140, 255),
+                (round(hitbox["cx"] * ANCHO), round(hitbox["cy"] * ALTO)),
+                max(1, round(hitbox["r"] * ANCHO)),
+                1,
+            )
+    pygame.draw.rect(superficie, (255, 230, 40), jugador["pies"], 1)
+    pygame.draw.rect(superficie, (245, 135, 75), HITBOX_CALDERO, 1)
+    pygame.draw.rect(superficie, (245, 185, 75), AREA_INTERACCION_CALDERO, 1)
+    for personaje in mundo["personajes"]:
+        pygame.draw.rect(superficie, (200, 130, 255), personaje["rect"], 1)
+    for objeto in mundo["interacciones"]:
+        color = (40, 240, 200) if objeto.get("tipo") == "eco_tronco" else (90, 220, 120)
+        pygame.draw.rect(superficie, color, objeto["rect"], 2)
+        etiqueta = objeto.get("id", objeto.get("accion", "interaccion"))
+        superficie.blit(pygame.font.Font(None, 12).render(etiqueta, True, color), objeto["rect"].topleft)
+    fuente_debug = pygame.font.Font(None, 18)
+    nombre = interactuable.get("id", interactuable.get("personaje", "?")) if interactuable else "ninguno"
+    cantidad_luciernagas = len(particulas.luciernagas) if particulas else 0
+    cantidad_particulas = len(particulas.particulas) if particulas else 0
+    detalle = (
+        f"F3 | {estado_control} | {nombre} | {distancia:.0f}px | "
+        f"luciernagas: {cantidad_luciernagas} | particulas: {cantidad_particulas}"
+    )
+    superficie.blit(fuente_debug.render(detalle, True, (255, 255, 255)), (8, 8))
+
+
+def dibujar_jugador(superficie, jugador):
+    frames_caminar = jugador["frames_caminar"].get(
+        jugador.get("direccion_movimiento", jugador["direccion"]), []
+    )
+    if jugador["estado_visual"] == "usar_eco" and jugador["frames_eco"]:
+        imagen = jugador["frames_eco"][jugador["indice_frame"] % len(jugador["frames_eco"])]
+    elif jugador["estado_visual"] == "hablar" and jugador["frames_hablar"]:
+        imagen = jugador["frames_hablar"][jugador["indice_frame"] % len(jugador["frames_hablar"])]
+    elif jugador["en_movimiento"] and frames_caminar:
+        imagen = frames_caminar[jugador["indice_frame"] % len(frames_caminar)]
+    else:
+        imagen = jugador["frames_idle"].get(jugador["direccion"]) or jugador["imagen_idle"]
+    if imagen:
+        imagen = pygame.transform.scale(imagen, jugador["rect"].size)
+        if (
+            jugador["direccion"] in ("izquierda", "arriba_izquierda", "abajo_izquierda")
+            and jugador["estado_visual"] in ("hablar", "usar_eco")
+        ):
+            imagen = pygame.transform.flip(imagen, True, False)
+        superficie.blit(imagen, jugador["rect"])
+
+
+def dibujar_troncos_eco(superficie, recursos, mundo):
+    for interaccion in mundo["interacciones"]:
+        if interaccion.get("accion") != "usar_eco_tronco" or not interaccion.get("activo", True):
+            continue
+        frames = interaccion.get("frames") or recursos.get("frames_tronco_eco", [])
+        if not frames:
+            continue
+        frame = frames[(pygame.time.get_ticks() // 140) % len(frames)]
+        rect = interaccion["rect"]
+        tamano = rect.size if interaccion.get("frames") else (58, 64)
+        imagen = pygame.transform.scale(frame, tamano)
+        superficie.blit(imagen, imagen.get_rect(midbottom=rect.midbottom))
+
+
+def dibujar_mapa(
+    superficie, recursos, mundo, estado, mouse_pos, hud,
+    interactuable=None, distancia=None, particulas=None, debug=False, resaltar=True,
+):
     superficie.blit(recursos["mapa"], (0, 0))
 
     # El Caldero expresa visualmente la salud informativa de la aldea.
@@ -336,6 +809,17 @@ def dibujar_mapa(superficie, recursos, mundo, estado, mouse_pos, hud, resaltar=T
     indice_caldero = 3 if desinformacion >= 100 else 2 if desinformacion >= 55 else 0 if positivos >= 65 else 1
     caldero = recursos["calderos"][indice_caldero]
     superficie.blit(caldero, caldero.get_rect(center=CENTRO_CALDERO))
+
+    dibujar_troncos_eco(superficie, recursos, mundo)
+    jugador = mundo["jugador"]
+    dibujar_jugador(superficie, jugador)
+    if particulas:
+        particulas.dibujar(superficie)
+    if debug:
+        dibujar_debug_mapa(
+            superficie, mundo, jugador, interactuable, distancia or 0,
+            particulas, "EXPLORANDO",
+        )
 
     interaccion = interaccion_en_mapa(mouse_pos, mundo) if resaltar else None
     if interaccion:
@@ -360,9 +844,27 @@ def dibujar_mapa(superficie, recursos, mundo, estado, mouse_pos, hud, resaltar=T
         else:
             texto = "Clic para viajar al mapa Central"
     else:
-        texto = "Haz clic en el Caldero para consultar una tablilla o en un personaje para hablar."
+        texto = "WASD o flechas: moverse | E: interactuar | Tab: alternar | F3: depuracion"
     hud.dibujar(superficie)
     dibujar_mensaje_mapa(superficie, recursos["fuente_mapa"], texto)
+    if interactuable:
+        nombres = {
+            "npc": f"Hablar con {interactuable.get('personaje', 'personaje')}",
+            "tablilla": "Examinar el Caldero",
+            "usar_eco_tronco": "Usar Eco de Troncos",
+            "puerta": "Viajar",
+        }
+        etiqueta = f"[E] {nombres.get(interactuable.get('accion'), 'Interactuar')}"
+        if interactuable.get("alternativas_cercanas", 0) > 1:
+            etiqueta = (
+                f"[Tab] cambiar ({interactuable['indice_alternativa']}/"
+                f"{interactuable['alternativas_cercanas']}) | {etiqueta}"
+            )
+        indicador = recursos["fuente_mapa"].render(etiqueta, True, CREMA)
+        caja = indicador.get_rect(midbottom=(jugador["rect"].centerx, jugador["rect"].top - 5)).inflate(14, 8)
+        pygame.draw.rect(superficie, (18, 31, 25), caja, border_radius=5)
+        pygame.draw.rect(superficie, ORO, caja, 1, border_radius=5)
+        superficie.blit(indicador, indicador.get_rect(center=caja.center))
 
 
 def buscar_imagen_para_opcion(texto, imagenes):
@@ -373,10 +875,8 @@ def buscar_imagen_para_opcion(texto, imagenes):
         return imagenes["consultar"]
     if "quemar" in texto:
         return imagenes["quemar"]
-    # Ignorar se representa como botón de texto: su recurso de imagen es una
-    # lámina de sprites y no un botón individual.
     if "ignorar" in texto:
-        return None
+        return imagenes["ignorar"]
     return None
 
 
@@ -893,10 +1393,7 @@ def determinar_resultado_final(estado):
 def dibujar_final(superficie, recursos, estado):
     victoria = determinar_resultado_final(estado) == "victoria"
     ilustracion = recursos["final_positivo"] if victoria else recursos["final_negativo"]
-    superficie.blit(recursos["mapa"], (0, 0))
-    velo = superficie_con_alpha((ANCHO, ALTO), (6, 18, 12, 94))
-    superficie.blit(velo, (0, 0))
-    superficie.blit(ilustracion, ilustracion.get_rect(center=(ANCHO // 2, 347)))
+    superficie.blit(ilustracion, (0, 0))
     titulo = recursos["fuente_resultado"].render("LA COPA FLORECE" if victoria else "LA COPA SE CUBRE DE HUMO", True, CREMA)
     superficie.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 88)))
     detalle = recursos["fuente_texto"].render(
@@ -919,18 +1416,59 @@ def dibujar_final(superficie, recursos, estado):
     superficie.blit(instruccion, instruccion.get_rect(center=(ANCHO // 2, 655)))
 
 
-def dibujar_escena_dialogo(superficie, recursos, dialogos, mouse_pos, hud):
+def dibujar_escena_dialogo(superficie, recursos, dialogos, mouse_pos, hud, jugador=None, particulas=None):
     """El diálogo se superpone al mapa y bloquea sus demás interacciones."""
     superficie.blit(recursos["mapa"], (0, 0))
+    if jugador:
+        if particulas:
+            particulas.dibujar(superficie)
+        dibujar_jugador(superficie, jugador)
     hud.dibujar(superficie)
     dialogos.dibujar(superficie, mouse_pos, ANCHO, ALTO)
 
 
-def dibujar_escena_mensaje(superficie, recursos, mensajes, mouse_pos, hud):
+def dibujar_escena_mensaje(superficie, recursos, mensajes, mouse_pos, hud, jugador=None):
     """El pergamino se presenta sobre el mapa y bloquea las demás acciones."""
     superficie.blit(recursos["mapa"], (0, 0))
+    if jugador:
+        dibujar_jugador(superficie, jugador)
     hud.dibujar(superficie)
     mensajes.dibujar(superficie, mouse_pos)
+
+
+def dibujar_interfaz_eco(superficie, recursos, jugador, estado_eco, contactos, mensajes):
+    superficie.blit(recursos["mapa"], (0, 0))
+    dibujar_jugador(superficie, jugador)
+    panel = pygame.Rect(190, 150, 580, 420)
+    superficie.blit(superficie_con_alpha(panel.size, (17, 34, 28, 242)), panel.topleft)
+    pygame.draw.rect(superficie, ORO, panel, 3, border_radius=14)
+    frames_tronco = recursos.get("frames_tronco_eco", [])
+    if frames_tronco:
+        frame = frames_tronco[(pygame.time.get_ticks() // 140) % len(frames_tronco)]
+        superficie.blit(pygame.transform.scale(frame, (64, 72)), (panel.right - 102, panel.y + 18))
+    titulo = recursos["fuente_panel_titulo"].render("ECO DE TRONCOS", True, ORO)
+    superficie.blit(titulo, titulo.get_rect(center=(panel.centerx, panel.y + 38)))
+    if not contactos:
+        lineas = ["No hay personajes disponibles en este mapa.", "Esc para volver."]
+    elif estado_eco["respuesta"]:
+        lineas = [
+            f"Mensaje enviado a {contactos[estado_eco['destinatario']]}:",
+            mensajes[estado_eco["mensaje"]][1],
+            estado_eco["respuesta"],
+            "Enter o Esc para volver.",
+        ]
+    else:
+        destinatario = contactos[estado_eco["destinatario"]]
+        mensaje = mensajes[estado_eco["mensaje"]][1]
+        lineas = [
+            f"Destinatario:  < {destinatario} >",
+            f"Mensaje:  < {mensaje} >",
+            "Arriba/abajo: destinatario | Izquierda/derecha: mensaje",
+            "E o Enter: enviar | Esc: cancelar",
+        ]
+    for indice, linea in enumerate(lineas):
+        texto = recursos["fuente_panel"].render(linea, True, CREMA)
+        superficie.blit(texto, texto.get_rect(center=(panel.centerx, panel.y + 112 + indice * 45)))
 
 
 def crear_fondo_tablilla(mapa):
@@ -941,10 +1479,46 @@ def crear_fondo_tablilla(mapa):
 
 
 def crear_mundo(recursos):
-    return {
+    personajes = [
+        {
+            "id": f"personaje_{indice}_{objeto['personaje'].lower()}",
+            "tipo": "personaje",
+            "accion": "npc",
+            "personaje": objeto["personaje"],
+            "rect": objeto["hitbox"].copy(),
+            "objeto": objeto,
+            "activo": True,
+            "distancia": DISTANCIA_INTERACCION,
+        }
+        for indice, objeto in enumerate(recursos["decoraciones"])
+        if objeto["personaje"] and objeto["personaje"] != "Guardián"
+    ]
+    for interaccion in recursos["interacciones"]:
+        if interaccion.get("accion") != "npc" or not interaccion.get("personaje"):
+            continue
+        if any(actor["personaje"] == interaccion["personaje"] for actor in personajes):
+            continue
+        personajes.append({
+            "id": interaccion["id"],
+            "tipo": "personaje",
+            "accion": "npc",
+            "personaje": interaccion["personaje"],
+            "rect": interaccion["rect"],
+            "activo": interaccion.get("activo", True),
+            "distancia": DISTANCIA_INTERACCION,
+        })
+    mundo = {
         "decoraciones": recursos["decoraciones"],
         "interacciones": recursos["interacciones"],
+        "hitboxes": recursos.get("hitboxes", []),
+        "personajes": personajes,
+        "jugador": crear_jugador_local(recursos),
     }
+    ajustar_inicio_jugador(mundo["jugador"], mundo)
+    mundo["posicion_casa"] = mundo["jugador"]["pies"].copy()
+    mundo["interacciones_cercanas"] = []
+    mundo["interaccion_seleccionada"] = None
+    return mundo
 
 
 def tamano_ventana_inicial():
@@ -1010,7 +1584,7 @@ def main():
     fuente_panel = cargar_fuente(13)
     fuente_resultado = cargar_fuente(28)
 
-    mapa, decoraciones, interacciones = cargar_mapa_principal()
+    mapa, decoraciones, interacciones, hitboxes, guardian = cargar_mapa_principal()
     retratos_dialogo = {
         objeto["personaje"]: pygame.transform.scale(objeto["imagen"], (78, 78))
         for objeto in decoraciones
@@ -1020,12 +1594,37 @@ def main():
         "mapa": mapa,
         "decoraciones": decoraciones,
         "interacciones": interacciones,
+        "hitboxes": hitboxes,
+        "guardian": guardian,
+        "guardian_walk_frames": {
+            "abajo": cargar_spritesheet_frames(
+                os.path.join("NPCS", "Guardian", "Fila 2. Guardián.png")
+            ),
+            "derecha": cargar_spritesheet_frames(
+                os.path.join("NPCS", "Guardian", "Fila 3. Guardián.png")
+            ),
+            "arriba": cargar_spritesheet_frames(
+                os.path.join("NPCS", "Guardian", "Fila 4. Guardián.png")
+            ),
+            "izquierda": cargar_spritesheet_frames(
+                os.path.join("NPCS", "Guardian", "Fila 5. Guardián.png")
+            ),
+        },
+        "guardian_idle_frames": cargar_frames_idle_guardian(),
+        "frames_tronco_eco": cargar_frames_tronco_eco(),
+        "guardian_talk_frames": cargar_spritesheet_frames(
+            os.path.join("NPCS", "Guardian", "Guardian_hablando.png")
+        ),
+        "guardian_eco_frames": cargar_spritesheet_frames(
+            os.path.join("NPCS", "Guardian", "Guardian_interaccion_ecos.png")
+        ),
         "fondo_tablilla": crear_fondo_tablilla(mapa),
         "fondo_clasificacion": cargar_imagen("FondoClasificacion.png", (860, 505)),
         "tablilla": cargar_imagen("Tablilla.png", (460, 460)),
         "colgar": cargar_imagen("Colgar.png", (190, 127)),
         "consultar": cargar_imagen("Consultar.png", (190, 127)),
         "quemar": cargar_imagen("Quemar.png", (190, 127)),
+        "ignorar": cargar_imagen("Ignorar.png", (190, 127)),
         "pergamino_mensaje": cargar_imagen("Mensaje_privado.png", (570, 410)),
         "calderos": [
             pygame.transform.scale(
@@ -1046,8 +1645,8 @@ def main():
             "quemar": cargar_efecto_tablilla("Quemar_tablilla.png"),
             "ignorar": cargar_efecto_tablilla("Ignorar_tablilla.png"),
         },
-        "final_positivo": cargar_imagen(os.path.join("Finales", "Final_positivo.jpeg"), (520, 293)),
-        "final_negativo": cargar_imagen(os.path.join("Finales", "Game_over.jpeg"), (520, 293)),
+        "final_positivo": cargar_imagen(os.path.join("Finales", "Final_positivo.jpeg"), (ANCHO, ALTO)),
+        "final_negativo": cargar_imagen(os.path.join("Finales", "Game_over.jpeg"), (ANCHO, ALTO)),
         "fuente_texto": fuente_texto,
         "fuente_categoria": fuente_categoria,
         "fuente_boton": fuente_boton,
@@ -1082,14 +1681,108 @@ def main():
     volumen.configurar([("volver", "Volver")])
     ayuda = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
     conversaciones = {
-        "Kael": {"personaje": "Kael", "texto": "Algunos quieren cerrar el puente norte, pero primero debemos comprobar qué ocurrió.", "respuestas": ["Consultar tablilla"]},
-        "Mira": {"personaje": "Mira", "texto": "Escuché un rumor sobre el puente norte. Antes de compartirlo, necesitamos pruebas.", "respuestas": ["Te ayudaré", "Necesito más pruebas"]},
-        "Tarek": {"personaje": "Tarek", "texto": "Yo vi el rayo cerca del Mirador Alto. No escuché que el puente se hubiera cerrado.", "respuestas": ["Gracias por tu testimonio"]},
-        "Luma": {"personaje": "Luma", "texto": "Los Ecos de Troncos repiten la noticia muy rápido. Una tablilla sin verificar puede confundir a toda la aldea.", "respuestas": ["Lo tendré en cuenta"]},
+        "Kael": {"personaje": "Kael", "texto": "Quiero conocer qué dicen los habitantes antes de responder.", "respuestas": []},
+        "Mira": {"personaje": "Mira", "texto": "Guardián, circula un rumor sobre el Puente Norte.", "respuestas": []},
+        "Tarek": {"personaje": "Tarek", "texto": "Escuché golpes extraños en el Tronco de Ecos.", "respuestas": []},
+        "Luma": {"personaje": "Luma", "texto": "Algunas tablillas están llegando sin una fuente clara.", "respuestas": []},
         "Mensajero": {"personaje": "Mensajero", "texto": "Puedo llevar un mensaje privado entre plataformas. La ruta más corta no siempre es la más segura.", "respuestas": ["Entrega el mensaje"]},
         "Guardián": {"personaje": "Guardián", "texto": "Escucha a la aldea y revisa la tablilla antes de decidir qué hacer con ella.", "respuestas": ["Consultar tablilla"]},
         "Naira": {"personaje": "Naira", "texto": "Las plataformas están conectadas por puentes; cuidemos la confianza de quienes viven aquí.", "respuestas": ["Consultar tablilla"]},
+        "Sabio de las Raíces": {
+            "personaje": "Sabio de las Raíces",
+            "texto": "Los ecos del tronco guardan lo que la aldea comparte. Escucha antes de decidir.",
+            "respuestas": [],
+        },
     }
+    dialogos_posteriores = {
+        nombre: {
+            "personaje": nombre,
+            "texto": f"{nombre} ya compartió lo que sabe por ahora.",
+            "respuestas": [],
+        }
+        for nombre in conversaciones
+    }
+    estado_personajes = {
+        personaje["personaje"]: {
+            "dialogo_inicial": conversaciones.get(personaje["personaje"], {}),
+            "dialogo_posterior": dialogos_posteriores.get(personaje["personaje"], {}),
+            "dialogos_condicionados": {},
+            "confianza": 0,
+            "conversacion_vista": False,
+            "disponible": personaje.get("activo", True),
+            "plataforma_actual": personaje.get("plataforma", ""),
+        }
+        for personaje in mundo["personajes"]
+    }
+    conversaciones_vistas = set()
+    personaje_dialogo_activo = None
+    clave_dialogo_activo = None
+
+    def abrir_dialogo_personaje(nombre):
+        nonlocal personaje_dialogo_activo, clave_dialogo_activo
+        personaje_dialogo_activo = nombre
+        jugador = mundo["jugador"]
+        jugador["en_movimiento"] = False
+        jugador["estado_visual"] = "hablar"
+        jugador["indice_frame"] = 0
+        objetivo = next(
+            (personaje for personaje in mundo["personajes"] if personaje["personaje"] == nombre),
+            None,
+        )
+        estado_personajes.setdefault(nombre, {
+            "dialogo_inicial": conversaciones.get(nombre, {}),
+            "dialogo_posterior": dialogos_posteriores.get(nombre, {}),
+            "dialogos_condicionados": {},
+            "confianza": 0,
+            "conversacion_vista": False,
+            "disponible": True,
+            "plataforma_actual": "",
+        })
+        if objetivo:
+            jugador["direccion"] = (
+                "izquierda" if objetivo["rect"].centerx < jugador["pies"].centerx else "derecha"
+            )
+        estado_personaje = estado_personajes.get(nombre, {})
+        dialogo, clave_dialogo_activo = construir_conversacion(
+            nombre, estado, conversaciones_vistas
+        )
+        dialogos.iniciar(dialogo, retratos_dialogo)
+
+    def registrar_evento(evento):
+            eventos_serializables.append(evento)
+            print(f"[evento local] {json.dumps(evento, ensure_ascii=False)}")
+
+    def abrir_caldero():
+            if estado.evento_resuelto():
+                escena_actual = ESCENA_RESULTADO if estado.evento_clasificado() else ESCENA_CONSECUENCIA
+                return escena_actual
+            opciones = estado.opciones_actuales()
+            botones_locales = construir_botones(opciones, recursos, fuente_boton)
+            botones.clear()
+            botones.extend(botones_locales)
+            grupo_botones.reemplazar(botones)
+            return ESCENA_TABLILLA
+
+    nombres_contacto = list(dict.fromkeys(
+        personaje["personaje"]
+        for personaje in mundo["personajes"]
+        if personaje["personaje"] != "Guardián"
+        and estado_personajes.get(personaje["personaje"], {}).get("disponible", True)
+    ))
+    mensajes_eco = [
+        ("ven_tronco_central", "Ven al Tronco Central."),
+        ("verificar_tablilla", "Necesito verificar una tablilla."),
+        ("puente_disponible", "¿El puente está disponible?"),
+        ("mensaje_reservado", "No compartas ese mensaje todavía."),
+        ("informacion_confirmada", "La información fue confirmada."),
+    ]
+    eco_ui = {"destinatario": 0, "mensaje": 0, "respuesta": ""}
+    eventos_serializables = []
+    sistema_particulas = SistemaParticulas(ANCHO, ALTO)
+    sistema_particulas.emitir(*CENTRO_CALDERO, 24)
+    depuracion_activa = False
+    tiempo_particulas_ambientales = 0
+    estado_caldero_efectos = estado_caldero(estado)
     usos_pociones = {"colgar": 1, "consultar": 1, "quemar": 1, "ignorar": 1}
     pocion_animacion = None
     escena = ESCENA_MAPA
@@ -1098,12 +1791,21 @@ def main():
     escena_audio_anterior = escena
     estado_caldero_anterior = estado_caldero(estado)
     estado_caldero_actual = estado_caldero_anterior
+    interactuable_cercano, distancia_interactuable = buscar_interactuable_cercano(
+        mundo["jugador"], mundo
+    )
 
     corriendo = True
     cursor_actual = None
     while corriendo:
         delta_ms = reloj.tick(FPS)
         delta_segundos = delta_ms / 1000
+        sistema_particulas.actualizar(delta_ms)
+        tiempo_particulas_ambientales += delta_ms
+        if tiempo_particulas_ambientales >= 850:
+            tiempo_particulas_ambientales %= 850
+            sistema_particulas.emitir(ANCHO // 2, ALTO // 2 - 32, 4)
+            sistema_particulas.emitir(*CENTRO_CALDERO, 4)
         rect_lienzo = rect_lienzo_en_ventana(pantalla.get_size())
         mouse_pos = convertir_mouse_a_lienzo(pygame.mouse.get_pos(), rect_lienzo)
 
@@ -1119,6 +1821,44 @@ def main():
             ):
                 pantalla_completa = not pantalla_completa
                 pantalla = crear_ventana(pantalla_completa)
+            elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_F3:
+                depuracion_activa = not depuracion_activa
+            elif escena == ESCENA_ECO and evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_ESCAPE:
+                    escena = ESCENA_MAPA
+                    eco_ui["respuesta"] = ""
+                    mundo["jugador"]["estado_visual"] = "idle"
+                elif eco_ui["respuesta"] and evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                    escena = ESCENA_MAPA
+                    eco_ui["respuesta"] = ""
+                    mundo["jugador"]["estado_visual"] = "idle"
+                elif not eco_ui["respuesta"] and nombres_contacto:
+                    if evento.key in (pygame.K_UP, pygame.K_DOWN):
+                        paso = -1 if evento.key == pygame.K_UP else 1
+                        eco_ui["destinatario"] = (eco_ui["destinatario"] + paso) % len(nombres_contacto)
+                    elif evento.key in (pygame.K_LEFT, pygame.K_RIGHT):
+                        paso = -1 if evento.key == pygame.K_LEFT else 1
+                        eco_ui["mensaje"] = (eco_ui["mensaje"] + paso) % len(mensajes_eco)
+                    elif evento.key in (pygame.K_e, pygame.K_RETURN, pygame.K_KP_ENTER):
+                        tronco = interactuable_cercano
+                        receptor = nombres_contacto[eco_ui["destinatario"]]
+                        mensaje_id, texto_mensaje = mensajes_eco[eco_ui["mensaje"]]
+                        registrar_evento({
+                            "tipo": "eco_tronco",
+                            "emisor_id": mundo["jugador"]["id"],
+                            "receptor_id": receptor.lower().replace(" ", "_"),
+                            "mensaje_id": mensaje_id,
+                            "tronco_origen_id": tronco.get("id", "eco_tronco"),
+                            "timestamp": pygame.time.get_ticks(),
+                        })
+                        eco_ui["respuesta"] = f"{receptor}: Recibido, lo revisaré."
+                        sistema_particulas.emitir(480, 380, 12)
+            elif escena in (
+                ESCENA_TABLILLA, ESCENA_CONSECUENCIA, ESCENA_CLASIFICACION, ESCENA_RESULTADO
+            ) and evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+                if escena != ESCENA_TABLILLA and estado.evento_resuelto():
+                    reiniciar_jugador_en_casa(mundo)
+                escena = ESCENA_MAPA
             elif escena == ESCENA_PAUSA:
                 accion = pausa.manejar_evento(
                     evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
@@ -1150,6 +1890,12 @@ def main():
                 )
                 if resultado_dialogo:
                     tipo, respuesta = resultado_dialogo
+                    if personaje_dialogo_activo:
+                        conversaciones_vistas.add(clave_dialogo_activo)
+                        if personaje_dialogo_activo in estado_personajes:
+                            estado_personajes[personaje_dialogo_activo]["conversacion_vista"] = True
+                        personaje_dialogo_activo = None
+                    mundo["jugador"]["estado_visual"] = "idle"
                     if tipo == "respuesta" and respuesta in ("Te ayudaré", "Entrega el mensaje"):
                         mensajes.abrir({
                             "remitente": "Sabio de las Raíces",
@@ -1171,6 +1917,8 @@ def main():
             elif escena == ESCENA_FINAL:
                 if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
                     estado = EstadoJuego()
+                    conversaciones_vistas.clear()
+                    clave_dialogo_activo = None
                     estado_caldero_anterior = estado_caldero_actual
                     estado_caldero_actual = sincronizar_audio_caldero(
                         gestor_audio, estado, estado_caldero_anterior
@@ -1188,6 +1936,42 @@ def main():
                     escena = ESCENA_MAPA
                 elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                     escena = ESCENA_MAPA
+            elif escena == ESCENA_MAPA and evento.type == pygame.KEYDOWN and evento.key == pygame.K_e:
+                if interactuable_cercano:
+                    jugador = mundo["jugador"]
+                    jugador["en_movimiento"] = False
+                    jugador["estado_visual"] = "idle"
+                    accion = interactuable_cercano.get("accion")
+                    if accion == "npc":
+                        abrir_dialogo_personaje(interactuable_cercano["personaje"])
+                        registrar_evento({
+                            "tipo": "interaccion_personaje",
+                            "actor_id": jugador["id"],
+                            "objetivo_id": interactuable_cercano["personaje"].lower().replace(" ", "_"),
+                        })
+                        sistema_particulas.emitir(jugador["pies"].centerx, jugador["pies"].centery, 6)
+                        escena = ESCENA_DIALOGO
+                    elif accion == "tablilla":
+                        registrar_evento({"tipo": "usar_caldero", "actor_id": jugador["id"]})
+                        sistema_particulas.emitir(*CENTRO_CALDERO, 14)
+                        escena = abrir_caldero()
+                    elif accion == "usar_eco_tronco":
+                        eco_ui.update({"destinatario": 0, "mensaje": 0, "respuesta": ""})
+                        jugador["estado_visual"] = "usar_eco"
+                        jugador["indice_frame"] = 0
+                        registrar_evento({
+                            "tipo": "usar_eco_tronco",
+                            "actor_id": jugador["id"],
+                            "objeto_id": interactuable_cercano.get("id", "eco_tronco"),
+                        })
+                        escena = ESCENA_ECO
+                    elif accion == "puerta":
+                        destino = interactuable_cercano.get("imagen_destino")
+                        if destino:
+                            recursos["mapa_destino"] = destino
+                            escena = ESCENA_MAPA_DESTINO
+            elif escena == ESCENA_MAPA and evento.type == pygame.KEYDOWN and evento.key == pygame.K_TAB:
+                alternar_interactuable_cercano(mundo)
             elif evento.type == pygame.KEYDOWN and evento.key in (pygame.K_ESCAPE, pygame.K_p):
                 escena_anterior = escena
                 pausa.configurar([
@@ -1200,12 +1984,23 @@ def main():
             elif escena == ESCENA_MAPA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 posicion = convertir_mouse_a_lienzo(evento.pos, rect_lienzo)
                 interaccion = interaccion_en_mapa(posicion, mundo)
-                if interaccion and interaccion["accion"] == "tablilla":
-                    botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
-                    grupo_botones.reemplazar(botones)
-                    escena = ESCENA_TABLILLA
+                if (
+                    interaccion
+                    and interaccion["accion"] == "tablilla"
+                    and any(
+                        objeto.get("accion") == "tablilla"
+                        for _, objeto in mundo.get("interacciones_cercanas", [])
+                    )
+                ):
+                    registrar_evento({"tipo": "usar_caldero", "actor_id": mundo["jugador"]["id"]})
+                    escena = abrir_caldero()
                 elif interaccion and interaccion["accion"] == "npc":
-                    dialogos.iniciar(conversaciones[interaccion["personaje"]], retratos_dialogo)
+                    abrir_dialogo_personaje(interaccion["personaje"])
+                    registrar_evento({
+                        "tipo": "interaccion_personaje",
+                        "actor_id": mundo["jugador"]["id"],
+                        "objetivo_id": interaccion["personaje"].lower().replace(" ", "_"),
+                    })
                     escena = ESCENA_DIALOGO
                 elif interaccion and interaccion["accion"] == "puerta":
                     recursos["mapa_destino"] = interaccion["imagen_destino"]
@@ -1226,6 +2021,7 @@ def main():
                     pocion_animacion = iniciar_animacion_decision(opcion_teclado)
             elif escena == ESCENA_RESULTADO and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 estado.continuar_despues_resultado()
+                reiniciar_jugador_en_casa(mundo)
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
                 grupo_botones.reemplazar(botones)
                 if estado.juego_terminado():
@@ -1258,6 +2054,24 @@ def main():
                             pocion_animacion = iniciar_animacion_decision(boton.texto)
                             break
 
+        jugador = mundo["jugador"]
+        if escena == ESCENA_MAPA:
+            mover_jugador(jugador, mundo, pygame.key.get_pressed(), delta_ms)
+        elif jugador["estado_visual"] in ("hablar", "usar_eco"):
+            frames_estado = (
+                jugador["frames_eco"]
+                if jugador["estado_visual"] == "usar_eco"
+                else jugador["frames_hablar"]
+            )
+            jugador["tiempo_animacion"] += delta_ms
+            while jugador["tiempo_animacion"] >= 150:
+                jugador["tiempo_animacion"] -= 150
+                if frames_estado:
+                    jugador["indice_frame"] = (jugador["indice_frame"] + 1) % len(frames_estado)
+        interactuable_cercano, distancia_interactuable = buscar_interactuable_cercano(
+            jugador, mundo
+        )
+
         hud.actualizar(estado.indicadores, delta_segundos)
 
         if pocion_animacion:
@@ -1272,6 +2086,8 @@ def main():
                             "tipo": "decision_tablilla",
                             "accion": accion,
                         })
+                        if accion == "consultar":
+                            sistema_particulas.emitir(*CENTRO_CALDERO, 12)
                     estado_caldero_anterior = estado_caldero_actual
                     estado_caldero_actual = sincronizar_audio_caldero(
                         gestor_audio, estado, estado_caldero_anterior
@@ -1286,6 +2102,13 @@ def main():
             resultado_audio = determinar_resultado_final(estado) if escena == ESCENA_FINAL else None
             gestor_audio.al_cambiar_escena(escena_audio_anterior, escena, resultado_audio)
             escena_audio_anterior = escena
+            if escena == ESCENA_FINAL:
+                sistema_particulas.emitir(*CENTRO_CALDERO, 24)
+        nuevo_estado_caldero_efectos = estado_caldero(estado)
+        if nuevo_estado_caldero_efectos != estado_caldero_efectos:
+            if nuevo_estado_caldero_efectos == "critico":
+                sistema_particulas.emitir(*CENTRO_CALDERO, 20)
+            estado_caldero_efectos = nuevo_estado_caldero_efectos
         if escena not in (ESCENA_PAUSA, ESCENA_AYUDA, ESCENA_VOLUMEN):
             gestor_audio.actualizar()
 
@@ -1297,7 +2120,11 @@ def main():
             cursor_actual = cursor_deseado
 
         if escena == ESCENA_MAPA:
-            dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud)
+            dibujar_mapa(
+                lienzo, recursos, mundo, estado, mouse_pos, hud,
+                interactuable_cercano, distancia_interactuable,
+                sistema_particulas, depuracion_activa,
+            )
         elif escena == ESCENA_PAUSA:
             dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud, resaltar=False)
             pausa.dibujar(
@@ -1315,7 +2142,7 @@ def main():
                 lienzo,
                 "AYUDA",
                 [
-                    "Clic en el Caldero o el Guardian: abrir la tablilla.",
+                    "Acércate al Caldero y pulsa E para abrir la tablilla; Tab alterna interacciones cercanas.",
                     "Clic en los personajes: conversar y reunir testimonios.",
                     "Clic en la salida derecha: visitar la zona Central; clic o Esc para volver.",
                     "Tablillas: decide si colgar, consultar, quemar o ignorar.",
@@ -1328,10 +2155,19 @@ def main():
             )
         elif escena == ESCENA_DIALOGO:
             dialogos.actualizar(delta_segundos)
-            dibujar_escena_dialogo(lienzo, recursos, dialogos, mouse_pos, hud)
+            dibujar_escena_dialogo(
+                lienzo, recursos, dialogos, mouse_pos, hud,
+                mundo["jugador"], sistema_particulas,
+            )
         elif escena == ESCENA_MENSAJE:
             mensajes.actualizar(delta_segundos)
-            dibujar_escena_mensaje(lienzo, recursos, mensajes, mouse_pos, hud)
+            dibujar_escena_mensaje(
+                lienzo, recursos, mensajes, mouse_pos, hud, mundo["jugador"]
+            )
+        elif escena == ESCENA_ECO:
+            dibujar_interfaz_eco(
+                lienzo, recursos, mundo["jugador"], eco_ui, nombres_contacto, mensajes_eco
+            )
         elif escena == ESCENA_MAPA_DESTINO:
             lienzo.blit(recursos["mapa_destino"], (0, 0))
             dibujar_mensaje_mapa(

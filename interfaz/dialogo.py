@@ -60,9 +60,12 @@ class ControladorDialogo:
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_ESCAPE:
                 return self._cerrar(None)
-            if self.escribiendo and evento.key in (pygame.K_RETURN, pygame.K_SPACE):
-                self.caracteres_visibles = len(self.texto_completo)
-                return None
+            if evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_SPACE):
+                if self.escribiendo:
+                    self.caracteres_visibles = len(self.texto_completo)
+                    return None
+                if not self.dialogo["respuestas"]:
+                    return self._cerrar(None)
             eleccion = self.grupo.manejar_teclado(evento)
             if eleccion:
                 return self._elegir(eleccion)
