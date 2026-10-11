@@ -80,3 +80,43 @@ def construir_conversacion(nombre, estado, vistas):
     if nombre in ("Naira", "Guardián", "Sabio de las Raíces"):
         respuestas.insert(0, "Consultar tablilla")
     return {"personaje": nombre, "texto": texto, "respuestas": respuestas}, clave
+
+
+def construir_mensajes_eco(estado):
+    """Mensajes que se pueden enviar sin afirmar hechos aún no verificados."""
+    ruta = estado.ruta_categoria_actual()
+    categoria = ruta[1] if len(ruta) > 1 else ""
+    tema, consulta = {
+        "Rumor Politico": ("Kael y el puente norte", "¿Quién escuchó la propuesta de Kael sobre el puente?"),
+        "Suceso Natural": ("el rayo del Mirador Alto", "¿Quién vio el rayo y dónde cayó?"),
+        "Acusacion Personal": ("la tablilla sobre Mira", "Escuchemos a Mira y a quienes estuvieron presentes."),
+    }.get(categoria, ("las noticias de la aldea", "Comparemos las fuentes de las noticias."))
+    if categoria == "Acusacion Personal" and "reparar" in estado.texto_actual().lower():
+        tema, consulta = "la reparación del puente", "¿Qué propone Mira para reparar el puente?"
+    mensajes = [
+        ("consulta_fuente", consulta),
+        ("verificar_tablilla", f"Necesito verificar lo que se dice sobre {tema}."),
+        ("mensaje_reservado", "No difundas el mensaje hasta revisar sus fuentes."),
+    ]
+    if "Consultar" in estado.camino_decision_actual:
+        mensajes.append(("consulta_en_curso", "Estoy consultando la tablilla. ¿Puedes aportar un testimonio?"))
+    if estado.historial_decisiones:
+        ultima = estado.historial_decisiones[-1]
+        ruta_anterior, camino = ultima.get("categoria", []), ultima.get("camino", [])
+        if len(ruta_anterior) > 1 and camino:
+            reaccion = REACCIONES.get(ruta_anterior[1], {}).get(camino[0])
+            if reaccion:
+                mensajes.append(("ultima_decision", reaccion))
+    return mensajes
+
+
+def construir_respuesta_eco(nombre, mensaje_id, estado):
+    if mensaje_id == "ultima_decision":
+        texto = "Recibido. Tendré en cuenta lo ocurrido al revisar los próximos mensajes."
+    elif mensaje_id == "mensaje_reservado":
+        texto = "Esperaré antes de difundirlo. Primero revisaré de dónde viene."
+    else:
+        # Compartir un testimonio por el tronco no cuenta como conversación vista.
+        dialogo, _ = construir_conversacion(nombre, estado, set())
+        texto = dialogo["texto"]
+    return f"{nombre}: {texto}"

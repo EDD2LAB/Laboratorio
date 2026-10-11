@@ -16,7 +16,7 @@ import unicodedata
 import pygame
 
 from audio_manager import GestorAudio
-from conversaciones import construir_conversacion
+from conversaciones import construir_conversacion, construir_mensajes_eco, construir_respuesta_eco
 from interfaz.boton import Boton, GrupoBotones
 from interfaz.dialogo import ControladorDialogo
 from interfaz.hud import HUDIndicadores
@@ -1466,9 +1466,21 @@ def dibujar_interfaz_eco(superficie, recursos, jugador, estado_eco, contactos, m
             "Arriba/abajo: destinatario | Izquierda/derecha: mensaje",
             "E o Enter: enviar | Esc: cancelar",
         ]
-    for indice, linea in enumerate(lineas):
-        texto = recursos["fuente_panel"].render(linea, True, CREMA)
-        superficie.blit(texto, texto.get_rect(center=(panel.centerx, panel.y + 112 + indice * 45)))
+    # Los testimonios pueden ocupar varias líneas: ajustar dentro del panel.
+    fuente = recursos["fuente_panel"]
+    bloques = [envolver_texto(linea, fuente, panel.width - 56) for linea in lineas]
+    alto = sum(len(bloque) * (fuente.get_linesize() + 3) + 10 for bloque in bloques)
+    if alto > panel.height - 110:
+        fuente = cargar_fuente(16)
+        bloques = [envolver_texto(linea, fuente, panel.width - 56) for linea in lineas]
+    y = panel.y + 100
+    for bloque in bloques:
+        for linea in bloque:
+            texto = fuente.render(linea, True, CREMA)
+            superficie.blit(texto, texto.get_rect(midtop=(panel.centerx, y)))
+            y += fuente.get_linesize() + 3
+        y += 10
+
 
 
 def crear_fondo_tablilla(mapa):
@@ -1769,13 +1781,7 @@ def main():
         if personaje["personaje"] != "Guardián"
         and estado_personajes.get(personaje["personaje"], {}).get("disponible", True)
     ))
-    mensajes_eco = [
-        ("ven_tronco_central", "Ven al Tronco Central."),
-        ("verificar_tablilla", "Necesito verificar una tablilla."),
-        ("puente_disponible", "¿El puente está disponible?"),
-        ("mensaje_reservado", "No compartas ese mensaje todavía."),
-        ("informacion_confirmada", "La información fue confirmada."),
-    ]
+    mensajes_eco = construir_mensajes_eco(estado)
     eco_ui = {"destinatario": 0, "mensaje": 0, "respuesta": ""}
     eventos_serializables = []
     sistema_particulas = SistemaParticulas(ANCHO, ALTO)
@@ -1851,7 +1857,7 @@ def main():
                             "tronco_origen_id": tronco.get("id", "eco_tronco"),
                             "timestamp": pygame.time.get_ticks(),
                         })
-                        eco_ui["respuesta"] = f"{receptor}: Recibido, lo revisaré."
+                        eco_ui["respuesta"] = construir_respuesta_eco(receptor, mensaje_id, estado)
                         sistema_particulas.emitir(480, 380, 12)
             elif escena in (
                 ESCENA_TABLILLA, ESCENA_CONSECUENCIA, ESCENA_CLASIFICACION, ESCENA_RESULTADO
@@ -1956,6 +1962,7 @@ def main():
                         sistema_particulas.emitir(*CENTRO_CALDERO, 14)
                         escena = abrir_caldero()
                     elif accion == "usar_eco_tronco":
+                        mensajes_eco = construir_mensajes_eco(estado)
                         eco_ui.update({"destinatario": 0, "mensaje": 0, "respuesta": ""})
                         jugador["estado_visual"] = "usar_eco"
                         jugador["indice_frame"] = 0
