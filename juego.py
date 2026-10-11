@@ -45,6 +45,7 @@ ESCENA_MENSAJE = "mensaje_privado"
 ESCENA_MAPA_DESTINO = "mapa_destino"
 ESCENA_FINAL = "final"
 ESCENA_PAUSA = "pausa"
+ESCENA_VOLUMEN = "volumen"
 ESCENA_AYUDA = "ayuda"
 CENTRO_TABLILLA = (ANCHO // 2, 330)
 CENTRO_TABLILLA_CENTRADA = (ANCHO // 2, 330)
@@ -297,6 +298,7 @@ def interaccion_en_mapa(posicion, mundo):
                 "accion": "npc",
                 "personaje": objeto["personaje"],
                 "rect": objeto["hitbox"],
+                "objeto": objeto,
             }
 
     for interaccion in mundo["interacciones"]:
@@ -305,7 +307,27 @@ def interaccion_en_mapa(posicion, mundo):
     return None
 
 
-def dibujar_mapa(superficie, recursos, mundo, estado, mouse_pos, hud):
+def dibujar_brillo_interaccion(superficie, imagen, rect, cache):
+    """Halo dorado que sigue la silueta, con una pulsación discreta."""
+    if imagen not in cache:
+        silueta = pygame.mask.from_surface(imagen).to_surface(
+            setcolor=(*ORO, 255), unsetcolor=(0, 0, 0, 0))
+        halo = pygame.Surface((rect.width + 20, rect.height + 20), pygame.SRCALPHA)
+        for radio, alpha in ((9, 12), (6, 20), (3, 32)):
+            silueta.set_alpha(alpha)
+            for angulo in range(0, 360, 30):
+                radianes = math.radians(angulo)
+                halo.blit(silueta, (10 + round(math.cos(radianes) * radio),
+                                    10 + round(math.sin(radianes) * radio)))
+        cache[imagen] = halo
+    halo = cache[imagen]
+    halo.set_alpha(round(180 + 35 * math.sin(pygame.time.get_ticks() / 350)))
+    superficie.blit(halo, (rect.x - 10, rect.y - 10))
+    # Mantener el sprite nítido sobre el halo.
+    superficie.blit(imagen, rect)
+
+
+def dibujar_mapa(superficie, recursos, mundo, estado, mouse_pos, hud, resaltar=True):
     superficie.blit(recursos["mapa"], (0, 0))
 
     # El Caldero expresa visualmente la salud informativa de la aldea.
@@ -315,10 +337,22 @@ def dibujar_mapa(superficie, recursos, mundo, estado, mouse_pos, hud):
     caldero = recursos["calderos"][indice_caldero]
     superficie.blit(caldero, caldero.get_rect(center=CENTRO_CALDERO))
 
-    hud.dibujar(superficie)
-    interaccion = interaccion_en_mapa(mouse_pos, mundo)
+    interaccion = interaccion_en_mapa(mouse_pos, mundo) if resaltar else None
     if interaccion:
-        pygame.draw.rect(superficie, ORO, interaccion["rect"], width=2, border_radius=5)
+        cache = recursos.setdefault("brillos_interaccion", {})
+        objeto = interaccion.get("objeto")
+        if objeto:
+            dibujar_brillo_interaccion(superficie, objeto["imagen"], objeto["rect"], cache)
+        elif interaccion["accion"] == "tablilla":
+            dibujar_brillo_interaccion(superficie, caldero, caldero.get_rect(center=CENTRO_CALDERO), cache)
+        else:
+            rect = interaccion["rect"]
+            luz = pygame.Surface(rect.size, pygame.SRCALPHA)
+            for margen, alpha in ((0, 12), (4, 18), (8, 24)):
+                zona = luz.get_rect().inflate(-margen * 2, -margen * 2)
+                if zona.width > 0 and zona.height > 0:
+                    pygame.draw.ellipse(luz, (*ORO, alpha), zona)
+            superficie.blit(luz, rect)
         if interaccion["accion"] == "npc":
             texto = f"Clic para hablar con {interaccion['personaje']}"
         elif interaccion["accion"] == "tablilla":
@@ -327,6 +361,7 @@ def dibujar_mapa(superficie, recursos, mundo, estado, mouse_pos, hud):
             texto = "Clic para viajar al mapa Central"
     else:
         texto = "Haz clic en el Caldero para consultar una tablilla o en un personaje para hablar."
+    hud.dibujar(superficie)
     dibujar_mensaje_mapa(superficie, recursos["fuente_mapa"], texto)
 
 
@@ -1042,6 +1077,9 @@ def main():
     )
     hud = HUDIndicadores(fuente_indicador, iconos_hud)
     pausa = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
+    volumen = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
+    volumen.conectar_audio(gestor_audio)
+    volumen.configurar([("volver", "Volver")])
     ayuda = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
     conversaciones = {
         "Kael": {"personaje": "Kael", "texto": "Algunos quieren cerrar el puente norte, pero primero debemos comprobar qué ocurrió.", "respuestas": ["Consultar tablilla"]},
@@ -1062,6 +1100,7 @@ def main():
     estado_caldero_actual = estado_caldero_anterior
 
     corriendo = True
+    cursor_actual = None
     while corriendo:
         delta_ms = reloj.tick(FPS)
         delta_segundos = delta_ms / 1000
@@ -1089,8 +1128,16 @@ def main():
                 elif accion == "ayuda":
                     ayuda.configurar([("volver", "Volver")])
                     escena = ESCENA_AYUDA
+                elif accion == "volumen":
+                    escena = ESCENA_VOLUMEN
                 elif accion == "salir":
                     corriendo = False
+            elif escena == ESCENA_VOLUMEN:
+                accion = volumen.manejar_evento(
+                    evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
+                )
+                if accion == "volver":
+                    escena = ESCENA_PAUSA
             elif escena == ESCENA_AYUDA:
                 accion = ayuda.manejar_evento(
                     evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
@@ -1146,6 +1193,7 @@ def main():
                 pausa.configurar([
                     ("continuar", "Continuar"),
                     ("ayuda", "Ayuda"),
+                    ("volumen", "Volumen"),
                     ("salir", "Salir"),
                 ])
                 escena = ESCENA_PAUSA
@@ -1238,21 +1286,31 @@ def main():
             resultado_audio = determinar_resultado_final(estado) if escena == ESCENA_FINAL else None
             gestor_audio.al_cambiar_escena(escena_audio_anterior, escena, resultado_audio)
             escena_audio_anterior = escena
-        if escena not in (ESCENA_PAUSA, ESCENA_AYUDA):
+        if escena not in (ESCENA_PAUSA, ESCENA_AYUDA, ESCENA_VOLUMEN):
             gestor_audio.actualizar()
+
+        cursor_deseado = (pygame.SYSTEM_CURSOR_HAND
+                          if escena == ESCENA_MAPA and interaccion_en_mapa(mouse_pos, mundo)
+                          else pygame.SYSTEM_CURSOR_ARROW)
+        if cursor_deseado != cursor_actual:
+            pygame.mouse.set_cursor(cursor_deseado)
+            cursor_actual = cursor_deseado
 
         if escena == ESCENA_MAPA:
             dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud)
         elif escena == ESCENA_PAUSA:
-            dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud)
+            dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud, resaltar=False)
             pausa.dibujar(
                 lienzo,
                 "PAUSA",
                 ["La Red de Ecos espera tu decisión.", "ESC o P: continuar"],
                 mouse_pos,
             )
+        elif escena == ESCENA_VOLUMEN:
+            dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud, resaltar=False)
+            volumen.dibujar(lienzo, "VOLUMEN", ["Ajusta la música y los efectos de sonido."], mouse_pos)
         elif escena == ESCENA_AYUDA:
-            dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud)
+            dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud, resaltar=False)
             ayuda.dibujar(
                 lienzo,
                 "AYUDA",

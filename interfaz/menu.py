@@ -14,6 +14,19 @@ class MenuModal:
         self.fuente_boton = fuente_boton
         self.botones = []
         self.grupo = GrupoBotones()
+        self.audio = None
+        self.controles_audio = []
+
+    def conectar_audio(self, audio):
+        self.audio = audio
+        for tipo, y in (("musica", 270), ("efectos", 330)):
+            for signo, x in ((-1, 590), (1, 660)):
+                self.controles_audio.append(Boton(
+                    "−" if signo < 0 else "+", centro=(x, y),
+                    fuente=self.fuente_boton, tamano=(50, 42),
+                    identificador=(tipo, signo)))
+        self.boton_silencio = Boton("Silenciar", centro=(480, 578),
+                                    fuente=self.fuente_boton, tamano=(260, 42))
 
     def configurar(self, opciones):
         separacion = 62
@@ -25,6 +38,16 @@ class MenuModal:
         self.grupo.reemplazar(self.botones)
 
     def manejar_evento(self, evento, posicion):
+        if self.audio and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            for boton in self.controles_audio:
+                if boton.fue_clickeado(posicion):
+                    tipo, signo = boton.identificador
+                    valor = getattr(self.audio, "volumen_" + tipo)
+                    getattr(self.audio, "establecer_volumen_" + tipo)(round(valor + signo * 0.05, 2))
+                    return None
+            if self.boton_silencio.fue_clickeado(posicion):
+                self.audio.alternar_silencio()
+                return None
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_ESCAPE:
                 return "volver"
@@ -69,3 +92,16 @@ class MenuModal:
             y += 25
         for boton in self.botones:
             boton.dibujar(superficie, mouse_pos)
+        if self.audio:
+            for tipo, etiqueta, y in (("musica", "Música", 270), ("efectos", "Efectos", 330)):
+                valor = getattr(self.audio, "volumen_" + tipo)
+                texto = self.fuente_texto.render(f"{etiqueta}: {round(valor * 100)}%", True, (255, 243, 210))
+                superficie.blit(texto, (260, y - 23))
+                barra = pygame.Rect(260, y + 7, 240, 8)
+                pygame.draw.rect(superficie, (8, 24, 18), barra, border_radius=4)
+                if valor > 0:
+                    pygame.draw.rect(superficie, (237, 185, 87), (barra.x, barra.y, round(barra.width * valor), barra.height), border_radius=4)
+            for boton in self.controles_audio:
+                boton.dibujar(superficie, mouse_pos)
+            self.boton_silencio.texto = "Activar sonido" if self.audio.silenciado else "Silenciar"
+            self.boton_silencio.dibujar(superficie, mouse_pos)
