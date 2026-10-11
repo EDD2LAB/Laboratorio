@@ -16,6 +16,7 @@ CHARACTER_FOLDERS = {
 }
 PANEL_W = 230   # right sidebar width
 STATUS_H = 36   # bottom status bar height
+PLAYER_HITBOX_SIZE = (12, 8)
 
 # ── Helper functions ──────────────────────────────────────────────────────────
 
@@ -92,7 +93,24 @@ def collides_rect_with_hitbox(rect, h, img_rect):
 
 
 def collides_with_any_hitbox(rect, hitboxes, img_rect):
-    return any(collides_rect_with_hitbox(rect, h, img_rect) for h in hitboxes)
+    return any(
+        h.get("role", "wall") == "wall" and collides_rect_with_hitbox(rect, h, img_rect)
+        for h in hitboxes
+    )
+
+
+def rect_inside_walkable(rect, hitbox, img_rect):
+    if hitbox.get("type", "rect") == "rect":
+        return denormalize_rect(hitbox, img_rect).contains(rect)
+    if hitbox.get("type") == "circle":
+        cx = img_rect.x + hitbox["cx"] * img_rect.width
+        cy = img_rect.y + hitbox["cy"] * img_rect.height
+        radius = hitbox["r"] * img_rect.width
+        return all(
+            (x - cx) ** 2 + (y - cy) ** 2 <= radius * radius
+            for x, y in (rect.topleft, rect.topright, rect.bottomleft, rect.bottomright)
+        )
+    return False
 
 
 def save_hitboxes(out_path, hitboxes, img_rect, image_path,
@@ -128,7 +146,7 @@ def load_hitboxes(in_path):
     with open(in_path, "r", encoding="utf-8") as fh:
         payload = json.load(fh)
     hitboxes = payload.get("hitboxes", [])
-    for h in hitboxes:
+    for indice, h in enumerate(hitboxes, start=1):
         if "type" not in h:
             h["type"] = "rect"
         if "role" not in h:
@@ -140,6 +158,12 @@ def load_hitboxes(in_path):
         if h["role"] == "interactable" and h.get("action") == "npc":
             h.setdefault("npc_character", "Sara")
             h.setdefault("npc_animation", "Sara_dibujando.png")
+        if h["role"] == "interactable" and h.get("action") == "usar_eco_tronco":
+            h.setdefault("tipo", "eco_tronco")
+            h.setdefault("id", f"eco_tronco_{indice}")
+            h.setdefault("activo", True)
+            h.setdefault("tecla", "E")
+            h.setdefault("plataforma", "")
     return (hitboxes,
             payload.get("spawn", {}),
             payload.get("npc_positions", {}),
@@ -177,7 +201,8 @@ def _resolve_game_personaje_class(project_root):
 
 
 def build_dummy_from_game_logic(project_root, img_rect):
-    default = pygame.Rect(img_rect.centerx - 14, img_rect.centery - 14, 28, 28)
+    default = pygame.Rect(0, 0, *PLAYER_HITBOX_SIZE)
+    default.center = img_rect.center
     try:
         Personaje = _resolve_game_personaje_class(project_root)
         if Personaje is None:
@@ -189,6 +214,8 @@ def build_dummy_from_game_logic(project_root, img_rect):
             rutas, velocidad=4, fps_animacion=8
         )
         hb = personaje.hitbox.copy()
+        hb.size = PLAYER_HITBOX_SIZE
+        hb.midbottom = personaje.hitbox.midbottom
         hb.x += img_rect.x
         hb.y += img_rect.y
         hb.clamp_ip(img_rect)
@@ -577,8 +604,11 @@ def main():
     current_rect = None
     current_shape = "rect"
     current_role = "wall"
-    interactable_actions = ["puerta", "npc"]
+    interactable_actions = ["puerta", "npc", "usar_eco_tronco"]
     current_interactable_action = "puerta"
+    current_trunk_platform = ""
+    eco_platform_modal = False
+    eco_platform_edit_idx = None
     current_target_bg_idx = 0
     try:
         current_file_name = os.path.relpath(image_path, images_dir).replace("\\", "/")
@@ -589,7 +619,7 @@ def main():
     current_line_thickness_px = 8
     test_mode = False
     test_speed = 4
-    test_player = pygame.Rect(0, 0, 28, 28)
+    test_player = pygame.Rect(0, 0, *PLAYER_HITBOX_SIZE)
 
     # ── Display options ───────────────────────────────────────────────────────
     show_walls = True
@@ -621,7 +651,13 @@ def main():
     bridge_button_rect = pygame.Rect(
         npc_button_rect.right + 4, panel_button_y, panel_button_w, panel_button_h
     )
-    hitbox_button_y = panel_button_y + panel_button_h + 4
+    trunk_button_rect = pygame.Rect(
+        panel_rect.x + 4,
+        panel_button_y + panel_button_h + 4,
+        panel_rect.width - 8,
+        panel_button_h,
+    )
+    hitbox_button_y = trunk_button_rect.bottom + 4
     hitbox_button_rect = pygame.Rect(
         panel_rect.x + 4, hitbox_button_y, panel_rect.width - 8, panel_button_h
     )
@@ -904,6 +940,7 @@ def main():
     # ── Object / decoracion system ────────────────────────────────────────────
     backgrounds_dir = os.path.join(images_root, "Fondos")
     bridges_dir = os.path.join(images_root, "Puentes")
+    trunks_dir = os.path.join(images_root, "Tronco ecos")
     valid_obj_ext = npc_image_ext
     available_objects = []
 
@@ -956,6 +993,17 @@ def main():
                 path = os.path.join(root, os.path.basename(normalized))
                 break
 
+        if path is None and normalized:
+            target_name = os.path.basename(normalized).casefold()
+            for root, dirs, files in os.walk(images_root):
+                dirs.sort()
+                for filename in sorted(files):
+                    if filename.casefold() == target_name:
+                        path = os.path.join(root, filename)
+                        break
+                if path is not None:
+                    break
+
         if path is None:
             object_cache[obj_name] = None
             return None
@@ -984,8 +1032,10 @@ def main():
         return (max(0, min(x, world_rect.width - w)),
                 max(0, min(y, world_rect.height - h)))
 
-    def detect_sprite_frames(obj_img):
+    def detect_sprite_frames(obj_img, obj_name=""):
         """Detecta cuántos frames tiene un spritesheet horizontal por ratio de aspecto."""
+        if "tronco ecos" in obj_name.casefold():
+            return 4
         iw, ih = obj_img.get_size()
         if ih == 0:
             return 1
@@ -1027,8 +1077,8 @@ def main():
             spawn_status_timer = 240
         npc_anim_modal = False
 
-    def get_initial_deco_size(obj_img):
-        frames = detect_sprite_frames(obj_img)
+    def get_initial_deco_size(obj_img, obj_name=""):
+        frames = detect_sprite_frames(obj_img, obj_name)
         iw, ih = obj_img.get_size()
         fw = iw // frames          # ancho de un solo frame
         s  = min(96 / max(fw, ih), 1.0)
@@ -1036,7 +1086,7 @@ def main():
 
     def get_placement_size(obj_name, obj_img):
         if obj_name not in placement_sizes:
-            placement_sizes[obj_name] = get_initial_deco_size(obj_img)
+            placement_sizes[obj_name] = get_initial_deco_size(obj_img, obj_name)
         return placement_sizes[obj_name]
 
     def get_deco_crop_rect(obj, obj_img):
@@ -1344,6 +1394,14 @@ def main():
                 return
             new_hitboxes = copy.deepcopy(copied_hitboxes)
             start_idx = len(hitboxes)
+            used_ids = {h.get("id") for h in hitboxes}
+            for hitbox in new_hitboxes:
+                if hitbox.get("action") == "usar_eco_tronco":
+                    siguiente = 1
+                    while f"eco_tronco_{siguiente}" in used_ids:
+                        siguiente += 1
+                    hitbox["id"] = f"eco_tronco_{siguiente}"
+                    used_ids.add(hitbox["id"])
             hitboxes.extend(new_hitboxes)
             selected_hitbox_idx = len(hitboxes) - 1
             selected_set.clear()
@@ -1370,6 +1428,8 @@ def main():
             with open(selected_clipboard_path, "r", encoding="utf-8") as fh:
                 pasted = json.load(fh)
             if isinstance(pasted, dict) and "type" in pasted:
+                if pasted.get("action") == "usar_eco_tronco":
+                    pasted["id"] = _nuevo_id_tronco()
                 hitboxes.append(copy.deepcopy(pasted))
                 selected_hitbox_idx = len(hitboxes) - 1
                 push_history()
@@ -1382,6 +1442,8 @@ def main():
         if selected_hitbox_idx is None or not (0 <= selected_hitbox_idx < len(hitboxes)):
             return
         dup = copy.deepcopy(hitboxes[selected_hitbox_idx])
+        if dup.get("action") == "usar_eco_tronco":
+            dup["id"] = _nuevo_id_tronco()
         offset = 0.02
         if dup["type"] == "rect":
             dup["rx"] = min(1.0 - dup.get("rw", 0), dup.get("rx", 0) + offset)
@@ -1404,6 +1466,13 @@ def main():
             center_camera_on_rect(denormalize_rect(hitboxes[selected_hitbox_idx], world_rect))
         print(f"Seleccionadas {len(selected_set)} hitboxes de tipo '{current_role}'.")
 
+    def _nuevo_id_tronco():
+        usados = {h.get("id") for h in hitboxes}
+        siguiente = 1
+        while f"eco_tronco_{siguiente}" in usados:
+            siguiente += 1
+        return f"eco_tronco_{siguiente}"
+
     def _build_hitbox_payload(shape_data):
         payload = {"role": current_role, **shape_data}
         if current_role == "interactable":
@@ -1419,10 +1488,22 @@ def main():
                     current_npc_animation_options[current_npc_animation_idx]
                     if current_npc_animation_options else ""
                 )
+            elif current_interactable_action == "usar_eco_tronco":
+                payload.update({
+                    "id": _nuevo_id_tronco(),
+                    "tipo": "eco_tronco",
+                    "accion": "usar_eco_tronco",
+                    "tecla": "E",
+                    "activo": True,
+                    "plataforma": current_trunk_platform,
+                })
         return payload
 
     def _interactable_label(action):
-        return {"npc": "NPC"}.get(str(action).lower(), "Puerta")
+        return {
+            "npc": "NPC",
+            "usar_eco_tronco": "Tronco de Ecos",
+        }.get(str(action).lower(), "Puerta")
 
     # ── Panel helpers ─────────────────────────────────────────────────────────
     def _panel_items():
@@ -1430,7 +1511,7 @@ def main():
         items = []
         for i, h in enumerate(hitboxes):
             role = h.get("role", "wall")
-            if role == "wall" and not show_walls:
+            if role in ("wall", "walkable") and not show_walls:
                 continue
             if role == "interactable" and not show_interactables:
                 continue
@@ -1440,9 +1521,15 @@ def main():
             if role == "wall":
                 label = f"W{i+1} {shape[:3]}"
                 color = (100, 160, 255)
+            elif role == "walkable":
+                label = f"S{i+1} caminar"
+                color = (100, 220, 140)
             elif act == "npc":
                 label = f"N{i+1} {char[:10]}"
                 color = (255, 200, 80)
+            elif act == "usar_eco_tronco":
+                label = f"E{i+1} {h.get('id', 'eco_tronco')[:12]}"
+                color = (55, 220, 200)
             else:
                 label = f"P{i+1} puerta"
                 color = (255, 200, 80)
@@ -1535,6 +1622,40 @@ def main():
         )
         spawn_status_timer = 240
 
+    def choose_trunk():
+        nonlocal screen, current_object_idx, pending_placement_frames
+        nonlocal selected_deco_idx, moving_deco_idx, editor_mode, deco_crop_mode
+        nonlocal deco_crop_dragging, spawn_status_message, spawn_status_timer
+        if not os.path.isdir(trunks_dir):
+            spawn_status_message = "No se encontró la carpeta Imagenes/Tronco ecos."
+            spawn_status_timer = 240
+            return
+        trunk_path = choose_image_gui(
+            trunks_dir, "Elegir imagen de Tronco de Ecos para colocar"
+        )
+        screen = pygame.display.set_mode((win_w, win_h), pygame.NOFRAME)
+        pygame.display.set_caption("Editor de Hitboxes")
+        if trunk_path is None:
+            spawn_status_message = "Selección de Tronco de Ecos cancelada."
+            spawn_status_timer = 120
+            return
+
+        trunk_name = os.path.relpath(trunk_path, images_root).replace("\\", "/")
+        if trunk_name not in available_objects:
+            available_objects.append(trunk_name)
+        current_object_idx = available_objects.index(trunk_name)
+        pending_placement_frames = 4
+        selected_deco_idx = None
+        moving_deco_idx = None
+        editor_mode = "object"
+        deco_crop_mode = False
+        deco_crop_dragging = False
+        spawn_status_message = (
+            f"Tronco de Ecos {os.path.basename(trunk_name)} listo; "
+            "haz clic en el mapa para colocarlo."
+        )
+        spawn_status_timer = 240
+
     # ── Main loop ─────────────────────────────────────────────────────────────
     running = True
     while running:
@@ -1546,7 +1667,7 @@ def main():
             f"{mouse_world[0] / world_rect.width:.3f}, {mouse_world[1] / world_rect.height:.3f}"
             if mouse_world else "---, ---"
         )
-        any_modal = spawn_modal_active or npc_char_modal or npc_anim_modal
+        any_modal = spawn_modal_active or npc_char_modal or npc_anim_modal or eco_platform_modal
 
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -1594,6 +1715,29 @@ def main():
                     elif event.key == pygame.K_ESCAPE:
                         pending_spawn_rect = None
                         spawn_modal_active = False
+                continue
+
+            if eco_platform_modal:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_ESCAPE:
+                        eco_platform_modal = False
+                        pygame.key.stop_text_input()
+                        eco_platform_edit_idx = None
+                    elif event.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        eco_platform_modal = False
+                        pygame.key.stop_text_input()
+                        if (
+                            eco_platform_edit_idx is not None
+                            and 0 <= eco_platform_edit_idx < len(hitboxes)
+                            and hitboxes[eco_platform_edit_idx].get("action") == "usar_eco_tronco"
+                        ):
+                            hitboxes[eco_platform_edit_idx]["plataforma"] = current_trunk_platform
+                            push_history()
+                        eco_platform_edit_idx = None
+                    elif event.key == pygame.K_BACKSPACE:
+                        current_trunk_platform = current_trunk_platform[:-1]
+                elif event.type == pygame.TEXTINPUT:
+                    current_trunk_platform = (current_trunk_platform + event.text)[:40]
                 continue
 
             # ── NPC character selector modal ──────────────────────────────────
@@ -1698,6 +1842,9 @@ def main():
                         continue
                     if bridge_button_rect.collidepoint(mx, my):
                         choose_bridge()
+                        continue
+                    if trunk_button_rect.collidepoint(mx, my):
+                        choose_trunk()
                         continue
                     if hitbox_button_rect.collidepoint(mx, my):
                         editor_mode = "hitbox"
@@ -2070,7 +2217,8 @@ def main():
                     current_shape = shapes[(shapes.index(current_shape) + 1) % 3]
 
                 elif event.key == pygame.K_i:
-                    current_role = "interactable" if current_role == "wall" else "wall"
+                    roles = ["wall", "interactable", "walkable"]
+                    current_role = roles[(roles.index(current_role) + 1) % len(roles)]
 
                 elif event.key == pygame.K_j:
                     if editor_mode == "object":
@@ -2089,6 +2237,24 @@ def main():
                 elif event.key == pygame.K_k:
                     idx = interactable_actions.index(current_interactable_action)
                     current_interactable_action = interactable_actions[(idx + 1) % len(interactable_actions)]
+
+                elif event.key == pygame.K_y and editor_mode == "hitbox":
+                    seleccionado_es_tronco = (
+                        selected_hitbox_idx is not None
+                        and 0 <= selected_hitbox_idx < len(hitboxes)
+                        and hitboxes[selected_hitbox_idx].get("action") == "usar_eco_tronco"
+                    )
+                    if seleccionado_es_tronco or (
+                        current_role == "interactable"
+                        and current_interactable_action == "usar_eco_tronco"
+                    ):
+                        eco_platform_edit_idx = selected_hitbox_idx if seleccionado_es_tronco else None
+                        current_trunk_platform = (
+                            hitboxes[selected_hitbox_idx].get("plataforma", "")
+                            if seleccionado_es_tronco else ""
+                        )
+                        eco_platform_modal = True
+                        pygame.key.start_text_input()
 
                 elif event.key == pygame.K_u:
                     choose_bridge()
@@ -2258,6 +2424,11 @@ def main():
                 if collides_rect_with_hitbox(test_player, h, world_rect):
                     test_player.x = prev_x
                     break
+            zonas_caminables = [h for h in hitboxes if h.get("role") == "walkable"]
+            if zonas_caminables and not any(
+                rect_inside_walkable(test_player, zona, world_rect) for zona in zonas_caminables
+            ):
+                test_player.x = prev_x
             prev_y = test_player.y
             test_player.y += my
             test_player.clamp_ip(world_rect)
@@ -2267,6 +2438,10 @@ def main():
                 if collides_rect_with_hitbox(test_player, h, world_rect):
                     test_player.y = prev_y
                     break
+            if zonas_caminables and not any(
+                rect_inside_walkable(test_player, zona, world_rect) for zona in zonas_caminables
+            ):
+                test_player.y = prev_y
             center_camera_on_rect(test_player)
         else:
             keys = pygame.key.get_pressed()
@@ -2370,13 +2545,19 @@ def main():
         anim_frame_idx = (pygame.time.get_ticks() // 180)
         for i, h in enumerate(hitboxes):
             role = h.get("role", "wall")
-            if role == "wall" and not show_walls:
+            if role in ("wall", "walkable") and not show_walls:
                 continue
             if role == "interactable" and not show_interactables:
                 continue
             is_selected = (selected_hitbox_idx == i) or (i in selected_set)
-            color = (90, 160, 255) if role == "wall" else (255, 210, 80)
-            label_color = (160, 210, 255) if role == "wall" else (255, 235, 150)
+            if role == "wall":
+                color, label_color = (90, 160, 255), (160, 210, 255)
+            elif role == "walkable":
+                color, label_color = (100, 220, 140), (160, 255, 190)
+            elif h.get("action") == "usar_eco_tronco":
+                color, label_color = (45, 225, 205), (130, 255, 235)
+            else:
+                color, label_color = (255, 210, 80), (255, 235, 150)
 
             if h["type"] == "rect":
                 r = denormalize_rect(h, world_rect)
@@ -2390,8 +2571,14 @@ def main():
                     action = h.get("action", "puerta")
                     act_lbl = _interactable_label(action)
                     if show_labels:
-                        lbl = small.render(act_lbl, True, (255, 245, 180))
+                        texto_lbl = act_lbl
+                        if action == "usar_eco_tronco":
+                            texto_lbl = f"{h.get('id', 'eco_tronco')} | {act_lbl}"
+                        lbl = small.render(texto_lbl, True, label_color)
                         screen.blit(lbl, lbl.get_rect(center=sr.center))
+                        if action == "usar_eco_tronco":
+                            info = f"Zona interactuable (no solida) | Plataforma: {h.get('plataforma') or 'sin asignar'}"
+                            screen.blit(tiny.render(info, True, label_color), (sr.x + 4, sr.bottom + 2))
                     if action == "npc":
                         frames = _load_npc_preview_frames(h.get("npc_character", "Sara"),
                                                           h.get("npc_animation", ""))
@@ -2427,7 +2614,10 @@ def main():
                 if role == "interactable":
                     action = h.get("action", "puerta")
                     if show_labels:
-                        lbl = small.render(_interactable_label(action), True, (255, 245, 180))
+                        texto_lbl = _interactable_label(action)
+                        if action == "usar_eco_tronco":
+                            texto_lbl = f"{h.get('id', 'eco_tronco')} | {texto_lbl}"
+                        lbl = small.render(texto_lbl, True, label_color)
                         screen.blit(lbl, lbl.get_rect(center=(int(sx), int(sy))))
                     if action == "npc":
                         frames = _load_npc_preview_frames(h.get("npc_character", "Sara"),
@@ -2455,7 +2645,10 @@ def main():
                                      max(thickness + 4, 5))
                 if show_labels:
                     mx_pt = ((sx1 + sx2) / 2, (sy1 + sy2) / 2)
-                    screen.blit(tiny.render(str(i + 1), True, label_color),
+                    label = str(i + 1)
+                    if role == "interactable" and h.get("action") == "usar_eco_tronco":
+                        label = f"{h.get('id', 'eco_tronco')} | Tronco de Ecos"
+                    screen.blit(tiny.render(label, True, label_color),
                                 (mx_pt[0] - 10, mx_pt[1] - 10))
 
         # Dragging preview
@@ -2543,6 +2736,11 @@ def main():
         bridge_button_label = tiny.render("Puentes (U)", True, (240, 245, 230))
         screen.blit(bridge_button_label,
                     bridge_button_label.get_rect(center=bridge_button_rect.center))
+        pygame.draw.rect(screen, (80, 65, 40), trunk_button_rect, border_radius=4)
+        pygame.draw.rect(screen, (160, 130, 85), trunk_button_rect, 1, border_radius=4)
+        trunk_button_label = tiny.render("Troncos de Ecos", True, (250, 235, 205))
+        screen.blit(trunk_button_label,
+                    trunk_button_label.get_rect(center=trunk_button_rect.center))
         pygame.draw.rect(screen, (65, 65, 80), hitbox_button_rect, border_radius=4)
         pygame.draw.rect(screen, (120, 120, 140), hitbox_button_rect, 1, border_radius=4)
         hitbox_button_label = tiny.render("Volver a hitboxes (O)", True, (240, 240, 245))
@@ -2599,6 +2797,8 @@ def main():
         tool_str = (f"{current_shape}/{current_role}/{current_interactable_action}"
                     if editor_mode == "hitbox" else
                     (available_objects[current_object_idx] if available_objects else "sin objetos"))
+        if current_role == "interactable" and current_interactable_action == "usar_eco_tronco":
+            tool_str += f"/plataforma:{current_trunk_platform or 'sin asignar'}"
         status_parts = [
             f"Imagen: {os.path.basename(image_path)}",
             f"Modo: {mode_str}{'  MOVER' if move_mode else ''}{'  TEST' if test_mode else ''}",
@@ -2659,8 +2859,8 @@ def main():
         max_txt_w = win_w - panel_rect.width - padding * 2 - 8
 
         lines = [
-            ("Puentes: U o boton Puentes > elige variante > clic mapa para colocar | NPC: Elegir NPC > personaje > animacion > clic mapa | Volver a hitboxes: boton u O", (210, 210, 160)),
-            ("N=personaje y B=animacion de la proxima hitbox NPC | Hitboxes: arrastra=crear | F=forma | I=pared/interactuable | K=puerta/NPC", (235, 235, 235)),
+            ("Puentes: boton/U > elige variante > clic mapa | Troncos de Ecos: boton > elige imagen > clic mapa | NPC: boton > personaje > animacion > clic mapa | Hitboxes: boton/O", (210, 210, 160)),
+            ("Hitboxes: arrastra=crear | F=forma | I=pared/interactuable/caminable | K=puerta/NPC/Tronco de Ecos | Y=asignar/editar plataforma", (235, 235, 235)),
             ("Clic derecho=borrar | M=mover | T=prueba | P=spawn; Shift+P=crear spawn | WASD=camara | J/H=imagen o destino | G=cuadricula | L=etiquetas | +/-=tamano", (190, 195, 210)),
             ("Ctrl+C/V: hitboxes en modo hitbox; objetos, personajes y puentes en modo objeto. Ctrl+Shift+C/V: seleccionado. Ctrl+D=duplicar | Enter=guardar | Ctrl+L=cargar | Ctrl+Z/Y=deshacer/rehacer | Esc=salir", (175, 185, 205)),
         ]
@@ -2695,6 +2895,21 @@ def main():
                 if txt != "Cualquier espacio" and txt in spawn_rules.get("by_origin", {}):
                     label_txt = f"{txt} [YA TIENE SPAWN]"
                 screen.blit(small.render(label_txt, True, (20, 20, 20)), (row.x + 8, row.y + 2))
+
+        if eco_platform_modal:
+            modal = pygame.Rect(win_w // 2 - 220, win_h // 2 - 70, 440, 140)
+            dim = pygame.Surface((win_w, win_h), pygame.SRCALPHA)
+            dim.fill((0, 0, 0, 145))
+            screen.blit(dim, (0, 0))
+            pygame.draw.rect(screen, (40, 40, 55), modal, border_radius=10)
+            pygame.draw.rect(screen, (45, 225, 205), modal, 2, border_radius=10)
+            screen.blit(font.render("Plataforma del Tronco de Ecos", True, (230, 255, 245)),
+                        (modal.x + 18, modal.y + 18))
+            entrada = current_trunk_platform or "(opcional: dejar vacio)"
+            screen.blit(small.render(entrada, True, (45, 225, 205)),
+                        (modal.x + 18, modal.y + 58))
+            screen.blit(tiny.render("Escribir plataforma | Enter=confirmar | Esc=cancelar",
+                                    True, (205, 210, 220)), (modal.x + 18, modal.y + 104))
 
         # ── NPC character modal ───────────────────────────────────────────────
         if npc_char_modal and npc_character_options:
