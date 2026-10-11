@@ -50,8 +50,6 @@ ESCENA_AYUDA = "ayuda"
 CENTRO_TABLILLA = (ANCHO // 2, 330)
 CENTRO_TABLILLA_CENTRADA = (ANCHO // 2, 330)
 CENTRO_CALDERO = (ANCHO // 2, 380)
-HITBOX_CALDERO = pygame.Rect(CENTRO_CALDERO[0] - 26, CENTRO_CALDERO[1] - 22, 52, 44)
-AREA_INTERACCION_CALDERO = pygame.Rect(CENTRO_CALDERO[0] - 28, CENTRO_CALDERO[1] - 28, 56, 56)
 TAMANO_HITBOX_PIES = (12, 8)
 VELOCIDAD_GUARDIAN = 155
 DISTANCIA_INTERACCION = 58
@@ -218,7 +216,7 @@ def cargar_mapa_principal():
     interacciones = []
     hitboxes = datos.get("hitboxes", [])
     for indice, hitbox in enumerate(hitboxes):
-        if hitbox.get("role") != "interactable":
+        if hitbox.get("role") not in ("interactable", "other"):
             continue
         tipo_forma = hitbox.get("type", "rect")
         if tipo_forma == "rect":
@@ -242,6 +240,7 @@ def cargar_mapa_principal():
             "accion": hitbox.get("action"),
             "personaje": hitbox.get("npc_character"),
             "destino": hitbox.get("target_image"),
+            "role": hitbox.get("role"),
             "plataforma": hitbox.get("plataforma", ""),
             "activo": hitbox.get("activo", True),
         }
@@ -311,14 +310,6 @@ def cargar_icono_hud(nombre):
     return contenedor
 
 
-def cargar_frame_caldero(nombre, indice=1):
-    """Extrae un solo fotograma del spritesheet horizontal del Caldero."""
-    spritesheet = cargar_imagen(nombre)
-    ancho_frame = spritesheet.get_width() // 4
-    area = pygame.Rect(ancho_frame * indice, 0, ancho_frame, spritesheet.get_height())
-    return pygame.transform.scale(spritesheet.subsurface(area).copy(), (72, 72))
-
-
 def cargar_efecto_tablilla(nombre):
     """Convierte un spritesheet horizontal de 12 pasos en fotogramas útiles."""
     spritesheet = cargar_imagen(nombre)
@@ -373,13 +364,6 @@ def dibujar_mensaje_mapa(superficie, fuente, texto):
 
 
 def interaccion_en_mapa(posicion, mundo):
-    if AREA_INTERACCION_CALDERO.collidepoint(posicion):
-        return {
-            "id": "caldero_eco",
-            "accion": "tablilla",
-            "rect": AREA_INTERACCION_CALDERO,
-        }
-
     for objeto in reversed(mundo["decoraciones"]):
         if (
             objeto["personaje"] and objeto["personaje"] != "Guardián"
@@ -503,7 +487,7 @@ def jugador_bloqueado(rect, mundo):
         contiene_zona_caminable(rect, zona) for zona in zonas_caminables
     ):
         return True
-    return rect.colliderect(HITBOX_CALDERO) or any(
+    return any(
         personaje["rect"].colliderect(rect) for personaje in mundo["personajes"]
     )
 
@@ -551,15 +535,6 @@ def _posicion_interaccion(jugador, interactuable):
 
 def buscar_interactuable_cercano(jugador, mundo):
     candidatos = [
-        {
-            "id": "caldero_eco",
-            "tipo": "caldero",
-            "accion": "tablilla",
-            "personaje": "Caldero",
-            "rect": AREA_INTERACCION_CALDERO,
-            "activo": True,
-            "distancia": 18,
-        },
         *mundo["personajes"],
         *mundo["interacciones"],
     ]
@@ -718,12 +693,14 @@ def dibujar_debug_mapa(
                 1,
             )
     pygame.draw.rect(superficie, (255, 230, 40), jugador["pies"], 1)
-    pygame.draw.rect(superficie, (245, 135, 75), HITBOX_CALDERO, 1)
-    pygame.draw.rect(superficie, (245, 185, 75), AREA_INTERACCION_CALDERO, 1)
     for personaje in mundo["personajes"]:
         pygame.draw.rect(superficie, (200, 130, 255), personaje["rect"], 1)
     for objeto in mundo["interacciones"]:
-        color = (40, 240, 200) if objeto.get("tipo") == "eco_tronco" else (90, 220, 120)
+        color = (
+            (200, 130, 255) if objeto.get("role") == "other"
+            else (40, 240, 200) if objeto.get("tipo") == "eco_tronco"
+            else (90, 220, 120)
+        )
         pygame.draw.rect(superficie, color, objeto["rect"], 2)
         etiqueta = objeto.get("id", objeto.get("accion", "interaccion"))
         superficie.blit(pygame.font.Font(None, 12).render(etiqueta, True, color), objeto["rect"].topleft)
@@ -780,13 +757,6 @@ def dibujar_mapa(
 ):
     superficie.blit(recursos["mapa"], (0, 0))
 
-    # El Caldero expresa visualmente la salud informativa de la aldea.
-    desinformacion = estado.indicadores["desinformación"] + estado.indicadores["susurros_falsos"]
-    positivos = sum(estado.indicadores[nombre] for nombre in ("sabiduria", "confianza_consejo", "armonia")) / 3
-    indice_caldero = 3 if desinformacion >= 100 else 2 if desinformacion >= 55 else 0 if positivos >= 65 else 1
-    caldero = recursos["calderos"][indice_caldero]
-    superficie.blit(caldero, caldero.get_rect(center=CENTRO_CALDERO))
-
     dibujar_troncos_eco(superficie, recursos, mundo)
     jugador = mundo["jugador"]
     dibujar_jugador(superficie, jugador)
@@ -806,8 +776,12 @@ def dibujar_mapa(
             texto = f"Clic para hablar con {interaccion['personaje']}"
         elif interaccion["accion"] == "tablilla":
             texto = "Clic en el Caldero para abrir la tablilla"
-        else:
+        elif interaccion["accion"] == "otro":
+            texto = "Objeto interactuable"
+        elif interaccion["accion"] == "puerta":
             texto = "Clic para viajar al mapa Central"
+        else:
+            texto = "Objeto interactuable"
     else:
         texto = "WASD o flechas: moverse | E: interactuar | Tab: alternar | F3: depuracion"
     dibujar_mensaje_mapa(superficie, recursos["fuente_mapa"], texto)
@@ -817,6 +791,7 @@ def dibujar_mapa(
             "tablilla": "Examinar el Caldero",
             "usar_eco_tronco": "Usar Eco de Troncos",
             "puerta": "Viajar",
+            "otro": "Interactuar",
         }
         etiqueta = f"[E] {nombres.get(interactuable.get('accion'), 'Interactuar')}"
         if interactuable.get("alternativas_cercanas", 0) > 1:
@@ -1590,13 +1565,6 @@ def main():
         "quemar": cargar_imagen("Quemar.png", (190, 127)),
         "ignorar": cargar_imagen("Ignorar.png", (190, 127)),
         "pergamino_mensaje": cargar_imagen("Mensaje_privado.png", (570, 410)),
-        "calderos": [
-            pygame.transform.scale(
-                cargar_frame_caldero(os.path.join("Caldero", f"Caldero-ecos-fila{indice}.png")),
-                (52, 52),
-            )
-            for indice in range(1, 5)
-        ],
         "pociones": {
             "colgar": cargar_imagen(os.path.join("Pociones", "pocion_amarilla.png"), (42, 42)),
             "consultar": cargar_imagen(os.path.join("Pociones", "pocion_azul.png"), (42, 42)),
@@ -1942,6 +1910,15 @@ def main():
                         if destino:
                             recursos["mapa_destino"] = destino
                             escena = ESCENA_MAPA_DESTINO
+                    elif accion == "otro":
+                        registrar_evento({
+                            "tipo": "interaccion_otro",
+                            "actor_id": jugador["id"],
+                            "objeto_id": interactuable_cercano.get("id", "otro"),
+                        })
+                        sistema_particulas.emitir(
+                            *interactuable_cercano["rect"].center, 6
+                        )
             elif escena == ESCENA_MAPA and evento.type == pygame.KEYDOWN and evento.key == pygame.K_TAB:
                 alternar_interactuable_cercano(mundo)
             elif evento.type == pygame.KEYDOWN and evento.key in (pygame.K_ESCAPE, pygame.K_p):
@@ -1976,6 +1953,13 @@ def main():
                 elif interaccion and interaccion["accion"] == "puerta":
                     recursos["mapa_destino"] = interaccion["imagen_destino"]
                     escena = ESCENA_MAPA_DESTINO
+                elif interaccion and interaccion["accion"] == "otro":
+                    registrar_evento({
+                        "tipo": "interaccion_otro",
+                        "actor_id": mundo["jugador"]["id"],
+                        "objeto_id": interaccion.get("id", "otro"),
+                    })
+                    sistema_particulas.emitir(*interaccion["rect"].center, 6)
             elif evento.type == pygame.KEYDOWN:
                 opcion_teclado = grupo_botones.manejar_teclado(evento)
                 if opcion_teclado and escena == ESCENA_CLASIFICACION:
