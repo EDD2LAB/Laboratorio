@@ -44,6 +44,7 @@ class ControladorDialogo:
         self.resultado = None
         self.botones = []
         self.grupo.reemplazar([])
+        self._crear_botones()
 
     def actualizar(self, delta_segundos):
         if self.escribiendo:
@@ -83,7 +84,24 @@ class ControladorDialogo:
     def dibujar(self, superficie, posicion_mouse, ancho, alto):
         if not self.activo:
             return
-        panel = pygame.Rect(36, alto - 210, ancho - 72, 174)
+        # Reservar el texto completo desde el comienzo evita que el panel
+        # cambie de tamaño durante la escritura y que las respuestas lo tapen.
+        zona_texto_x = 36 + (205 if self.retratos.get(self.dialogo["personaje"]) else 28)
+        lineas_completas = _envolver(self.texto_completo, self.fuente_texto, ancho - 36 - zona_texto_x - 30)
+        paso_linea = max(24, self.fuente_texto.get_linesize())
+        filas = self._filas_respuestas(ancho - 120)
+        alto_respuestas = max(36, len(filas) * 62)
+        alto_panel = max(174, 52 + len(lineas_completas) * paso_linea + 20 + alto_respuestas + 18)
+        panel = pygame.Rect(36, alto - 36 - alto_panel, ancho - 72, alto_panel)
+        y_boton = panel.bottom - 18 - alto_respuestas + 25
+        for fila in filas:
+            ancho_fila = sum(b.rect.width for b in fila) + 20 * (len(fila) - 1)
+            x = (ancho - ancho_fila) // 2
+            for boton in fila:
+                boton.rect.topleft = (x, y_boton - 25)
+                boton.centro = boton.rect.center
+                x += boton.rect.width + 20
+            y_boton += 62
         sombra = pygame.Surface(panel.size, pygame.SRCALPHA)
         sombra.fill((11, 23, 18, 235))
         superficie.blit(sombra, panel.topleft)
@@ -102,7 +120,7 @@ class ControladorDialogo:
         texto = self.texto_completo[: int(self.caracteres_visibles)]
         for i, linea in enumerate(_envolver(texto, self.fuente_texto, panel.right - zona_texto_x - 30)):
             render = self.fuente_texto.render(linea, True, (255, 243, 210))
-            superficie.blit(render, (zona_texto_x, panel.y + 52 + i * 24))
+            superficie.blit(render, (zona_texto_x, panel.y + 52 + i * paso_linea))
 
         if not self.escribiendo:
             for boton in self.botones:
@@ -128,6 +146,19 @@ class ControladorDialogo:
             )
             cursor += ancho + separacion
         self.grupo.reemplazar(self.botones)
+
+    def _filas_respuestas(self, ancho_disponible):
+        filas, fila, ancho = [], [], 0
+        for boton in self.botones:
+            siguiente = ancho + (20 if fila else 0) + boton.rect.width
+            if fila and siguiente > ancho_disponible:
+                filas.append(fila)
+                fila, ancho = [], 0
+            fila.append(boton)
+            ancho += (20 if len(fila) > 1 else 0) + boton.rect.width
+        if fila:
+            filas.append(fila)
+        return filas
 
     def _elegir(self, respuesta):
         return self._cerrar(respuesta)

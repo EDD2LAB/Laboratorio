@@ -85,11 +85,30 @@ class MenuModal:
             if actual:
                 lineas_ajustadas.append(actual)
 
-        y = panel.y + 100
-        for linea in lineas_ajustadas:
-            texto = self.fuente_texto.render(linea, True, (255, 243, 210))
-            superficie.blit(texto, texto.get_rect(center=(panel.centerx, y)))
-            y += 25
+        # Situar todas las acciones después de las explicaciones, también
+        # cuando la ayuda ocupa varias líneas.
+        if self.botones:
+            primer_centro = min(
+                max(448 - 62 * (len(self.botones) - 1) // 2, panel.y + 100 + len(lineas_ajustadas) * 25 + 30),
+                panel.bottom - 50 - (len(self.botones) - 1) * 62,
+            )
+            for indice, boton in enumerate(self.botones):
+                boton.centro = (panel.centerx, primer_centro + indice * 62)
+                boton.rect.center = boton.centro
+        limite_texto = min((b.rect.top - 20 for b in self.botones), default=panel.bottom - 30)
+        if self.audio:
+            limite_texto = min(limite_texto, 235)
+        y = panel.y + 88
+        if lineas_ajustadas:
+            paso = max(25, self.fuente_texto.get_linesize())
+            bloque = pygame.Surface((ancho_util, len(lineas_ajustadas) * paso), pygame.SRCALPHA)
+            for indice, linea in enumerate(lineas_ajustadas):
+                texto = self.fuente_texto.render(linea, True, (255, 243, 210))
+                bloque.blit(texto, texto.get_rect(midtop=(ancho_util // 2, indice * paso)))
+            if bloque.get_height() > limite_texto - y:
+                factor = (limite_texto - y) / bloque.get_height()
+                bloque = pygame.transform.smoothscale(bloque, (round(bloque.get_width() * factor), round(bloque.get_height() * factor)))
+            superficie.blit(bloque, bloque.get_rect(midtop=(panel.centerx, y)))
         for boton in self.botones:
             boton.dibujar(superficie, mouse_pos)
         if self.audio:
