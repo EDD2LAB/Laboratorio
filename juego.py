@@ -797,8 +797,6 @@ def dibujar_mapa(
         objeto = interaccion.get("objeto")
         if objeto:
             dibujar_brillo_interaccion(superficie, objeto["imagen"], objeto["rect"], cache)
-        elif interaccion["accion"] == "tablilla":
-            dibujar_brillo_interaccion(superficie, caldero, caldero.get_rect(center=CENTRO_CALDERO), cache)
         else:
             rect = interaccion["rect"]
             luz = pygame.Surface(rect.size, pygame.SRCALPHA)
