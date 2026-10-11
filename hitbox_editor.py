@@ -164,6 +164,11 @@ def load_hitboxes(in_path):
             h.setdefault("activo", True)
             h.setdefault("tecla", "E")
             h.setdefault("plataforma", "")
+        if h["role"] == "other":
+            h.setdefault("action", "otro")
+            h.setdefault("id", f"otro_{indice}")
+            h.setdefault("activo", True)
+            h.setdefault("tecla", "E")
     return (hitboxes,
             payload.get("spawn", {}),
             payload.get("npc_positions", {}),
@@ -604,7 +609,7 @@ def main():
     current_rect = None
     current_shape = "rect"
     current_role = "wall"
-    interactable_actions = ["puerta", "npc", "usar_eco_tronco"]
+    interactable_actions = ["puerta", "npc", "usar_eco_tronco", "tablilla", "otro"]
     current_interactable_action = "puerta"
     current_trunk_platform = ""
     eco_platform_modal = False
@@ -1475,7 +1480,7 @@ def main():
 
     def _build_hitbox_payload(shape_data):
         payload = {"role": current_role, **shape_data}
-        if current_role == "interactable":
+        if current_role in ("interactable", "other"):
             payload["action"] = current_interactable_action
             if current_interactable_action == "puerta":
                 payload["target_image"] = available_backgrounds[current_target_bg_idx]
@@ -1497,12 +1502,20 @@ def main():
                     "activo": True,
                     "plataforma": current_trunk_platform,
                 })
+            elif current_interactable_action in ("tablilla", "otro"):
+                payload.update({
+                    "id": f"{current_interactable_action}_{len(hitboxes) + 1}",
+                    "tecla": "E",
+                    "activo": True,
+                })
         return payload
 
     def _interactable_label(action):
         return {
             "npc": "NPC",
             "usar_eco_tronco": "Tronco de Ecos",
+            "tablilla": "Caldero",
+            "otro": "Otro",
         }.get(str(action).lower(), "Puerta")
 
     # ── Panel helpers ─────────────────────────────────────────────────────────
@@ -1513,7 +1526,7 @@ def main():
             role = h.get("role", "wall")
             if role in ("wall", "walkable") and not show_walls:
                 continue
-            if role == "interactable" and not show_interactables:
+            if role in ("interactable", "other") and not show_interactables:
                 continue
             act = h.get("action", "")
             char = h.get("npc_character", "")
@@ -1524,6 +1537,9 @@ def main():
             elif role == "walkable":
                 label = f"S{i+1} caminar"
                 color = (100, 220, 140)
+            elif role == "other":
+                label = f"O{i+1} {h.get('id', _interactable_label(act))[:12]}"
+                color = (200, 130, 255)
             elif act == "npc":
                 label = f"N{i+1} {char[:10]}"
                 color = (255, 200, 80)
@@ -2217,8 +2233,12 @@ def main():
                     current_shape = shapes[(shapes.index(current_shape) + 1) % 3]
 
                 elif event.key == pygame.K_i:
-                    roles = ["wall", "interactable", "walkable"]
+                    roles = ["wall", "interactable", "walkable", "other"]
                     current_role = roles[(roles.index(current_role) + 1) % len(roles)]
+
+                elif event.key == pygame.K_4:
+                    current_role = "other"
+                    current_interactable_action = "tablilla"
 
                 elif event.key == pygame.K_j:
                     if editor_mode == "object":
@@ -2242,10 +2262,11 @@ def main():
                     seleccionado_es_tronco = (
                         selected_hitbox_idx is not None
                         and 0 <= selected_hitbox_idx < len(hitboxes)
+                        and hitboxes[selected_hitbox_idx].get("role") in ("interactable", "other")
                         and hitboxes[selected_hitbox_idx].get("action") == "usar_eco_tronco"
                     )
                     if seleccionado_es_tronco or (
-                        current_role == "interactable"
+                        current_role in ("interactable", "other")
                         and current_interactable_action == "usar_eco_tronco"
                     ):
                         eco_platform_edit_idx = selected_hitbox_idx if seleccionado_es_tronco else None
@@ -2547,13 +2568,15 @@ def main():
             role = h.get("role", "wall")
             if role in ("wall", "walkable") and not show_walls:
                 continue
-            if role == "interactable" and not show_interactables:
+            if role in ("interactable", "other") and not show_interactables:
                 continue
             is_selected = (selected_hitbox_idx == i) or (i in selected_set)
             if role == "wall":
                 color, label_color = (90, 160, 255), (160, 210, 255)
             elif role == "walkable":
                 color, label_color = (100, 220, 140), (160, 255, 190)
+            elif role == "other":
+                color, label_color = (200, 130, 255), (225, 190, 255)
             elif h.get("action") == "usar_eco_tronco":
                 color, label_color = (45, 225, 205), (130, 255, 235)
             else:
@@ -2567,7 +2590,7 @@ def main():
                     pygame.draw.rect(screen, (255, 255, 255), sr, 4)
                 if show_labels:
                     screen.blit(tiny.render(str(i + 1), True, label_color), (sr.x + 4, sr.y + 2))
-                if role == "interactable":
+                if role in ("interactable", "other"):
                     action = h.get("action", "puerta")
                     act_lbl = _interactable_label(action)
                     if show_labels:
@@ -2611,7 +2634,7 @@ def main():
                     pygame.draw.circle(screen, (255, 255, 255), (int(sx), int(sy)), int(rr), 4)
                 if show_labels:
                     screen.blit(tiny.render(str(i + 1), True, label_color), (sx - 10, sy - 10))
-                if role == "interactable":
+                if role in ("interactable", "other"):
                     action = h.get("action", "puerta")
                     if show_labels:
                         texto_lbl = _interactable_label(action)
@@ -2797,7 +2820,7 @@ def main():
         tool_str = (f"{current_shape}/{current_role}/{current_interactable_action}"
                     if editor_mode == "hitbox" else
                     (available_objects[current_object_idx] if available_objects else "sin objetos"))
-        if current_role == "interactable" and current_interactable_action == "usar_eco_tronco":
+        if current_role in ("interactable", "other") and current_interactable_action == "usar_eco_tronco":
             tool_str += f"/plataforma:{current_trunk_platform or 'sin asignar'}"
         status_parts = [
             f"Imagen: {os.path.basename(image_path)}",
@@ -2828,7 +2851,7 @@ def main():
             screen.blit(_fi_bg,   (_fi_ox, _fi_oy))
             screen.blit(_fi_surf, (_fi_ox + 8, _fi_oy + 4))
 
-        if current_role == "interactable" and current_interactable_action == "puerta" and available_backgrounds:
+        if current_role in ("interactable", "other") and current_interactable_action == "puerta" and available_backgrounds:
             dest = available_backgrounds[current_target_bg_idx]
             overlay = font.render(f"DESTINO PUERTA: {dest}", True, (255, 255, 0))
             bg_surf = pygame.Surface((overlay.get_width() + 16, overlay.get_height() + 8))
@@ -2860,7 +2883,7 @@ def main():
 
         lines = [
             ("Puentes: boton/U > elige variante > clic mapa | Troncos de Ecos: boton > elige imagen > clic mapa | NPC: boton > personaje > animacion > clic mapa | Hitboxes: boton/O", (210, 210, 160)),
-            ("Hitboxes: arrastra=crear | F=forma | I=pared/interactuable/caminable | K=puerta/NPC/Tronco de Ecos | Y=asignar/editar plataforma", (235, 235, 235)),
+            ("Hitboxes: arrastra=crear | F=forma | I=roles | 4=Otros | K=puerta/NPC/Tronco/Caldero/Otro | Y=asignar plataforma", (235, 235, 235)),
             ("Clic derecho=borrar | M=mover | T=prueba | P=spawn; Shift+P=crear spawn | WASD=camara | J/H=imagen o destino | G=cuadricula | L=etiquetas | +/-=tamano", (190, 195, 210)),
             ("Ctrl+C/V: hitboxes en modo hitbox; objetos, personajes y puentes en modo objeto. Ctrl+Shift+C/V: seleccionado. Ctrl+D=duplicar | Enter=guardar | Ctrl+L=cargar | Ctrl+Z/Y=deshacer/rehacer | Esc=salir", (175, 185, 205)),
         ]
