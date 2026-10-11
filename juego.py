@@ -839,10 +839,8 @@ def buscar_imagen_para_opcion(texto, imagenes):
         return imagenes["consultar"]
     if "quemar" in texto:
         return imagenes["quemar"]
-    # Ignorar se representa como botón de texto: su recurso de imagen es una
-    # lámina de sprites y no un botón individual.
     if "ignorar" in texto:
-        return None
+        return imagenes["ignorar"]
     return None
 
 
@@ -1590,6 +1588,7 @@ def main():
         "colgar": cargar_imagen("Colgar.png", (190, 127)),
         "consultar": cargar_imagen("Consultar.png", (190, 127)),
         "quemar": cargar_imagen("Quemar.png", (190, 127)),
+        "ignorar": cargar_imagen("Ignorar.png", (190, 127)),
         "pergamino_mensaje": cargar_imagen("Mensaje_privado.png", (570, 410)),
         "calderos": [
             pygame.transform.scale(
