@@ -481,7 +481,7 @@ def migrate_all_objetos_to_hitboxes(project_root):
         print(f"[migration] {migrated} archivos migrados de Objetos/ a Hitboxes/.")
 
 
-def main():
+def main(forzar_selector=False):
     pygame.init()
     clock = pygame.time.Clock()
 
@@ -489,7 +489,7 @@ def main():
 
     migrate_all_objetos_to_hitboxes(project_root)
 
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 1 and not forzar_selector:
         image_path = sys.argv[1]
         if not os.path.isabs(image_path):
             image_path = os.path.join(project_root, image_path)
@@ -499,13 +499,14 @@ def main():
                                       "Elegir imagen de espacio — Editor de Hitboxes  (doble clic o Enter)")
         if image_path is None:
             pygame.quit()
-            return
+            return False
 
     if not os.path.isabs(image_path):
         image_path = os.path.join(project_root, image_path)
     if not os.path.exists(image_path):
         print(f"No existe la imagen: {image_path}")
-        return
+        pygame.quit()
+        return False
 
     padding = 20
     ui_h = 180
@@ -1782,6 +1783,7 @@ def main():
 
     # ── Main loop ─────────────────────────────────────────────────────────────
     running = True
+    return_to_selector = False
     while running:
         dt_ms = clock.tick(60)
         fps = clock.get_fps()
@@ -2251,6 +2253,7 @@ def main():
 
                 if event.key == pygame.K_ESCAPE:
                     running = False
+                    return_to_selector = True
 
                 elif event.key == pygame.K_z and ctrl:
                     if editor_mode == "object":
@@ -3154,7 +3157,12 @@ def main():
         pygame.display.flip()
 
     pygame.quit()
+    return return_to_selector
 
 
 if __name__ == "__main__":
-    main()
+    volver_al_selector = False
+    while True:
+        volver_al_selector = main(forzar_selector=volver_al_selector)
+        if not volver_al_selector:
+            break
