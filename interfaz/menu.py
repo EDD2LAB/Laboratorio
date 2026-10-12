@@ -21,7 +21,10 @@ class MenuModal:
         self.imagen_panel = None
 
     def establecer_fondo(self, imagen, opacidad=0.6):
-        """Usa una imagen como fondo del recuadro con esquinas redondeadas."""
+        """Usa una imagen como fondo del recuadro (esquinas redondeadas).
+
+        opacidad: de 0 a 1. Menor valor = imagen más transparente.
+        """
         if imagen is None:
             self.imagen_panel = None
             return
