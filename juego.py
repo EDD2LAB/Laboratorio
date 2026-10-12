@@ -25,6 +25,7 @@ from interfaz.menu import MenuModal
 from interfaz.mensaje_privado import ControladorMensajePrivado
 from logica_juego import EstadoJuego
 from particulas import SistemaParticulas
+from propagacion_visual import PropagacionVisual
 
 ANCHO, ALTO = 960, 720
 RELACION_ASPECTO = ANCHO / ALTO
@@ -51,13 +52,23 @@ ESCENA_PAUSA = "pausa"
 ESCENA_VISUAL = "visual"
 ESCENA_VOLUMEN = "volumen"
 ESCENA_AYUDA = "ayuda"
+ESCENA_ECO = "eco_tronco"
+ESCENAS_CON_MAPA = (
+    ESCENA_MAPA,
+    ESCENA_PAUSA,
+    ESCENA_VISUAL,
+    ESCENA_VOLUMEN,
+    ESCENA_AYUDA,
+    ESCENA_DIALOGO,
+    ESCENA_MENSAJE,
+    ESCENA_ECO,
+)
 CENTRO_TABLILLA = (ANCHO // 2, 330)
 CENTRO_TABLILLA_CENTRADA = (ANCHO // 2, 330)
 CENTRO_CALDERO = (ANCHO // 2, 380)
 TAMANO_HITBOX_PIES = (12, 8)
 VELOCIDAD_GUARDIAN = 155
 DISTANCIA_INTERACCION = 58
-ESCENA_ECO = "eco_tronco"
 
 
 def normalizar_ruta(ruta):
@@ -150,73 +161,6 @@ def cargar_frames_tronco_eco():
     return frames
 
 
-def dibujar_cascada_animada(superficie, recursos, animar=True):
-    frames = recursos.get("frames_cascada", [])
-    if not frames:
-        return
-    mapa_manana = recursos["mapas_dia"][0]
-    ancho_mapa, alto_mapa = mapa_manana.get_size()
-    ancho, alto = superficie.get_size()
-    escala_x = ancho / ancho_mapa
-    escala_y = alto / alto_mapa
-    rect_mapa_manana = pygame.Rect(
-        round(ancho_mapa * 350 / 1679),
-        0,
-        max(1, round(ancho_mapa * 310 / 1679)),
-        max(1, round(alto_mapa * 935 / 937)),
-    )
-    rect = pygame.Rect(
-        round(rect_mapa_manana.x * escala_x),
-        round(rect_mapa_manana.y * escala_y),
-        max(1, round(rect_mapa_manana.width * escala_x)),
-        max(1, round(rect_mapa_manana.height * escala_y)),
-    )
-    frames_por_mapa = recursos.setdefault("frames_cascada_por_mapa", {})
-    clave_cache = (0, rect.size)
-    if clave_cache not in frames_por_mapa:
-        mascara_mapa_manana = pygame.Surface(rect_mapa_manana.size, pygame.SRCALPHA)
-        for y in range(rect_mapa_manana.height):
-            for x in range(rect_mapa_manana.width):
-                rojo, verde, azul = mapa_manana.get_at((
-                    rect_mapa_manana.x + x, rect_mapa_manana.y + y
-                ))[:3]
-                es_agua = (
-                    azul > 140 and verde > 130
-                    and azul > rojo * 1.35 and verde > rojo * 1.25
-                )
-                es_espuma = (
-                    azul > 185 and verde > 185
-                    and azul >= rojo and verde >= rojo
-                )
-                es_espuma_clara = (
-                    rojo > 220 and verde > 220 and azul > 220
-                    and max(rojo, verde, azul) - min(rojo, verde, azul) < 45
-                )
-                if es_agua or es_espuma or es_espuma_clara:
-                    mascara_mapa_manana.set_at((x, y), (255, 255, 255, 255))
-        mascara = pygame.transform.scale(mascara_mapa_manana, rect.size)
-
-        frames_por_mapa[clave_cache] = []
-        for frame_original in frames:
-            frame = pygame.transform.scale(frame_original, rect.size)
-            frame.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-            frames_por_mapa[clave_cache].append(frame)
-
-    frames_animados = frames_por_mapa[clave_cache]
-    indice_frame = (pygame.time.get_ticks() // 120) % len(frames_animados) if animar else 0
-    frame = frames_animados[indice_frame]
-    superficie.blit(frame, rect)
-    for objeto in recursos["decoraciones"]:
-        if (
-            not objeto["puente"]
-            and not objeto["frames"]
-            and not objeto["tronco_eco"]
-            and objeto["personaje"] != "Guardián"
-            and objeto["rect"].colliderect(rect)
-        ):
-            superficie.blit(objeto["imagen"], objeto["rect"])
-
-
 def cargar_frames_idle_guardian():
     orientaciones = (
         "abajo",
@@ -259,6 +203,9 @@ def cargar_mapa_principal():
     ]
     decoraciones = []
     for objeto in datos.get("decoracion", []):
+        nombre_normalizado = normalizar_ruta(objeto["name"])
+        if nombre_normalizado.endswith("cascada_animacion.png"):
+            continue
         imagen_original = cargar_imagen(objeto["name"])
         recorte = objeto.get("crop")
         rect = pygame.Rect(
@@ -268,7 +215,6 @@ def cargar_mapa_principal():
             max(1, round(objeto["h"] * ALTO)),
         )
         personaje = personaje_de_decoracion(objeto["name"])
-        nombre_normalizado = normalizar_ruta(objeto["name"])
         es_puente = nombre_normalizado.startswith("puentes/")
         nombre_archivo = os.path.basename(nombre_normalizado)
         # En el set de arte, estos cuatro PNG son escaleras; aunque estén en
@@ -926,6 +872,26 @@ def dibujar_debug_mapa(
             superficie.blit(fuente_historial.render(linea, True, (255, 244, 194)), (12, y + 1))
             y_historial += 18
         y_historial += 4
+    activas = mundo["propagaciones_visuales"]
+    superficie.blit(
+        fuente_debug.render(f"Propagaciones activas: {len(activas)}", True, (255, 224, 128)),
+        (8, y_historial),
+    )
+    for indice, propagacion in enumerate(activas[:3]):
+        if not propagacion.activa:
+            continue
+        tramo = min(propagacion.indice_actual, len(propagacion.ruta) - 2)
+        nodo_actual = propagacion.ruta[tramo]
+        linea = (
+            f"{propagacion.origen}->{propagacion.destino} "
+            f"ruta:{' > '.join(propagacion.ruta)} nodo:{nodo_actual} "
+            f"pos:({propagacion.posicion.x:.0f},{propagacion.posicion.y:.0f}) "
+            f"avance:{propagacion.progreso:.2f}"
+        )
+        superficie.blit(
+            fuente_debug.render(linea, True, (255, 244, 194)),
+            (8, y_historial + 18 * (indice + 1)),
+        )
 
 
 def _posicion_en_mapa(plataforma, ancho=ANCHO, alto=ALTO):
@@ -992,7 +958,10 @@ def dibujar_decoraciones_editor(superficie, recursos, animar=True):
     """Dibuja puentes y animaciones que fueron colocados desde el editor."""
     tiempo = pygame.time.get_ticks() if animar else 0
     for objeto in recursos["decoraciones"]:
-        if objeto.get("personaje") == "Guardián" or objeto.get("tronco_eco"):
+        if (
+            objeto.get("personaje") == "Guardián"
+            or objeto.get("tronco_eco")
+        ):
             continue
         if objeto.get("puente_animable"):
             dibujar_puente_balanceandose(superficie, objeto, tiempo)
@@ -1040,16 +1009,39 @@ def dibujar_troncos_eco(superficie, recursos, mundo, animar=True):
         superficie.blit(imagen, imagen.get_rect(midbottom=rect.midbottom))
 
 
+def dibujar_propagaciones_visuales(superficie, mundo):
+    puente_por_id = {
+        objeto.get("id"): objeto
+        for objeto in mundo["decoraciones"]
+        if objeto.get("puente") and objeto.get("id")
+    }
+    brillo = pygame.Surface(superficie.get_size(), pygame.SRCALPHA)
+    for propagacion in mundo["propagaciones_visuales"]:
+        if not propagacion.activa:
+            continue
+        puente = puente_por_id.get(propagacion.puente_actual)
+        if puente:
+            brillo_puente = puente["rect"].inflate(-12, -12)
+            if brillo_puente.width > 0 and brillo_puente.height > 0:
+                pygame.draw.ellipse(brillo, (255, 213, 102, 65), brillo_puente)
+        superficie.blit(brillo, (0, 0))
+        brillo.fill((0, 0, 0, 0))
+        frame = propagacion.obtener_frame()
+        if frame:
+            imagen = pygame.transform.smoothscale(frame, (36, 36))
+            superficie.blit(imagen, imagen.get_rect(center=propagacion.posicion))
+
+
 def dibujar_mapa(
     superficie, recursos, mundo, estado, mouse_pos, hud,
     interactuable=None, distancia=None, particulas=None, debug=False, resaltar=True,
 ):
     superficie.blit(recursos["mapas_dia"][estado.dia], (0, 0))
-    dibujar_cascada_animada(superficie, recursos)
     dibujar_decoraciones_editor(superficie, recursos)
     dibujar_troncos_eco(superficie, recursos, mundo)
     jugador = mundo["jugador"]
     dibujar_jugador(superficie, jugador)
+    dibujar_propagaciones_visuales(superficie, mundo)
     if particulas:
         particulas.dibujar(superficie)
     if debug:
@@ -1218,7 +1210,7 @@ def dibujar_consecuencia_evento(superficie, recursos, estado):
     superficie.blit(continuar, continuar.get_rect(center=(panel.centerx, panel.bottom - 42)))
 
 
-def dibujar_pregunta_clasificacion(superficie, recursos, botones, mouse_pos):
+def dibujar_pregunta_clasificacion(superficie, recursos, estado, botones, mouse_pos):
     """Pide la clasificación sin mostrar cuál era la categoría real."""
     superficie.blit(fondo_tablilla_actual(recursos, estado), (0, 0))
     # En clasificación el HUD no se muestra: la tablilla recupera el centro.
@@ -1661,12 +1653,13 @@ def dibujar_escena_dialogo(
 ):
     """El diálogo se superpone al mapa y bloquea sus demás interacciones."""
     superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
-    dibujar_cascada_animada(superficie, recursos)
     dibujar_decoraciones_editor(superficie, recursos)
     if jugador:
-        if particulas:
-            particulas.dibujar(superficie)
         dibujar_jugador(superficie, jugador)
+    if mundo:
+        dibujar_propagaciones_visuales(superficie, mundo)
+    if particulas:
+        particulas.dibujar(superficie)
     hud.dibujar(superficie)
     dialogos.dibujar(superficie, mouse_pos, ANCHO, ALTO)
 
@@ -1676,10 +1669,11 @@ def dibujar_escena_mensaje(
 ):
     """El pergamino se presenta sobre el mapa y bloquea las demás acciones."""
     superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
-    dibujar_cascada_animada(superficie, recursos)
     dibujar_decoraciones_editor(superficie, recursos)
     if jugador:
         dibujar_jugador(superficie, jugador)
+    if mundo:
+        dibujar_propagaciones_visuales(superficie, mundo)
     hud.dibujar(superficie)
     mensajes.dibujar(superficie, mouse_pos)
 
@@ -1688,9 +1682,10 @@ def dibujar_interfaz_eco(
     superficie, recursos, jugador, estado_eco, contactos, mensajes, mundo=None
 ):
     superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
-    dibujar_cascada_animada(superficie, recursos)
     dibujar_decoraciones_editor(superficie, recursos)
     dibujar_jugador(superficie, jugador)
+    if mundo:
+        dibujar_propagaciones_visuales(superficie, mundo)
     panel = pygame.Rect(190, 150, 580, 420)
     superficie.blit(superficie_con_alpha(panel.size, (17, 34, 28, 242)), panel.topleft)
     pygame.draw.rect(superficie, ORO, panel, 3, border_radius=14)
@@ -1738,7 +1733,6 @@ def dibujar_interfaz_eco(
 def crear_fondo_tablilla(recursos, dia):
     dia = max(0, min(int(dia), len(recursos["mapas_dia"]) - 1))
     fondo = recursos["mapas_dia"][dia].copy()
-    dibujar_cascada_animada(fondo, recursos, animar=False)
     dibujar_decoraciones_editor(fondo, recursos, animar=False)
     mundo = recursos.get("mundo")
     if mundo:
@@ -1792,6 +1786,7 @@ def crear_mundo(recursos):
         "personajes": personajes,
         "jugador": crear_jugador_local(recursos),
         "grafo_fisico": crear_grafo_fisico(recursos["decoraciones"]),
+        "propagaciones_visuales": [],
     }
     ajustar_inicio_jugador(mundo["jugador"], mundo)
     mundo["posicion_casa"] = mundo["jugador"]["pies"].copy()
@@ -1870,6 +1865,12 @@ def main():
     fuente_resultado = cargar_fuente(28)
 
     mapa, decoraciones, interacciones, hitboxes, guardian, mapas_dia = cargar_mapa_principal()
+    frames_propagacion = cargar_spritesheet_frames(
+        os.path.join("Animaciones Ambiente", "Propagacion_puente.png"),
+        cantidad=24,
+    )
+    if len(frames_propagacion) != 24:
+        raise RuntimeError("No se pudo cargar el spritesheet de propagacion de puentes.")
     retratos_dialogo = {
         objeto["personaje"]: pygame.transform.scale(objeto["imagen"], (78, 78))
         for objeto in decoraciones
@@ -1878,9 +1879,7 @@ def main():
     recursos = {
         "mapa": mapa,
         "mapas_dia": mapas_dia,
-        "frames_cascada": cargar_spritesheet_frames(
-            os.path.join("Animaciones Ambiente", "Cascada_animación.png")
-        ),
+        "frames_propagacion": frames_propagacion,
         "dia": 0,
         "decoraciones": decoraciones,
         "interacciones": interacciones,
@@ -2024,8 +2023,6 @@ def main():
 
     def registrar_transmision(transmisor, receptor, medio, origen_pos, destino_pos):
         propagacion = estado.propagacion_actual
-        if propagacion is None:
-            return None
         grafo = mundo["grafo_fisico"]
         origen_id = plataforma_cercana(origen_pos)
         destino_id = plataforma_cercana(destino_pos)
@@ -2034,14 +2031,51 @@ def main():
             raise RuntimeError(
                 f"No existe ruta para la transmision entre {origen_id} y {destino_id}."
             )
-        propagacion.registrar_transmision(
-            transmisor,
-            receptor,
-            ruta,
-            medio,
-            origen_id,
-            destino_id,
-        )
+        if propagacion is not None:
+            propagacion.registrar_transmision(
+                transmisor,
+                receptor,
+                ruta,
+                medio,
+                origen_id,
+                destino_id,
+            )
+
+        tipo_visual = "informacion_normal"
+        if propagacion:
+            tipo_visual = {
+                "verificada": "informacion_verificada",
+                "rumor": "rumor",
+                "falsa": "informacion_falsa",
+            }.get(propagacion.estado_verificacion, tipo_visual)
+        evento_visual = {
+            "tipo": "propagacion",
+            "origen": origen_id,
+            "destino": destino_id,
+            "ruta": list(ruta),
+            "clase": tipo_visual,
+            "medio": medio,
+            "transmisor": transmisor,
+            "receptor": receptor,
+        }
+        if len(ruta) > 1:
+            puente_ids = [
+                grafo.obtener_puente(origen, destino)
+                for origen, destino in zip(ruta, ruta[1:])
+            ]
+            if any(puente_id is None for puente_id in puente_ids):
+                raise RuntimeError("La ruta de propagacion contiene un puente inexistente.")
+            visual = PropagacionVisual(
+                origen_id,
+                destino_id,
+                ruta,
+                [_posicion_en_mapa(grafo.plataformas[nodo]) for nodo in ruta],
+                puente_ids,
+                recursos["frames_propagacion"],
+                tipo=tipo_visual,
+            )
+            mundo["propagaciones_visuales"].append(visual)
+        registrar_evento(evento_visual)
         return ruta
 
     def difundir_resultado_tablilla():
@@ -2174,6 +2208,14 @@ def main():
     while corriendo:
         delta_ms = reloj.tick(FPS)
         delta_segundos = delta_ms / 1000
+        if escena in ESCENAS_CON_MAPA:
+            for propagacion_visual in mundo["propagaciones_visuales"]:
+                propagacion_visual.actualizar(delta_ms)
+            mundo["propagaciones_visuales"] = [
+                propagacion_visual
+                for propagacion_visual in mundo["propagaciones_visuales"]
+                if propagacion_visual.activa
+            ]
         sistema_particulas.actualizar(delta_ms)
         tiempo_particulas_ambientales += delta_ms
         if tiempo_particulas_ambientales >= 850:
@@ -2642,7 +2684,7 @@ def main():
         elif escena == ESCENA_CONSECUENCIA:
             dibujar_consecuencia_evento(lienzo, recursos, estado)
         elif escena == ESCENA_CLASIFICACION:
-            dibujar_pregunta_clasificacion(lienzo, recursos, botones, mouse_pos)
+            dibujar_pregunta_clasificacion(lienzo, recursos, estado, botones, mouse_pos)
         elif escena == ESCENA_RESULTADO:
             dibujar_resultado_evento(lienzo, recursos, estado)
         elif escena == ESCENA_FINAL:

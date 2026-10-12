@@ -5,6 +5,8 @@ import pygame
 import math
 import copy
 
+from animacion import crear_frame_animado_suave, extraer_frames_horizontales
+
 PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 CHARACTER_FOLDERS = {
     "aspirante hombre",
@@ -1014,6 +1016,7 @@ def main(forzar_selector=False):
     current_object_idx = 0
     pending_placement_frames = 1   # frames que se asignarán al próximo objeto colocado
     object_cache = {}
+    animation_frame_cache = {}
     placement_sizes = {}
     decoracion = []
     deco_history = [copy.deepcopy(decoracion)]
@@ -2658,20 +2661,33 @@ def main(forzar_selector=False):
 
         # Decoracion objects
         if show_objects:
-            for j, obj in enumerate(decoracion):
+            indices_decoracion = sorted(
+                range(len(decoracion)),
+                key=lambda indice: (
+                    not os.path.basename(
+                        decoracion[indice].get("name", "")
+                    ).casefold().startswith("cascada_anim"),
+                    indice,
+                ),
+            )
+            for j in indices_decoracion:
+                obj = decoracion[j]
                 obj_img = load_object_image(obj["name"])
                 if obj_img:
                     r = get_deco_world_rect(obj)
                     sx, sy = world_to_screen((r.x, r.y))
                     frames = int(obj.get("frames", 1))
                     if frames > 1:
-                        # Spritesheet animado: w ya es 1 frame → subsurface + escalar a r.width×r.height
-                        frame_idx  = (pygame.time.get_ticks() // 120) % frames
-                        iw = obj_img.get_width()
-                        ih = obj_img.get_height()
-                        fw = max(1, iw // frames)
-                        frame_surf = obj_img.subsurface(pygame.Rect(frame_idx * fw, 0, fw, ih))
-                        scaled = pygame.transform.smoothscale(frame_surf, (r.width, r.height))
+                        cache_key = (obj["name"], frames)
+                        if cache_key not in animation_frame_cache:
+                            animation_frame_cache[cache_key] = extraer_frames_horizontales(
+                                obj_img, frames
+                            )
+                        scaled = crear_frame_animado_suave(
+                            animation_frame_cache[cache_key],
+                            (r.width, r.height),
+                            pygame.time.get_ticks(),
+                        )
                     else:
                         source_img = get_cropped_deco_image(obj, obj_img)
                         scaled = pygame.transform.smoothscale(source_img, (r.width, r.height))
@@ -2711,15 +2727,20 @@ def main(forzar_selector=False):
                 sx, sy = world_to_screen((px, py))
                 cur_frames = pending_placement_frames
                 if cur_frames > 1:
-                    fidx   = (pygame.time.get_ticks() // 120) % cur_frames
-                    iw     = obj_img.get_width()
-                    ih     = obj_img.get_height()
-                    fwp    = max(1, iw // cur_frames)
-                    source = obj_img.subsurface(pygame.Rect(fidx * fwp, 0, fwp, ih))
+                    cache_key = (obj_name, cur_frames)
+                    if cache_key not in animation_frame_cache:
+                        animation_frame_cache[cache_key] = extraer_frames_horizontales(
+                            obj_img, cur_frames
+                        )
+                    prev = crear_frame_animado_suave(
+                        animation_frame_cache[cache_key],
+                        (ow, oh),
+                        pygame.time.get_ticks(),
+                        alpha=100,
+                    )
                 else:
-                    source = obj_img
-                prev = pygame.transform.smoothscale(source, (ow, oh)).copy()
-                prev.set_alpha(100)
+                    prev = pygame.transform.smoothscale(obj_img, (ow, oh)).copy()
+                    prev.set_alpha(100)
                 screen.blit(prev, (sx, sy))
 
         # Hitboxes

@@ -140,6 +140,12 @@ class GrafoFisico:
                 return puente_id
         return None
 
+    def obtener_puente(self, origen, destino):
+        """Devuelve el id del puente transitable que conecta dos nodos vecinos."""
+        self._validar_plataforma(origen)
+        self._validar_plataforma(destino)
+        return self._obtener_puente(origen, destino)
+
     def iniciar_propagacion(
         self, origen, destino, duracion_puente_ms=None, color=(80, 220, 255),
         medio="directo", demora_ms=0,
