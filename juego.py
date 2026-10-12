@@ -1133,6 +1133,46 @@ def construir_botones(opciones, imagenes, fuente):
     return botones
 
 
+def imagen_boton_clasificacion(imagen, texto, fuente):
+    boton = imagen.copy()
+    lineas = envolver_texto(texto, fuente, boton.get_width() - 34)
+    alto_linea = fuente.get_linesize()
+    alto_total = len(lineas) * alto_linea
+    y = int(boton.get_height() * .86 - alto_total / 2)
+    for linea in lineas:
+        etiqueta = fuente.render(linea, True, TINTA)
+        sombra = fuente.render(linea, True, (255, 235, 168))
+        rect = etiqueta.get_rect(center=(boton.get_width() // 2, y + alto_linea // 2))
+        boton.blit(sombra, rect.move(1, 1))
+        boton.blit(etiqueta, rect)
+        y += alto_linea
+    return boton
+
+
+def construir_botones_clasificacion(opciones, recursos, fuente):
+    if not opciones:
+        return []
+    imagenes = []
+    for opcion in opciones:
+        clave = normalizar_ruta(opcion).replace(" ", "_")
+        base = recursos["botones_clasificacion"].get(clave)
+        imagenes.append(imagen_boton_clasificacion(base, opcion, fuente) if base else None)
+
+    anchos = [
+        imagen.get_width() if imagen else max(164, fuente.size(opcion)[0] + 28)
+        for opcion, imagen in zip(opciones, imagenes)
+    ]
+    separacion = 36
+    ancho_total = sum(anchos) + separacion * (len(opciones) - 1)
+    cursor = (ANCHO - ancho_total) / 2
+    botones = []
+    for opcion, imagen, ancho in zip(opciones, imagenes, anchos):
+        centro = (int(cursor + ancho / 2), 570)
+        botones.append(Boton(opcion, imagen, centro, fuente))
+        cursor += ancho + separacion
+    return botones
+
+
 def dibujar_tablilla(superficie, tablilla, estado, fuente_texto, fuente_categoria):
     # Se desplaza a la derecha para reservar un margen real al HUD.
     rect = tablilla.get_rect(center=CENTRO_TABLILLA)
@@ -1218,23 +1258,24 @@ def dibujar_consecuencia_evento(superficie, recursos, estado):
 def dibujar_pregunta_clasificacion(superficie, recursos, estado, botones, mouse_pos):
     """Pide la clasificación sin mostrar cuál era la categoría real."""
     superficie.blit(fondo_tablilla_actual(recursos, estado), (0, 0))
-    # En clasificación el HUD no se muestra: la tablilla recupera el centro.
-    rect = recursos["tablilla"].get_rect(center=CENTRO_TABLILLA_CENTRADA)
-    superficie.blit(recursos["tablilla"], rect)
-    titulo = recursos["fuente_panel_titulo"].render("¿CÓMO CLASIFICARÍAS ESTA TABLILLA?", True, TINTA)
-    superficie.blit(titulo, titulo.get_rect(center=(rect.centerx, rect.y + 190)))
+    # En clasificación el HUD no se muestra para dejar aire al panel central.
+    panel = recursos["panel_clasificacion"]
+    rect = panel.get_rect(center=(ANCHO // 2, 238))
+    superficie.blit(panel, rect)
+    titulo = recursos["fuente_resultado"].render("¿CÓMO CLASIFICARÍAS ESTA TABLILLA?", True, CREMA)
+    superficie.blit(titulo, titulo.get_rect(center=(rect.centerx, rect.y + 122)))
     # El texto de ayuda se ajusta al interior útil del pergamino para que no
     # se salga por los bordes en ninguna resolución.
     lineas = envolver_texto(
         "Elige la categoría que consideres correcta",
         recursos["fuente_panel"],
-        320,
+        rect.width - 220,
     )
-    y = rect.y + 238
+    y = rect.y + 168
     for linea in lineas:
-        detalle = recursos["fuente_panel"].render(linea, True, TINTA)
+        detalle = recursos["fuente_panel"].render(linea, True, CREMA)
         superficie.blit(detalle, detalle.get_rect(center=(rect.centerx, y)))
-        y += 22
+        y += 24
     for boton in botones:
         boton.dibujar(superficie, mouse_pos)
 
@@ -1913,6 +1954,12 @@ def main():
             os.path.join("NPCS", "Guardian", "Guardian_interaccion_ecos.png")
         ),
         "fondo_clasificacion": cargar_imagen("FondoClasificacion.png", (860, 505)),
+        "panel_clasificacion": cargar_imagen("Cartel_decision.png", (840, 315)),
+        "botones_clasificacion": {
+            "rumor_politico": cargar_imagen("Rumor_politico.png", (180, 200)),
+            "suceso_natural": cargar_imagen("Suceso_natural.png", (180, 200)),
+            "acusacion_personal": cargar_imagen("Acusacion_personal.png", (180, 200)),
+        },
         "tablilla": cargar_imagen("Tablilla.png", (460, 460)),
         "colgar": cargar_imagen("Colgar.png", (190, 127)),
         "consultar": cargar_imagen("Consultar.png", (190, 127)),
@@ -2525,7 +2572,9 @@ def main():
                 else:
                     escena = ESCENA_MAPA
             elif escena == ESCENA_CONSECUENCIA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                botones = construir_botones(estado.opciones_clasificacion_actuales(), recursos, fuente_boton)
+                botones = construir_botones_clasificacion(
+                    estado.opciones_clasificacion_actuales(), recursos, fuente_boton
+                )
                 grupo_botones.reemplazar(botones)
                 escena = ESCENA_CLASIFICACION
             elif escena == ESCENA_CLASIFICACION and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
