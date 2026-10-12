@@ -269,7 +269,13 @@ def cargar_mapa_principal():
         personaje = personaje_de_decoracion(objeto["name"])
         nombre_normalizado = normalizar_ruta(objeto["name"])
         es_puente = nombre_normalizado.startswith("puentes/")
-        es_escalera = "escalera" in nombre_normalizado
+        nombre_archivo = os.path.basename(nombre_normalizado)
+        # En el set de arte, estos cuatro PNG son escaleras; aunque estén en
+        # la carpeta Puentes, son estructuras rígidas y nunca se balancean.
+        es_escalera = (
+            "escalera" in nombre_normalizado
+            or nombre_archivo in {"puente3.png", "puente4.png", "puente5.png", "puente8.png"}
+        )
         nombre_puente = os.path.splitext(os.path.basename(objeto["name"]))[0]
         cantidad_frames = max(1, int(objeto.get("frames", 1)))
         imagenes_frames = []
@@ -309,6 +315,7 @@ def cargar_mapa_principal():
             "imagen": imagen,
             "puente": es_puente,
             "escalera": es_escalera,
+            "puente_animable": es_puente and not es_escalera,
             "frames": imagenes_frames,
             "tronco_eco": nombre_normalizado.startswith("tronco ecos/"),
         })
@@ -986,7 +993,7 @@ def dibujar_decoraciones_editor(superficie, recursos):
     for objeto in recursos["decoraciones"]:
         if objeto.get("personaje") == "Guardián" or objeto.get("tronco_eco"):
             continue
-        if objeto.get("puente") and not objeto.get("escalera"):
+        if objeto.get("puente_animable"):
             dibujar_puente_balanceandose(superficie, objeto, tiempo)
         elif objeto.get("puente"):
             superficie.blit(objeto["imagen"], objeto["rect"])
