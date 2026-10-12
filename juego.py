@@ -17,6 +17,7 @@ import pygame
 
 from audio_manager import GestorAudio
 from conversaciones import construir_conversacion, construir_mensajes_eco, construir_respuesta_eco
+from grafo_fisico import GrafoFisico
 from interfaz.boton import Boton, GrupoBotones
 from interfaz.dialogo import ControladorDialogo
 from interfaz.hud import HUDIndicadores
@@ -197,17 +198,21 @@ def cargar_mapa_principal():
         )
         imagen = pygame.transform.scale(imagen, rect.size)
         personaje = personaje_de_decoracion(objeto["name"])
+        nombre_normalizado = normalizar_ruta(objeto["name"])
+        es_puente = nombre_normalizado.startswith("puentes/")
+        nombre_puente = os.path.splitext(os.path.basename(objeto["name"]))[0]
         hitbox = rect.copy()
         if personaje == "Guardián":
             hitbox.inflate_ip(-round(rect.width * 0.4), -round(rect.height * 0.4))
         decoraciones.append({
+            "id": f"puente_{nombre_puente[6:].lower()}" if es_puente else None,
             "nombre": objeto["name"],
             "personaje": personaje,
             "rect": rect,
             "hitbox": hitbox,
             "imagen": imagen,
-            "puente": normalizar_ruta(objeto["name"]).startswith("puentes/"),
-            "tronco_eco": normalizar_ruta(objeto["name"]).startswith("tronco ecos/"),
+            "puente": es_puente,
+            "tronco_eco": nombre_normalizado.startswith("tronco ecos/"),
         })
 
     decoraciones.sort(key=lambda objeto: objeto["puente"], reverse=True)
@@ -609,6 +614,50 @@ def reiniciar_jugador_en_casa(mundo):
     mundo["interaccion_seleccionada"] = None
 
 
+PLATAFORMAS_ALDEA = (
+    {"id": "plataforma_central", "nombre": "Plataforma Central", "posicion": [0.50, 0.50]},
+    {"id": "plataforma_noroeste", "nombre": "Plataforma Noroeste", "posicion": [0.20, 0.22]},
+    {"id": "plataforma_noreste", "nombre": "Plataforma Noreste", "posicion": [0.80, 0.22]},
+    {"id": "plataforma_suroeste", "nombre": "Plataforma Suroeste", "posicion": [0.20, 0.68]},
+    {"id": "plataforma_sureste", "nombre": "Plataforma Sureste", "posicion": [0.80, 0.68]},
+    {"id": "plataforma_borde_oeste_norte", "nombre": "Borde Oeste Norte", "posicion": [0.02, 0.45]},
+    {"id": "plataforma_borde_este_norte", "nombre": "Borde Este Norte", "posicion": [0.98, 0.45]},
+    {"id": "plataforma_borde_oeste_sur", "nombre": "Borde Oeste Sur", "posicion": [0.02, 0.91]},
+    {"id": "plataforma_borde_este_sur", "nombre": "Borde Este Sur", "posicion": [0.98, 0.91]},
+)
+
+CONEXIONES_PUENTES_ALDEA = (
+    ("puente_1", "plataforma_noroeste", "plataforma_central"),
+    ("puente_2", "plataforma_noreste", "plataforma_central"),
+    ("puente_3", "plataforma_noroeste", "plataforma_borde_oeste_norte"),
+    ("puente_4", "plataforma_noreste", "plataforma_borde_este_norte"),
+    ("puente_5", "plataforma_suroeste", "plataforma_borde_oeste_sur"),
+    ("puente_6", "plataforma_suroeste", "plataforma_central"),
+    ("puente_7", "plataforma_central", "plataforma_sureste"),
+    ("puente_8", "plataforma_sureste", "plataforma_borde_este_sur"),
+)
+
+
+def crear_grafo_fisico(decoraciones):
+    """Asocia plataformas (posiciones normalizadas 0..1) y puentes del mapa."""
+    puentes_visuales = {
+        objeto["id"]: objeto
+        for objeto in decoraciones
+        if objeto.get("puente") and objeto.get("id")
+    }
+    puentes = []
+    for puente_id, origen, destino in CONEXIONES_PUENTES_ALDEA:
+        if puente_id not in puentes_visuales:
+            raise RuntimeError(f"No se encontro la decoracion del {puente_id}.")
+        puentes.append({
+            "id": puente_id,
+            "origen": origen,
+            "destino": destino,
+            "estado": "normal",
+        })
+    return GrafoFisico(PLATAFORMAS_ALDEA, puentes)
+
+
 def mover_jugador(jugador, mundo, teclas, delta_ms):
     dx = int(teclas[pygame.K_d] or teclas[pygame.K_RIGHT]) - int(teclas[pygame.K_a] or teclas[pygame.K_LEFT])
     dy = int(teclas[pygame.K_s] or teclas[pygame.K_DOWN]) - int(teclas[pygame.K_w] or teclas[pygame.K_UP])
@@ -736,6 +785,100 @@ def dibujar_debug_mapa(
         f"luciernagas: {cantidad_luciernagas} | particulas: {cantidad_particulas}"
     )
     superficie.blit(fuente_debug.render(detalle, True, (255, 255, 255)), (8, 8))
+    dibujar_debug_grafo(superficie, mundo["grafo_fisico"], mundo["decoraciones"])
+
+
+def _posicion_en_mapa(plataforma, ancho=ANCHO, alto=ALTO):
+    x, y = plataforma["posicion"]
+    return round(x * ancho), round(y * alto)
+
+
+def dibujar_debug_grafo(superficie, grafo, decoraciones):
+    """Dibuja conexiones e ids del grafo solo cuando F3 esta activo."""
+    fuente = pygame.font.Font(None, 13)
+    decoraciones_por_id = {
+        objeto.get("id"): objeto
+        for objeto in decoraciones
+        if objeto.get("puente")
+    }
+    for puente in grafo.puentes.values():
+        origen = grafo.plataformas[puente["origen"]]
+        destino = grafo.plataformas[puente["destino"]]
+        pygame.draw.line(
+            superficie,
+            (80, 235, 255),
+            _posicion_en_mapa(origen),
+            _posicion_en_mapa(destino),
+            1,
+        )
+        decoracion = decoraciones_por_id.get(puente["id"])
+        if decoracion:
+            etiqueta = fuente.render(puente["id"], True, (255, 245, 150))
+            etiqueta_rect = etiqueta.get_rect(center=decoracion["rect"].center)
+            pygame.draw.rect(
+                superficie, (12, 28, 35), etiqueta_rect.inflate(4, 2), border_radius=2
+            )
+            superficie.blit(etiqueta, etiqueta_rect)
+
+    for plataforma in grafo.plataformas.values():
+        centro = _posicion_en_mapa(plataforma)
+        pygame.draw.circle(superficie, (255, 235, 90), centro, 5)
+        pygame.draw.circle(superficie, (22, 35, 24), centro, 3)
+        etiqueta = fuente.render(plataforma["id"], True, (255, 255, 255))
+        etiqueta_rect = etiqueta.get_rect(midtop=(centro[0], centro[1] + 6))
+        etiqueta_rect.clamp_ip(superficie.get_rect())
+        pygame.draw.rect(
+            superficie, (12, 28, 22), etiqueta_rect.inflate(4, 2), border_radius=2
+        )
+        superficie.blit(etiqueta, etiqueta_rect)
+
+
+def dibujar_propagaciones_grafo(superficie, grafo, decoraciones):
+    """Superpone luz y una senal movil sobre los puentes de cada ruta activa."""
+    estados_propagaciones = grafo.obtener_estado_visual_propagaciones()
+    if not estados_propagaciones:
+        return
+    decoraciones_por_id = {
+        objeto.get("id"): objeto
+        for objeto in decoraciones
+        if objeto.get("puente")
+    }
+    luz = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+    senales = []
+    for estado in estados_propagaciones:
+        puente_ids = [*estado["puentes_iluminados"], estado["puente_actual"]]
+        for puente_id in puente_ids:
+            decoracion = decoraciones_por_id.get(puente_id)
+            if not decoracion:
+                continue
+            puente = grafo.puentes[puente_id]
+            origen = _posicion_en_mapa(grafo.plataformas[puente["origen"]])
+            destino = _posicion_en_mapa(grafo.plataformas[puente["destino"]])
+            dx, dy = destino[0] - origen[0], destino[1] - origen[1]
+            longitud = math.hypot(dx, dy) or 1
+            ux, uy = dx / longitud, dy / longitud
+            rect = decoracion["rect"]
+            semilongitud = 0.39 / max(2 * abs(ux) / rect.width, 2 * abs(uy) / rect.height)
+            centro = rect.center
+            inicio = (round(centro[0] - ux * semilongitud), round(centro[1] - uy * semilongitud))
+            fin = (round(centro[0] + ux * semilongitud), round(centro[1] + uy * semilongitud))
+
+            pygame.draw.line(luz, (65, 210, 255, 55), inicio, fin, 15)
+            pygame.draw.line(luz, (90, 225, 255, 150), inicio, fin, 7)
+            pygame.draw.line(luz, (255, 249, 195, 230), inicio, fin, 2)
+
+            if puente_id == estado["puente_actual"]:
+                avance = estado["avance"]
+                senales.append((
+                    round(inicio[0] + (fin[0] - inicio[0]) * avance),
+                    round(inicio[1] + (fin[1] - inicio[1]) * avance),
+                ))
+
+    if senales:
+        superficie.blit(luz, (0, 0))
+        for senal in senales:
+            pygame.draw.circle(superficie, (80, 220, 255), senal, 8)
+            pygame.draw.circle(superficie, (255, 255, 225), senal, 4)
 
 
 def dibujar_jugador(superficie, jugador):
@@ -781,6 +924,9 @@ def dibujar_mapa(
     superficie.blit(recursos["mapa"], (0, 0))
 
     dibujar_troncos_eco(superficie, recursos, mundo)
+    dibujar_propagaciones_grafo(
+        superficie, mundo["grafo_fisico"], mundo["decoraciones"]
+    )
     jugador = mundo["jugador"]
     dibujar_jugador(superficie, jugador)
     if particulas:
@@ -1498,6 +1644,7 @@ def crear_mundo(recursos):
         "hitboxes": recursos.get("hitboxes", []),
         "personajes": personajes,
         "jugador": crear_jugador_local(recursos),
+        "grafo_fisico": crear_grafo_fisico(recursos["decoraciones"]),
     }
     ajustar_inicio_jugador(mundo["jugador"], mundo)
     mundo["posicion_casa"] = mundo["jugador"]["pies"].copy()
@@ -1658,6 +1805,9 @@ def main():
     volumen.conectar_audio(gestor_audio)
     volumen.configurar([("volver", "Volver")])
     ayuda = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
+    fondo_menu = cargar_imagen(os.path.join("Fondos", "Fondo_pausa.png"))
+    for menu in (pausa, volumen, ayuda):
+        menu.establecer_fondo(fondo_menu, 0.6)
     conversaciones = {
         "Kael": {"personaje": "Kael", "texto": "Quiero conocer qué dicen los habitantes antes de responder.", "respuestas": []},
         "Mira": {"personaje": "Mira", "texto": "Guardián, circula un rumor sobre el Puente Norte.", "respuestas": []},
@@ -1773,6 +1923,7 @@ def main():
         delta_ms = reloj.tick(FPS)
         delta_segundos = delta_ms / 1000
         sistema_particulas.actualizar(delta_ms)
+        mundo["grafo_fisico"].actualizar_propagaciones(delta_ms)
         tiempo_particulas_ambientales += delta_ms
         if tiempo_particulas_ambientales >= 850:
             tiempo_particulas_ambientales %= 850
