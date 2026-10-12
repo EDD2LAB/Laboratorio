@@ -13,6 +13,7 @@ from Arboles import (
     construir_tablilla_suceso_natural,
     construir_tablilla_dia_tres,
 )
+from propagacion_informacion import PropagacionInformacion
 
 
 OPCIONES_CLASIFICACION = {
@@ -50,10 +51,13 @@ class EstadoJuego:
         ]
 
         self.tablillas_resueltas = 0
+        self.dia = 0
         self.nodo_actual = None
         self.categoria_tablilla_actual = None
         self.camino_decision_actual = []
         self.historial_decisiones = []
+        self.propagaciones_informacion = []
+        self.propagacion_actual = None
         # La clasificación se guarda como resultado: no se revela mientras
         # el jugador todavía está tomando decisiones sobre la tablilla.
         self.resultado_evento = None
@@ -125,6 +129,7 @@ class EstadoJuego:
         if not self.evento_clasificado():
             return
         self.resultado_evento = None
+        self.dia = min(self.tablillas_resueltas, 2)
         if self.tablillas_resueltas == 2 and not self.tablillas_pendientes:
             tablilla_dia_tres = construir_tablilla_dia_tres(self.historial_decisiones)
             self.tablillas_pendientes.append(tablilla_dia_tres)
@@ -210,9 +215,19 @@ class EstadoJuego:
             self.nodo_actual = self.tablillas_pendientes.pop(0)
             self.categoria_tablilla_actual = getattr(self.nodo_actual, "categoria", None)
             self.camino_decision_actual = []
+            ruta_categoria = self.ruta_categoria_actual()
+            categoria = ruta_categoria[1] if len(ruta_categoria) > 1 else "normal"
+            tipo = "rumor" if categoria in ("Rumor Politico", "Acusacion Personal") else "normal"
+            self.propagacion_actual = PropagacionInformacion(
+                f"tablilla_{self.tablillas_resueltas + 1}",
+                self.nodo_actual.texto,
+                tipo,
+            )
+            self.propagaciones_informacion.append(self.propagacion_actual)
         else:
             self.nodo_actual = None
             self.categoria_tablilla_actual = None
+            self.propagacion_actual = None
             self.terminado = True
 
     def _texto_resumen_final(self):

@@ -140,7 +140,10 @@ class GrafoFisico:
                 return puente_id
         return None
 
-    def iniciar_propagacion(self, origen, destino, duracion_puente_ms=None):
+    def iniciar_propagacion(
+        self, origen, destino, duracion_puente_ms=None, color=(80, 220, 255),
+        medio="directo", demora_ms=0,
+    ):
         """Encola una señal visual que recorre los puentes de la ruta."""
         camino = self.bfs(origen, destino)
         if camino is None:
@@ -160,6 +163,8 @@ class GrafoFisico:
         )
         if duracion <= 0:
             raise ValueError("La duracion de cada puente debe ser positiva.")
+        if demora_ms < 0:
+            raise ValueError("La demora de una propagacion no puede ser negativa.")
         propagacion = {
             "origen": origen,
             "destino": destino,
@@ -167,6 +172,9 @@ class GrafoFisico:
             "puentes": puente_ids,
             "tiempo_ms": 0.0,
             "duracion_puente_ms": duracion,
+            "color": tuple(color),
+            "medio": medio,
+            "demora_ms": demora_ms,
         }
         self._propagaciones.append(propagacion)
         return propagacion
@@ -180,7 +188,8 @@ class GrafoFisico:
             propagacion
             for propagacion in self._propagaciones
             if propagacion["tiempo_ms"]
-            <= len(propagacion["puentes"]) * propagacion["duracion_puente_ms"]
+            <= propagacion["demora_ms"]
+            + len(propagacion["puentes"]) * propagacion["duracion_puente_ms"]
             + self.DURACION_RESPLANDOR_MS
         ]
 
@@ -189,18 +198,24 @@ class GrafoFisico:
         estados = []
         for propagacion in self._propagaciones:
             puentes = propagacion["puentes"]
-            if not puentes:
+            tiempo_activo = propagacion["tiempo_ms"] - propagacion["demora_ms"]
+            if not puentes or tiempo_activo < 0:
                 continue
             duracion = propagacion["duracion_puente_ms"]
-            indice_actual = min(int(propagacion["tiempo_ms"] // duracion), len(puentes) - 1)
-            avance = min(1.0, (propagacion["tiempo_ms"] % duracion) / duracion)
-            if propagacion["tiempo_ms"] >= len(puentes) * duracion:
+            indice_actual = min(int(tiempo_activo // duracion), len(puentes) - 1)
+            avance = min(1.0, (tiempo_activo % duracion) / duracion)
+            if tiempo_activo >= len(puentes) * duracion:
                 indice_actual = len(puentes) - 1
                 avance = 1.0
+            camino = propagacion["camino"]
             estados.append({
                 "puentes_iluminados": puentes[:indice_actual],
                 "puente_actual": puentes[indice_actual],
                 "avance": avance,
-                "camino": propagacion["camino"],
+                "camino": camino,
+                "origen_tramo": camino[indice_actual],
+                "destino_tramo": camino[indice_actual + 1],
+                "color": propagacion["color"],
+                "medio": propagacion["medio"],
             })
         return estados

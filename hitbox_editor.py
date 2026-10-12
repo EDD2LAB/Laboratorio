@@ -631,6 +631,7 @@ def main():
     show_interactables = True
     show_objects = True
     show_labels = True
+    hide_bridge_hitboxes = True
     grid_snap = False
     GRID_SIZE = 0.01    # 1% of world per axis
 
@@ -656,13 +657,26 @@ def main():
     bridge_button_rect = pygame.Rect(
         npc_button_rect.right + 4, panel_button_y, panel_button_w, panel_button_h
     )
+    animal_button_y = panel_button_y + panel_button_h + 4
+    animal_button_rect = pygame.Rect(
+        panel_rect.x + 4, animal_button_y, panel_button_w, panel_button_h
+    )
+    vegetation_button_rect = pygame.Rect(
+        animal_button_rect.right + 4, animal_button_y, panel_button_w, panel_button_h
+    )
     trunk_button_rect = pygame.Rect(
         panel_rect.x + 4,
-        panel_button_y + panel_button_h + 4,
+        animal_button_y + panel_button_h + 4,
         panel_rect.width - 8,
         panel_button_h,
     )
-    hitbox_button_y = trunk_button_rect.bottom + 4
+    bridge_hitbox_button_rect = pygame.Rect(
+        panel_rect.x + 4,
+        trunk_button_rect.bottom + 4,
+        panel_rect.width - 8,
+        panel_button_h,
+    )
+    hitbox_button_y = bridge_hitbox_button_rect.bottom + 4
     hitbox_button_rect = pygame.Rect(
         panel_rect.x + 4, hitbox_button_y, panel_rect.width - 8, panel_button_h
     )
@@ -946,6 +960,9 @@ def main():
     backgrounds_dir = os.path.join(images_root, "Fondos")
     bridges_dir = os.path.join(images_root, "Puentes")
     trunks_dir = os.path.join(images_root, "Tronco ecos")
+    animals_dir = os.path.join(images_root, "Animales")
+    vegetation_dir = os.path.join(images_root, "Vegetación")
+    ambient_animation_dir = os.path.join(images_root, "Animaciones Ambiente")
     valid_obj_ext = npc_image_ext
     available_objects = []
 
@@ -966,6 +983,7 @@ def main():
     current_object_idx = 0
     pending_placement_frames = 1   # frames que se asignarán al próximo objeto colocado
     object_cache = {}
+    bridge_animation_cache = {}
     placement_sizes = {}
     decoracion = []
     deco_history = [copy.deepcopy(decoracion)]
@@ -1029,6 +1047,43 @@ def main():
             max(MIN_DECO, int(obj["h"] * world_rect.height)),
         )
 
+    def hitbox_sobre_puente(hitbox):
+        if hitbox.get("role") not in ("wall", "walkable"):
+            return False
+        tipo = hitbox.get("type", "rect")
+        if tipo == "rect":
+            rect = denormalize_rect(hitbox, world_rect)
+        elif tipo == "circle":
+            radio = max(1, round(hitbox.get("r", 0) * world_rect.width))
+            centro_x = round(hitbox.get("cx", 0) * world_rect.width)
+            centro_y = round(hitbox.get("cy", 0) * world_rect.height)
+            rect = pygame.Rect(centro_x - radio, centro_y - radio, radio * 2, radio * 2)
+        elif tipo == "line":
+            x1 = round(hitbox.get("x1", 0) * world_rect.width)
+            y1 = round(hitbox.get("y1", 0) * world_rect.height)
+            x2 = round(hitbox.get("x2", 0) * world_rect.width)
+            y2 = round(hitbox.get("y2", 0) * world_rect.height)
+            rect = pygame.Rect(
+                min(x1, x2), min(y1, y2),
+                max(1, abs(x2 - x1)), max(1, abs(y2 - y1)),
+            ).inflate(max(2, round(hitbox.get("thickness", 0.008) * world_rect.width)), 2)
+        else:
+            return False
+
+        for objeto in decoracion:
+            if not (
+                os.path.basename(objeto.get("name", "")).casefold().startswith("puente")
+            ):
+                continue
+            puente_rect = get_deco_world_rect(objeto)
+            if rect.width > puente_rect.width * 1.5 or rect.height > puente_rect.height * 1.5:
+                continue
+            interseccion = rect.clip(puente_rect)
+            area_menor = max(1, min(rect.width * rect.height, puente_rect.width * puente_rect.height))
+            if interseccion.width * interseccion.height / area_menor >= 0.2:
+                return True
+        return False
+
     def normalize_deco(x, y, w, h):
         return {"x": x / world_rect.width, "y": y / world_rect.height,
                 "w": w / world_rect.width, "h": h / world_rect.height}
@@ -1041,6 +1096,8 @@ def main():
         """Detecta cuántos frames tiene un spritesheet horizontal por ratio de aspecto."""
         if "tronco ecos" in obj_name.casefold():
             return 4
+        if obj_name.casefold().replace("\\", "/").startswith("animales/"):
+            return 8
         iw, ih = obj_img.get_size()
         if ih == 0:
             return 1
@@ -1093,6 +1150,28 @@ def main():
         if obj_name not in placement_sizes:
             placement_sizes[obj_name] = get_initial_deco_size(obj_img, obj_name)
         return placement_sizes[obj_name]
+
+    def get_bridge_animation_frames(obj_name):
+        stem = os.path.splitext(os.path.basename(obj_name))[0]
+        if not stem.casefold().startswith("puente") or not stem[6:].isdigit():
+            return []
+        cache_key = stem.casefold()
+        if cache_key not in bridge_animation_cache:
+            animation_path = os.path.join(
+                ambient_animation_dir, f"{stem}_balanceo.png"
+            )
+            frames = []
+            try:
+                sheet = pygame.image.load(animation_path).convert_alpha()
+                frame_width = sheet.get_width() // 8
+                frames = [
+                    sheet.subsurface((index * frame_width, 0, frame_width, sheet.get_height())).copy()
+                    for index in range(8)
+                ]
+            except (OSError, pygame.error):
+                frames = []
+            bridge_animation_cache[cache_key] = frames
+        return bridge_animation_cache[cache_key]
 
     def get_deco_crop_rect(obj, obj_img):
         crop = obj.get("crop")
@@ -1524,6 +1603,8 @@ def main():
         items = []
         for i, h in enumerate(hitboxes):
             role = h.get("role", "wall")
+            if hide_bridge_hitboxes and hitbox_sobre_puente(h):
+                continue
             if role in ("wall", "walkable") and not show_walls:
                 continue
             if role in ("interactable", "other") and not show_interactables:
@@ -1634,6 +1715,41 @@ def main():
         deco_crop_dragging = False
         spawn_status_message = (
             f"Puente {os.path.basename(bridge_name)} listo; "
+            "haz clic en el mapa para colocarlo."
+        )
+        spawn_status_timer = 240
+
+    def choose_collection(folder, label):
+        nonlocal screen, current_object_idx, pending_placement_frames
+        nonlocal selected_deco_idx, moving_deco_idx, editor_mode, deco_crop_mode
+        nonlocal deco_crop_dragging, spawn_status_message, spawn_status_timer
+        if not os.path.isdir(folder):
+            spawn_status_message = f"No se encontró la carpeta de {label.lower()}."
+            spawn_status_timer = 240
+            return
+        selected_path = choose_image_gui(folder, f"Elegir {label.lower()} para colocar")
+        screen = pygame.display.set_mode((win_w, win_h), pygame.NOFRAME)
+        pygame.display.set_caption("Editor de Hitboxes")
+        if selected_path is None:
+            spawn_status_message = f"Selección de {label.lower()} cancelada."
+            spawn_status_timer = 120
+            return
+
+        object_name = os.path.relpath(selected_path, images_root).replace("\\", "/")
+        if object_name not in available_objects:
+            available_objects.append(object_name)
+        current_object_idx = available_objects.index(object_name)
+        object_image = load_object_image(object_name)
+        pending_placement_frames = (
+            detect_sprite_frames(object_image, object_name) if object_image else 1
+        )
+        selected_deco_idx = None
+        moving_deco_idx = None
+        editor_mode = "object"
+        deco_crop_mode = False
+        deco_crop_dragging = False
+        spawn_status_message = (
+            f"{label} {os.path.basename(object_name)} listo; "
             "haz clic en el mapa para colocarlo."
         )
         spawn_status_timer = 240
@@ -1859,8 +1975,17 @@ def main():
                     if bridge_button_rect.collidepoint(mx, my):
                         choose_bridge()
                         continue
+                    if animal_button_rect.collidepoint(mx, my):
+                        choose_collection(animals_dir, "Animales")
+                        continue
+                    if vegetation_button_rect.collidepoint(mx, my):
+                        choose_collection(vegetation_dir, "Vegetación")
+                        continue
                     if trunk_button_rect.collidepoint(mx, my):
                         choose_trunk()
+                        continue
+                    if bridge_hitbox_button_rect.collidepoint(mx, my):
+                        hide_bridge_hitboxes = not hide_bridge_hitboxes
                         continue
                     if hitbox_button_rect.collidepoint(mx, my):
                         editor_mode = "hitbox"
@@ -2504,7 +2629,13 @@ def main():
                     r = get_deco_world_rect(obj)
                     sx, sy = world_to_screen((r.x, r.y))
                     frames = int(obj.get("frames", 1))
-                    if frames > 1:
+                    bridge_frames = get_bridge_animation_frames(obj["name"])
+                    if bridge_frames:
+                        frame_surf = bridge_frames[
+                            (pygame.time.get_ticks() // 140) % len(bridge_frames)
+                        ]
+                        scaled = pygame.transform.smoothscale(frame_surf, (r.width, r.height))
+                    elif frames > 1:
                         # Spritesheet animado: w ya es 1 frame → subsurface + escalar a r.width×r.height
                         frame_idx  = (pygame.time.get_ticks() // 120) % frames
                         iw = obj_img.get_width()
@@ -2550,7 +2681,12 @@ def main():
                 py = int(mouse_world[1] - oh / 2)
                 sx, sy = world_to_screen((px, py))
                 cur_frames = pending_placement_frames
-                if cur_frames > 1:
+                bridge_frames = get_bridge_animation_frames(obj_name)
+                if bridge_frames:
+                    source = bridge_frames[
+                        (pygame.time.get_ticks() // 140) % len(bridge_frames)
+                    ]
+                elif cur_frames > 1:
                     fidx   = (pygame.time.get_ticks() // 120) % cur_frames
                     iw     = obj_img.get_width()
                     ih     = obj_img.get_height()
@@ -2566,6 +2702,8 @@ def main():
         anim_frame_idx = (pygame.time.get_ticks() // 180)
         for i, h in enumerate(hitboxes):
             role = h.get("role", "wall")
+            if hide_bridge_hitboxes and hitbox_sobre_puente(h):
+                continue
             if role in ("wall", "walkable") and not show_walls:
                 continue
             if role in ("interactable", "other") and not show_interactables:
@@ -2759,11 +2897,30 @@ def main():
         bridge_button_label = tiny.render("Puentes (U)", True, (240, 245, 230))
         screen.blit(bridge_button_label,
                     bridge_button_label.get_rect(center=bridge_button_rect.center))
+        pygame.draw.rect(screen, (60, 95, 65), animal_button_rect, border_radius=4)
+        pygame.draw.rect(screen, (120, 165, 125), animal_button_rect, 1, border_radius=4)
+        animal_button_label = tiny.render("Animales", True, (235, 250, 235))
+        screen.blit(animal_button_label,
+                    animal_button_label.get_rect(center=animal_button_rect.center))
+        pygame.draw.rect(screen, (65, 90, 65), vegetation_button_rect, border_radius=4)
+        pygame.draw.rect(screen, (130, 160, 110), vegetation_button_rect, 1, border_radius=4)
+        vegetation_button_label = tiny.render("Vegetación", True, (235, 250, 225))
+        screen.blit(vegetation_button_label,
+                    vegetation_button_label.get_rect(center=vegetation_button_rect.center))
         pygame.draw.rect(screen, (80, 65, 40), trunk_button_rect, border_radius=4)
         pygame.draw.rect(screen, (160, 130, 85), trunk_button_rect, 1, border_radius=4)
         trunk_button_label = tiny.render("Troncos de Ecos", True, (250, 235, 205))
         screen.blit(trunk_button_label,
                     trunk_button_label.get_rect(center=trunk_button_rect.center))
+        pygame.draw.rect(screen, (65, 65, 80), bridge_hitbox_button_rect, border_radius=4)
+        pygame.draw.rect(screen, (120, 120, 140), bridge_hitbox_button_rect, 1, border_radius=4)
+        bridge_hitbox_label = tiny.render(
+            "Hitboxes de puentes: ocultas" if hide_bridge_hitboxes
+            else "Hitboxes de puentes: visibles",
+            True, (240, 240, 245),
+        )
+        screen.blit(bridge_hitbox_label,
+                    bridge_hitbox_label.get_rect(center=bridge_hitbox_button_rect.center))
         pygame.draw.rect(screen, (65, 65, 80), hitbox_button_rect, border_radius=4)
         pygame.draw.rect(screen, (120, 120, 140), hitbox_button_rect, 1, border_radius=4)
         hitbox_button_label = tiny.render("Volver a hitboxes (O)", True, (240, 240, 245))

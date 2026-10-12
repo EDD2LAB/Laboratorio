@@ -178,29 +178,61 @@ def cargar_mapa_principal():
     with open(ruta_hitboxes, "r", encoding="utf-8") as archivo:
         datos = json.load(archivo)
 
-    mapa = cargar_imagen(os.path.join("Fondos", "Mapas", "Pr1SinP(Espacio).png"), (ANCHO, ALTO))
+    fondos_por_dia = (
+        os.path.join("Fondos", "Mapas", "Pr_MañanaLumi.png"),
+        os.path.join("Fondos", "Mapas", "Pr_Atardecer.png"),
+        os.path.join("Fondos", "Mapas", "Pr_Noche.png"),
+    )
+    mapas_dia = [
+        cargar_imagen(nombre, (ANCHO, ALTO))
+        for nombre in fondos_por_dia
+    ]
     decoraciones = []
     for objeto in datos.get("decoracion", []):
-        imagen = cargar_imagen(objeto["name"])
+        imagen_original = cargar_imagen(objeto["name"])
         recorte = objeto.get("crop")
-        if recorte:
-            x = max(0, min(imagen.get_width() - 1, round(recorte["x"] * imagen.get_width())))
-            y = max(0, min(imagen.get_height() - 1, round(recorte["y"] * imagen.get_height())))
-            ancho = max(1, min(imagen.get_width() - x, round(recorte["w"] * imagen.get_width())))
-            alto = max(1, min(imagen.get_height() - y, round(recorte["h"] * imagen.get_height())))
-            imagen = imagen.subsurface((x, y, ancho, alto)).copy()
-
         rect = pygame.Rect(
             round(objeto["x"] * ANCHO),
             round(objeto["y"] * ALTO),
             max(1, round(objeto["w"] * ANCHO)),
             max(1, round(objeto["h"] * ALTO)),
         )
-        imagen = pygame.transform.scale(imagen, rect.size)
         personaje = personaje_de_decoracion(objeto["name"])
         nombre_normalizado = normalizar_ruta(objeto["name"])
         es_puente = nombre_normalizado.startswith("puentes/")
         nombre_puente = os.path.splitext(os.path.basename(objeto["name"]))[0]
+        cantidad_frames = max(1, int(objeto.get("frames", 1)))
+        imagenes_frames = []
+        if cantidad_frames > 1 and not es_puente:
+            ancho_frame = imagen_original.get_width() // cantidad_frames
+            for indice_frame in range(cantidad_frames):
+                frame = imagen_original.subsurface((
+                    indice_frame * ancho_frame, 0, ancho_frame, imagen_original.get_height()
+                )).copy()
+                if recorte:
+                    x = max(0, min(frame.get_width() - 1, round(recorte["x"] * frame.get_width())))
+                    y = max(0, min(frame.get_height() - 1, round(recorte["y"] * frame.get_height())))
+                    ancho = max(1, min(frame.get_width() - x, round(recorte["w"] * frame.get_width())))
+                    alto = max(1, min(frame.get_height() - y, round(recorte["h"] * frame.get_height())))
+                    frame = frame.subsurface((x, y, ancho, alto)).copy()
+                imagenes_frames.append(pygame.transform.scale(frame, rect.size))
+            imagen = imagenes_frames[0] if imagenes_frames else imagen_original
+        else:
+            imagen = imagen_original
+            if recorte:
+                x = max(0, min(imagen.get_width() - 1, round(recorte["x"] * imagen.get_width())))
+                y = max(0, min(imagen.get_height() - 1, round(recorte["y"] * imagen.get_height())))
+                ancho = max(1, min(imagen.get_width() - x, round(recorte["w"] * imagen.get_width())))
+                alto = max(1, min(imagen.get_height() - y, round(recorte["h"] * imagen.get_height())))
+                imagen = imagen.subsurface((x, y, ancho, alto)).copy()
+            imagen = pygame.transform.scale(imagen, rect.size)
+
+        frames_puente = []
+        if es_puente:
+            numero_puente = nombre_puente.removeprefix("Puente")
+            frames_puente = cargar_spritesheet_frames(
+                os.path.join("Animaciones Ambiente", f"Puente{numero_puente}_balanceo.png")
+            )
         hitbox = rect.copy()
         if personaje == "Guardián":
             hitbox.inflate_ip(-round(rect.width * 0.4), -round(rect.height * 0.4))
@@ -212,13 +244,22 @@ def cargar_mapa_principal():
             "hitbox": hitbox,
             "imagen": imagen,
             "puente": es_puente,
+            "frames": imagenes_frames,
+            "frames_puente": frames_puente,
             "tronco_eco": nombre_normalizado.startswith("tronco ecos/"),
         })
 
     decoraciones.sort(key=lambda objeto: objeto["puente"], reverse=True)
-    for objeto in decoraciones:
-        if objeto["personaje"] != "Guardián" and not objeto["tronco_eco"]:
-            mapa.blit(objeto["imagen"], objeto["rect"])
+    for mapa_dia in mapas_dia:
+        for objeto in decoraciones:
+            if (
+                objeto["personaje"] != "Guardián"
+                and not objeto["puente"]
+                and not objeto["tronco_eco"]
+                and not objeto["frames"]
+            ):
+                mapa_dia.blit(objeto["imagen"], objeto["rect"])
+    mapa = mapas_dia[0]
 
     interacciones = []
     hitboxes = datos.get("hitboxes", [])
@@ -273,7 +314,7 @@ def cargar_mapa_principal():
     )
     if guardian is None:
         print("[advertencia] No se encontró la decoración del Guardián; usando posición inicial central.")
-    return mapa, decoraciones, interacciones, hitboxes, guardian
+    return mapa, decoraciones, interacciones, hitboxes, guardian, mapas_dia
 
 
 def cargar_fuente(tamano):
@@ -723,7 +764,8 @@ def mover_jugador(jugador, mundo, teclas, delta_ms):
 
 
 def dibujar_debug_mapa(
-    superficie, mundo, jugador, interactuable, distancia, particulas, estado_control
+    superficie, mundo, jugador, interactuable, distancia, particulas, estado_control,
+    propagaciones=None,
 ):
     for hitbox in mundo["hitboxes"]:
         if hitbox.get("role") == "walkable":
@@ -786,6 +828,29 @@ def dibujar_debug_mapa(
     )
     superficie.blit(fuente_debug.render(detalle, True, (255, 255, 255)), (8, 8))
     dibujar_debug_grafo(superficie, mundo["grafo_fisico"], mundo["decoraciones"])
+    fuente_historial = pygame.font.Font(None, 15)
+    y_historial = 28
+    for propagacion in (propagaciones or [])[-3:]:
+        tramos = " | ".join(
+            f"{tramo['transmisor']} -> {tramo['receptor']} "
+            f"[{' > '.join(tramo['ruta']) or 'sin puente'}] ({tramo['medio']})"
+            for tramo in propagacion.transmisiones
+        ) or "sin transmisiones"
+        lineas = [
+            f"{propagacion.id} | origen: {propagacion.origen} | tipo: {propagacion.tipo} | "
+            f"verificacion: {propagacion.estado_verificacion} | alcance: {propagacion.obtener_alcance()}",
+            *envolver_texto(f"Tramos: {tramos}", fuente_historial, ANCHO - 28),
+            f"Transmisores: {' -> '.join(propagacion.transmisores) or 'ninguno'}",
+            f"Receptores: {', '.join(propagacion.destinatarios) or 'ninguno'}",
+        ]
+        for linea in lineas:
+            y = y_historial
+            panel = pygame.Surface((ANCHO - 16, 17), pygame.SRCALPHA)
+            panel.fill((10, 24, 19, 205))
+            superficie.blit(panel, (8, y))
+            superficie.blit(fuente_historial.render(linea, True, (255, 244, 194)), (12, y + 1))
+            y_historial += 18
+        y_historial += 4
 
 
 def _posicion_en_mapa(plataforma, ancho=ANCHO, alto=ALTO):
@@ -833,7 +898,46 @@ def dibujar_debug_grafo(superficie, grafo, decoraciones):
         superficie.blit(etiqueta, etiqueta_rect)
 
 
-def dibujar_propagaciones_grafo(superficie, grafo, decoraciones):
+def dibujar_ambiente_animado(superficie, recursos):
+    """Anima los elementos superpuestos sin sustituir los fondos ni las hitboxes."""
+    tiempo = pygame.time.get_ticks()
+    frames_cascada = recursos.get("cascada_frames", [])
+    if frames_cascada:
+        rect_cascada = pygame.Rect(
+            round(ANCHO * 0.31), round(ALTO * 0.08),
+            round(ANCHO * 0.125), round(ALTO * 0.76),
+        )
+        frame = frames_cascada[(tiempo // 140) % len(frames_cascada)]
+        superficie.blit(pygame.transform.scale(frame, rect_cascada.size), rect_cascada)
+
+    frames_vegetacion = recursos.get("vegetacion_frames", [])
+    if frames_vegetacion:
+        frame = frames_vegetacion[(tiempo // 140) % len(frames_vegetacion)]
+        ancho_arbol = round(ANCHO * 0.43)
+        alto_arbol = round(ancho_arbol * frame.get_height() / frame.get_width())
+        desplazamiento = round(math.sin(tiempo / 430) * 3)
+        rect_arbol = pygame.Rect(
+            (ANCHO - ancho_arbol) // 2 + desplazamiento, 0,
+            ancho_arbol, alto_arbol,
+        )
+        imagen_arbol = pygame.transform.smoothscale(frame, rect_arbol.size)
+        imagen_arbol.set_alpha(80)
+        superficie.blit(imagen_arbol, rect_arbol)
+
+    for objeto in recursos["decoraciones"]:
+        if objeto.get("puente") and objeto.get("frames_puente"):
+            frames = objeto["frames_puente"]
+            frame = frames[(tiempo // 140) % len(frames)]
+            superficie.blit(pygame.transform.scale(frame, objeto["rect"].size), objeto["rect"])
+        elif objeto.get("puente"):
+            superficie.blit(objeto["imagen"], objeto["rect"])
+        elif objeto.get("frames") and not objeto.get("tronco_eco"):
+            frames = objeto["frames"]
+            frame = frames[(tiempo // 140) % len(frames)]
+            superficie.blit(frame, objeto["rect"])
+
+
+def dibujar_propagaciones_grafo(superficie, grafo, decoraciones, recursos=None):
     """Superpone luz y una senal movil sobre los puentes de cada ruta activa."""
     estados_propagaciones = grafo.obtener_estado_visual_propagaciones()
     if not estados_propagaciones:
@@ -847,13 +951,22 @@ def dibujar_propagaciones_grafo(superficie, grafo, decoraciones):
     senales = []
     for estado in estados_propagaciones:
         puente_ids = [*estado["puentes_iluminados"], estado["puente_actual"]]
+        color = estado["color"]
         for puente_id in puente_ids:
             decoracion = decoraciones_por_id.get(puente_id)
             if not decoracion:
                 continue
             puente = grafo.puentes[puente_id]
-            origen = _posicion_en_mapa(grafo.plataformas[puente["origen"]])
-            destino = _posicion_en_mapa(grafo.plataformas[puente["destino"]])
+            origen_id = (
+                estado["origen_tramo"] if puente_id == estado["puente_actual"]
+                else puente["origen"]
+            )
+            destino_id = (
+                estado["destino_tramo"] if puente_id == estado["puente_actual"]
+                else puente["destino"]
+            )
+            origen = _posicion_en_mapa(grafo.plataformas[origen_id])
+            destino = _posicion_en_mapa(grafo.plataformas[destino_id])
             dx, dy = destino[0] - origen[0], destino[1] - origen[1]
             longitud = math.hypot(dx, dy) or 1
             ux, uy = dx / longitud, dy / longitud
@@ -863,22 +976,47 @@ def dibujar_propagaciones_grafo(superficie, grafo, decoraciones):
             inicio = (round(centro[0] - ux * semilongitud), round(centro[1] - uy * semilongitud))
             fin = (round(centro[0] + ux * semilongitud), round(centro[1] + uy * semilongitud))
 
-            pygame.draw.line(luz, (65, 210, 255, 55), inicio, fin, 15)
-            pygame.draw.line(luz, (90, 225, 255, 150), inicio, fin, 7)
+            pygame.draw.line(luz, (*color, 50), inicio, fin, 15)
+            pygame.draw.line(luz, (*color, 145), inicio, fin, 7)
             pygame.draw.line(luz, (255, 249, 195, 230), inicio, fin, 2)
 
             if puente_id == estado["puente_actual"]:
                 avance = estado["avance"]
-                senales.append((
+                punto = (
                     round(inicio[0] + (fin[0] - inicio[0]) * avance),
                     round(inicio[1] + (fin[1] - inicio[1]) * avance),
+                )
+                senales.append((
+                    punto, color, estado["medio"], dx, dy,
                 ))
 
     if senales:
         superficie.blit(luz, (0, 0))
-        for senal in senales:
-            pygame.draw.circle(superficie, (80, 220, 255), senal, 8)
-            pygame.draw.circle(superficie, (255, 255, 225), senal, 4)
+        for punto, color, medio, dx, dy in senales:
+            energia_frames = (recursos or {}).get("energia_puente_frames", [])
+            if energia_frames:
+                frame = energia_frames[(pygame.time.get_ticks() // 100) % len(energia_frames)].copy()
+                frame = pygame.transform.smoothscale(frame, (66, 34))
+                frame = pygame.transform.rotate(frame, -math.degrees(math.atan2(dy, dx)))
+                superficie.blit(frame, frame.get_rect(center=punto))
+            pygame.draw.circle(superficie, color, punto, 7)
+            pygame.draw.circle(superficie, (255, 255, 225), punto, 3)
+            if medio == "eco":
+                fase = (pygame.time.get_ticks() % 700) / 700
+                for indice in range(2):
+                    radio = 10 + round(((fase + indice * 0.5) % 1) * 30)
+                    alfa = round(170 * (1 - ((fase + indice * 0.5) % 1)))
+                    onda = pygame.Surface((radio * 2 + 2, radio * 2 + 2), pygame.SRCALPHA)
+                    pygame.draw.circle(
+                        onda, (*color, alfa), (radio + 1, radio + 1), radio, 2
+                    )
+                    superficie.blit(onda, onda.get_rect(center=punto))
+            elif medio == "mensajero":
+                frames_mensajero = (recursos or {}).get("mensajero_frames", [])
+                if frames_mensajero:
+                    frame = frames_mensajero[(pygame.time.get_ticks() // 120) % len(frames_mensajero)]
+                    frame = pygame.transform.scale(frame, (26, 36))
+                    superficie.blit(frame, frame.get_rect(midbottom=(punto[0], punto[1] - 5)))
 
 
 def dibujar_jugador(superficie, jugador):
@@ -921,11 +1059,12 @@ def dibujar_mapa(
     superficie, recursos, mundo, estado, mouse_pos, hud,
     interactuable=None, distancia=None, particulas=None, debug=False, resaltar=True,
 ):
-    superficie.blit(recursos["mapa"], (0, 0))
+    superficie.blit(recursos["mapas_dia"][estado.dia], (0, 0))
+    dibujar_ambiente_animado(superficie, recursos)
 
     dibujar_troncos_eco(superficie, recursos, mundo)
     dibujar_propagaciones_grafo(
-        superficie, mundo["grafo_fisico"], mundo["decoraciones"]
+        superficie, mundo["grafo_fisico"], mundo["decoraciones"], recursos
     )
     jugador = mundo["jugador"]
     dibujar_jugador(superficie, jugador)
@@ -934,7 +1073,7 @@ def dibujar_mapa(
     if debug:
         dibujar_debug_mapa(
             superficie, mundo, jugador, interactuable, distancia or 0,
-            particulas, "EXPLORANDO",
+            particulas, "EXPLORANDO", estado.propagaciones_informacion,
         )
 
     interaccion = interaccion_en_mapa(mouse_pos, mundo) if resaltar else None
@@ -1535,9 +1674,16 @@ def dibujar_final(superficie, recursos, estado):
     superficie.blit(instruccion, instruccion.get_rect(center=(ANCHO // 2, 655)))
 
 
-def dibujar_escena_dialogo(superficie, recursos, dialogos, mouse_pos, hud, jugador=None, particulas=None):
+def dibujar_escena_dialogo(
+    superficie, recursos, dialogos, mouse_pos, hud, jugador=None, particulas=None, mundo=None
+):
     """El diálogo se superpone al mapa y bloquea sus demás interacciones."""
-    superficie.blit(recursos["mapa"], (0, 0))
+    superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
+    dibujar_ambiente_animado(superficie, recursos)
+    if mundo:
+        dibujar_propagaciones_grafo(
+            superficie, mundo["grafo_fisico"], mundo["decoraciones"], recursos
+        )
     if jugador:
         if particulas:
             particulas.dibujar(superficie)
@@ -1546,17 +1692,31 @@ def dibujar_escena_dialogo(superficie, recursos, dialogos, mouse_pos, hud, jugad
     dialogos.dibujar(superficie, mouse_pos, ANCHO, ALTO)
 
 
-def dibujar_escena_mensaje(superficie, recursos, mensajes, mouse_pos, hud, jugador=None):
+def dibujar_escena_mensaje(
+    superficie, recursos, mensajes, mouse_pos, hud, jugador=None, mundo=None
+):
     """El pergamino se presenta sobre el mapa y bloquea las demás acciones."""
-    superficie.blit(recursos["mapa"], (0, 0))
+    superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
+    dibujar_ambiente_animado(superficie, recursos)
+    if mundo:
+        dibujar_propagaciones_grafo(
+            superficie, mundo["grafo_fisico"], mundo["decoraciones"], recursos
+        )
     if jugador:
         dibujar_jugador(superficie, jugador)
     hud.dibujar(superficie)
     mensajes.dibujar(superficie, mouse_pos)
 
 
-def dibujar_interfaz_eco(superficie, recursos, jugador, estado_eco, contactos, mensajes):
-    superficie.blit(recursos["mapa"], (0, 0))
+def dibujar_interfaz_eco(
+    superficie, recursos, jugador, estado_eco, contactos, mensajes, mundo=None
+):
+    superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
+    dibujar_ambiente_animado(superficie, recursos)
+    if mundo:
+        dibujar_propagaciones_grafo(
+            superficie, mundo["grafo_fisico"], mundo["decoraciones"], recursos
+        )
     dibujar_jugador(superficie, jugador)
     panel = pygame.Rect(190, 150, 580, 420)
     superficie.blit(superficie_con_alpha(panel.size, (17, 34, 28, 242)), panel.topleft)
@@ -1716,7 +1876,7 @@ def main():
     fuente_panel = cargar_fuente(13)
     fuente_resultado = cargar_fuente(28)
 
-    mapa, decoraciones, interacciones, hitboxes, guardian = cargar_mapa_principal()
+    mapa, decoraciones, interacciones, hitboxes, guardian, mapas_dia = cargar_mapa_principal()
     retratos_dialogo = {
         objeto["personaje"]: pygame.transform.scale(objeto["imagen"], (78, 78))
         for objeto in decoraciones
@@ -1724,10 +1884,28 @@ def main():
     }
     recursos = {
         "mapa": mapa,
+        "mapas_dia": mapas_dia,
+        "dia": 0,
         "decoraciones": decoraciones,
         "interacciones": interacciones,
         "hitboxes": hitboxes,
         "guardian": guardian,
+        "cascada_frames": cargar_spritesheet_frames(
+            os.path.join("Animaciones Ambiente", "Cascada_animación.png")
+        ),
+        "vegetacion_frames": cargar_spritesheet_frames(
+            os.path.join("Animaciones Ambiente", "Vegetación_animacion.png")
+        ),
+        "energia_puente_frames": cargar_spritesheet_frames(
+            os.path.join("Animaciones Ambiente", "Energia_puente.png")
+        ),
+        "mensajero_frames": [
+            cargar_imagen(
+                os.path.join("NPCS", "mensajero", f"Mensajero_corriendo_{indice}.png"),
+                requerido=False,
+            )
+            for indice in range(1, 5)
+        ],
         "guardian_walk_frames": {
             "abajo": cargar_spritesheet_frames(
                 os.path.join("NPCS", "Guardian", "Fila 2. Guardián.png")
@@ -1846,6 +2024,91 @@ def main():
     personaje_dialogo_activo = None
     clave_dialogo_activo = None
 
+    def plataforma_cercana(posicion):
+        return min(
+            mundo["grafo_fisico"].plataformas.values(),
+            key=lambda plataforma: math.dist(
+                posicion, _posicion_en_mapa(plataforma)
+            ),
+        )["id"]
+
+    def registrar_transmision(transmisor, receptor, medio, origen_pos, destino_pos, demora_ms=0):
+        propagacion = estado.propagacion_actual
+        if propagacion is None:
+            return None
+        grafo = mundo["grafo_fisico"]
+        origen_id = plataforma_cercana(origen_pos)
+        destino_id = plataforma_cercana(destino_pos)
+        ruta = grafo.buscar_camino(origen_id, destino_id)
+        if ruta is None:
+            raise RuntimeError(
+                f"No existe ruta para la transmision entre {origen_id} y {destino_id}."
+            )
+        propagacion.registrar_transmision(
+            transmisor,
+            receptor,
+            ruta,
+            medio,
+            origen_id,
+            destino_id,
+        )
+        if len(ruta) > 1:
+            grafo.iniciar_propagacion(
+                origen_id,
+                destino_id,
+                color=propagacion.color_visual(),
+                medio=medio,
+                demora_ms=demora_ms,
+            )
+        return ruta
+
+    def difundir_resultado_tablilla():
+        propagacion = estado.propagacion_actual
+        resultado = estado.resultado_evento_actual()
+        if not propagacion or not resultado:
+            return
+        camino = resultado.get("camino", [])
+        if not camino:
+            return
+
+        accion = accion_tablilla(camino[0])
+        texto_resultado = resultado.get("resultado", "")
+        propagacion.registrar_decision(accion or camino[0], resultado=texto_resultado)
+        texto_normalizado = normalizar_ruta(texto_resultado)
+        if accion == "consultar":
+            refutada = (
+                camino[-1].casefold() == "no"
+                or "exagerado" in texto_normalizado
+                or "rumor falso" in texto_normalizado
+                or "no es cierto" in texto_normalizado
+            )
+            confirmada = (
+                camino[-1].casefold() == "si"
+                or "verdad confirmada" in texto_normalizado
+                or ("confirma" in texto_normalizado and not refutada)
+            )
+            if refutada or confirmada:
+                propagacion.registrar_verificacion(confirmada and not refutada)
+        elif accion == "ignorar":
+            propagacion.marcar_como_rumor()
+        elif accion == "colgar" and propagacion.tipo == "rumor":
+            propagacion.marcar_como_rumor()
+
+        if accion not in ("colgar", "consultar"):
+            return
+        origen = mundo["jugador"]["pies"].center
+        for indice, personaje in enumerate(mundo["personajes"]):
+            if not personaje.get("activo", True):
+                continue
+            registrar_transmision(
+                "Guardián",
+                personaje["personaje"],
+                "tablilla",
+                origen,
+                personaje["rect"].center,
+                demora_ms=indice * 850,
+            )
+
     def abrir_dialogo_personaje(nombre):
         nonlocal personaje_dialogo_activo, clave_dialogo_activo
         personaje_dialogo_activo = nombre
@@ -1875,6 +2138,14 @@ def main():
             nombre, estado, conversaciones_vistas
         )
         dialogos.iniciar(dialogo, retratos_dialogo)
+        if objetivo:
+            registrar_transmision(
+                nombre,
+                "Guardián",
+                "conversacion",
+                objetivo["rect"].center,
+                jugador["pies"].center,
+            )
 
     def registrar_evento(evento):
             eventos_serializables.append(evento)
@@ -1974,6 +2245,17 @@ def main():
                             "tronco_origen_id": tronco.get("id", "eco_tronco"),
                             "timestamp": pygame.time.get_ticks(),
                         })
+                        destino = next(
+                            persona for persona in mundo["personajes"]
+                            if persona["personaje"] == receptor
+                        )
+                        registrar_transmision(
+                            "Guardián",
+                            receptor,
+                            "eco",
+                            mundo["jugador"]["pies"].center,
+                            destino["rect"].center,
+                        )
                         eco_ui["respuesta"] = construir_respuesta_eco(receptor, mensaje_id, estado)
                         sistema_particulas.emitir(480, 380, 12)
             elif escena in (
@@ -2013,6 +2295,7 @@ def main():
                 )
                 if resultado_dialogo:
                     tipo, respuesta = resultado_dialogo
+                    personaje_que_respondio = personaje_dialogo_activo
                     if personaje_dialogo_activo:
                         conversaciones_vistas.add(clave_dialogo_activo)
                         if personaje_dialogo_activo in estado_personajes:
@@ -2020,6 +2303,21 @@ def main():
                         personaje_dialogo_activo = None
                     mundo["jugador"]["estado_visual"] = "idle"
                     if tipo == "respuesta" and respuesta in ("Te ayudaré", "Entrega el mensaje"):
+                        mensajero = next(
+                            (
+                                persona for persona in mundo["personajes"]
+                                if persona["personaje"] == "Mensajero"
+                            ),
+                            None,
+                        )
+                        if mensajero and personaje_que_respondio == "Mensajero":
+                            registrar_transmision(
+                                "Mensajero",
+                                "Guardián",
+                                "mensajero",
+                                mensajero["rect"].center,
+                                mundo["jugador"]["pies"].center,
+                            )
                         mensajes.abrir({
                             "remitente": "Sabio de las Raíces",
                             "destinatario": "Guardián",
@@ -2040,6 +2338,7 @@ def main():
             elif escena == ESCENA_FINAL:
                 if evento.type == pygame.KEYDOWN and evento.key == pygame.K_r:
                     estado = EstadoJuego()
+                    recursos["dia"] = 0
                     conversaciones_vistas.clear()
                     clave_dialogo_activo = None
                     estado_caldero_anterior = estado_caldero_actual
@@ -2161,6 +2460,7 @@ def main():
                     pocion_animacion = iniciar_animacion_decision(opcion_teclado)
             elif escena == ESCENA_RESULTADO and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 estado.continuar_despues_resultado()
+                recursos["dia"] = estado.dia
                 reiniciar_jugador_en_casa(mundo)
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
                 grupo_botones.reemplazar(botones)
@@ -2228,6 +2528,8 @@ def main():
                         })
                         if accion == "consultar":
                             sistema_particulas.emitir(*CENTRO_CALDERO, 12)
+                    if estado.evento_resuelto():
+                        difundir_resultado_tablilla()
                     estado_caldero_anterior = estado_caldero_actual
                     estado_caldero_actual = sincronizar_audio_caldero(
                         gestor_audio, estado, estado_caldero_anterior
@@ -2297,16 +2599,16 @@ def main():
             dialogos.actualizar(delta_segundos)
             dibujar_escena_dialogo(
                 lienzo, recursos, dialogos, mouse_pos, hud,
-                mundo["jugador"], sistema_particulas,
+                mundo["jugador"], sistema_particulas, mundo,
             )
         elif escena == ESCENA_MENSAJE:
             mensajes.actualizar(delta_segundos)
             dibujar_escena_mensaje(
-                lienzo, recursos, mensajes, mouse_pos, hud, mundo["jugador"]
+                lienzo, recursos, mensajes, mouse_pos, hud, mundo["jugador"], mundo
             )
         elif escena == ESCENA_ECO:
             dibujar_interfaz_eco(
-                lienzo, recursos, mundo["jugador"], eco_ui, nombres_contacto, mensajes_eco
+                lienzo, recursos, mundo["jugador"], eco_ui, nombres_contacto, mensajes_eco, mundo
             )
         elif escena == ESCENA_MAPA_DESTINO:
             lienzo.blit(recursos["mapa_destino"], (0, 0))
