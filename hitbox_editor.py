@@ -560,9 +560,13 @@ def main(forzar_selector=False):
     panel_x = win_w - PANEL_W
     panel_rect = pygame.Rect(panel_x, 0, PANEL_W, win_h - STATUS_H)
     status_rect_layout = pygame.Rect(0, win_h - STATUS_H, win_w, STATUS_H)
+    base_world_w, base_world_h = world_w, world_h
     world_rect = pygame.Rect(0, 0, world_w, world_h)
     camera_x = min(0, (world_w - viewport_rect.width) // 2)
     camera_y = min(0, (world_h - viewport_rect.height) // 2)
+    zoom_factor = 1.0
+    zoom_out_button_rect = pygame.Rect(viewport_rect.right - 72, viewport_rect.y + 8, 30, 26)
+    zoom_in_button_rect = pygame.Rect(viewport_rect.right - 38, viewport_rect.y + 8, 30, 26)
 
     def clamp_camera():
         nonlocal camera_x, camera_y
@@ -590,6 +594,23 @@ def main(forzar_selector=False):
     def world_to_screen(pos):
         wx, wy = pos
         return (wx - camera_x + viewport_rect.x, wy - camera_y + viewport_rect.y)
+
+    def change_zoom(factor):
+        nonlocal camera_x, camera_y, image_view, world_w, world_h, zoom_factor
+        new_zoom = max(0.55, min(3.0, zoom_factor * factor))
+        if new_zoom == zoom_factor:
+            return
+
+        anchor_x = (camera_x + viewport_rect.width / 2) / world_rect.width
+        anchor_y = (camera_y + viewport_rect.height / 2) / world_rect.height
+        zoom_factor = new_zoom
+        world_w = max(1, round(base_world_w * zoom_factor))
+        world_h = max(1, round(base_world_h * zoom_factor))
+        world_rect.size = (world_w, world_h)
+        image_view = pygame.transform.smoothscale(raw_image, world_rect.size)
+        camera_x = round(anchor_x * world_w - viewport_rect.width / 2)
+        camera_y = round(anchor_y * world_h - viewport_rect.height / 2)
+        clamp_camera()
 
     # ── Available images for door targets and spawn rules ────────────────────
     images_dir = os.path.join(project_root, "Imagenes/Fondos")
@@ -1953,6 +1974,12 @@ def main(forzar_selector=False):
             # ── Panel click ───────────────────────────────────────────────────
             if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 mx, my = event.pos
+                if zoom_out_button_rect.collidepoint(mx, my):
+                    change_zoom(1 / 1.2)
+                    continue
+                if zoom_in_button_rect.collidepoint(mx, my):
+                    change_zoom(1.2)
+                    continue
                 if panel_rect.collidepoint(mx, my):
                     if npc_button_rect.collidepoint(mx, my):
                         if npc_character_options:
@@ -2602,6 +2629,14 @@ def main(forzar_selector=False):
         # Clip rendering to viewport
         camera_view = pygame.Rect(camera_x, camera_y, viewport_rect.width, viewport_rect.height)
         screen.blit(image_view, viewport_rect.topleft, area=camera_view)
+        for zoom_button_rect, label in (
+            (zoom_out_button_rect, "-"),
+            (zoom_in_button_rect, "+"),
+        ):
+            pygame.draw.rect(screen, (35, 40, 52), zoom_button_rect, border_radius=4)
+            pygame.draw.rect(screen, (205, 210, 225), zoom_button_rect, 1, border_radius=4)
+            zoom_label = font.render(label, True, (245, 245, 250))
+            screen.blit(zoom_label, zoom_label.get_rect(center=zoom_button_rect.center))
 
         # Grid overlay
         if grid_snap:

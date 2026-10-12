@@ -148,6 +148,67 @@ def cargar_frames_tronco_eco():
     return frames
 
 
+def dibujar_cascada_animada(superficie, recursos):
+    frames = recursos.get("frames_cascada", [])
+    if not frames:
+        return
+    mapa_manana = recursos["mapas_dia"][0]
+    ancho_mapa, alto_mapa = mapa_manana.get_size()
+    ancho, alto = superficie.get_size()
+    escala_x = ancho / ancho_mapa
+    escala_y = alto / alto_mapa
+    rect_mapa_manana = pygame.Rect(
+        round(ancho_mapa * 321 / 1679),
+        round(alto_mapa * 60 / 937),
+        max(1, round(ancho_mapa * 324 / 1679)),
+        max(1, round(alto_mapa * 770 / 937)),
+    )
+    rect = pygame.Rect(
+        round(rect_mapa_manana.x * escala_x),
+        round(rect_mapa_manana.y * escala_y),
+        max(1, round(rect_mapa_manana.width * escala_x)),
+        max(1, round(rect_mapa_manana.height * escala_y)),
+    )
+    frames_por_mapa = recursos.setdefault("frames_cascada_por_mapa", {})
+    if 0 not in frames_por_mapa:
+        mascara_mapa_manana = pygame.Surface(rect_mapa_manana.size, pygame.SRCALPHA)
+        for y in range(rect_mapa_manana.height):
+            for x in range(rect_mapa_manana.width):
+                rojo, verde, azul = mapa_manana.get_at((
+                    rect_mapa_manana.x + x, rect_mapa_manana.y + y
+                ))[:3]
+                es_agua = (
+                    azul > 140 and verde > 130
+                    and azul > rojo * 1.35 and verde > rojo * 1.25
+                )
+                es_espuma = (
+                    azul > 185 and verde > 185
+                    and azul >= rojo and verde >= rojo
+                )
+                if es_agua or es_espuma:
+                    mascara_mapa_manana.set_at((x, y), (255, 255, 255, 255))
+        mascara = pygame.transform.scale(mascara_mapa_manana, rect.size)
+
+        frames_por_mapa[0] = []
+        for frame_original in frames:
+            frame = pygame.transform.scale(frame_original, rect.size)
+            frame.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+            frames_por_mapa[0].append(frame)
+
+    frames_animados = frames_por_mapa[0]
+    frame = frames_animados[(pygame.time.get_ticks() // 120) % len(frames_animados)]
+    superficie.blit(frame, rect)
+    for objeto in recursos["decoraciones"]:
+        if (
+            not objeto["puente"]
+            and not objeto["frames"]
+            and not objeto["tronco_eco"]
+            and objeto["personaje"] != "Guardián"
+            and objeto["rect"].colliderect(rect)
+        ):
+            superficie.blit(objeto["imagen"], objeto["rect"])
+
+
 def cargar_frames_idle_guardian():
     orientaciones = (
         "abajo",
@@ -169,12 +230,12 @@ def cargar_frames_idle_guardian():
 
 
 def cargar_mapa_principal():
-    """Carga el fondo y las capas interactivas definidas por el editor."""
+    """Carga el mapa usando en todos los momentos las hitboxes del fondo de mañana."""
     ruta_hitboxes = os.path.join(
         os.path.dirname(__file__),
         "Hitboxes",
         "Mapas",
-        "Pr1SinP(Espacio)_hitboxes.json",
+        "Pr_MañanaLumi_hitboxes.json",
     )
     with open(ruta_hitboxes, "r", encoding="utf-8") as archivo:
         datos = json.load(archivo)
@@ -947,6 +1008,7 @@ def dibujar_mapa(
     interactuable=None, distancia=None, particulas=None, debug=False, resaltar=True,
 ):
     superficie.blit(recursos["mapas_dia"][estado.dia], (0, 0))
+    dibujar_cascada_animada(superficie, recursos)
     dibujar_decoraciones_editor(superficie, recursos)
     dibujar_troncos_eco(superficie, recursos, mundo)
     jugador = mundo["jugador"]
@@ -1562,6 +1624,7 @@ def dibujar_escena_dialogo(
 ):
     """El diálogo se superpone al mapa y bloquea sus demás interacciones."""
     superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
+    dibujar_cascada_animada(superficie, recursos)
     dibujar_decoraciones_editor(superficie, recursos)
     if jugador:
         if particulas:
@@ -1576,6 +1639,7 @@ def dibujar_escena_mensaje(
 ):
     """El pergamino se presenta sobre el mapa y bloquea las demás acciones."""
     superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
+    dibujar_cascada_animada(superficie, recursos)
     dibujar_decoraciones_editor(superficie, recursos)
     if jugador:
         dibujar_jugador(superficie, jugador)
@@ -1587,6 +1651,7 @@ def dibujar_interfaz_eco(
     superficie, recursos, jugador, estado_eco, contactos, mensajes, mundo=None
 ):
     superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
+    dibujar_cascada_animada(superficie, recursos)
     dibujar_decoraciones_editor(superficie, recursos)
     dibujar_jugador(superficie, jugador)
     panel = pygame.Rect(190, 150, 580, 420)
@@ -1762,6 +1827,9 @@ def main():
     recursos = {
         "mapa": mapa,
         "mapas_dia": mapas_dia,
+        "frames_cascada": cargar_spritesheet_frames(
+            os.path.join("Animaciones Ambiente", "Cascada_animación.png")
+        ),
         "dia": 0,
         "decoraciones": decoraciones,
         "interacciones": interacciones,
