@@ -507,22 +507,27 @@ def main():
         print(f"No existe la imagen: {image_path}")
         return
 
-    raw_image = load_image(image_path)
-    iw, ih = raw_image.get_size()
-    max_w, max_h = 1600, 950
-    fit_scale = min(max_w / iw, max_h / ih, 1.0)
-    view_w = int(iw * fit_scale)
-    view_h = int(ih * fit_scale)
-    zoom_factor = 1.35
-    world_w = max(view_w, int(view_w * zoom_factor))
-    world_h = max(view_h, int(view_h * zoom_factor))
-    image_view = pygame.transform.smoothscale(raw_image, (world_w, world_h))
-
     padding = 20
     ui_h = 180
     display_info = pygame.display.Info()
     win_w = display_info.current_w
     win_h = display_info.current_h
+    viewport_w = max(100, win_w - padding * 2 - PANEL_W)
+    viewport_h = max(100, win_h - padding * 2 - ui_h - STATUS_H)
+
+    raw_image = load_image(image_path)
+    iw, ih = raw_image.get_size()
+    max_w, max_h = 1600, 950
+    fit_scale = min(
+        max_w / iw,
+        max_h / ih,
+        viewport_w / iw,
+        viewport_h / ih,
+        1.0,
+    )
+    world_w = max(1, int(iw * fit_scale))
+    world_h = max(1, int(ih * fit_scale))
+    image_view = pygame.transform.smoothscale(raw_image, (world_w, world_h))
 
     screen = pygame.display.set_mode((win_w, win_h), pygame.NOFRAME)
     pygame.display.set_caption("Editor de Hitboxes")
@@ -550,20 +555,24 @@ def main():
         return yy
 
     # ── Layout ────────────────────────────────────────────────────────────────
-    viewport_w = max(100, win_w - padding * 2 - PANEL_W)
-    viewport_h = max(100, win_h - padding * 2 - ui_h - STATUS_H)
     viewport_rect = pygame.Rect(padding, padding, viewport_w, viewport_h)
     panel_x = win_w - PANEL_W
     panel_rect = pygame.Rect(panel_x, 0, PANEL_W, win_h - STATUS_H)
     status_rect_layout = pygame.Rect(0, win_h - STATUS_H, win_w, STATUS_H)
     world_rect = pygame.Rect(0, 0, world_w, world_h)
-    camera_x = 0
-    camera_y = 0
+    camera_x = min(0, (world_w - viewport_rect.width) // 2)
+    camera_y = min(0, (world_h - viewport_rect.height) // 2)
 
     def clamp_camera():
         nonlocal camera_x, camera_y
-        camera_x = max(0, min(camera_x, max(0, world_rect.width - viewport_rect.width)))
-        camera_y = max(0, min(camera_y, max(0, world_rect.height - viewport_rect.height)))
+        camera_x = max(
+            min(0, world_rect.width - viewport_rect.width),
+            min(camera_x, 0),
+        )
+        camera_y = max(
+            min(0, world_rect.height - viewport_rect.height),
+            min(camera_y, 0),
+        )
 
     def center_camera_on_rect(rect):
         nonlocal camera_x, camera_y
@@ -670,9 +679,15 @@ def main():
         panel_rect.width - 8,
         panel_button_h,
     )
-    bridge_hitbox_button_rect = pygame.Rect(
+    ambient_button_rect = pygame.Rect(
         panel_rect.x + 4,
         trunk_button_rect.bottom + 4,
+        panel_rect.width - 8,
+        panel_button_h,
+    )
+    bridge_hitbox_button_rect = pygame.Rect(
+        panel_rect.x + 4,
+        ambient_button_rect.bottom + 4,
         panel_rect.width - 8,
         panel_button_h,
     )
@@ -983,7 +998,6 @@ def main():
     current_object_idx = 0
     pending_placement_frames = 1   # frames que se asignarán al próximo objeto colocado
     object_cache = {}
-    bridge_animation_cache = {}
     placement_sizes = {}
     decoracion = []
     deco_history = [copy.deepcopy(decoracion)]
@@ -1150,28 +1164,6 @@ def main():
         if obj_name not in placement_sizes:
             placement_sizes[obj_name] = get_initial_deco_size(obj_img, obj_name)
         return placement_sizes[obj_name]
-
-    def get_bridge_animation_frames(obj_name):
-        stem = os.path.splitext(os.path.basename(obj_name))[0]
-        if not stem.casefold().startswith("puente") or not stem[6:].isdigit():
-            return []
-        cache_key = stem.casefold()
-        if cache_key not in bridge_animation_cache:
-            animation_path = os.path.join(
-                ambient_animation_dir, f"{stem}_balanceo.png"
-            )
-            frames = []
-            try:
-                sheet = pygame.image.load(animation_path).convert_alpha()
-                frame_width = sheet.get_width() // 8
-                frames = [
-                    sheet.subsurface((index * frame_width, 0, frame_width, sheet.get_height())).copy()
-                    for index in range(8)
-                ]
-            except (OSError, pygame.error):
-                frames = []
-            bridge_animation_cache[cache_key] = frames
-        return bridge_animation_cache[cache_key]
 
     def get_deco_crop_rect(obj, obj_img):
         crop = obj.get("crop")
@@ -1984,6 +1976,11 @@ def main():
                     if trunk_button_rect.collidepoint(mx, my):
                         choose_trunk()
                         continue
+                    if ambient_button_rect.collidepoint(mx, my):
+                        choose_collection(
+                            ambient_animation_dir, "Animaciones ambiente"
+                        )
+                        continue
                     if bridge_hitbox_button_rect.collidepoint(mx, my):
                         hide_bridge_hitboxes = not hide_bridge_hitboxes
                         continue
@@ -2629,13 +2626,7 @@ def main():
                     r = get_deco_world_rect(obj)
                     sx, sy = world_to_screen((r.x, r.y))
                     frames = int(obj.get("frames", 1))
-                    bridge_frames = get_bridge_animation_frames(obj["name"])
-                    if bridge_frames:
-                        frame_surf = bridge_frames[
-                            (pygame.time.get_ticks() // 140) % len(bridge_frames)
-                        ]
-                        scaled = pygame.transform.smoothscale(frame_surf, (r.width, r.height))
-                    elif frames > 1:
+                    if frames > 1:
                         # Spritesheet animado: w ya es 1 frame → subsurface + escalar a r.width×r.height
                         frame_idx  = (pygame.time.get_ticks() // 120) % frames
                         iw = obj_img.get_width()
@@ -2681,12 +2672,7 @@ def main():
                 py = int(mouse_world[1] - oh / 2)
                 sx, sy = world_to_screen((px, py))
                 cur_frames = pending_placement_frames
-                bridge_frames = get_bridge_animation_frames(obj_name)
-                if bridge_frames:
-                    source = bridge_frames[
-                        (pygame.time.get_ticks() // 140) % len(bridge_frames)
-                    ]
-                elif cur_frames > 1:
+                if cur_frames > 1:
                     fidx   = (pygame.time.get_ticks() // 120) % cur_frames
                     iw     = obj_img.get_width()
                     ih     = obj_img.get_height()
@@ -2912,6 +2898,15 @@ def main():
         trunk_button_label = tiny.render("Troncos de Ecos", True, (250, 235, 205))
         screen.blit(trunk_button_label,
                     trunk_button_label.get_rect(center=trunk_button_rect.center))
+        pygame.draw.rect(screen, (70, 75, 105), ambient_button_rect, border_radius=4)
+        pygame.draw.rect(screen, (130, 140, 185), ambient_button_rect, 1, border_radius=4)
+        ambient_button_label = tiny.render(
+            "Animaciones ambiente", True, (235, 235, 255)
+        )
+        screen.blit(
+            ambient_button_label,
+            ambient_button_label.get_rect(center=ambient_button_rect.center),
+        )
         pygame.draw.rect(screen, (65, 65, 80), bridge_hitbox_button_rect, border_radius=4)
         pygame.draw.rect(screen, (120, 120, 140), bridge_hitbox_button_rect, 1, border_radius=4)
         bridge_hitbox_label = tiny.render(
@@ -3039,7 +3034,7 @@ def main():
         max_txt_w = win_w - panel_rect.width - padding * 2 - 8
 
         lines = [
-            ("Puentes: boton/U > elige variante > clic mapa | Troncos de Ecos: boton > elige imagen > clic mapa | NPC: boton > personaje > animacion > clic mapa | Hitboxes: boton/O", (210, 210, 160)),
+            ("Puentes: boton/U | Animaciones ambiente: elige cascada, vegetacion, energia o puente | clic mapa para colocar; [ ] cambia frames", (210, 210, 160)),
             ("Hitboxes: arrastra=crear | F=forma | I=roles | 4=Otros | K=puerta/NPC/Tronco/Caldero/Otro | Y=asignar plataforma", (235, 235, 235)),
             ("Clic derecho=borrar | M=mover | T=prueba | P=spawn; Shift+P=crear spawn | WASD=camara | J/H=imagen o destino | G=cuadricula | L=etiquetas | +/-=tamano", (190, 195, 210)),
             ("Ctrl+C/V: hitboxes en modo hitbox; objetos, personajes y puentes en modo objeto. Ctrl+Shift+C/V: seleccionado. Ctrl+D=duplicar | Enter=guardar | Ctrl+L=cargar | Ctrl+Z/Y=deshacer/rehacer | Esc=salir", (175, 185, 205)),

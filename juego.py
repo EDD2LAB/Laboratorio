@@ -48,6 +48,7 @@ ESCENA_MENSAJE = "mensaje_privado"
 ESCENA_MAPA_DESTINO = "mapa_destino"
 ESCENA_FINAL = "final"
 ESCENA_PAUSA = "pausa"
+ESCENA_VISUAL = "visual"
 ESCENA_VOLUMEN = "volumen"
 ESCENA_AYUDA = "ayuda"
 CENTRO_TABLILLA = (ANCHO // 2, 330)
@@ -227,12 +228,6 @@ def cargar_mapa_principal():
                 imagen = imagen.subsurface((x, y, ancho, alto)).copy()
             imagen = pygame.transform.scale(imagen, rect.size)
 
-        frames_puente = []
-        if es_puente:
-            numero_puente = nombre_puente.removeprefix("Puente")
-            frames_puente = cargar_spritesheet_frames(
-                os.path.join("Animaciones Ambiente", f"Puente{numero_puente}_balanceo.png")
-            )
         hitbox = rect.copy()
         if personaje == "Guardián":
             hitbox.inflate_ip(-round(rect.width * 0.4), -round(rect.height * 0.4))
@@ -245,7 +240,6 @@ def cargar_mapa_principal():
             "imagen": imagen,
             "puente": es_puente,
             "frames": imagenes_frames,
-            "frames_puente": frames_puente,
             "tronco_eco": nombre_normalizado.startswith("tronco ecos/"),
         })
 
@@ -898,125 +892,18 @@ def dibujar_debug_grafo(superficie, grafo, decoraciones):
         superficie.blit(etiqueta, etiqueta_rect)
 
 
-def dibujar_ambiente_animado(superficie, recursos):
-    """Anima los elementos superpuestos sin sustituir los fondos ni las hitboxes."""
+def dibujar_decoraciones_editor(superficie, recursos):
+    """Dibuja puentes y animaciones que fueron colocados desde el editor."""
     tiempo = pygame.time.get_ticks()
-    frames_cascada = recursos.get("cascada_frames", [])
-    if frames_cascada:
-        rect_cascada = pygame.Rect(
-            round(ANCHO * 0.31), round(ALTO * 0.08),
-            round(ANCHO * 0.125), round(ALTO * 0.76),
-        )
-        frame = frames_cascada[(tiempo // 140) % len(frames_cascada)]
-        superficie.blit(pygame.transform.scale(frame, rect_cascada.size), rect_cascada)
-
-    frames_vegetacion = recursos.get("vegetacion_frames", [])
-    if frames_vegetacion:
-        frame = frames_vegetacion[(tiempo // 140) % len(frames_vegetacion)]
-        ancho_arbol = round(ANCHO * 0.43)
-        alto_arbol = round(ancho_arbol * frame.get_height() / frame.get_width())
-        desplazamiento = round(math.sin(tiempo / 430) * 3)
-        rect_arbol = pygame.Rect(
-            (ANCHO - ancho_arbol) // 2 + desplazamiento, 0,
-            ancho_arbol, alto_arbol,
-        )
-        imagen_arbol = pygame.transform.smoothscale(frame, rect_arbol.size)
-        imagen_arbol.set_alpha(80)
-        superficie.blit(imagen_arbol, rect_arbol)
-
     for objeto in recursos["decoraciones"]:
-        if objeto.get("puente") and objeto.get("frames_puente"):
-            frames = objeto["frames_puente"]
-            frame = frames[(tiempo // 140) % len(frames)]
-            superficie.blit(pygame.transform.scale(frame, objeto["rect"].size), objeto["rect"])
-        elif objeto.get("puente"):
+        if objeto.get("personaje") == "Guardián" or objeto.get("tronco_eco"):
+            continue
+        if objeto.get("puente"):
             superficie.blit(objeto["imagen"], objeto["rect"])
         elif objeto.get("frames") and not objeto.get("tronco_eco"):
             frames = objeto["frames"]
             frame = frames[(tiempo // 140) % len(frames)]
             superficie.blit(frame, objeto["rect"])
-
-
-def dibujar_propagaciones_grafo(superficie, grafo, decoraciones, recursos=None):
-    """Superpone luz y una senal movil sobre los puentes de cada ruta activa."""
-    estados_propagaciones = grafo.obtener_estado_visual_propagaciones()
-    if not estados_propagaciones:
-        return
-    decoraciones_por_id = {
-        objeto.get("id"): objeto
-        for objeto in decoraciones
-        if objeto.get("puente")
-    }
-    luz = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
-    senales = []
-    for estado in estados_propagaciones:
-        puente_ids = [*estado["puentes_iluminados"], estado["puente_actual"]]
-        color = estado["color"]
-        for puente_id in puente_ids:
-            decoracion = decoraciones_por_id.get(puente_id)
-            if not decoracion:
-                continue
-            puente = grafo.puentes[puente_id]
-            origen_id = (
-                estado["origen_tramo"] if puente_id == estado["puente_actual"]
-                else puente["origen"]
-            )
-            destino_id = (
-                estado["destino_tramo"] if puente_id == estado["puente_actual"]
-                else puente["destino"]
-            )
-            origen = _posicion_en_mapa(grafo.plataformas[origen_id])
-            destino = _posicion_en_mapa(grafo.plataformas[destino_id])
-            dx, dy = destino[0] - origen[0], destino[1] - origen[1]
-            longitud = math.hypot(dx, dy) or 1
-            ux, uy = dx / longitud, dy / longitud
-            rect = decoracion["rect"]
-            semilongitud = 0.39 / max(2 * abs(ux) / rect.width, 2 * abs(uy) / rect.height)
-            centro = rect.center
-            inicio = (round(centro[0] - ux * semilongitud), round(centro[1] - uy * semilongitud))
-            fin = (round(centro[0] + ux * semilongitud), round(centro[1] + uy * semilongitud))
-
-            pygame.draw.line(luz, (*color, 50), inicio, fin, 15)
-            pygame.draw.line(luz, (*color, 145), inicio, fin, 7)
-            pygame.draw.line(luz, (255, 249, 195, 230), inicio, fin, 2)
-
-            if puente_id == estado["puente_actual"]:
-                avance = estado["avance"]
-                punto = (
-                    round(inicio[0] + (fin[0] - inicio[0]) * avance),
-                    round(inicio[1] + (fin[1] - inicio[1]) * avance),
-                )
-                senales.append((
-                    punto, color, estado["medio"], dx, dy,
-                ))
-
-    if senales:
-        superficie.blit(luz, (0, 0))
-        for punto, color, medio, dx, dy in senales:
-            energia_frames = (recursos or {}).get("energia_puente_frames", [])
-            if energia_frames:
-                frame = energia_frames[(pygame.time.get_ticks() // 100) % len(energia_frames)].copy()
-                frame = pygame.transform.smoothscale(frame, (66, 34))
-                frame = pygame.transform.rotate(frame, -math.degrees(math.atan2(dy, dx)))
-                superficie.blit(frame, frame.get_rect(center=punto))
-            pygame.draw.circle(superficie, color, punto, 7)
-            pygame.draw.circle(superficie, (255, 255, 225), punto, 3)
-            if medio == "eco":
-                fase = (pygame.time.get_ticks() % 700) / 700
-                for indice in range(2):
-                    radio = 10 + round(((fase + indice * 0.5) % 1) * 30)
-                    alfa = round(170 * (1 - ((fase + indice * 0.5) % 1)))
-                    onda = pygame.Surface((radio * 2 + 2, radio * 2 + 2), pygame.SRCALPHA)
-                    pygame.draw.circle(
-                        onda, (*color, alfa), (radio + 1, radio + 1), radio, 2
-                    )
-                    superficie.blit(onda, onda.get_rect(center=punto))
-            elif medio == "mensajero":
-                frames_mensajero = (recursos or {}).get("mensajero_frames", [])
-                if frames_mensajero:
-                    frame = frames_mensajero[(pygame.time.get_ticks() // 120) % len(frames_mensajero)]
-                    frame = pygame.transform.scale(frame, (26, 36))
-                    superficie.blit(frame, frame.get_rect(midbottom=(punto[0], punto[1] - 5)))
 
 
 def dibujar_jugador(superficie, jugador):
@@ -1060,12 +947,8 @@ def dibujar_mapa(
     interactuable=None, distancia=None, particulas=None, debug=False, resaltar=True,
 ):
     superficie.blit(recursos["mapas_dia"][estado.dia], (0, 0))
-    dibujar_ambiente_animado(superficie, recursos)
-
+    dibujar_decoraciones_editor(superficie, recursos)
     dibujar_troncos_eco(superficie, recursos, mundo)
-    dibujar_propagaciones_grafo(
-        superficie, mundo["grafo_fisico"], mundo["decoraciones"], recursos
-    )
     jugador = mundo["jugador"]
     dibujar_jugador(superficie, jugador)
     if particulas:
@@ -1679,11 +1562,7 @@ def dibujar_escena_dialogo(
 ):
     """El diálogo se superpone al mapa y bloquea sus demás interacciones."""
     superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
-    dibujar_ambiente_animado(superficie, recursos)
-    if mundo:
-        dibujar_propagaciones_grafo(
-            superficie, mundo["grafo_fisico"], mundo["decoraciones"], recursos
-        )
+    dibujar_decoraciones_editor(superficie, recursos)
     if jugador:
         if particulas:
             particulas.dibujar(superficie)
@@ -1697,11 +1576,7 @@ def dibujar_escena_mensaje(
 ):
     """El pergamino se presenta sobre el mapa y bloquea las demás acciones."""
     superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
-    dibujar_ambiente_animado(superficie, recursos)
-    if mundo:
-        dibujar_propagaciones_grafo(
-            superficie, mundo["grafo_fisico"], mundo["decoraciones"], recursos
-        )
+    dibujar_decoraciones_editor(superficie, recursos)
     if jugador:
         dibujar_jugador(superficie, jugador)
     hud.dibujar(superficie)
@@ -1712,11 +1587,7 @@ def dibujar_interfaz_eco(
     superficie, recursos, jugador, estado_eco, contactos, mensajes, mundo=None
 ):
     superficie.blit(recursos["mapas_dia"][recursos.get("dia", 0)], (0, 0))
-    dibujar_ambiente_animado(superficie, recursos)
-    if mundo:
-        dibujar_propagaciones_grafo(
-            superficie, mundo["grafo_fisico"], mundo["decoraciones"], recursos
-        )
+    dibujar_decoraciones_editor(superficie, recursos)
     dibujar_jugador(superficie, jugador)
     panel = pygame.Rect(190, 150, 580, 420)
     superficie.blit(superficie_con_alpha(panel.size, (17, 34, 28, 242)), panel.topleft)
@@ -1826,11 +1697,16 @@ def tamano_ventana_inicial():
     return ancho, alto
 
 
-def crear_ventana(pantalla_completa):
+def crear_ventana(pantalla_completa, maximizada=False):
     """Crea ventana redimensionable o pantalla completa sin estirar el lienzo."""
     if pantalla_completa:
         return pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
-    return pygame.display.set_mode(tamano_ventana_inicial(), pygame.RESIZABLE)
+    pantalla = pygame.display.set_mode(tamano_ventana_inicial(), pygame.RESIZABLE)
+    if maximizada:
+        from pygame._sdl2 import Window
+
+        Window.from_display_module().maximize()
+    return pantalla
 
 
 def rect_lienzo_en_ventana(tamano_ventana):
@@ -1862,7 +1738,8 @@ def main():
     pygame.init()
     gestor_audio = GestorAudio(os.path.dirname(__file__))
     pantalla_completa = True
-    pantalla = crear_ventana(pantalla_completa)
+    ventana_maximizada = False
+    pantalla = crear_ventana(pantalla_completa, ventana_maximizada)
     pygame.display.set_caption("La Copa: Voces en las Alturas")
     reloj = pygame.time.Clock()
     lienzo = pygame.Surface((ANCHO, ALTO))
@@ -1890,22 +1767,6 @@ def main():
         "interacciones": interacciones,
         "hitboxes": hitboxes,
         "guardian": guardian,
-        "cascada_frames": cargar_spritesheet_frames(
-            os.path.join("Animaciones Ambiente", "Cascada_animación.png")
-        ),
-        "vegetacion_frames": cargar_spritesheet_frames(
-            os.path.join("Animaciones Ambiente", "Vegetación_animacion.png")
-        ),
-        "energia_puente_frames": cargar_spritesheet_frames(
-            os.path.join("Animaciones Ambiente", "Energia_puente.png")
-        ),
-        "mensajero_frames": [
-            cargar_imagen(
-                os.path.join("NPCS", "mensajero", f"Mensajero_corriendo_{indice}.png"),
-                requerido=False,
-            )
-            for indice in range(1, 5)
-        ],
         "guardian_walk_frames": {
             "abajo": cargar_spritesheet_frames(
                 os.path.join("NPCS", "Guardian", "Fila 2. Guardián.png")
@@ -1979,13 +1840,22 @@ def main():
     )
     hud = HUDIndicadores(fuente_indicador, iconos_hud)
     pausa = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
+    visual = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
     volumen = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
     volumen.conectar_audio(gestor_audio)
     volumen.configurar([("volver", "Volver")])
     ayuda = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
     fondo_menu = cargar_imagen(os.path.join("Fondos", "Fondo_pausa.png"))
-    for menu in (pausa, volumen, ayuda):
+    for menu in (pausa, visual, volumen, ayuda):
         menu.establecer_fondo(fondo_menu, 0.6)
+
+    def configurar_menu_visual():
+        visual.configurar([
+            ("modo_pantalla_completa", "Pantalla completa"),
+            ("modo_ventana_maximizada", "Ventana maximizada"),
+            ("modo_ventana_normal", "Ventana normal"),
+            ("volver", "Volver"),
+        ])
     conversaciones = {
         "Kael": {"personaje": "Kael", "texto": "Quiero conocer qué dicen los habitantes antes de responder.", "respuestas": []},
         "Mira": {"personaje": "Mira", "texto": "Guardián, circula un rumor sobre el Puente Norte.", "respuestas": []},
@@ -2032,7 +1902,7 @@ def main():
             ),
         )["id"]
 
-    def registrar_transmision(transmisor, receptor, medio, origen_pos, destino_pos, demora_ms=0):
+    def registrar_transmision(transmisor, receptor, medio, origen_pos, destino_pos):
         propagacion = estado.propagacion_actual
         if propagacion is None:
             return None
@@ -2052,14 +1922,6 @@ def main():
             origen_id,
             destino_id,
         )
-        if len(ruta) > 1:
-            grafo.iniciar_propagacion(
-                origen_id,
-                destino_id,
-                color=propagacion.color_visual(),
-                medio=medio,
-                demora_ms=demora_ms,
-            )
         return ruta
 
     def difundir_resultado_tablilla():
@@ -2097,7 +1959,7 @@ def main():
         if accion not in ("colgar", "consultar"):
             return
         origen = mundo["jugador"]["pies"].center
-        for indice, personaje in enumerate(mundo["personajes"]):
+        for personaje in mundo["personajes"]:
             if not personaje.get("activo", True):
                 continue
             registrar_transmision(
@@ -2106,7 +1968,6 @@ def main():
                 "tablilla",
                 origen,
                 personaje["rect"].center,
-                demora_ms=indice * 850,
             )
 
     def abrir_dialogo_personaje(nombre):
@@ -2194,7 +2055,6 @@ def main():
         delta_ms = reloj.tick(FPS)
         delta_segundos = delta_ms / 1000
         sistema_particulas.actualizar(delta_ms)
-        mundo["grafo_fisico"].actualizar_propagaciones(delta_ms)
         tiempo_particulas_ambientales += delta_ms
         if tiempo_particulas_ambientales >= 850:
             tiempo_particulas_ambientales %= 850
@@ -2214,7 +2074,9 @@ def main():
                 or (evento.key == pygame.K_RETURN and getattr(evento, "mod", 0) & pygame.KMOD_ALT)
             ):
                 pantalla_completa = not pantalla_completa
-                pantalla = crear_ventana(pantalla_completa)
+                pantalla = crear_ventana(pantalla_completa, ventana_maximizada)
+                if escena == ESCENA_VISUAL:
+                    configurar_menu_visual()
             elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_F3:
                 depuracion_activa = not depuracion_activa
             elif escena == ESCENA_ECO and evento.type == pygame.KEYDOWN:
@@ -2273,10 +2135,36 @@ def main():
                 elif accion == "ayuda":
                     ayuda.configurar([("volver", "Volver")])
                     escena = ESCENA_AYUDA
+                elif accion == "visual":
+                    configurar_menu_visual()
+                    escena = ESCENA_VISUAL
                 elif accion == "volumen":
                     escena = ESCENA_VOLUMEN
                 elif accion == "salir":
                     corriendo = False
+            elif escena == ESCENA_VISUAL:
+                accion = visual.manejar_evento(
+                    evento,
+                    convertir_mouse_a_lienzo(
+                        getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo
+                    ),
+                )
+                if accion == "modo_pantalla_completa":
+                    pantalla_completa = True
+                    pantalla = crear_ventana(pantalla_completa, ventana_maximizada)
+                    configurar_menu_visual()
+                elif accion == "modo_ventana_maximizada":
+                    pantalla_completa = False
+                    ventana_maximizada = True
+                    pantalla = crear_ventana(pantalla_completa, ventana_maximizada)
+                    configurar_menu_visual()
+                elif accion == "modo_ventana_normal":
+                    pantalla_completa = False
+                    ventana_maximizada = False
+                    pantalla = crear_ventana(pantalla_completa, ventana_maximizada)
+                    configurar_menu_visual()
+                elif accion == "volver":
+                    escena = ESCENA_PAUSA
             elif escena == ESCENA_VOLUMEN:
                 accion = volumen.manejar_evento(
                     evento, convertir_mouse_a_lienzo(getattr(evento, "pos", pygame.mouse.get_pos()), rect_lienzo)
@@ -2408,6 +2296,7 @@ def main():
                 escena_anterior = escena
                 pausa.configurar([
                     ("continuar", "Continuar"),
+                    ("visual", "Visual"),
                     ("ayuda", "Ayuda"),
                     ("volumen", "Volumen"),
                     ("salir", "Salir"),
@@ -2551,7 +2440,7 @@ def main():
             if nuevo_estado_caldero_efectos == "critico":
                 sistema_particulas.emitir(*CENTRO_CALDERO, 20)
             estado_caldero_efectos = nuevo_estado_caldero_efectos
-        if escena not in (ESCENA_PAUSA, ESCENA_AYUDA, ESCENA_VOLUMEN):
+        if escena not in (ESCENA_PAUSA, ESCENA_VISUAL, ESCENA_AYUDA, ESCENA_VOLUMEN):
             gestor_audio.actualizar()
 
         cursor_deseado = (pygame.SYSTEM_CURSOR_HAND
@@ -2573,6 +2462,19 @@ def main():
                 lienzo,
                 "PAUSA",
                 ["La Red de Ecos espera tu decisión.", "ESC o P: continuar"],
+                mouse_pos,
+            )
+        elif escena == ESCENA_VISUAL:
+            dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud, resaltar=False)
+            modo_actual = (
+                "Pantalla completa" if pantalla_completa
+                else "Ventana maximizada" if ventana_maximizada
+                else "Ventana normal"
+            )
+            visual.dibujar(
+                lienzo,
+                "VISUAL",
+                [f"Modo actual: {modo_actual}. Selecciona una opcion."],
                 mouse_pos,
             )
         elif escena == ESCENA_VOLUMEN:
