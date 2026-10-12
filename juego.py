@@ -269,6 +269,7 @@ def cargar_mapa_principal():
         personaje = personaje_de_decoracion(objeto["name"])
         nombre_normalizado = normalizar_ruta(objeto["name"])
         es_puente = nombre_normalizado.startswith("puentes/")
+        es_escalera = "escalera" in nombre_normalizado
         nombre_puente = os.path.splitext(os.path.basename(objeto["name"]))[0]
         cantidad_frames = max(1, int(objeto.get("frames", 1)))
         imagenes_frames = []
@@ -307,6 +308,7 @@ def cargar_mapa_principal():
             "hitbox": hitbox,
             "imagen": imagen,
             "puente": es_puente,
+            "escalera": es_escalera,
             "frames": imagenes_frames,
             "tronco_eco": nombre_normalizado.startswith("tronco ecos/"),
         })
@@ -967,12 +969,12 @@ def dibujar_puente_balanceandose(superficie, objeto, tiempo):
     """Da vida a los puentes sin mover sus hitboxes ni alterar el grafo."""
     rect_base = objeto["rect"]
     # Cada puente empieza en una fase distinta para que no se balanceen como
-    # un bloque rígido. La oscilación es suave, lateral y muy contenida.
+    # un bloque rígido. La curva sinusoidal evita cambios bruscos de dirección.
     fase = sum(ord(caracter) for caracter in objeto.get("id") or objeto["nombre"]) * .071
-    oscilacion = math.sin(tiempo / 740 + fase)
-    amplitud_x = min(6, max(2, round(rect_base.width * .012)))
+    oscilacion = math.sin(tiempo / 1050 + fase)
+    amplitud_x = min(13, max(5, round(rect_base.width * .028)))
     desplazamiento_x = round(oscilacion * amplitud_x)
-    inclinacion = oscilacion * .65
+    inclinacion = oscilacion * 1.35
     imagen = pygame.transform.rotate(objeto["imagen"], inclinacion)
     rect_visual = imagen.get_rect(center=(rect_base.centerx + desplazamiento_x, rect_base.centery))
     superficie.blit(imagen, rect_visual)
@@ -984,8 +986,10 @@ def dibujar_decoraciones_editor(superficie, recursos):
     for objeto in recursos["decoraciones"]:
         if objeto.get("personaje") == "Guardián" or objeto.get("tronco_eco"):
             continue
-        if objeto.get("puente"):
+        if objeto.get("puente") and not objeto.get("escalera"):
             dibujar_puente_balanceandose(superficie, objeto, tiempo)
+        elif objeto.get("puente"):
+            superficie.blit(objeto["imagen"], objeto["rect"])
         elif objeto.get("frames") and not objeto.get("tronco_eco"):
             frames = objeto["frames"]
             frame = frames[(tiempo // 140) % len(frames)]
