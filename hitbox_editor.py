@@ -562,22 +562,16 @@ def main(forzar_selector=False):
     status_rect_layout = pygame.Rect(0, win_h - STATUS_H, win_w, STATUS_H)
     base_world_w, base_world_h = world_w, world_h
     world_rect = pygame.Rect(0, 0, world_w, world_h)
-    camera_x = min(0, (world_w - viewport_rect.width) // 2)
-    camera_y = min(0, (world_h - viewport_rect.height) // 2)
+    camera_x = 0
+    camera_y = 0
     zoom_factor = 1.0
     zoom_out_button_rect = pygame.Rect(viewport_rect.right - 72, viewport_rect.y + 8, 30, 26)
     zoom_in_button_rect = pygame.Rect(viewport_rect.right - 38, viewport_rect.y + 8, 30, 26)
 
     def clamp_camera():
         nonlocal camera_x, camera_y
-        camera_x = max(
-            min(0, world_rect.width - viewport_rect.width),
-            min(camera_x, 0),
-        )
-        camera_y = max(
-            min(0, world_rect.height - viewport_rect.height),
-            min(camera_y, 0),
-        )
+        camera_x = max(0, min(camera_x, max(0, world_rect.width - viewport_rect.width)))
+        camera_y = max(0, min(camera_y, max(0, world_rect.height - viewport_rect.height)))
 
     def center_camera_on_rect(rect):
         nonlocal camera_x, camera_y

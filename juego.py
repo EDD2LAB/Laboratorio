@@ -114,6 +114,8 @@ def personaje_de_decoracion(nombre):
         return "Luma"
     if "aspirante mujer" in ruta:
         return "Mira"
+    if "/darek/" in ruta:
+        return "Darek"
     if "/naira/" in ruta:
         return "Naira"
     if "/odran/" in ruta:
@@ -158,10 +160,10 @@ def dibujar_cascada_animada(superficie, recursos):
     escala_x = ancho / ancho_mapa
     escala_y = alto / alto_mapa
     rect_mapa_manana = pygame.Rect(
-        round(ancho_mapa * 300 / 1679),
-        round(alto_mapa * 35 / 937),
-        max(1, round(ancho_mapa * 390 / 1679)),
-        max(1, round(alto_mapa * 850 / 937)),
+        round(ancho_mapa * 320 / 1679),
+        0,
+        max(1, round(ancho_mapa * 430 / 1679)),
+        max(1, round(alto_mapa * 920 / 937)),
     )
     rect = pygame.Rect(
         round(rect_mapa_manana.x * escala_x),
@@ -186,7 +188,11 @@ def dibujar_cascada_animada(superficie, recursos):
                     azul > 185 and verde > 185
                     and azul >= rojo and verde >= rojo
                 )
-                if es_agua or es_espuma:
+                es_espuma_clara = (
+                    rojo > 220 and verde > 220 and azul > 220
+                    and max(rojo, verde, azul) - min(rojo, verde, azul) < 45
+                )
+                if es_agua or es_espuma or es_espuma_clara:
                     mascara_mapa_manana.set_at((x, y), (255, 255, 255, 255))
         mascara = pygame.transform.scale(mascara_mapa_manana, rect.size)
 
@@ -758,6 +764,9 @@ def crear_grafo_fisico(decoraciones):
 def mover_jugador(jugador, mundo, teclas, delta_ms):
     dx = int(teclas[pygame.K_d] or teclas[pygame.K_RIGHT]) - int(teclas[pygame.K_a] or teclas[pygame.K_LEFT])
     dy = int(teclas[pygame.K_s] or teclas[pygame.K_DOWN]) - int(teclas[pygame.K_w] or teclas[pygame.K_UP])
+    velocidad = VELOCIDAD_GUARDIAN * (
+        1.65 if teclas[pygame.K_LSHIFT] or teclas[pygame.K_RSHIFT] else 1.0
+    )
     movimiento = dx != 0 or dy != 0
     jugador["en_movimiento"] = movimiento
     if not movimiento:
@@ -785,9 +794,9 @@ def mover_jugador(jugador, mundo, teclas, delta_ms):
         dx *= math.sqrt(0.5)
         dy *= math.sqrt(0.5)
     delta = min(max(delta_ms, 0), 100) / 1000
-    pasos = max(1, math.ceil(VELOCIDAD_GUARDIAN * delta / 3))
-    paso_x = dx * VELOCIDAD_GUARDIAN * delta / pasos
-    paso_y = dy * VELOCIDAD_GUARDIAN * delta / pasos
+    pasos = max(1, math.ceil(velocidad * delta / 3))
+    paso_x = dx * velocidad * delta / pasos
+    paso_y = dy * velocidad * delta / pasos
     posicion_x = jugador.get("posicion_x", float(jugador["pies"].x))
     posicion_y = jugador.get("posicion_y", float(jugador["pies"].y))
     jugador["tiempo_animacion"] += delta_ms
@@ -1930,6 +1939,7 @@ def main():
         "Mira": {"personaje": "Mira", "texto": "Guardián, circula un rumor sobre el Puente Norte.", "respuestas": []},
         "Tarek": {"personaje": "Tarek", "texto": "Escuché golpes extraños en el Tronco de Ecos.", "respuestas": []},
         "Luma": {"personaje": "Luma", "texto": "Algunas tablillas están llegando sin una fuente clara.", "respuestas": []},
+        "Darek": {"personaje": "Darek", "texto": "Vi pasar un eco entre plataformas. Puede ayudarnos a seguir la ruta del rumor.", "respuestas": []},
         "Mensajero": {"personaje": "Mensajero", "texto": "Puedo llevar un mensaje privado entre plataformas. La ruta más corta no siempre es la más segura.", "respuestas": ["Entrega el mensaje"]},
         "Guardián": {"personaje": "Guardián", "texto": "Escucha a la aldea y revisa la tablilla antes de decidir qué hacer con ella.", "respuestas": ["Consultar tablilla"]},
         "Naira": {"personaje": "Naira", "texto": "Las plataformas están conectadas por puentes; cuidemos la confianza de quienes viven aquí.", "respuestas": ["Consultar tablilla"]},
