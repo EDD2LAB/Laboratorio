@@ -204,8 +204,6 @@ def cargar_mapa_principal():
     decoraciones = []
     for objeto in datos.get("decoracion", []):
         nombre_normalizado = normalizar_ruta(objeto["name"])
-        if nombre_normalizado.endswith("cascada_animacion.png"):
-            continue
         imagen_original = cargar_imagen(objeto["name"])
         recorte = objeto.get("crop")
         rect = pygame.Rect(
@@ -215,6 +213,7 @@ def cargar_mapa_principal():
             max(1, round(objeto["h"] * ALTO)),
         )
         personaje = personaje_de_decoracion(objeto["name"])
+        es_fondo_animado = nombre_normalizado.endswith("cascada_animacion.png")
         es_puente = nombre_normalizado.startswith("puentes/")
         nombre_archivo = os.path.basename(nombre_normalizado)
         # En el set de arte, estos cuatro PNG son escaleras; aunque estén en
@@ -261,13 +260,19 @@ def cargar_mapa_principal():
             "hitbox": hitbox,
             "imagen": imagen,
             "puente": es_puente,
+            "fondo_animado": es_fondo_animado,
             "escalera": es_escalera,
             "puente_animable": es_puente and not es_escalera,
             "frames": imagenes_frames,
             "tronco_eco": nombre_normalizado.startswith("tronco ecos/"),
         })
 
-    decoraciones.sort(key=lambda objeto: objeto["puente"], reverse=True)
+    decoraciones.sort(
+        key=lambda objeto: (
+            not objeto.get("fondo_animado"),
+            not objeto["puente"],
+        ),
+    )
     for mapa_dia in mapas_dia:
         for objeto in decoraciones:
             if (
