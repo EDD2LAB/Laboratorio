@@ -963,6 +963,21 @@ def dibujar_debug_grafo(superficie, grafo, decoraciones):
         superficie.blit(etiqueta, etiqueta_rect)
 
 
+def dibujar_puente_balanceandose(superficie, objeto, tiempo):
+    """Da vida a los puentes sin mover sus hitboxes ni alterar el grafo."""
+    rect_base = objeto["rect"]
+    # Cada puente empieza en una fase distinta para que no se balanceen como
+    # un bloque rígido. La oscilación es suave, lateral y muy contenida.
+    fase = sum(ord(caracter) for caracter in objeto.get("id") or objeto["nombre"]) * .071
+    oscilacion = math.sin(tiempo / 740 + fase)
+    amplitud_x = min(6, max(2, round(rect_base.width * .012)))
+    desplazamiento_x = round(oscilacion * amplitud_x)
+    inclinacion = oscilacion * .65
+    imagen = pygame.transform.rotate(objeto["imagen"], inclinacion)
+    rect_visual = imagen.get_rect(center=(rect_base.centerx + desplazamiento_x, rect_base.centery))
+    superficie.blit(imagen, rect_visual)
+
+
 def dibujar_decoraciones_editor(superficie, recursos):
     """Dibuja puentes y animaciones que fueron colocados desde el editor."""
     tiempo = pygame.time.get_ticks()
@@ -970,7 +985,7 @@ def dibujar_decoraciones_editor(superficie, recursos):
         if objeto.get("personaje") == "Guardián" or objeto.get("tronco_eco"):
             continue
         if objeto.get("puente"):
-            superficie.blit(objeto["imagen"], objeto["rect"])
+            dibujar_puente_balanceandose(superficie, objeto, tiempo)
         elif objeto.get("frames") and not objeto.get("tronco_eco"):
             frames = objeto["frames"]
             frame = frames[(tiempo // 140) % len(frames)]
