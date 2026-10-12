@@ -150,7 +150,7 @@ def cargar_frames_tronco_eco():
     return frames
 
 
-def dibujar_cascada_animada(superficie, recursos):
+def dibujar_cascada_animada(superficie, recursos, animar=True):
     frames = recursos.get("frames_cascada", [])
     if not frames:
         return
@@ -160,10 +160,10 @@ def dibujar_cascada_animada(superficie, recursos):
     escala_x = ancho / ancho_mapa
     escala_y = alto / alto_mapa
     rect_mapa_manana = pygame.Rect(
-        round(ancho_mapa * 320 / 1679),
+        round(ancho_mapa * 350 / 1679),
         0,
-        max(1, round(ancho_mapa * 430 / 1679)),
-        max(1, round(alto_mapa * 920 / 937)),
+        max(1, round(ancho_mapa * 310 / 1679)),
+        max(1, round(alto_mapa * 935 / 937)),
     )
     rect = pygame.Rect(
         round(rect_mapa_manana.x * escala_x),
@@ -203,7 +203,8 @@ def dibujar_cascada_animada(superficie, recursos):
             frames_por_mapa[clave_cache].append(frame)
 
     frames_animados = frames_por_mapa[clave_cache]
-    frame = frames_animados[(pygame.time.get_ticks() // 120) % len(frames_animados)]
+    indice_frame = (pygame.time.get_ticks() // 120) % len(frames_animados) if animar else 0
+    frame = frames_animados[indice_frame]
     superficie.blit(frame, rect)
     for objeto in recursos["decoraciones"]:
         if (
@@ -978,9 +979,9 @@ def dibujar_puente_balanceandose(superficie, objeto, tiempo):
     superficie.blit(imagen, rect_visual)
 
 
-def dibujar_decoraciones_editor(superficie, recursos):
+def dibujar_decoraciones_editor(superficie, recursos, animar=True):
     """Dibuja puentes y animaciones que fueron colocados desde el editor."""
-    tiempo = pygame.time.get_ticks()
+    tiempo = pygame.time.get_ticks() if animar else 0
     for objeto in recursos["decoraciones"]:
         if objeto.get("personaje") == "Guardián" or objeto.get("tronco_eco"):
             continue
@@ -988,7 +989,7 @@ def dibujar_decoraciones_editor(superficie, recursos):
             dibujar_puente_balanceandose(superficie, objeto, tiempo)
         elif objeto.get("frames") and not objeto.get("tronco_eco"):
             frames = objeto["frames"]
-            frame = frames[(tiempo // 140) % len(frames)]
+            frame = frames[(tiempo // 140) % len(frames)] if animar else frames[0]
             superficie.blit(frame, objeto["rect"])
 
 
@@ -1014,14 +1015,14 @@ def dibujar_jugador(superficie, jugador):
         superficie.blit(imagen, jugador["rect"])
 
 
-def dibujar_troncos_eco(superficie, recursos, mundo):
+def dibujar_troncos_eco(superficie, recursos, mundo, animar=True):
     for interaccion in mundo["interacciones"]:
         if interaccion.get("accion") != "usar_eco_tronco" or not interaccion.get("activo", True):
             continue
         frames = interaccion.get("frames") or recursos.get("frames_tronco_eco", [])
         if not frames:
             continue
-        frame = frames[(pygame.time.get_ticks() // 140) % len(frames)]
+        frame = frames[(pygame.time.get_ticks() // 140) % len(frames)] if animar else frames[0]
         rect = interaccion["rect"]
         tamano = rect.size if interaccion.get("frames") else (58, 64)
         imagen = pygame.transform.scale(frame, tamano)
@@ -1187,7 +1188,7 @@ def reproducir_audio_clasificacion(gestor_audio, estado):
 
 def dibujar_consecuencia_evento(superficie, recursos, estado):
     """Muestra la consecuencia de la decisión antes de preguntar la categoría."""
-    superficie.blit(recursos["fondo_tablilla"], (0, 0))
+    superficie.blit(fondo_tablilla_actual(recursos, estado), (0, 0))
     resultado = estado.resultado_evento_actual()
     panel = pygame.Rect(178, 175, 604, 345)
     fondo = superficie_con_alpha(panel.size, (18, 36, 29, 238))
@@ -1208,7 +1209,7 @@ def dibujar_consecuencia_evento(superficie, recursos, estado):
 
 def dibujar_pregunta_clasificacion(superficie, recursos, botones, mouse_pos):
     """Pide la clasificación sin mostrar cuál era la categoría real."""
-    superficie.blit(recursos["fondo_tablilla"], (0, 0))
+    superficie.blit(fondo_tablilla_actual(recursos, estado), (0, 0))
     # En clasificación el HUD no se muestra: la tablilla recupera el centro.
     rect = recursos["tablilla"].get_rect(center=CENTRO_TABLILLA_CENTRADA)
     superficie.blit(recursos["tablilla"], rect)
@@ -1232,7 +1233,7 @@ def dibujar_pregunta_clasificacion(superficie, recursos, botones, mouse_pos):
 
 def dibujar_resultado_evento(superficie, recursos, estado):
     """Compara la respuesta de trivia con la categoría real del árbol."""
-    superficie.blit(recursos["fondo_tablilla"], (0, 0))
+    superficie.blit(fondo_tablilla_actual(recursos, estado), (0, 0))
     resultado = estado.resultado_evento_actual()
     categoria, subcategorias = formatear_categoria(resultado["categoria"])
     marco = recursos["fondo_clasificacion"]
@@ -1540,7 +1541,7 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
 
 
 def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos, hud, animacion=None):
-    superficie.blit(recursos["fondo_tablilla"], (0, 0))
+    superficie.blit(fondo_tablilla_actual(recursos, estado), (0, 0))
     hud.dibujar(superficie)
     if animacion:
         dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion)
@@ -1723,11 +1724,25 @@ def dibujar_interfaz_eco(
 
 
 
-def crear_fondo_tablilla(mapa):
-    fondo = mapa.copy()
+def crear_fondo_tablilla(recursos, dia):
+    dia = max(0, min(int(dia), len(recursos["mapas_dia"]) - 1))
+    fondo = recursos["mapas_dia"][dia].copy()
+    dibujar_cascada_animada(fondo, recursos, animar=False)
+    dibujar_decoraciones_editor(fondo, recursos, animar=False)
+    mundo = recursos.get("mundo")
+    if mundo:
+        dibujar_troncos_eco(fondo, recursos, mundo, animar=False)
     velo = superficie_con_alpha((ANCHO, ALTO), (7, 18, 14, 178))
     fondo.blit(velo, (0, 0))
     return fondo
+
+
+def fondo_tablilla_actual(recursos, estado):
+    dia = max(0, min(int(getattr(estado, "dia", recursos.get("dia", 0))), len(recursos["mapas_dia"]) - 1))
+    cache = recursos.setdefault("fondos_tablilla_por_dia", {})
+    if dia not in cache:
+        cache[dia] = crear_fondo_tablilla(recursos, dia)
+    return cache[dia]
 
 
 def crear_mundo(recursos):
@@ -1882,7 +1897,6 @@ def main():
         "guardian_eco_frames": cargar_spritesheet_frames(
             os.path.join("NPCS", "Guardian", "Guardian_interaccion_ecos.png")
         ),
-        "fondo_tablilla": crear_fondo_tablilla(mapa),
         "fondo_clasificacion": cargar_imagen("FondoClasificacion.png", (860, 505)),
         "tablilla": cargar_imagen("Tablilla.png", (460, 460)),
         "colgar": cargar_imagen("Colgar.png", (190, 127)),
@@ -1924,6 +1938,7 @@ def main():
 
     estado = EstadoJuego()
     mundo = crear_mundo(recursos)
+    recursos["mundo"] = mundo
 
     botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
     grupo_botones = GrupoBotones(botones)
