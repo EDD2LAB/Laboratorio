@@ -185,7 +185,7 @@ class GestorAudio:
         self._introduccion_activa = False
 
     def al_cambiar_escena(self, escena_anterior, escena_nueva, resultado=None):
-        grupo_pausa = {"pausa", "ayuda", "volumen"}
+        grupo_pausa = {"pausa", "visual", "ayuda", "volumen"}
         if escena_anterior not in grupo_pausa and escena_nueva in grupo_pausa:
             self.pausar_todo()
         elif escena_anterior in grupo_pausa and escena_nueva not in grupo_pausa:

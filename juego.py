@@ -158,10 +158,10 @@ def dibujar_cascada_animada(superficie, recursos):
     escala_x = ancho / ancho_mapa
     escala_y = alto / alto_mapa
     rect_mapa_manana = pygame.Rect(
-        round(ancho_mapa * 321 / 1679),
-        round(alto_mapa * 60 / 937),
-        max(1, round(ancho_mapa * 324 / 1679)),
-        max(1, round(alto_mapa * 770 / 937)),
+        round(ancho_mapa * 300 / 1679),
+        round(alto_mapa * 35 / 937),
+        max(1, round(ancho_mapa * 390 / 1679)),
+        max(1, round(alto_mapa * 850 / 937)),
     )
     rect = pygame.Rect(
         round(rect_mapa_manana.x * escala_x),
@@ -170,7 +170,8 @@ def dibujar_cascada_animada(superficie, recursos):
         max(1, round(rect_mapa_manana.height * escala_y)),
     )
     frames_por_mapa = recursos.setdefault("frames_cascada_por_mapa", {})
-    if 0 not in frames_por_mapa:
+    clave_cache = (0, rect.size)
+    if clave_cache not in frames_por_mapa:
         mascara_mapa_manana = pygame.Surface(rect_mapa_manana.size, pygame.SRCALPHA)
         for y in range(rect_mapa_manana.height):
             for x in range(rect_mapa_manana.width):
@@ -189,13 +190,13 @@ def dibujar_cascada_animada(superficie, recursos):
                     mascara_mapa_manana.set_at((x, y), (255, 255, 255, 255))
         mascara = pygame.transform.scale(mascara_mapa_manana, rect.size)
 
-        frames_por_mapa[0] = []
+        frames_por_mapa[clave_cache] = []
         for frame_original in frames:
             frame = pygame.transform.scale(frame_original, rect.size)
             frame.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
-            frames_por_mapa[0].append(frame)
+            frames_por_mapa[clave_cache].append(frame)
 
-    frames_animados = frames_por_mapa[0]
+    frames_animados = frames_por_mapa[clave_cache]
     frame = frames_animados[(pygame.time.get_ticks() // 120) % len(frames_animados)]
     superficie.blit(frame, rect)
     for objeto in recursos["decoraciones"]:

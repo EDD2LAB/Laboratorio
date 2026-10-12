@@ -2619,8 +2619,14 @@ def main(forzar_selector=False):
         else:
             keys = pygame.key.get_pressed()
             cam_speed = 10
-            camera_x += ((1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)) * cam_speed
-            camera_y += ((1 if keys[pygame.K_s] else 0) - (1 if keys[pygame.K_w] else 0)) * cam_speed
+            camera_x += (
+                (1 if keys[pygame.K_d] or keys[pygame.K_RIGHT] else 0)
+                - (1 if keys[pygame.K_a] or keys[pygame.K_LEFT] else 0)
+            ) * cam_speed
+            camera_y += (
+                (1 if keys[pygame.K_s] or keys[pygame.K_DOWN] else 0)
+                - (1 if keys[pygame.K_w] or keys[pygame.K_UP] else 0)
+            ) * cam_speed
             clamp_camera()
 
         # ── RENDER ────────────────────────────────────────────────────────────
