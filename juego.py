@@ -1658,6 +1658,9 @@ def main():
     volumen.conectar_audio(gestor_audio)
     volumen.configurar([("volver", "Volver")])
     ayuda = MenuModal(fuente_resultado, fuente_texto, fuente_boton)
+    fondo_menu = cargar_imagen(os.path.join("Fondos", "Fondo_pausa.png"))
+    for menu in (pausa, volumen, ayuda):
+        menu.establecer_fondo(fondo_menu, 0.6)
     conversaciones = {
         "Kael": {"personaje": "Kael", "texto": "Quiero conocer qué dicen los habitantes antes de responder.", "respuestas": []},
         "Mira": {"personaje": "Mira", "texto": "Guardián, circula un rumor sobre el Puente Norte.", "respuestas": []},

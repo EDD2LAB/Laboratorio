@@ -4,6 +4,8 @@ import pygame
 
 from interfaz.boton import Boton, GrupoBotones
 
+PANEL_RECT = pygame.Rect(170, 85, 620, 550)
+
 
 class MenuModal:
     """Modal reutilizable que bloquea el juego mientras está abierto."""
@@ -16,6 +18,23 @@ class MenuModal:
         self.grupo = GrupoBotones()
         self.audio = None
         self.controles_audio = []
+        self.imagen_panel = None
+
+    def establecer_fondo(self, imagen, opacidad=0.6):
+        """Usa una imagen como fondo del recuadro (esquinas redondeadas).
+
+        opacidad: de 0 a 1. Menor valor = imagen más transparente.
+        """
+        if imagen is None:
+            self.imagen_panel = None
+            return
+        imagen = pygame.transform.smoothscale(imagen, PANEL_RECT.size).convert_alpha()
+        mascara = pygame.Surface(PANEL_RECT.size, pygame.SRCALPHA)
+        pygame.draw.rect(mascara, (255, 255, 255, 255), mascara.get_rect(), border_radius=18)
+        imagen.blit(mascara, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+        alfa = max(0, min(255, round(255 * opacidad)))
+        imagen.fill((255, 255, 255, alfa), special_flags=pygame.BLEND_RGBA_MULT)
+        self.imagen_panel = imagen
 
     def conectar_audio(self, audio):
         self.audio = audio
@@ -62,8 +81,11 @@ class MenuModal:
         velo = pygame.Surface(superficie.get_size(), pygame.SRCALPHA)
         velo.fill((4, 13, 11, 190))
         superficie.blit(velo, (0, 0))
-        panel = pygame.Rect(170, 85, 620, 550)
-        pygame.draw.rect(superficie, (17, 43, 31), panel, border_radius=18)
+        panel = PANEL_RECT.copy()
+        if self.imagen_panel:
+            superficie.blit(self.imagen_panel, panel.topleft)
+        else:
+            pygame.draw.rect(superficie, (17, 43, 31), panel, border_radius=18)
         pygame.draw.rect(superficie, (237, 185, 87), panel, width=3, border_radius=18)
         texto_titulo = self.fuente_titulo.render(titulo, True, (237, 185, 87))
         superficie.blit(texto_titulo, texto_titulo.get_rect(center=(panel.centerx, panel.y + 48)))
