@@ -26,6 +26,11 @@ def load_image(path):
     return pygame.image.load(path)
 
 
+def es_hoja_portales(nombre):
+    normalized = str(nombre).replace("\\", "/")
+    return os.path.basename(normalized).casefold() == "portales 4x4.png"
+
+
 def clamp_rect_to_image(rect, img_rect):
     x1 = max(img_rect.left, min(rect.left, img_rect.right))
     y1 = max(img_rect.top, min(rect.top, img_rect.bottom))
@@ -1066,6 +1071,15 @@ def main(forzar_selector=False):
 
         try:
             img = pygame.image.load(path).convert_alpha()
+            if es_hoja_portales(normalized):
+                cell_width = img.get_width() // 4
+                cell_height = img.get_height() // 4
+                img = img.subsurface((
+                    cell_width * 3,
+                    cell_height * 3,
+                    cell_width,
+                    cell_height,
+                )).copy()
             object_cache[obj_name] = img
             return img
         except (OSError, pygame.error):
@@ -2060,7 +2074,10 @@ def main(forzar_selector=False):
                                     oy = max(0, min(oy, world_rect.height - oh))
                                     new_obj = {"name": obj_name,
                                                **normalize_deco(ox, oy, ow, oh)}
-                                    if pending_placement_frames > 1:
+                                    if (
+                                        pending_placement_frames > 1
+                                        and not es_hoja_portales(obj_name)
+                                    ):
                                         new_obj["frames"] = pending_placement_frames
                                     decoracion.append(new_obj)
                                     selected_deco_idx = len(decoracion) - 1
@@ -2676,7 +2693,10 @@ def main(forzar_selector=False):
                 if obj_img:
                     r = get_deco_world_rect(obj)
                     sx, sy = world_to_screen((r.x, r.y))
-                    frames = int(obj.get("frames", 1))
+                    frames = (
+                        1 if es_hoja_portales(obj["name"])
+                        else int(obj.get("frames", 1))
+                    )
                     if frames > 1:
                         cache_key = (obj["name"], frames)
                         if cache_key not in animation_frame_cache:
@@ -2725,7 +2745,10 @@ def main(forzar_selector=False):
                 px = int(mouse_world[0] - ow / 2)
                 py = int(mouse_world[1] - oh / 2)
                 sx, sy = world_to_screen((px, py))
-                cur_frames = pending_placement_frames
+                cur_frames = (
+                    1 if es_hoja_portales(obj_name)
+                    else pending_placement_frames
+                )
                 if cur_frames > 1:
                     cache_key = (obj_name, cur_frames)
                     if cache_key not in animation_frame_cache:

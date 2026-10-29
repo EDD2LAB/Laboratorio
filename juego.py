@@ -49,6 +49,7 @@ ESCENA_MENSAJE = "mensaje_privado"
 ESCENA_MAPA_DESTINO = "mapa_destino"
 ESCENA_FINAL = "final"
 ESCENA_PAUSA = "pausa"
+ESCENA_ZONA_EN_PROCESO = "zona_en_proceso"
 ESCENA_VISUAL = "visual"
 ESCENA_VOLUMEN = "volumen"
 ESCENA_AYUDA = "ayuda"
@@ -111,6 +112,24 @@ def cargar_imagen(nombre, tamano=None, requerido=True):
     if tamano:
         imagen = pygame.transform.scale(imagen, tamano)
     return imagen
+
+
+def es_hoja_portales(nombre):
+    return os.path.basename(normalizar_ruta(nombre)) == "portales 4x4.png"
+
+
+def recortar_portal_final(imagen, nombre):
+    """Limita la hoja 4x4 al portal de la esquina inferior derecha."""
+    if not es_hoja_portales(nombre):
+        return imagen
+    ancho_celda = imagen.get_width() // 4
+    alto_celda = imagen.get_height() // 4
+    return imagen.subsurface((
+        ancho_celda * 3,
+        alto_celda * 3,
+        ancho_celda,
+        alto_celda,
+    )).copy()
 
 
 def personaje_de_decoracion(nombre):
@@ -204,7 +223,10 @@ def cargar_mapa_principal():
     decoraciones = []
     for objeto in datos.get("decoracion", []):
         nombre_normalizado = normalizar_ruta(objeto["name"])
-        imagen_original = cargar_imagen(objeto["name"])
+        imagen_original = recortar_portal_final(
+            cargar_imagen(objeto["name"]),
+            objeto["name"],
+        )
         recorte = objeto.get("crop")
         rect = pygame.Rect(
             round(objeto["x"] * ANCHO),
@@ -223,7 +245,10 @@ def cargar_mapa_principal():
             or nombre_archivo in {"puente3.png", "puente4.png", "puente5.png", "puente8.png"}
         )
         nombre_puente = os.path.splitext(os.path.basename(objeto["name"]))[0]
-        cantidad_frames = max(1, int(objeto.get("frames", 1)))
+        cantidad_frames = (
+            1 if es_hoja_portales(objeto["name"])
+            else max(1, int(objeto.get("frames", 1)))
+        )
         imagenes_frames = []
         if cantidad_frames > 1 and not es_puente:
             ancho_frame = imagen_original.get_width() // cantidad_frames
@@ -314,8 +339,13 @@ def cargar_mapa_principal():
             "role": hitbox.get("role"),
             "plataforma": hitbox.get("plataforma", ""),
             "activo": hitbox.get("activo", True),
+            "zona_en_proceso": hitbox.get("zona_en_proceso", False),
         }
-        if interaccion["accion"] == "puerta" and interaccion["destino"]:
+        if (
+            interaccion["accion"] == "puerta"
+            and interaccion["destino"]
+            and not interaccion["zona_en_proceso"]
+        ):
             interaccion["imagen_destino"] = cargar_imagen(interaccion["destino"], (ANCHO, ALTO))
         interacciones.append(interaccion)
 
@@ -1014,27 +1044,55 @@ def dibujar_troncos_eco(superficie, recursos, mundo, animar=True):
         superficie.blit(imagen, imagen.get_rect(midbottom=rect.midbottom))
 
 
+def posicion_visual_en_puente(propagacion, puente, grafo):
+    indice = propagacion.indice_actual
+    origen = grafo.plataformas[propagacion.ruta[indice]]["posicion"]
+    destino = grafo.plataformas[propagacion.ruta[indice + 1]]["posicion"]
+    dx = destino[0] - origen[0]
+    dy = destino[1] - origen[1]
+    longitud = math.hypot(dx, dy)
+    if longitud == 0:
+        return puente["rect"].center, 0.0
+
+    direccion_x = dx / longitud
+    direccion_y = dy / longitud
+    semilongitudes = []
+    if direccion_x:
+        semilongitudes.append(puente["rect"].width / (2 * abs(direccion_x)))
+    if direccion_y:
+        semilongitudes.append(puente["rect"].height / (2 * abs(direccion_y)))
+    semilongitud = min(semilongitudes) * 0.85
+    avance = (propagacion.progreso * 2 - 1) * semilongitud
+    centro = puente["rect"].center
+    posicion = (
+        round(centro[0] + direccion_x * avance),
+        round(centro[1] + direccion_y * avance),
+    )
+    angulo = -math.degrees(math.atan2(direccion_y, direccion_x))
+    return posicion, angulo
+
+
 def dibujar_propagaciones_visuales(superficie, mundo):
     puente_por_id = {
         objeto.get("id"): objeto
         for objeto in mundo["decoraciones"]
         if objeto.get("puente") and objeto.get("id")
     }
-    brillo = pygame.Surface(superficie.get_size(), pygame.SRCALPHA)
+    grafo = mundo["grafo_fisico"]
     for propagacion in mundo["propagaciones_visuales"]:
         if not propagacion.activa:
             continue
         puente = puente_por_id.get(propagacion.puente_actual)
-        if puente:
-            brillo_puente = puente["rect"].inflate(-12, -12)
-            if brillo_puente.width > 0 and brillo_puente.height > 0:
-                pygame.draw.ellipse(brillo, (255, 213, 102, 65), brillo_puente)
-        superficie.blit(brillo, (0, 0))
-        brillo.fill((0, 0, 0, 0))
         frame = propagacion.obtener_frame()
-        if frame:
-            imagen = pygame.transform.smoothscale(frame, (36, 36))
-            superficie.blit(imagen, imagen.get_rect(center=propagacion.posicion))
+        if puente and frame:
+            posicion, angulo = posicion_visual_en_puente(
+                propagacion,
+                puente,
+                grafo,
+            )
+            imagen = pygame.transform.smoothscale(frame, (72, 72))
+            imagen = pygame.transform.rotate(imagen, angulo)
+            superficie.blit(imagen, imagen.get_rect(center=posicion))
 
 
 def dibujar_mapa(
@@ -1076,7 +1134,11 @@ def dibujar_mapa(
         elif interaccion["accion"] == "otro":
             texto = "Objeto interactuable"
         elif interaccion["accion"] == "puerta":
-            texto = "Clic para viajar al mapa Central"
+            texto = (
+                "Clic para viajar a otra zona"
+                if interaccion.get("zona_en_proceso")
+                else "Clic para viajar al mapa Central"
+            )
         else:
             texto = "Objeto interactuable"
     else:
@@ -1912,11 +1974,11 @@ def main():
 
     mapa, decoraciones, interacciones, hitboxes, guardian, mapas_dia = cargar_mapa_principal()
     frames_propagacion = cargar_spritesheet_frames(
-        os.path.join("Animaciones Ambiente", "Propagacion_puente.png"),
-        cantidad=24,
+        os.path.join("Animaciones Ambiente", "Destello.png"),
+        cantidad=8,
     )
-    if len(frames_propagacion) != 24:
-        raise RuntimeError("No se pudo cargar el spritesheet de propagacion de puentes.")
+    if len(frames_propagacion) != 8:
+        raise RuntimeError("No se pudo cargar el spritesheet Destello para la propagacion por puentes.")
     retratos_dialogo = {
         objeto["personaje"]: pygame.transform.scale(objeto["imagen"], (78, 78))
         for objeto in decoraciones
@@ -2455,7 +2517,7 @@ def main():
                     escena = ESCENA_MAPA
                 elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
                     corriendo = False
-            elif escena == ESCENA_MAPA_DESTINO:
+            elif escena in (ESCENA_MAPA_DESTINO, ESCENA_ZONA_EN_PROCESO):
                 if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
                     escena = ESCENA_MAPA
                 elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
@@ -2491,10 +2553,13 @@ def main():
                         })
                         escena = ESCENA_ECO
                     elif accion == "puerta":
-                        destino = interactuable_cercano.get("imagen_destino")
-                        if destino:
-                            recursos["mapa_destino"] = destino
-                            escena = ESCENA_MAPA_DESTINO
+                        if interactuable_cercano.get("zona_en_proceso"):
+                            escena = ESCENA_ZONA_EN_PROCESO
+                        else:
+                            destino = interactuable_cercano.get("imagen_destino")
+                            if destino:
+                                recursos["mapa_destino"] = destino
+                                escena = ESCENA_MAPA_DESTINO
                     elif accion == "otro":
                         registrar_evento({
                             "tipo": "interaccion_otro",
@@ -2538,8 +2603,11 @@ def main():
                     })
                     escena = ESCENA_DIALOGO
                 elif interaccion and interaccion["accion"] == "puerta":
-                    recursos["mapa_destino"] = interaccion["imagen_destino"]
-                    escena = ESCENA_MAPA_DESTINO
+                    if interaccion.get("zona_en_proceso"):
+                        escena = ESCENA_ZONA_EN_PROCESO
+                    else:
+                        recursos["mapa_destino"] = interaccion["imagen_destino"]
+                        escena = ESCENA_MAPA_DESTINO
                 elif interaccion and interaccion["accion"] == "otro":
                     registrar_evento({
                         "tipo": "interaccion_otro",
@@ -2734,6 +2802,23 @@ def main():
                 lienzo,
                 recursos["fuente_mapa"],
                 "Zona Central. Haz clic o pulsa Esc para volver al mapa principal.",
+            )
+        elif escena == ESCENA_ZONA_EN_PROCESO:
+            lienzo.fill((0, 0, 0))
+            titulo = recursos["fuente_resultado"].render(
+                "ZONA EN PROCESO",
+                True,
+                CREMA,
+            )
+            lienzo.blit(titulo, titulo.get_rect(center=(ANCHO // 2, ALTO // 2 - 24)))
+            instruccion = recursos["fuente_mapa"].render(
+                "Pulsa Esc o haz clic para regresar",
+                True,
+                CREMA,
+            )
+            lienzo.blit(
+                instruccion,
+                instruccion.get_rect(center=(ANCHO // 2, ALTO // 2 + 28)),
             )
         elif escena == ESCENA_CONSECUENCIA:
             dibujar_consecuencia_evento(lienzo, recursos, estado)
