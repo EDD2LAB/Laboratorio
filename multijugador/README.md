@@ -5,9 +5,9 @@ alterna entre **Internet** y **Red local**.
 
 ## Internet: computadores en redes diferentes
 
-El servicio central debe estar publicado antes de usar este modo. En esta
-copia `configuracion.json` deja la dirección vacía porque todavía no existe
-un despliegue público. No se inventa una dirección ni se usa la IP doméstica.
+El servicio central está publicado en `https://la-copa-salas.onrender.com` y
+su dirección ya está incluida en `configuracion.json`. No hace falta escribir
+la IP doméstica ni introducir la dirección en cada partida.
 
 1. Introducir la misma dirección HTTPS del servicio en las PC.
 2. Un jugador crea la sala y recibe un código de seis caracteres.
