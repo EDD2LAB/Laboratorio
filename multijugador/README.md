@@ -1,7 +1,7 @@
 # Sala de espera multijugador
 
-Ejecutar `python juego.py` y elegir **Multijugador**. El botón de conexión
-alterna entre **Internet** y **Red local**.
+Ejecutar `python juego.py` y elegir **Multijugador**. Crear y unirse usan
+automáticamente el servidor público configurado; no hay selector de conexión.
 
 ## Internet: computadores en redes diferentes
 
@@ -9,7 +9,7 @@ El servicio central está publicado en `https://la-copa-salas.onrender.com` y
 su dirección ya está incluida en `configuracion.json`. No hace falta escribir
 la IP doméstica ni introducir la dirección en cada partida.
 
-1. Introducir la misma dirección HTTPS del servicio en las PC.
+1. Mantener actualizada la rama `multijugador` en todas las PC.
 2. Un jugador crea la sala y recibe un código de seis caracteres.
 3. Los demás eligen Unirse y escriben ese código.
 4. Elegir roles, marcarse como listos y confirmar desde el anfitrión.
@@ -18,8 +18,8 @@ Todos hacen conexiones salientes HTTPS; no es necesario abrir puertos del
 router, compartir IP pública ni instalar una VPN. El creador administra la
 sala, pero el servidor se ejecuta en el alojamiento, no en su PC.
 
-La URL puede introducirse en la interfaz o configurarse para todas las copias
-en `multijugador/configuracion.json`, campo `servidor_internet`. También se
+La URL se configura para todas las copias en `multijugador/configuracion.json`,
+campo `servidor_internet`; no se pide a los jugadores. También se
 admite la variable de entorno `COPA_SERVIDOR_INTERNET`.
 
 ### Publicar el servicio en Render
@@ -59,7 +59,11 @@ sin cifrar para loopback. Para uso externo, el alojamiento debe proporcionar
 HTTPS. La consulta periódica de estado es para la sala de espera; el movimiento
 en tiempo real será una entrega posterior.
 
-## Crear y unirse desde PC diferentes
+## Transporte local para pruebas de desarrollo
+
+El transporte TCP local se conserva en los módulos y pruebas automáticas,
+pero ya no aparece como opción en el menú. El siguiente flujo corresponde
+a la interfaz de desarrollo anterior:
 
 1. Todos deben tener esta misma versión y estar en la misma red local.
    Seleccionar el modo **Red local** en Multijugador.

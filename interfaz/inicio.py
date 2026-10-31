@@ -207,8 +207,6 @@ class MenuInicio:
             return "salir"
         if clave == "multi":
             self.vista = "multijugador"
-        elif clave == "transporte":
-            self.internet = not self.internet
         elif clave in ("crear", "unirse"):
             self.anfitrion = clave == "crear"
             self.vista = "formulario"
@@ -247,7 +245,6 @@ class MenuInicio:
             self.panel(pygame.Rect(200, 95, 560, 540))
             self.texto("MULTIJUGADOR", 480, 140, 32, ORO, True)
             self.texto("De 2 a 4 jugadores · Una PC por jugador", 480, 200, 18, centro=True)
-            self.boton("transporte", "Internet" if self.internet else "Red local", (480, 255), 270)
             self.boton("crear", "Crear partida", (480, 305))
             self.boton("unirse", "Unirse a partida", (480, 375))
             self.boton("volver", "Volver", (480, 465))
@@ -259,9 +256,8 @@ class MenuInicio:
             campos = [("nombre", "Tu nombre", 195), ("puerto", "Puerto", 360)] if self.anfitrion else [
                 ("nombre", "Tu nombre", 170), ("ip", "IP del anfitrión", 270), ("puerto", "Puerto", 370)]
             if self.internet:
-                campos = [("nombre", "Tu nombre", 195), ("servidor", "Servidor de Internet (https://…)", 360)] if self.anfitrion else [
-                    ("nombre", "Tu nombre", 170), ("servidor", "Servidor de Internet (https://…)", 270),
-                    ("codigo", "Código de sala", 370)]
+                campos = [("nombre", "Tu nombre", 220)] if self.anfitrion else [
+                    ("nombre", "Tu nombre", 195), ("codigo", "Código de sala", 345)]
             for clave, etiqueta, y in campos:
                 self.texto(etiqueta, 230, y, 18)
                 rect = pygame.Rect(230, y + 29, 500, 46)
@@ -286,7 +282,7 @@ class MenuInicio:
         self.panel(pygame.Rect(16, 16, 928, 688))
         self.texto("SALA DE ESPERA", 480, 38, 32, ORO, True)
         direccion = self.ips if self.anfitrion else self.campos["ip"].strip()
-        cabecera = (f"INTERNET · Código de sala: {self.codigo_sala} · Comparte este código" if self.internet else
+        cabecera = (f"Código de sala: {self.codigo_sala} · Comparte este código" if self.internet else
                     f"IP: {direccion}   Puerto: {self.campos['puerto']}")
         self.parrafo(cabecera, pygame.Rect(44, 84, 866, 45), 16)
         self.texto("2–4 jugadores · Cada rol solo puede elegirse una vez", 44, 132, 14)
