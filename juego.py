@@ -2840,4 +2840,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    from interfaz.inicio import mostrar_menu_inicio
+
+    if mostrar_menu_inicio() == "individual":
+        main()
+    else:
+        pygame.quit()

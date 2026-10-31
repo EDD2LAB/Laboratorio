@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: la-copa-salas
+    runtime: docker
+    branch: multijugador
+    dockerfilePath: ./Dockerfile.multijugador
+    plan: free
+    numInstances: 1
+    healthCheckPath: /health
+    autoDeployTrigger: 'off'

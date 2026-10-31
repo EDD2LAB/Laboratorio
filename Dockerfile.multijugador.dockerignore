@@ -1,0 +1,4 @@
+**
+!multijugador/
+!multijugador/*.py
+!Dockerfile.multijugador
