@@ -103,10 +103,29 @@ class PruebasWebSocket(unittest.IsolatedAsyncioTestCase):
                         await asyncio.sleep(.05)
                     visto = await estado(sockets[1], lambda e: e.get("mundo", {}).get("jugadores", [{}])[0].get("x", 0) > primero["x"] + 5)
                     self.assertEqual(len(visto["mundo"]["jugadores"]), 4)
+                    # Un envío lento no debe detener el reloj ni los envíos
+                    # de los otros tres jugadores.
+                    from multijugador.tiempo_real import CONEXIONES, SERVICIO
+                    lento = servidor.app[CONEXIONES][jugadores[3]["token"]]
+                    envio_original = lento.send_json
+                    async def envio_lento(*args, **kwargs):
+                        await asyncio.sleep(1.5)
+                        await envio_original(*args, **kwargs)
+                    lento.send_json = envio_lento
+                    revision = servidor.app[SERVICIO].salas[jugadores[0]["codigo"]]._revision
+                    await asyncio.wait_for(estado(sockets[0], lambda e: e.get("revision", 0) >= revision + 8), timeout=1.1)
+                    lento.send_json = envio_original
                     await sockets[1].close()
+                    # Un corte de transporte conserva el personaje y el rol.
+                    sockets[1] = await cliente.ws_connect(servidor.make_url("/v1/juego"),
+                                  headers={"Authorization": "Bearer " + jugadores[1]["token"]})
+                    await sockets[1].send_json({"tipo": "mover", "dx": 0, "dy": 0, "seq": 50})
+                    recuperado = await estado(sockets[1], lambda e: any(j.get("seq") == 50 for j in e.get("mundo", {}).get("jugadores", [])))
+                    self.assertEqual(len(recuperado["mundo"]["jugadores"]), 4)
+                    await post("/v1/salir", {}, jugadores[1]["token"])
                     restante = await estado(sockets[0], lambda e: len(e.get("mundo", {}).get("jugadores", [])) == 3)
                     self.assertTrue(restante["iniciada"])
-                    await sockets[0].close()
+                    await post("/v1/salir", {}, jugadores[0]["token"])
                     await estado(sockets[2], lambda e: e.get("tipo") == "desconectado")
                 finally:
                     for ws in sockets:

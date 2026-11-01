@@ -39,6 +39,7 @@ class ClienteInternet:
         self._datos = {"nombre": nombre, "version": VERSION, "codigo": codigo}
         self._crear = crear
         self._movimiento = (0, 0)
+        self._secuencia = 0
         self._ultimo_estado = 0
         self._http = urllib.request.build_opener(SinRedirecciones())
         threading.Thread(target=self._ejecutar, daemon=True).start()
@@ -84,12 +85,31 @@ class ClienteInternet:
         self._movimiento = (dx, dy)
 
     def _abrir_juego(self):
-        try:
-            asyncio.run(self._jugar())
-        except ValueError:
-            raise
-        except Exception as error:
-            raise ConnectionError("No se pudo mantener la conexión de movimiento. Comprueba la red y actualiza el servidor en Render.") from error
+        for intento in range(4):
+            try:
+                asyncio.run(self._jugar())
+                return
+            except ValueError:
+                raise
+            except Exception as error:
+                if self._cerrado.is_set():
+                    return
+                nombre = type(error).__name__
+                estado = getattr(error, "status", None)
+                codigo = getattr(error, "winerror", None) or getattr(error, "errno", None)
+                # Diagnóstico sin tokens, cabeceras, nombres ni código de sala.
+                print(f"[Red] WebSocket: {nombre}; HTTP={estado}; codigo={codigo}", flush=True)
+                if estado in (401, 403):
+                    raise PermissionError("La sala se cerró o tu sesión caducó. Pide al anfitrión crear una sala nueva.") from error
+                if estado == 404:
+                    raise ValueError("Render todavía no tiene la conexión de movimiento. Despliega el último commit del servidor.") from error
+                if "Certificate" in nombre:
+                    raise ValueError("No se pudo validar el certificado del servidor. Comprueba la fecha y hora de esta PC.") from error
+                if intento == 3:
+                    detalle = f"HTTP {estado}" if estado else f"{nombre}" + (f", código {codigo}" if codigo else "")
+                    raise ConnectionError(f"Se perdió la conexión tras 3 reintentos ({detalle}). Vuelve a entrar a la sala.") from error
+                self._evento({"tipo": "reconectando", "mensaje": f"Conexión interrumpida. Reconectando ({intento + 1}/3)…"})
+                self._cerrado.wait(min(2 ** intento, 4))
 
     async def _jugar(self):
         try:
@@ -101,11 +121,11 @@ class ClienteInternet:
             async with sesion.ws_connect(url, headers={"Authorization": "Bearer " + self._token},
                                          heartbeat=8, max_msg_size=65536, compress=0) as ws:
                 async def controles():
-                    seq = 0
                     while not self._cerrado.is_set():
                         dx, dy = self._movimiento
+                        seq = self._secuencia
+                        self._secuencia += 1
                         await ws.send_json({"tipo": "mover", "dx": dx, "dy": dy, "seq": seq})
-                        seq += 1
                         await asyncio.sleep(.05)
                     await ws.close()
                 envio = asyncio.create_task(controles())

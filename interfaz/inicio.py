@@ -204,6 +204,10 @@ class MenuInicio:
                         continue
                 if evento["iniciada"]:
                     self.mensaje, self.error = "Todos los jugadores confirmaron el equipo.", False
+            elif tipo == "reconectando":
+                self.mensaje, self.error = evento["mensaje"], False
+                if self.partida:
+                    self.partida.aviso_red = evento["mensaje"]
             elif tipo == "error":
                 self.mensaje, self.error = evento["mensaje"], True
             elif tipo in ("rechazado", "desconectado"):

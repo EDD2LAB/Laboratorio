@@ -114,6 +114,18 @@ class PruebasHTTP(unittest.TestCase):
             self.assertEqual(a["mundo"]["firma_mapa"], b["mundo"]["firma_mapa"])
             self.assertEqual([(j["id"], j["x"], j["y"], j["rol"]) for j in a["mundo"]["jugadores"]],
                              [(j["id"], j["x"], j["y"], j["rol"]) for j in b["mundo"]["jugadores"]])
+            # Interrumpir el WebSocket y verificar la recuperación del cliente
+            # real, conservando sesión, identidad y secuencia de controles.
+            import asyncio
+            from multijugador.tiempo_real import CONEXIONES
+            previo = esperar(host, lambda e: e["tipo"] == "estado" and any(j["seq"] >= 2 for j in e["mundo"]["jugadores"]))
+            seq = max(j["seq"] for j in previo["mundo"]["jugadores"])
+            async def cortar():
+                await servidor.app[CONEXIONES][host._token].close(code=1001)
+            asyncio.run_coroutine_threadsafe(cortar(), servidor.loop).result(timeout=4)
+            esperar(host, lambda e: e["tipo"] == "reconectando")
+            recuperado = esperar(host, lambda e: e["tipo"] == "estado" and any(j["seq"] > seq for j in e["mundo"]["jugadores"]))
+            self.assertEqual({j["id"] for j in recuperado["mundo"]["jugadores"]}, {j["id"] for j in previo["mundo"]["jugadores"]})
             host.cerrar()
             esperar(otro, lambda e: e["tipo"] == "desconectado")
         finally:

@@ -27,7 +27,8 @@ class ServidorPrueba:
     async def _ejecutar(self):
         self.loop = asyncio.get_running_loop()
         self.parar = asyncio.Event()
-        runner = web.AppRunner(crear_app(), shutdown_timeout=1, access_log=None)
+        self.app = crear_app()
+        runner = web.AppRunner(self.app, shutdown_timeout=1, access_log=None)
         await runner.setup()
         sitio = web.TCPSite(runner, "127.0.0.1", 0)
         await sitio.start()

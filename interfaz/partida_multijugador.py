@@ -80,6 +80,7 @@ class VistaPartida:
         self.titulo = juego.cargar_fuente(20)
         self.jugadores = {}
         self.ultimo_paquete = time.monotonic()
+        self.aviso_red = ""
         self.estado = estado
         self.frames_eco = juego.cargar_frames_tronco_eco()
         self.recibir(estado)
@@ -90,6 +91,7 @@ class VistaPartida:
             raise ValueError("El mapa no coincide con el servidor. Actualiza la rama multijugador en todas las PC y Render.")
         self.estado = estado
         self.ultimo_paquete = time.monotonic()
+        self.aviso_red = ""
         presentes = set()
         for jugador in mundo.get("jugadores", []):
             clave = jugador["id"]
@@ -160,6 +162,6 @@ class VistaPartida:
         superficie.blit(etiqueta, (22, 667))
         ayuda = self.fuente.render("WASD o flechas: caminar juntos | Esc: salir de la partida", True, (255, 243, 210))
         superficie.blit(ayuda, (22, 695))
-        if time.monotonic() - self.ultimo_paquete > 1:
-            aviso = self.titulo.render("Esperando al servidor…", True, (255, 207, 110))
+        if self.aviso_red or time.monotonic() - self.ultimo_paquete > 1:
+            aviso = self.titulo.render(self.aviso_red or "Esperando al servidor…", True, (255, 207, 110))
             superficie.blit(aviso, aviso.get_rect(center=(480, 45)))

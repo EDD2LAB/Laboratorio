@@ -10,6 +10,7 @@ from .servicio_internet import ServicioSalas
 
 SERVICIO = web.AppKey("servicio", ServicioSalas)
 CONEXIONES = web.AppKey("conexiones", dict)
+BUZONES = web.AppKey("buzones", dict)
 
 
 async def http(request):
@@ -37,9 +38,23 @@ async def websocket(request):
         return web.json_response({"error": str(error)}, status=401)
     if token in request.app[CONEXIONES]:
         return web.json_response({"error": "Tu sesión ya está conectada al mapa."}, status=409)
-    ws = web.WebSocketResponse(heartbeat=8, max_msg_size=2048, compress=False)
+    ws = web.WebSocketResponse(heartbeat=8, timeout=2, max_msg_size=2048, compress=False)
     await ws.prepare(request)
     request.app[CONEXIONES][token] = ws
+    cola = asyncio.Queue(maxsize=1)
+    request.app[BUZONES][token] = cola
+    async def escribir():
+        try:
+            while not ws.closed:
+                estado = await cola.get()
+                await asyncio.wait_for(ws.send_json(estado), timeout=3)
+                if estado.get("tipo") == "desconectado":
+                    break
+        except (OSError, TimeoutError, RuntimeError):
+            pass
+        finally:
+            await ws.close()
+    escritor = asyncio.create_task(escribir())
     ultimo_rechazo = 0
     ventana, cantidad = servicio.reloj(), 0
     try:
@@ -67,8 +82,17 @@ async def websocket(request):
                     ultimo_rechazo = ahora
     finally:
         request.app[CONEXIONES].pop(token, None)
-        if token in servicio.sesiones:
-            servicio._salir(token)
+        request.app[BUZONES].pop(token, None)
+        escritor.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await escritor
+        # Un corte de Wi-Fi no elimina inmediatamente al jugador ni su rol.
+        # Salir explícitamente usa /v1/salir; una ausencia caduca a los 45 s.
+        actual = servicio.sesiones.get(token)
+        if actual:
+            sala = servicio.salas.get(actual["codigo"])
+            if sala and sala.partida:
+                sala.partida.controles.pop(actual["id"], None)
     return ws
 
 
@@ -83,20 +107,17 @@ async def simulacion(app):
                 if sala.partida:
                     sala.partida.actualizar(ahora)
                     sala._publicar()
-            async def enviar(token, ws):
-                try:
-                    sesion = servicio.sesiones.get(token)
-                    if not sesion:
-                        await ws.send_json({"tipo": "desconectado", "mensaje": "El anfitrión cerró la sala."})
-                        await ws.close()
-                        return
-                    sala = servicio.salas[sesion["codigo"]]
-                    await asyncio.wait_for(ws.send_json(sala._estado()), timeout=.3)
-                except (OSError, TimeoutError, ConnectionError):
-                    await ws.close()
-            envios = [enviar(token, ws) for token, ws in list(app[CONEXIONES].items())]
-            if envios:
-                await asyncio.gather(*envios, return_exceptions=True)
+            # No esperar a la red dentro del reloj de simulación. Cada cliente
+            # tiene un escritor independiente y conserva solo el estado nuevo.
+            estados = {codigo: sala._estado() for codigo, sala in servicio.salas.items() if sala.partida}
+            for token, cola in list(app[BUZONES].items()):
+                sesion = servicio.sesiones.get(token)
+                estado = estados.get(sesion["codigo"]) if sesion else None
+                if estado is None:
+                    estado = {"tipo": "desconectado", "mensaje": "El anfitrión cerró la sala."}
+                if cola.full():
+                    cola.get_nowait()
+                cola.put_nowait(estado)
             await asyncio.sleep(max(.001, .05 - (asyncio.get_running_loop().time() - inicio)))
     tarea = asyncio.create_task(paso())
     yield
@@ -112,6 +133,7 @@ def crear_app(servicio=None):
     app = web.Application(client_max_size=4096)
     app[SERVICIO] = servicio or ServicioSalas()
     app[CONEXIONES] = {}
+    app[BUZONES] = {}
     app.router.add_get("/v1/juego", websocket)
     app.router.add_get("/health", http)
     app.router.add_get("/v1/estado", http)

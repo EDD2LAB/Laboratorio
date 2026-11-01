@@ -47,8 +47,10 @@ para pruebas con la variable `COPA_SERVIDOR_INTERNET`.
 El modo individual se conserva. Todavía no están sincronizadas las tablillas,
 diálogos, inventarios, entregas, habilidades, portales ni las otras dimensiones.
 La simulación actual permite explorar juntos, no resolver una partida cooperativa.
-No hay predicción local ni reconexión de sesión; con latencia alta la respuesta
-al teclado puede tardar en llegar, aunque se interpole el dibujo.
+Los cortes breves de WebSocket tienen hasta tres reintentos automáticos y
+conservan temporalmente el rol, posición y sesión. Cerrar el juego o salir
+explícitamente no recupera la sesión al abrirlo de nuevo. No hay predicción
+local; con latencia alta la respuesta al teclado puede tardar en llegar.
 
 ## Actualizar el servidor de Render
 
