@@ -78,9 +78,8 @@ class PruebasServicio(unittest.TestCase):
 
 class PruebasHTTP(unittest.TestCase):
     def test_clientes_http_comparten_sala(self):
-        servidor = ServidorHTTP(("127.0.0.1", 0))
-        hilo = threading.Thread(target=servidor.serve_forever, daemon=True)
-        hilo.start()
+        from soporte_servidor import ServidorPrueba
+        servidor = ServidorPrueba()
         url = "http://127.0.0.1:" + str(servidor.server_port)
         clientes = []
 
@@ -112,7 +111,9 @@ class PruebasHTTP(unittest.TestCase):
             host.enviar("iniciar")
             a = esperar(host, lambda e: e["tipo"] == "estado" and e["iniciada"])
             b = esperar(otro, lambda e: e["tipo"] == "estado" and e["iniciada"])
-            self.assertEqual(a, b)
+            self.assertEqual(a["mundo"]["firma_mapa"], b["mundo"]["firma_mapa"])
+            self.assertEqual([(j["id"], j["x"], j["y"], j["rol"]) for j in a["mundo"]["jugadores"]],
+                             [(j["id"], j["x"], j["y"], j["rol"]) for j in b["mundo"]["jugadores"]])
             host.cerrar()
             esperar(otro, lambda e: e["tipo"] == "desconectado")
         finally:

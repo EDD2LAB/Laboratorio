@@ -56,6 +56,7 @@ class MenuInicio:
         self.servidor = None
         self.identificador = None
         self.estado = {"jugadores": [], "iniciada": False}
+        self.partida = None
         self.mensaje = ""
         self.error = False
         self.conectando = False
@@ -117,6 +118,7 @@ class MenuInicio:
         self.identificador = None
         self.codigo_sala = ""
         self.estado = {"jugadores": [], "iniciada": False}
+        self.partida = None
         self.conectando = False
 
     def conectar(self):
@@ -187,6 +189,19 @@ class MenuInicio:
                 pygame.key.stop_text_input()
             elif tipo == "estado":
                 self.estado = evento
+                if evento.get("fase") == "partida":
+                    try:
+                        if self.partida is None:
+                            from interfaz.partida_multijugador import VistaPartida
+                            self.partida = VistaPartida(self.identificador, evento)
+                        else:
+                            self.partida.recibir(evento)
+                        self.vista = "partida"
+                    except (OSError, ValueError, RuntimeError) as error:
+                        self.limpiar_conexion()
+                        self.vista = "formulario"
+                        self.mensaje, self.error = str(error), True
+                        continue
                 if evento["iniciada"]:
                     self.mensaje, self.error = "Todos los jugadores confirmaron el equipo.", False
             elif tipo == "error":
@@ -277,6 +292,9 @@ class MenuInicio:
             self.parrafo(self.mensaje, pygame.Rect(215, 560, 535, 95), 16, (255, 161, 145) if self.error else CREMA)
         elif self.vista == "sala":
             self.dibujar_sala()
+        elif self.vista == "partida" and self.partida:
+            self.partida.dibujar(self.lienzo, self.codigo_sala)
+            self.boton("volver", "Salir", (869, 689), 125)
 
     def dibujar_sala(self):
         self.panel(pygame.Rect(16, 16, 928, 688))
@@ -320,19 +338,19 @@ class MenuInicio:
                    bool(yo.get("rol")) and not self.estado["iniciada"])
         if yo.get("anfitrion"):
             preparado = len(jugadores) >= 2 and all(j["listo"] for j in jugadores)
-            self.boton("iniciar", "Confirmar equipo", (795, 605), 255, preparado and not self.estado["iniciada"])
+            self.boton("iniciar", "Iniciar partida", (795, 605), 255, preparado and not self.estado["iniciada"])
         else:
             self.parrafo("El anfitrión confirma el equipo.", pygame.Rect(690, 580, 210, 65), 16)
         mensaje = self.mensaje
         if self.estado["iniciada"]:
-            mensaje = "¡Equipo confirmado en todas las PC! El movimiento compartido se incorporará en la siguiente etapa."
+            mensaje = "Preparando La Copa para el equipo…"
         self.parrafo(mensaje, pygame.Rect(44, 651, 866, 48), 16, (255, 161, 145) if self.error else VERDE)
 
     def ejecutar(self):
         reloj = pygame.time.Clock()
         try:
             while True:
-                reloj.tick(60)
+                segundos = reloj.tick(60) / 1000
                 ancho, alto = self.pantalla.get_size()
                 escala = min(ancho / 960, alto / 720)
                 destino = pygame.Rect(0, 0, round(960 * escala), round(720 * escala))
@@ -341,6 +359,8 @@ class MenuInicio:
                 self.mouse = ((mx - destino.x) / escala, (my - destino.y) / escala) if destino.collidepoint(mx, my) else (-1, -1)
                 self.recibir()
                 # Preparar las áreas clicables antes de procesar la entrada.
+                if self.vista == "partida" and self.partida and self.cliente:
+                    self.partida.actualizar(segundos, self.cliente)
                 self.dibujar()
                 for evento in pygame.event.get():
                     if evento.type == pygame.QUIT:

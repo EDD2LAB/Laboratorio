@@ -13,9 +13,35 @@ import threading
 import time
 
 from .servidor import ServidorSala
+from .movimiento import PartidaMovimiento
+from .protocolo import VERSION
 
 
 class SalaInternet(ServidorSala):
+    def __init__(self, reloj=time.monotonic):
+        super().__init__()
+        self.reloj = reloj
+        self.partida = None
+
+    def _accion(self, identificador, mensaje):
+        super()._accion(identificador, mensaje)
+        if mensaje.get("tipo") == "iniciar":
+            try:
+                self.partida = PartidaMovimiento(
+                    [s["jugador"] for s in self._sesiones.values()], self.reloj())
+            except (OSError, ValueError):
+                self._iniciada = False
+                self._publicar()
+                raise ValueError("No se pudo preparar el mapa del servidor.")
+
+    def _estado(self):
+        estado = super()._estado()
+        estado["protocolo"] = VERSION
+        estado["fase"] = "partida" if self.partida and self._iniciada else "sala"
+        if self.partida:
+            estado["mundo"] = self.partida.estado()
+        return estado
+
     def _publicar(self):
         # Los clientes consultan el estado; no acumular copias en colas TCP.
         self._revision += 1
@@ -76,7 +102,10 @@ class ServicioSalas:
         if jugador and jugador["jugador"]["anfitrion"]:
             self._eliminar_sala(codigo)
         else:
-            sala._iniciada = False
+            if sala.partida:
+                sala.partida.quitar(sesion["id"])
+            else:
+                sala._iniciada = False
             sala._publicar()
 
     def ejecutar(self, metodo, ruta, datos, token="", ip="local"):
@@ -84,14 +113,14 @@ class ServicioSalas:
             self.limpiar()
             self.limitar(ip)
             if metodo == "GET" and ruta == "/health":
-                return {"ok": True}
+                return {"ok": True, "protocolo": VERSION, "movimiento": True}
             if metodo == "POST" and ruta in ("/v1/crear", "/v1/unirse"):
                 crear = ruta == "/v1/crear"
                 if crear:
                     if len(self.salas) >= 100:
                         raise ValueError("El servicio está lleno. Intenta más tarde.")
                     # No asignar una sala hasta validar el saludo.
-                    sala = SalaInternet()
+                    sala = SalaInternet(self.reloj)
                     codigo = "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(6))
                     while codigo in self.salas:
                         codigo = "".join(secrets.choice("ABCDEFGHJKLMNPQRSTUVWXYZ23456789") for _ in range(6))
@@ -182,15 +211,9 @@ class Manejador(BaseHTTPRequestHandler):
 
 
 def main():
-    puerto = int(os.environ.get("PORT", "10000"))
-    servidor = ServidorHTTP(("0.0.0.0", puerto))
-    print(f"Servicio de salas iniciado en el puerto {puerto}", flush=True)
-    try:
-        servidor.serve_forever(poll_interval=0.5)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        servidor.server_close()
+    from aiohttp import web
+    from .tiempo_real import crear_app
+    web.run_app(crear_app(), host="0.0.0.0", port=int(os.environ.get("PORT", "10000")), access_log=None)
 
 
 if __name__ == "__main__":

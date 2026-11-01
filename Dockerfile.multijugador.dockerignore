@@ -1,4 +1,8 @@
 **
 !multijugador/
 !multijugador/*.py
+!multijugador/requirements.txt
+!Hitboxes/
+!Hitboxes/Mapas/
+!Hitboxes/Mapas/*.json
 !Dockerfile.multijugador

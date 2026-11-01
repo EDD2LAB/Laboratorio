@@ -1,7 +1,7 @@
 """Mensajes JSON delimitados por nueva línea; sin dependencias externas."""
 import json
 
-VERSION = 1
+VERSION = 2
 PUERTO = 45871
 ROLES = ("guardian", "mensajero", "habitante", "aspirante")
 NOMBRES_ROLES = ("Guardián", "Mensajero", "Habitante", "Aspirante")

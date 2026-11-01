@@ -1,102 +1,103 @@
-# Sala de espera multijugador
+# Multijugador: sala y exploración compartida
 
-Ejecutar `python juego.py` y elegir **Multijugador**. Crear y unirse usan
-automáticamente el servidor público configurado; no hay selector de conexión.
+## Actualizar cada PC
 
-## Internet: computadores en redes diferentes
+```powershell
+git switch multijugador
+git pull origin multijugador
+python -m pip install -r multijugador/requirements.txt
+python juego.py
+```
 
-El servicio central está publicado en `https://la-copa-salas.onrender.com` y
-su dirección ya está incluida en `configuracion.json`. No hace falta escribir
-la IP doméstica ni introducir la dirección en cada partida.
+Pygame debe estar instalado para el juego; el paquete nuevo es aiohttp, usado
+por el cliente y el servidor para WebSocket. El servidor no necesita Pygame.
 
-1. Mantener actualizada la rama `multijugador` en todas las PC.
-2. Un jugador crea la sala y recibe un código de seis caracteres.
-3. Los demás eligen Unirse y escriben ese código.
-4. Elegir roles, marcarse como listos y confirmar desde el anfitrión.
+## Jugar desde redes diferentes
 
-Todos hacen conexiones salientes HTTPS; no es necesario abrir puertos del
-router, compartir IP pública ni instalar una VPN. El creador administra la
-sala, pero el servidor se ejecuta en el alojamiento, no en su PC.
+El servidor configurado es `https://la-copa-salas.onrender.com`.
 
-La URL se configura para todas las copias en `multijugador/configuracion.json`,
-campo `servidor_internet`; no se pide a los jugadores. También se
-admite la variable de entorno `COPA_SERVIDOR_INTERNET`.
+1. Elegir Multijugador → Crear partida e introducir el nombre.
+2. Compartir el código de seis caracteres con los demás.
+3. Los invitados eligen Unirse e introducen nombre y código.
+4. Cada jugador elige un rol y se marca como listo.
+5. El anfitrión pulsa **Iniciar partida**: todos entran automáticamente a La Copa.
+6. Moverse con WASD o flechas. Esc o Salir abandona la partida.
 
-### Publicar el servicio en Render
+No hace falta compartir IP doméstica, instalar VPN ni abrir puertos del router.
+Las solicitudes de sala utilizan HTTPS y el mapa utiliza WebSocket seguro en
+el mismo servicio. La URL se guarda en `configuracion.json`; puede reemplazarse
+para pruebas con la variable `COPA_SERVIDOR_INTERNET`.
 
-Preparación incluida: `Dockerfile.multijugador`, `render.yaml` y comprobación
-de salud `/health`. No requiere instalar Pygame en el servidor.
+## Qué está implementado
 
-1. Crear una cuenta en Render y conectar el repositorio de GitHub.
-2. Subir primero esta implementación a la rama `multijugador`.
-3. Crear un Blueprint con `render.yaml` desde esa rama. El archivo solicita
-   una única instancia del plan `free` y desactiva despliegues automáticos.
-   Si se configura como Web Service manual, usar Docker y la ruta
-   `Dockerfile.multijugador`; mantener `/health` como Health Check Path.
-4. Esperar a que el despliegue esté activo y comprobar `https://TU-SERVICIO/health`.
-   Debe responder `{"ok": true}`. Esa dirección es un ejemplo, no una URL real.
-5. Copiar la URL HTTPS base (sin `/health`) en el juego o en la configuración.
-6. Probar una PC por Wi-Fi y otra usando una red distinta, por ejemplo un
-   punto de acceso móvil. Ambas deben ver los mismos roles y jugadores.
+- Sala de 2–4 jugadores con roles exclusivos y validación en el servidor.
+- Transición del equipo al mapa y puntos de aparición separados y libres.
+- Posiciones calculadas en el servidor con las hitboxes del mapa de mañana.
+- Paredes rectangulares, circulares y líneas; obstáculos de NPC no jugables.
+- Velocidad limitada, diagonales normalizadas y controles con secuencia.
+- Simulación y estados a 20 Hz; dibujo interpolado a 60 FPS.
+- Personajes de los cuatro roles, reposo y movimiento en cuatro direcciones.
+- Recorte de hojas mediante sus separaciones transparentes y alineación inferior.
+- Nombres, color por rol y marcador del jugador local.
+- Los jugadores se atraviesan entre sí para no bloquear los puentes.
+- Un control sin renovación deja de mover al personaje después de 350 ms.
+- Al salir un invitado desaparece del mapa; los demás continúan.
+- Al salir el anfitrión se cierra la sala para todos.
 
-Documentación de referencia:
-- https://render.com/docs/blueprint-spec
-- https://render.com/docs/docker
-- https://render.com/docs/health-checks
+El modo individual se conserva. Todavía no están sincronizadas las tablillas,
+diálogos, inventarios, entregas, habilidades, portales ni las otras dimensiones.
+La simulación actual permite explorar juntos, no resolver una partida cooperativa.
+No hay predicción local ni reconexión de sesión; con latencia alta la respuesta
+al teclado puede tardar en llegar, aunque se interpole el dibujo.
 
-El plan de pruebas puede tardar en arrancar tras inactividad. Se puede cancelar
-la conexión desde el juego; la primera solicitud espera hasta 60 segundos.
-Las salas viven en memoria: reiniciar o desplegar el servidor las cierra.
-Mantener **una sola instancia y proceso** hasta incorporar almacenamiento
-compartido. No hay reconexión de sesión en esta fase; una ausencia de más de
-45 segundos libera al jugador y, si era el creador, cierra su sala.
+## Actualizar el servidor de Render
 
-### Prueba técnica local del servicio Internet
+Esta entrega usa **protocolo 2**. No es compatible con el servidor anterior:
+actualizar tanto Render como las PC antes de probar una sala.
 
-Ejecutar `python -m multijugador.servicio_internet` y usar
-`http://127.0.0.1:10000` en clientes del mismo equipo. Solo se admite HTTP
-sin cifrar para loopback. Para uso externo, el alojamiento debe proporcionar
-HTTPS. La consulta periódica de estado es para la sala de espera; el movimiento
-en tiempo real será una entrega posterior.
+1. Publicar el commit de esta entrega en la rama `multijugador`.
+2. En Render abrir el servicio `la-copa-salas`.
+3. Seleccionar **Manual Deploy → Deploy latest commit** y esperar a Live.
+4. Abrir `https://la-copa-salas.onrender.com/health`.
+5. La respuesta debe incluir `"protocolo": 2` y `"movimiento": true`.
 
-## Transporte local para pruebas de desarrollo
+Docker instala aiohttp y copia solo el código del servidor y los JSON de
+hitboxes. HTTP y WebSocket escuchan en el mismo `PORT`. El servicio mantiene
+una sola instancia/proceso; las salas son temporales y se pierden al reiniciar
+o desplegar. No actualizar mientras otros están probando una partida.
 
-El transporte TCP local se conserva en los módulos y pruebas automáticas,
-pero ya no aparece como opción en el menú. El siguiente flujo corresponde
-a la interfaz de desarrollo anterior:
+Los despliegues automáticos siguen desactivados en `render.yaml`. Si el servicio
+está detenido por inactividad, la primera conexión puede tardar; el juego deja
+cancelarla. Una sesión sin comunicación durante 45 segundos se retira de la sala.
 
-1. Todos deben tener esta misma versión y estar en la misma red local.
-   Seleccionar el modo **Red local** en Multijugador.
-2. El anfitrión elige **Crear partida**, introduce nombre y puerto y crea la sala.
-3. La sala muestra las direcciones IPv4 locales del anfitrión. Si aparecen varias,
-   usar la del adaptador Wi-Fi/Ethernet de la red compartida (`ipconfig`).
-4. Los demás eligen **Unirse a partida**, escriben su nombre, la IP del anfitrión
-   y el mismo puerto (por defecto **45871 TCP**).
-5. Si Windows lo solicita, permitir Python en la **red privada**. Una red Wi-Fi
-   de invitados o institucional puede impedir que dos equipos se comuniquen.
-6. Elegir roles diferentes, marcarse como listos y confirmar el equipo desde
-   el anfitrión. Cambiar de rol cancela el estado Listo.
+Referencias oficiales:
+- https://render.com/docs/websocket
+- https://render.com/docs/deploys
+- https://docs.aiohttp.org/en/stable/web_reference.html
 
-El anfitrión juega como uno de los cuatro participantes; el servidor no consume
-otro cupo. Se requieren dos participantes listos para confirmar. Los roles sin
-jugador quedan libres; todavía no hay asistentes automáticos.
+## Pruebas de desarrollo
 
-## Alcance de esta entrega
+```powershell
+python -m unittest discover -s tests -p "test_*.py" -v
+```
 
-Menú inicial, formularios, sala TCP, selección exclusiva de cuatro roles,
-preparación y confirmación sincronizadas, liberación de cupos al salir, errores
-de conexión y cierre al salir el anfitrión. La confirmación muestra el mismo
-equipo en todas las PC; **todavía no inicia movimiento multijugador en La Copa**.
-El botón **Un jugador** abre el modo individual existente.
+Incluyen cuatro clientes WebSocket reales, autenticación, inicio, movimiento,
+colisiones, límites de velocidad, desconexión, aislamiento de salas y compatibilidad.
+Las pruebas locales no sustituyen una prueba manual entre dos PC con redes distintas.
 
-El servidor valida todas las acciones de la sala. La red se procesa en hilos
-separados de Pygame. No se implementan reconexión, chat libre ni migración de
-anfitrión en esta fase. En red local se utiliza IP; en Internet, código de sala.
+Para iniciar el servicio local:
 
-## Comprobar la implementación
+```powershell
+python -m multijugador.servicio_internet
+```
 
-`python -m unittest discover -s tests -p "test_sala*.py" -v`
+En una consola de cliente del mismo equipo:
 
-Las pruebas usan clientes TCP y HTTP reales en el mismo equipo. Debe completarse
-una prueba manual adicional entre dos PC y una prueba entre redes diferentes
-cuando exista el despliegue HTTPS público.
+```powershell
+$env:COPA_SERVIDOR_INTERNET = "http://127.0.0.1:10000"
+python juego.py
+```
+
+HTTP sin cifrar se admite únicamente en loopback. El transporte TCP de la
+primera sala se conserva para pruebas, pero no aparece en el menú ni implementa
+el nuevo movimiento compartido.

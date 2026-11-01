@@ -1,6 +1,8 @@
 FROM python:3.12-slim
 WORKDIR /app
 COPY multijugador/ /app/multijugador/
+COPY Hitboxes/Mapas/ /app/Hitboxes/Mapas/
+RUN pip install --no-cache-dir -r /app/multijugador/requirements.txt
 ENV PYTHONUNBUFFERED=1
 ENV PORT=10000
 EXPOSE 10000
