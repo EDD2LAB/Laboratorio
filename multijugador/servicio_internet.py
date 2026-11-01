@@ -34,12 +34,12 @@ class SalaInternet(ServidorSala):
                 self._publicar()
                 raise ValueError("No se pudo preparar el mapa del servidor.")
 
-    def _estado(self):
+    def _estado(self, identificador=None):
         estado = super()._estado()
         estado["protocolo"] = VERSION
         estado["fase"] = "partida" if self.partida and self._iniciada else "sala"
         if self.partida:
-            estado["mundo"] = self.partida.estado()
+            estado["mundo"] = self.partida.estado(identificador)
         return estado
 
     def _publicar(self):
@@ -113,7 +113,8 @@ class ServicioSalas:
             self.limpiar()
             self.limitar(ip)
             if metodo == "GET" and ruta == "/health":
-                return {"ok": True, "protocolo": VERSION, "movimiento": True}
+                return {"ok": True, "protocolo": VERSION, "movimiento": True, "mision": "puente_norte",
+                        "build": os.environ.get("RENDER_GIT_COMMIT", "local")[:12]}
             if metodo == "POST" and ruta in ("/v1/crear", "/v1/unirse"):
                 crear = ruta == "/v1/crear"
                 if crear:
@@ -142,15 +143,15 @@ class ServicioSalas:
                     self.salas[codigo] = sala
                 token = secrets.token_urlsafe(32)
                 self.sesiones[token] = {"id": identificador, "codigo": codigo, "ultima": self.reloj()}
-                return {"id": identificador, "codigo": codigo, "token": token, "estado": sala._estado()}
+                return {"id": identificador, "codigo": codigo, "token": token, "estado": sala._estado(identificador)}
             sesion, sala = self._sesion(token)
             if metodo == "GET" and ruta == "/v1/estado":
-                return sala._estado()
+                return sala._estado(sesion["id"])
             if metodo == "POST" and ruta == "/v1/accion":
                 if datos.get("tipo") not in ("rol", "listo", "iniciar"):
                     raise ValueError("Acción no permitida.")
                 sala._accion(sesion["id"], datos)
-                return sala._estado()
+                return sala._estado(sesion["id"])
             if metodo == "POST" and ruta == "/v1/salir":
                 self._salir(token)
                 return {"ok": True}

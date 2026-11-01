@@ -2,6 +2,7 @@
 import asyncio
 import contextlib
 import json
+from collections import deque
 
 from aiohttp import WSMsgType, web
 
@@ -11,6 +12,34 @@ from .servicio_internet import ServicioSalas
 SERVICIO = web.AppKey("servicio", ServicioSalas)
 CONEXIONES = web.AppKey("conexiones", dict)
 BUZONES = web.AppKey("buzones", dict)
+
+
+class Buzon:
+    """Estados reemplazables y acuses fiables, sin bloquear la simulación."""
+    def __init__(self):
+        self.estado = None
+        self.acuses = deque()
+        self.nuevo = asyncio.Event()
+
+    def publicar(self, estado):
+        self.estado = estado
+        self.nuevo.set()
+
+    def confirmar(self, acuse):
+        if len(self.acuses) >= 32:
+            raise ValueError("Demasiadas acciones pendientes.")
+        self.acuses.append(acuse)
+        self.nuevo.set()
+
+    async def siguiente(self):
+        while True:
+            if self.acuses:
+                return self.acuses.popleft()
+            if self.estado is not None:
+                estado, self.estado = self.estado, None
+                return estado
+            self.nuevo.clear()
+            await self.nuevo.wait()
 
 
 async def http(request):
@@ -41,12 +70,13 @@ async def websocket(request):
     ws = web.WebSocketResponse(heartbeat=8, timeout=2, max_msg_size=2048, compress=False)
     await ws.prepare(request)
     request.app[CONEXIONES][token] = ws
-    cola = asyncio.Queue(maxsize=1)
+    cola = Buzon()
     request.app[BUZONES][token] = cola
+    sala.partida.conectados.add(sesion["id"])
     async def escribir():
         try:
             while not ws.closed:
-                estado = await cola.get()
+                estado = await cola.siguiente()
                 await asyncio.wait_for(ws.send_json(estado), timeout=3)
                 if estado.get("tipo") == "desconectado":
                     break
@@ -70,10 +100,14 @@ async def websocket(request):
                 break
             try:
                 datos = json.loads(mensaje.data)
-                if not isinstance(datos, dict) or datos.get("tipo") != "mover":
+                if not isinstance(datos, dict) or datos.get("tipo") not in ("mover", "accion"):
                     raise ValueError("Control inválido.")
                 actual, sala = servicio._sesion(token)
-                sala.partida.recibir(actual["id"], datos, ahora)
+                if datos["tipo"] == "mover":
+                    sala.partida.recibir(actual["id"], datos, ahora)
+                else:
+                    cola.confirmar(sala.partida.actuar(actual["id"], datos, ahora))
+                    sala._publicar()
             except PermissionError:
                 break
             except ValueError as error:
@@ -93,6 +127,7 @@ async def websocket(request):
             sala = servicio.salas.get(actual["codigo"])
             if sala and sala.partida:
                 sala.partida.controles.pop(actual["id"], None)
+                sala.partida.conectados.discard(actual["id"])
     return ws
 
 
@@ -115,9 +150,10 @@ async def simulacion(app):
                 estado = estados.get(sesion["codigo"]) if sesion else None
                 if estado is None:
                     estado = {"tipo": "desconectado", "mensaje": "El anfitrión cerró la sala."}
-                if cola.full():
-                    cola.get_nowait()
-                cola.put_nowait(estado)
+                else:
+                    sala = servicio.salas[sesion["codigo"]]
+                    estado = {**estado, "mundo": {**estado["mundo"], "privado": sala.partida.mision.privado(sesion["id"])}}
+                cola.publicar(estado)
             await asyncio.sleep(max(.001, .05 - (asyncio.get_running_loop().time() - inicio)))
     tarea = asyncio.create_task(paso())
     yield

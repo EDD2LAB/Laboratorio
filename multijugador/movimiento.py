@@ -25,6 +25,7 @@ class ColisionesMapa:
     def __init__(self, datos=None):
         if datos is None:
             datos = json.loads(MAPA.read_text(encoding="utf-8"))
+        self.datos = datos
         self.firma = hashlib.sha256(json.dumps(datos, sort_keys=True).encode()).hexdigest()[:16]
         self.paredes = [h for h in datos.get("hitboxes", []) if h.get("role", "wall") == "wall"]
         self.zonas = [h for h in datos.get("hitboxes", []) if h.get("role") == "walkable"]
@@ -123,6 +124,13 @@ class PartidaMovimiento:
                 "id": jugador["id"], "nombre": jugador["nombre"], "rol": jugador["rol"],
                 "x": x, "y": y, "direccion": "abajo", "animacion": "reposo", "seq": -1,
             }
+        from .mision import MisionPuente
+        self.conectados = set(self.jugadores)
+        self.mision = MisionPuente(self.jugadores, self.colisiones.datos)
+
+    def actuar(self, identificador, datos, ahora):
+        self.actualizar(ahora)
+        return self.mision.actuar(identificador, datos, ahora, self.conectados)
 
     def recibir(self, identificador, datos, ahora):
         if identificador not in self.jugadores:
@@ -152,11 +160,15 @@ class PartidaMovimiento:
                 jugador["direccion"] = "derecha" if dx > 0 else "izquierda"
             elif dy:
                 jugador["direccion"] = "abajo" if dy > 0 else "arriba"
+        self.mision.resolver(self.conectados)
 
     def quitar(self, identificador):
         self.jugadores.pop(identificador, None)
         self.controles.pop(identificador, None)
+        self.conectados.discard(identificador)
 
-    def estado(self):
+    def estado(self, identificador=None):
         return {"mapa": "la_copa", "firma_mapa": self.colisiones.firma,
-                "jugadores": [dict(j) for j in self.jugadores.values()]}
+                "jugadores": [dict(j, conectado=clave in self.conectados) for clave, j in self.jugadores.items()],
+                "caso": self.mision.publico(self.conectados),
+                "privado": self.mision.privado(identificador) if identificador else {}}

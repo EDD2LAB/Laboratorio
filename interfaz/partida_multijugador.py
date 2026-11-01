@@ -83,6 +83,10 @@ class VistaPartida:
         self.aviso_red = ""
         self.estado = estado
         self.frames_eco = juego.cargar_frames_tronco_eco()
+        from interfaz.cooperativo import PanelCooperativo
+        self.panel = PanelCooperativo(self)
+        self.seleccion = None
+        self.mouse = (-1, -1)
         self.recibir(estado)
 
     def recibir(self, estado):
@@ -102,12 +106,46 @@ class VistaPartida:
             self.jugadores[clave].update(datos=jugador, destino=destino)
         for clave in set(self.jugadores) - presentes:
             del self.jugadores[clave]
+        self.panel.actualizar()
+
+    def cerca(self, objetivo, radio=68):
+        yo = next((j for j in self.estado.get("mundo", {}).get("jugadores", []) if j["id"] == self.identificador), None)
+        return yo is not None and math.hypot(yo["x"] - objetivo["x"], yo["y"] - objetivo["y"]) <= radio
+
+    def candidatos(self):
+        mundo = self.estado.get("mundo", {})
+        yo = next((j for j in mundo.get("jugadores", []) if j["id"] == self.identificador), None)
+        if not yo:
+            return []
+        objetivos = [dict(o) for o in mundo.get("caso", {}).get("objetivos", []) if self.cerca(o)]
+        objetivos.extend({"id": "jugador:" + j["id"], "nombre": "Compartir con " + j["nombre"], "x": j["x"], "y": j["y"]}
+                         for j in mundo.get("jugadores", []) if j["id"] != self.identificador and j.get("conectado", True) and self.cerca(j, 64))
+        objetivos.sort(key=lambda o: math.hypot(yo["x"] - o["x"], yo["y"] - o["y"]) - (15 if o.get("rol") == yo["rol"] else 0))
+        return objetivos
+
+    def manejar_evento(self, evento, posicion, cliente):
+        if self.panel.manejar(evento, posicion, cliente):
+            return True
+        if evento.type == pygame.KEYDOWN and evento.key in (pygame.K_e, pygame.K_TAB):
+            opciones = self.candidatos()
+            claves = [o["id"] for o in opciones]
+            if self.seleccion not in claves:
+                self.seleccion = claves[0] if claves else None
+            if evento.key == pygame.K_TAB and claves:
+                self.seleccion = claves[(claves.index(self.seleccion) + 1) % len(claves)]
+            elif evento.key == pygame.K_e:
+                if self.seleccion:
+                    cliente.actuar("interactuar", objetivo=self.seleccion)
+                else:
+                    self.panel.notificar("Acércate a una fuente, al caldero o a otro jugador para pulsar E.")
+            return True
+        return False
 
     def actualizar(self, segundos, cliente):
         teclas = pygame.key.get_pressed()
         dx = int(teclas[pygame.K_d] or teclas[pygame.K_RIGHT]) - int(teclas[pygame.K_a] or teclas[pygame.K_LEFT])
         dy = int(teclas[pygame.K_s] or teclas[pygame.K_DOWN]) - int(teclas[pygame.K_w] or teclas[pygame.K_UP])
-        if not pygame.key.get_focused():
+        if not pygame.key.get_focused() or self.panel.activo:
             dx = dy = 0
         cliente.mover(dx, dy)
         for jugador in self.jugadores.values():
@@ -115,8 +153,9 @@ class VistaPartida:
             jugador["posicion"] = jugador["posicion"].lerp(jugador["destino"], factor)
             jugador["reloj"] += segundos
 
-    def dibujar(self, superficie, codigo):
+    def dibujar(self, superficie, codigo, mouse=(-1, -1)):
         import juego
+        self.mouse = mouse
         superficie.blit(self.fondo, (0, 0))
         for objeto in self.decoraciones:
             if objeto.get("tronco_eco") and self.frames_eco:
@@ -160,8 +199,37 @@ class VistaPartida:
         superficie.blit(panel, (0, 658))
         etiqueta = self.titulo.render(f"LA COPA · Sala {codigo} · {len(self.jugadores)} jugadores", True, (237, 185, 87))
         superficie.blit(etiqueta, (22, 667))
-        ayuda = self.fuente.render("WASD o flechas: caminar juntos | Esc: salir de la partida", True, (255, 243, 210))
+        opciones = self.candidatos()
+        claves = [o["id"] for o in opciones]
+        if self.seleccion not in claves:
+            self.seleccion = claves[0] if claves else None
+        seleccion = next((o for o in opciones if o["id"] == self.seleccion), None)
+        instruccion = ("[E] " + seleccion["nombre"] + (" | Tab: cambiar" if len(opciones) > 1 else "")) if seleccion else "WASD: caminar | E: interactuar | I: pruebas | M: caso | Esc: salir"
+        ayuda = self.fuente.render(instruccion, True, (255, 243, 210))
         superficie.blit(ayuda, (22, 695))
+        caso = self.estado.get("mundo", {}).get("caso", {})
+        privado = self.estado.get("mundo", {}).get("privado", {})
+        if caso:
+            hud = pygame.Surface((590, 107), pygame.SRCALPHA)
+            hud.fill((8, 28, 20, 235))
+            superficie.blit(hud, (12, 12))
+            self.panel.texto_lineas(superficie, caso["titulo"], 25, 22, 560, self.titulo, (237, 185, 87))
+            objetivo = privado.get("objetivo", {})
+            self.panel.texto_lineas(superficie, privado.get("instruccion", "Tu fuente: " + objetivo.get("nombre", "")), 25, 54, 560, self.fuente)
+            self.panel.texto_lineas(superficie, f"Pruebas: {caso['pruebas_halladas']} | Entregas: {caso['entregas']} | Votos: {caso['votos_emitidos']}/{caso['votantes']} | I: leer", 25, 83, 560, self.fuente)
+            for o in caso["objetivos"]:
+                if o.get("rol") == objetivo.get("rol") or o["id"] == "caldero":
+                    color = (126, 231, 188) if o.get("rol") else (237, 185, 87)
+                    radio = 9 + round(math.sin(pygame.time.get_ticks() / 250) * 2)
+                    pygame.draw.circle(superficie, color, (o["x"], o["y"] + 5), radio, 2)
+            badge = pygame.Surface((330, 110), pygame.SRCALPHA)
+            badge.fill((8, 28, 20, 235))
+            superficie.blit(badge, (618, 12))
+            for i, (nombre, valor) in enumerate(caso["indicadores"].items()):
+                self.panel.texto_lineas(superficie, f"{nombre.capitalize()}: {valor}", 632, 22 + i * 23, 300, self.fuente)
+            estado_puente = {"sin_verificar": "Puente: información sin verificar", "revision_programada": "Puente: revisión mañana", "alarma_injustificada": "Puente: falsa alarma", "aviso_pendiente": "Puente: aviso pendiente"}[caso["estado_puente"]]
+            self.panel.texto_lineas(superficie, estado_puente, 632, 93, 300, self.fuente, (237, 185, 87))
         if self.aviso_red or time.monotonic() - self.ultimo_paquete > 1:
             aviso = self.titulo.render(self.aviso_red or "Esperando al servidor…", True, (255, 207, 110))
             superficie.blit(aviso, aviso.get_rect(center=(480, 45)))
+        self.panel.dibujar(superficie)

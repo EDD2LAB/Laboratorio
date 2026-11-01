@@ -208,8 +208,13 @@ class MenuInicio:
                 self.mensaje, self.error = evento["mensaje"], False
                 if self.partida:
                     self.partida.aviso_red = evento["mensaje"]
+            elif tipo == "acuse":
+                if self.partida:
+                    self.partida.panel.recibir(evento)
             elif tipo == "error":
                 self.mensaje, self.error = evento["mensaje"], True
+                if self.partida:
+                    self.partida.panel.notificar(evento["mensaje"])
             elif tipo in ("rechazado", "desconectado"):
                 self.limpiar_conexion()
                 self.vista = "formulario"
@@ -297,8 +302,9 @@ class MenuInicio:
         elif self.vista == "sala":
             self.dibujar_sala()
         elif self.vista == "partida" and self.partida:
-            self.partida.dibujar(self.lienzo, self.codigo_sala)
-            self.boton("volver", "Salir", (869, 689), 125)
+            self.partida.dibujar(self.lienzo, self.codigo_sala, self.mouse)
+            if not self.partida.panel.activo:
+                self.boton("volver", "Salir", (869, 689), 125)
 
     def dibujar_sala(self):
         self.panel(pygame.Rect(16, 16, 928, 688))
@@ -367,6 +373,10 @@ class MenuInicio:
                     self.partida.actualizar(segundos, self.cliente)
                 self.dibujar()
                 for evento in pygame.event.get():
+                    if evento.type != pygame.QUIT and self.vista == "partida" and self.partida:
+                        posicion = ((evento.pos[0] - destino.x) / escala, (evento.pos[1] - destino.y) / escala) if hasattr(evento, "pos") else self.mouse
+                        if self.partida.manejar_evento(evento, posicion, self.cliente):
+                            continue
                     if evento.type == pygame.QUIT:
                         return "salir"
                     if evento.type == pygame.VIDEORESIZE:
