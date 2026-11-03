@@ -19,6 +19,8 @@ class SistemaParticulas:
         self.alto = alto
         self.rng = random.Random(semilla)
         self.tiempo = 0.0
+        self.mostrar_luciernagas = True
+        self.paleta = self.PALETA
         self.luciernagas = [
             self._nueva_luciernaga(indice) for indice in range(self.MAX_LUCIERNAGAS)
         ]
@@ -32,6 +34,14 @@ class SistemaParticulas:
             except (pygame.error, MemoryError) as error:
                 print(f"[advertencia] No se pudo crear el pixel de luciernaga: {error}")
                 break
+
+    def configurar_dimension(self, dimension):
+        if dimension == "presente":
+            self.mostrar_luciernagas = False
+            self.paleta = ((62, 210, 206), (99, 185, 241), (170, 239, 230))
+        else:
+            self.mostrar_luciernagas = True
+            self.paleta = self.PALETA
 
     def _nueva_luciernaga(self, indice):
         return {
@@ -58,7 +68,7 @@ class SistemaParticulas:
                 "vida": vida,
                 "vida_max": vida,
                 "tamano": self.rng.choice((2, 3, 3, 4, 5, 6)),
-                "color": self.rng.choice(self.PALETA),
+                "color": self.rng.choice(self.paleta),
             })
 
     def actualizar(self, delta_ms):
@@ -79,25 +89,26 @@ class SistemaParticulas:
 
     def dibujar(self, superficie):
         brillos = pygame.Surface(superficie.get_size(), pygame.SRCALPHA)
-        for luciernaga in self.luciernagas:
-            x = int(luciernaga["x"] + math.sin(luciernaga["fase"]) * luciernaga["amplitud"])
-            y = int(luciernaga["y"] + math.sin(luciernaga["fase"] * 0.7) * 3)
-            brillo = (math.sin(self.tiempo * 1.6 + luciernaga["fase_brillo"]) + 1) / 2
-            alpha = int(100 + brillo * 155)
-            tamano = luciernaga["tamano"]
-            pygame.draw.circle(
-                brillos,
-                (255, 207, 92, int(38 + brillo * 42)),
-                (x + tamano // 2, y + tamano // 2),
-                self.RADIO_BRILLO,
-            )
-            pixel = self._superficies_luciernaga.get(tamano)
-            if pixel is not None:
-                pixel.set_alpha(alpha)
-                superficie.blit(pixel, (x, y))
-            elif alpha > 2:
-                color = (alpha, alpha * 3 // 4, alpha // 3)
-                pygame.draw.rect(superficie, color, pygame.Rect(x, y, tamano, tamano))
+        if self.mostrar_luciernagas:
+            for luciernaga in self.luciernagas:
+                x = int(luciernaga["x"] + math.sin(luciernaga["fase"]) * luciernaga["amplitud"])
+                y = int(luciernaga["y"] + math.sin(luciernaga["fase"] * 0.7) * 3)
+                brillo = (math.sin(self.tiempo * 1.6 + luciernaga["fase_brillo"]) + 1) / 2
+                alpha = int(100 + brillo * 155)
+                tamano = luciernaga["tamano"]
+                pygame.draw.circle(
+                    brillos,
+                    (255, 207, 92, int(38 + brillo * 42)),
+                    (x + tamano // 2, y + tamano // 2),
+                    self.RADIO_BRILLO,
+                )
+                pixel = self._superficies_luciernaga.get(tamano)
+                if pixel is not None:
+                    pixel.set_alpha(alpha)
+                    superficie.blit(pixel, (x, y))
+                elif alpha > 2:
+                    color = (alpha, alpha * 3 // 4, alpha // 3)
+                    pygame.draw.rect(superficie, color, pygame.Rect(x, y, tamano, tamano))
 
         for particula in self.particulas:
             proporcion_vida = max(

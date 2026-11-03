@@ -13,10 +13,14 @@ class HUDIndicadores:
     def __init__(self, fuente, iconos=None):
         self.fuente = fuente
         self.iconos = iconos or {}
+        self.etiquetas = {}
         self.valores = {}
         self.objetivos = {}
         self.avisos = []
         self.tiempo = 0.0
+
+    def establecer_etiquetas(self, etiquetas=None):
+        self.etiquetas = dict(etiquetas or {})
 
     def actualizar(self, indicadores, delta_segundos):
         self.tiempo += delta_segundos
@@ -62,7 +66,7 @@ class HUDIndicadores:
         es_negativo = nombre in NEGATIVOS
         critico = objetivo >= 75 if es_negativo else objetivo <= 25
         icono = self.iconos.get(nombre)
-        etiqueta = nombre.replace("_", " ").capitalize()
+        etiqueta = self.etiquetas.get(nombre, nombre.replace("_", " ").capitalize())
         canal = pygame.Rect(x + 54, y + 25, 128, 12)
 
         if critico:

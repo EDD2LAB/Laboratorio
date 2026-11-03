@@ -1,0 +1,58 @@
+{
+  "image": "Imagenes/Fondos/Mapas/Presente/MapaPresente.png",
+  "image_size": [998, 576],
+  "hitboxes": [
+    {
+      "id": "pantalla_publica_presente",
+      "role": "interactable",
+      "type": "rect",
+      "rx": 0.49,
+      "ry": 0.30,
+      "rw": 0.08,
+      "rh": 0.08,
+      "action": "examinar_publicacion",
+      "tipo": "pantalla_publica",
+      "dimension": "presente",
+      "activo": true,
+      "distancia": 58
+    }
+  ],
+  "spawn_presente": {
+    "x": 480,
+    "y": 620
+  },
+  "spawn": {},
+  "npc_positions": {
+    "Agente de verificación": {
+      "rx": 0.43,
+      "ry": 0.25,
+      "rw": 0.06,
+      "rh": 0.12
+    },
+    "Kael": {
+      "rx": 0.31,
+      "ry": 0.47,
+      "rw": 0.06,
+      "rh": 0.12
+    },
+    "Habitante Conectada": {
+      "rx": 0.61,
+      "ry": 0.44,
+      "rw": 0.06,
+      "rh": 0.12
+    },
+    "Influencer": {
+      "rx": 0.76,
+      "ry": 0.65,
+      "rw": 0.06,
+      "rh": 0.12
+    },
+    "Mensajero urbano": {
+      "rx": 0.16,
+      "ry": 0.48,
+      "rw": 0.06,
+      "rh": 0.12
+    }
+  },
+  "decoracion": []
+}

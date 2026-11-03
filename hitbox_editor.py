@@ -641,7 +641,22 @@ def main(forzar_selector=False):
     current_rect = None
     current_shape = "rect"
     current_role = "wall"
-    interactable_actions = ["puerta", "npc", "usar_eco_tronco", "tablilla", "otro"]
+    interactable_actions = [
+        "puerta",
+        "npc",
+        "usar_eco_tronco",
+        "tablilla",
+        "otro",
+        "examinar_publicacion",
+        "terminal_verificacion",
+        "estudio_influencer",
+        "sede_aspirante",
+        "estacion_mensajero",
+        "portal_temporal",
+        "entrada_edificio",
+        "publicacion_digital",
+        "punto_spawn",
+    ]
     current_interactable_action = "puerta"
     current_trunk_platform = ""
     eco_platform_modal = False
@@ -1586,6 +1601,11 @@ def main(forzar_selector=False):
         payload = {"role": current_role, **shape_data}
         if current_role in ("interactable", "other"):
             payload["action"] = current_interactable_action
+            dimension = (
+                "presente"
+                if os.path.basename(image_path).casefold() == "mapapresente.png"
+                else "la_copa"
+            )
             if current_interactable_action == "puerta":
                 payload["target_image"] = available_backgrounds[current_target_bg_idx]
             elif current_interactable_action == "npc":
@@ -1612,6 +1632,34 @@ def main(forzar_selector=False):
                     "tecla": "E",
                     "activo": True,
                 })
+            elif current_interactable_action in {
+                "examinar_publicacion",
+                "terminal_verificacion",
+                "estudio_influencer",
+                "sede_aspirante",
+                "estacion_mensajero",
+                "portal_temporal",
+                "entrada_edificio",
+                "publicacion_digital",
+                "punto_spawn",
+            }:
+                tipo = (
+                    "pantalla_publica"
+                    if current_interactable_action == "examinar_publicacion"
+                    else current_interactable_action
+                )
+                payload.update({
+                    "id": (
+                        "spawn_presente"
+                        if current_interactable_action == "punto_spawn"
+                        else f"{tipo}_{len(hitboxes) + 1}"
+                    ),
+                    "tipo": tipo,
+                    "dimension": dimension,
+                    "datos": {},
+                    "tecla": "E",
+                    "activo": True,
+                })
         return payload
 
     def _interactable_label(action):
@@ -1620,6 +1668,15 @@ def main(forzar_selector=False):
             "usar_eco_tronco": "Tronco de Ecos",
             "tablilla": "Caldero",
             "otro": "Otro",
+            "examinar_publicacion": "Pantalla pública",
+            "terminal_verificacion": "Terminal de verificación",
+            "estudio_influencer": "Estudio influencer",
+            "sede_aspirante": "Sede del aspirante",
+            "estacion_mensajero": "Estación del mensajero",
+            "portal_temporal": "Portal temporal",
+            "entrada_edificio": "Entrada de edificio",
+            "publicacion_digital": "Publicación digital",
+            "punto_spawn": "Spawn de dimensión",
         }.get(str(action).lower(), "Puerta")
 
     # ── Panel helpers ─────────────────────────────────────────────────────────
@@ -1653,7 +1710,7 @@ def main(forzar_selector=False):
                 label = f"E{i+1} {h.get('id', 'eco_tronco')[:12]}"
                 color = (55, 220, 200)
             else:
-                label = f"P{i+1} puerta"
+                label = f"P{i+1} {_interactable_label(act)[:12]}"
                 color = (255, 200, 80)
             items.append((label, color, "hitbox", i))
         if show_objects:
@@ -2406,6 +2463,18 @@ def main(forzar_selector=False):
                     current_role = "other"
                     current_interactable_action = "tablilla"
 
+                elif event.key == pygame.K_5:
+                    current_role = "interactable"
+                    current_interactable_action = "examinar_publicacion"
+
+                elif event.key == pygame.K_6:
+                    current_role = "interactable"
+                    current_interactable_action = "terminal_verificacion"
+
+                elif event.key == pygame.K_7:
+                    current_role = "interactable"
+                    current_interactable_action = "punto_spawn"
+
                 elif event.key == pygame.K_j:
                     if editor_mode == "object":
                         current_object_idx = (current_object_idx + 1) % max(1, len(available_objects))
@@ -3117,7 +3186,7 @@ def main(forzar_selector=False):
 
         lines = [
             ("Puentes: boton/U | Animaciones ambiente: elige cascada, vegetacion, energia o puente | clic mapa para colocar; [ ] cambia frames", (210, 210, 160)),
-            ("Hitboxes: arrastra=crear | F=forma | I=roles | 4=Otros | K=puerta/NPC/Tronco/Caldero/Otro | Y=asignar plataforma", (235, 235, 235)),
+            ("Hitboxes: arrastra=crear | F=forma | I=roles | 5=pantalla | 6=terminal | 7=spawn | K=otras acciones", (235, 235, 235)),
             ("Clic derecho=borrar | M=mover | T=prueba | P=spawn; Shift+P=crear spawn | WASD=camara | J/H=imagen o destino | G=cuadricula | L=etiquetas | +/-=tamano", (190, 195, 210)),
             ("Ctrl+C/V: hitboxes en modo hitbox; objetos, personajes y puentes en modo objeto. Ctrl+Shift+C/V: seleccionado. Ctrl+D=duplicar | Enter=guardar | Ctrl+L=cargar | Ctrl+Z/Y=deshacer/rehacer | Esc=salir", (175, 185, 205)),
         ]

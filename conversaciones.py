@@ -47,9 +47,42 @@ REACCIONES = {
     },
 }
 
+TESTIMONIOS_PRESENTE = {
+    "Agente de verificación": (
+        "Como periodista, tu tarea es rastrear la fuente y distinguir evidencia de rumor.",
+        "La imagen puede analizarse, pero una coincidencia visual no demuestra por sí sola quién la creó.",
+    ),
+    "Kael (aspirante a alcalde)": (
+        "Estoy presentando mi candidatura a la alcaldía. Escucha mis propuestas, pero contrástalas con fuentes.",
+        "Una publicación sobre mi campaña no es prueba de culpabilidad. Investiga el origen y el contexto.",
+    ),
+    "Habitante conectada": (
+        "Vi la publicación, pero no conozco quién subió el archivo original.",
+        "Puedo compartir lo que observé; no puedo confirmar lo que no vi.",
+    ),
+    "Influencer": (
+        "El video se está compartiendo mucho. Antes de amplificarlo, deberíamos comprobar su origen.",
+        "El alcance de una publicación no la convierte en verdadera. Busquemos una fuente verificable.",
+    ),
+    "Mensajero urbano": (
+        "Puedo llevar una corrección, pero necesito saber qué dato está confirmado.",
+        "Una corrección clara debe enlazar la fuente y explicar qué parte del mensaje era dudosa.",
+    ),
+}
+
 
 def construir_conversacion(nombre, estado, vistas):
     """Las conversaciones vistas se registran por tablilla y personaje."""
+    if nombre in TESTIMONIOS_PRESENTE:
+        clave = ("presente", nombre)
+        inicial, ampliacion = TESTIMONIOS_PRESENTE[nombre]
+        texto = ampliacion if clave in vistas else inicial
+        return {
+            "personaje": nombre,
+            "texto": texto,
+            "respuestas": ["Gracias por la información"],
+        }, clave
+
     ruta = estado.ruta_categoria_actual()
     categoria = ruta[1] if len(ruta) > 1 else ""
     clave = (estado.tablillas_resueltas, nombre)
