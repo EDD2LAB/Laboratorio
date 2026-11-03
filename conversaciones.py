@@ -99,6 +99,12 @@ def construir_conversacion(nombre, estado, vistas):
         }.get(nombre, "La tablilla habla de reparar el puente. Comparemos la propuesta de Mira con lo que escuchó el consejo.")
     elif "Consultar" in estado.camino_decision_actual:
         texto = ampliacion
+    if (
+        not estado.tablillas_resueltas
+        and not estado.historial_decisiones
+        and clave not in vistas
+    ):
+        texto += " Para investigar, escucha a los vecinos y luego revisa la tablilla en el Caldero central."
     if estado.historial_decisiones:
         ultima = estado.historial_decisiones[-1]
         camino = ultima.get("camino", [])

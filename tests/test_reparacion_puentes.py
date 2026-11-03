@@ -6,7 +6,13 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
 from grafo_fisico import GrafoFisico
-from juego import cargar_spritesheet_frames, jugador_bloqueado
+from juego import (
+    cargar_mapa_principal,
+    cargar_spritesheet_frames,
+    colision_hitbox_mapa,
+    crear_grafo_fisico,
+    jugador_bloqueado,
+)
 from reparacion_puentes import SistemaReparacionPuente
 
 
@@ -17,26 +23,28 @@ def cargar_imagen(ruta):
     return pygame.image.load(os.path.join(ROOT, "Imagenes", ruta)).convert_alpha()
 
 
-def crear_sistema():
-    puente = {
-        "id": "puente_1",
-        "rect": pygame.Rect(300, 300, 120, 70),
-        "imagen": pygame.Surface((120, 70), pygame.SRCALPHA),
-    }
-    grafo = GrafoFisico(
-        (
-            {"id": "origen", "posicion": [0.2, 0.5]},
-            {"id": "destino", "posicion": [0.8, 0.5]},
-            {"id": "plataforma_noreste", "posicion": [0.8, 0.2]},
-            {"id": "plataforma_suroeste", "posicion": [0.2, 0.7]},
-            {"id": "plataforma_sureste", "posicion": [0.8, 0.7]},
-        ),
-        ({
+def crear_sistema(puente=None, grafo=None):
+    if puente is None:
+        puente = {
             "id": "puente_1",
-            "origen": "origen",
-            "destino": "destino",
-        },),
-    )
+            "rect": pygame.Rect(300, 300, 120, 70),
+            "imagen": pygame.Surface((120, 70), pygame.SRCALPHA),
+        }
+    if grafo is None:
+        grafo = GrafoFisico(
+            (
+                {"id": "origen", "posicion": [0.2, 0.5]},
+                {"id": "destino", "posicion": [0.8, 0.5]},
+                {"id": "plataforma_noreste", "posicion": [0.8, 0.2]},
+                {"id": "plataforma_suroeste", "posicion": [0.2, 0.7]},
+                {"id": "plataforma_sureste", "posicion": [0.8, 0.7]},
+            ),
+            ({
+                "id": "puente_1",
+                "origen": "origen",
+                "destino": "destino",
+            },),
+        )
     recursos = {
         "puente_danado": cargar_imagen(os.path.join("Puentes", "Puente1Roto.png")),
         "puente_reparado": cargar_imagen(os.path.join("Puentes", "Puente1.png")),
@@ -98,6 +106,19 @@ class ReparacionPuentesTests(unittest.TestCase):
             )
         )
         for objeto in sistema.objetos:
+            posicion_plataforma = sistema.grafo.plataformas[
+                objeto["plataforma"]
+            ]["posicion"]
+            desplazamiento = sistema.DESPLAZAMIENTOS_SUELO[
+                objeto["plataforma"]
+            ]
+            self.assertEqual(
+                objeto["rect"].midbottom,
+                (
+                    round(posicion_plataforma[0] * 960) + desplazamiento[0],
+                    round(posicion_plataforma[1] * 720) + desplazamiento[1],
+                ),
+            )
             evento = sistema.solicitar_recoleccion(objeto["id"])
             self.assertIsNotNone(evento)
             self.assertIsNone(sistema.solicitar_recoleccion(objeto["id"]))
@@ -116,6 +137,36 @@ class ReparacionPuentesTests(unittest.TestCase):
             [recortes[item].get_size() for item in SistemaReparacionPuente.MATERIALES],
             [(47, 48), (34, 37), (37, 41)],
         )
+
+    def test_materials_are_on_clear_floor_areas_of_the_real_platforms(self):
+        _, decoraciones, _, hitboxes, _, _ = cargar_mapa_principal()
+        puente = next(
+            decoracion
+            for decoracion in decoraciones
+            if decoracion.get("id") == "puente_1"
+        )
+        _, _, sistema = crear_sistema(
+            puente,
+            crear_grafo_fisico(decoraciones),
+        )
+
+        for objeto in sistema.objetos:
+            with self.subTest(material=objeto["tipo"]):
+                self.assertFalse(any(
+                    hitbox.get("role") == "wall"
+                    and colision_hitbox_mapa(objeto["rect"], hitbox)
+                    for hitbox in hitboxes
+                ))
+                self.assertFalse(any(
+                    decoracion.get("personaje")
+                    and decoracion["hitbox"].colliderect(objeto["rect"])
+                    for decoracion in decoraciones
+                ))
+                self.assertFalse(any(
+                    decoracion.get("puente")
+                    and decoracion["rect"].colliderect(objeto["rect"])
+                    for decoracion in decoraciones
+                ))
 
     def test_bridge_collision_blocks_crossing_until_repaired(self):
         puente, _, sistema = crear_sistema()

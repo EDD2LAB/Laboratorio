@@ -837,6 +837,32 @@ def dibujar_mensaje_mapa(superficie, fuente, texto):
         y += 22
 
 
+def texto_tutorial_primer_evento(estado, mundo, conversaciones_vistas):
+    if (
+        mundo.get("dimension") != DIMENSION_LA_COPA
+        or estado.tablillas_resueltas
+        or estado.evento_resuelto()
+    ):
+        return None
+
+    ruta_categoria = estado.ruta_categoria_actual()
+    categoria = ruta_categoria[1] if len(ruta_categoria) > 1 else "Primer evento"
+    categoria = {
+        "Rumor Politico": "Rumor político",
+        "Suceso Natural": "Suceso natural",
+        "Acusacion Personal": "Acusación personal",
+    }.get(categoria, categoria)
+    if conversaciones_vistas:
+        return (
+            f"EVENTO: {categoria}. Ahora ve al Caldero central y pulsa E "
+            "para revisar la tablilla."
+        )
+    return (
+        f"PRIMER EVENTO: {categoria}. Habla con alguien (E); luego "
+        "consulta la tablilla del Caldero."
+    )
+
+
 def interaccion_en_mapa(posicion, mundo):
     for objeto in reversed(mundo["decoraciones"]):
         if (
@@ -1696,6 +1722,13 @@ def dibujar_mapa(
             "WASD o flechas: moverse | E: interactuar | Q: habilidad | "
             "Tab: alternar | F3: depuracion"
         )
+    texto_tutorial = texto_tutorial_primer_evento(
+        estado,
+        mundo,
+        recursos.get("conversaciones_vistas", set()),
+    )
+    if texto_tutorial:
+        texto = texto_tutorial
     hud.dibujar(superficie)
     dibujar_habilidad_jugador(superficie, recursos, mundo, estado)
     if reparacion:
@@ -3047,6 +3080,7 @@ def main():
         for personaje in mundo["personajes"]
     }
     conversaciones_vistas = set()
+    recursos["conversaciones_vistas"] = conversaciones_vistas
     personaje_dialogo_activo = None
     clave_dialogo_activo = None
 
@@ -3733,7 +3767,17 @@ def main():
                 habilidad = mundo.get("habilidad")
                 if habilidad and habilidad.personaje == "guardian":
                     if habilidad.activar():
-                        recursos["mensaje_dimension"] = "Impulso de viento activado."
+                        multiplicador = f"{habilidad.multiplicador_movimiento:.1f}".replace(
+                            ".", ","
+                        )
+                        duracion = f"{habilidad.configuracion['duracion_ms'] / 1000:.2f}".replace(
+                            ".", ","
+                        )
+                        recursos["mensaje_dimension"] = (
+                            "Impulso de viento: velocidad x"
+                            f"{multiplicador} durante {duracion} s. "
+                            f"Recarga: {habilidad.configuracion['recarga_ms'] / 1000:.0f} s."
+                        )
                     else:
                         recursos["mensaje_dimension"] = (
                             f"Impulso recargando: "
@@ -4070,7 +4114,7 @@ def main():
                 "AYUDA",
                 [
                     "Acércate al Caldero y pulsa E para abrir la tablilla; Tab alterna interacciones cercanas.",
-                    "Pulsa Q para el Impulso de viento del Guardián o para difundir una corrección verificada.",
+                    "Impulso de viento (Q): velocidad x2,2 durante 0,85 s; recarga de 6 s. En el presente, Q difunde una corrección verificada.",
                     "Puente Norte: recoge tablas, cuerda y herramientas; pulsa E en el puente y acierta tres veces.",
                     "Clic en los personajes: conversar y reunir testimonios.",
                     "Clic en la salida derecha: visitar la zona Central; clic o Esc para volver.",

@@ -14,6 +14,11 @@ class SistemaReparacionPuente:
         "plataforma_suroeste": "cuerda",
         "plataforma_sureste": "herramientas",
     }
+    DESPLAZAMIENTOS_SUELO = {
+        "plataforma_noreste": (-24, 118),
+        "plataforma_suroeste": (53, 75),
+        "plataforma_sureste": (-18, 85),
+    }
     CONFIGURACION = {
         "aciertos_necesarios": 3,
         "duracion_recorrido_ms": 1200,
@@ -146,6 +151,8 @@ class SistemaReparacionPuente:
             if 0 <= nodo.x <= 1 and 0 <= nodo.y <= 1:
                 nodo.x *= ANCHO_JUEGO
                 nodo.y *= ALTO_JUEGO
+            desplazamiento = self.DESPLAZAMIENTOS_SUELO[id_plataforma]
+            nodo += pygame.Vector2(desplazamiento)
             posiciones.append((id_plataforma, material, nodo))
         return posiciones
 
@@ -159,7 +166,7 @@ class SistemaReparacionPuente:
 
         for id_plataforma, material, posicion in self._posiciones_plataformas():
             rect = pygame.Rect(0, 0, 38, 38)
-            rect.center = round(posicion.x), round(posicion.y)
+            rect.midbottom = round(posicion.x), round(posicion.y)
             imagen = self._escalar_conservar_proporcion(
                 imagenes.get(material), rect.size
             )

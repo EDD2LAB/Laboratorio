@@ -19,11 +19,30 @@ from juego import (
     posicion_mundo_a_pantalla,
     posicion_pantalla_a_mundo,
     actualizar_camara_mundo,
+    texto_tutorial_primer_evento,
 )
 from logica_juego import EstadoJuego
+from conversaciones import construir_conversacion
 
 
 class GestorDimensionesTests(unittest.TestCase):
+    def test_first_event_tutorial_explains_talk_then_review_the_tablet(self):
+        estado = EstadoJuego()
+        mundo = {"dimension": DIMENSION_LA_COPA}
+
+        texto_inicial = texto_tutorial_primer_evento(estado, mundo, set())
+        self.assertIn("PRIMER EVENTO", texto_inicial)
+        self.assertIn("Habla con alguien", texto_inicial)
+
+        dialogo, clave = construir_conversacion("Kael", estado, set())
+        self.assertIn("Caldero central", dialogo["texto"])
+        texto_despues_de_hablar = texto_tutorial_primer_evento(
+            estado,
+            mundo,
+            {clave},
+        )
+        self.assertIn("ve al Caldero central", texto_despues_de_hablar)
+
     def test_transition_is_serializable_and_only_runs_once(self):
         gestor = GestorDimensiones()
         self.assertNotIn(DIMENSION_PRESENTE, gestor.desbloqueadas)
