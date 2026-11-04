@@ -4,6 +4,7 @@ import sys
 import pygame
 import math
 import copy
+import re
 
 from animacion import crear_frame_animado_suave, extraer_frames_horizontales
 
@@ -19,11 +20,98 @@ CHARACTER_FOLDERS = {
 PANEL_W = 230   # right sidebar width
 STATUS_H = 36   # bottom status bar height
 PLAYER_HITBOX_SIZE = (12, 8)
+NPC_POSITION_SPRITES = {
+    "Agente de verificación": (
+        "NPCS/Agente de verificación/Agente_de_verificacion-Fila1.png"
+    ),
+    "Kael": "NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila1.png",
+    "Habitante Conectada": (
+        "NPCS/Habitante Conectada/Habitante_conectada-Fila1.png"
+    ),
+    "Influencer": "NPCS/Influencer/Influencer_fila1.png",
+    "Mensajero urbano": "NPCS/Mensajero urbano/Mensajero_urbano-Fila1.png",
+}
+NPC_POSITION_DIRECTIONS = (
+    "abajo",
+    "abajo_derecha",
+    "derecha",
+    "arriba_derecha",
+    "arriba",
+    "arriba_izquierda",
+    "izquierda",
+    "abajo_izquierda",
+)
+_NPC_POSITION_SPRITE_CACHE = {}
+NPC_IDLE_SHEETS = {
+    "guardian": tuple(
+        f"NPCS/Guardian/Reposo/Guardian_reposo_fila{row}.png"
+        for row in range(1, 5)
+    ),
+    "mensajero": tuple(
+        f"NPCS/mensajero/Reposo/Mensajero_reposo_fila{row}.png"
+        for row in range(1, 5)
+    ),
+    "habitante hombre": tuple(
+        "NPCS/Habitante hombre/Reposo/"
+        f"Habitante_hombre_reposo_fila{row}.png"
+        for row in range(1, 5)
+    ),
+    "habitante mujer": tuple(
+        "NPCS/Habitante mujer/Reposo/"
+        f"Habitante_femenina-reposo_fila{row}.png"
+        for row in range(1, 5)
+    ),
+    "aspirante mujer": (
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo_fila1.png",
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo _fila2.png",
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo _fila3.png",
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo_ fila4.png",
+    ),
+    "aspirante hombre": tuple(
+        "NPCS/Aspirante hombre/Reposo/"
+        f"Aspirante_a_cacique-reposo_fila{row}.png"
+        for row in range(1, 5)
+    ),
+}
+NPC_IDLE_ROW_BY_SPRITE = (1, 1, 2, 2, 3, 3, 4, 1)
 
 # ── Helper functions ──────────────────────────────────────────────────────────
 
 def load_image(path):
     return pygame.image.load(path)
+
+
+def cargar_sprite_posicion_npc(nombre, direccion="abajo"):
+    ruta_relativa = NPC_POSITION_SPRITES.get(nombre)
+    if ruta_relativa is None:
+        return None
+    ruta = os.path.join(PROJECT_ROOT, "Imagenes", *ruta_relativa.split("/"))
+    if ruta not in _NPC_POSITION_SPRITE_CACHE:
+        _NPC_POSITION_SPRITE_CACHE[ruta] = load_image(ruta).convert_alpha()
+    spritesheet = _NPC_POSITION_SPRITE_CACHE[ruta]
+    indice = (
+        NPC_POSITION_DIRECTIONS.index(direccion)
+        if direccion in NPC_POSITION_DIRECTIONS
+        else 0
+    )
+    x1 = round(indice * spritesheet.get_width() / len(NPC_POSITION_DIRECTIONS))
+    x2 = round((indice + 1) * spritesheet.get_width() / len(NPC_POSITION_DIRECTIONS))
+    frame = spritesheet.subsurface((x1, 0, x2 - x1, spritesheet.get_height()))
+    limites = frame.get_bounding_rect(min_alpha=32)
+    return frame.subsurface(limites).copy() if limites.width and limites.height else None
+
+
+def tecla_activa(teclas, *codigos):
+    if teclas is None:
+        return False
+    for codigo in codigos:
+        try:
+            valor = teclas[codigo]
+        except (KeyError, TypeError):
+            valor = False
+        if valor:
+            return True
+    return False
 
 
 def es_hoja_portales(nombre):
@@ -1037,6 +1125,7 @@ def main(forzar_selector=False):
     pending_placement_frames = 1   # frames que se asignarán al próximo objeto colocado
     object_cache = {}
     animation_frame_cache = {}
+    npc_idle_frame_cache = {}
     placement_sizes = {}
     decoracion = []
     deco_history = [copy.deepcopy(decoracion)]
@@ -1100,6 +1189,55 @@ def main(forzar_selector=False):
         except (OSError, pygame.error):
             object_cache[obj_name] = None
             return None
+
+    def get_npc_idle_frame(obj):
+        normalized = str(obj.get("name", "")).replace("\\", "/").casefold()
+        character = next(
+            (
+                name for name in (
+                    "guardian",
+                    "mensajero",
+                    "habitante hombre",
+                    "habitante mujer",
+                    "aspirante mujer",
+                    "aspirante hombre",
+                )
+                if name in normalized
+            ),
+            None,
+        )
+        if character is None:
+            return None
+        match = re.search(
+            r"fila\s*1\s*-\s*(\d+)",
+            os.path.basename(normalized),
+        )
+        if match is None:
+            return None
+        sprite_direction = int(match.group(1))
+        if not 1 <= sprite_direction <= len(NPC_IDLE_ROW_BY_SPRITE):
+            return None
+        row = NPC_IDLE_ROW_BY_SPRITE[sprite_direction - 1]
+        sheet_path = NPC_IDLE_SHEETS[character][row - 1]
+        if sheet_path not in npc_idle_frame_cache:
+            sheet = load_object_image(sheet_path)
+            if sheet is None:
+                npc_idle_frame_cache[sheet_path] = []
+            else:
+                npc_idle_frame_cache[sheet_path] = [
+                    sheet.subsurface((
+                        round(index * sheet.get_width() / 8),
+                        0,
+                        round((index + 1) * sheet.get_width() / 8)
+                        - round(index * sheet.get_width() / 8),
+                        sheet.get_height(),
+                    )).copy()
+                    for index in range(8)
+                ]
+        frames = npc_idle_frame_cache[sheet_path]
+        if not frames:
+            return None
+        return frames[(pygame.time.get_ticks() // 180) % len(frames)]
 
     def get_deco_world_rect(obj):
         return pygame.Rect(
@@ -2669,8 +2807,8 @@ def main(forzar_selector=False):
         # ── Test mode physics ─────────────────────────────────────────────────
         if test_mode:
             keys = pygame.key.get_pressed()
-            mx = ((1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)) * test_speed
-            my = ((1 if keys[pygame.K_s] else 0) - (1 if keys[pygame.K_w] else 0)) * test_speed
+            mx = ((1 if tecla_activa(keys, pygame.K_d) else 0) - (1 if tecla_activa(keys, pygame.K_a) else 0)) * test_speed
+            my = ((1 if tecla_activa(keys, pygame.K_s) else 0) - (1 if tecla_activa(keys, pygame.K_w) else 0)) * test_speed
             prev_x = test_player.x
             test_player.x += mx
             test_player.clamp_ip(world_rect)
@@ -2703,12 +2841,12 @@ def main(forzar_selector=False):
             keys = pygame.key.get_pressed()
             cam_speed = 10
             camera_x += (
-                (1 if keys[pygame.K_d] or keys[pygame.K_RIGHT] else 0)
-                - (1 if keys[pygame.K_a] or keys[pygame.K_LEFT] else 0)
+                (1 if tecla_activa(keys, pygame.K_d, pygame.K_RIGHT) else 0)
+                - (1 if tecla_activa(keys, pygame.K_a, pygame.K_LEFT) else 0)
             ) * cam_speed
             camera_y += (
-                (1 if keys[pygame.K_s] or keys[pygame.K_DOWN] else 0)
-                - (1 if keys[pygame.K_w] or keys[pygame.K_UP] else 0)
+                (1 if tecla_activa(keys, pygame.K_s, pygame.K_DOWN) else 0)
+                - (1 if tecla_activa(keys, pygame.K_w, pygame.K_UP) else 0)
             ) * cam_speed
             clamp_camera()
 
@@ -2762,11 +2900,31 @@ def main(forzar_selector=False):
                 if obj_img:
                     r = get_deco_world_rect(obj)
                     sx, sy = world_to_screen((r.x, r.y))
+                    npc_frame = get_npc_idle_frame(obj)
                     frames = (
                         1 if es_hoja_portales(obj["name"])
                         else int(obj.get("frames", 1))
                     )
-                    if frames > 1:
+                    if npc_frame is not None:
+                        bounds = npc_frame.get_bounding_rect(min_alpha=32)
+                        if bounds.width and bounds.height:
+                            sprite = npc_frame.subsurface(bounds)
+                            scale = min(
+                                r.width / sprite.get_width(),
+                                r.height / sprite.get_height(),
+                            )
+                            sprite = pygame.transform.scale(
+                                sprite,
+                                (
+                                    max(1, round(sprite.get_width() * scale)),
+                                    max(1, round(sprite.get_height() * scale)),
+                                ),
+                            )
+                            sprite_rect = sprite.get_rect(
+                                midbottom=(sx + r.width // 2, sy + r.height)
+                            )
+                            screen.blit(sprite, sprite_rect)
+                    elif frames > 1:
                         cache_key = (obj["name"], frames)
                         if cache_key not in animation_frame_cache:
                             animation_frame_cache[cache_key] = extraer_frames_horizontales(
@@ -2780,10 +2938,33 @@ def main(forzar_selector=False):
                     else:
                         source_img = get_cropped_deco_image(obj, obj_img)
                         scaled = pygame.transform.smoothscale(source_img, (r.width, r.height))
-                    screen.blit(scaled, (sx, sy))
+                    if npc_frame is None:
+                        screen.blit(scaled, (sx, sy))
                     sr = pygame.Rect(sx, sy, r.width, r.height)
-                    border_col = (255, 235, 80) if selected_deco_idx == j else (80, 220, 100)
-                    pygame.draw.rect(screen, border_col, sr, 2 if selected_deco_idx != j else 3)
+                    ruta_npc = obj.get("name", "").replace("\\", "/").casefold()
+                    seleccionado_visible = (
+                        selected_deco_idx == j
+                        and (not ruta_npc.startswith("npcs/") or npc_frame is not None)
+                    )
+                    border_col = (
+                        (255, 235, 80)
+                        if seleccionado_visible
+                        else (80, 220, 100)
+                    )
+                    pygame.draw.rect(
+                        screen,
+                        border_col,
+                        sr,
+                        3 if seleccionado_visible else 2,
+                    )
+                    if ruta_npc.startswith("npcs/"):
+                        hitbox_npc = sr.copy()
+                        if "guardian" in ruta_npc:
+                            hitbox_npc.inflate_ip(
+                                -round(sr.width * 0.4),
+                                -round(sr.height * 0.4),
+                            )
+                        pygame.draw.rect(screen, (220, 110, 255), hitbox_npc, 2)
                     if show_labels:
                         crop_tag  = " [C]" if "crop" in obj else ""
                         anim_tag  = f" [{frames}f]" if frames > 1 else ""
@@ -2791,6 +2972,15 @@ def main(forzar_selector=False):
                         object_label = os.path.basename(obj["name"])[:12]
                         lbl = tiny.render(f"D{j+1} {object_label}{crop_tag}{anim_tag}{owner_tag}", True, (130, 240, 130))
                         screen.blit(lbl, (sr.x + 2, sr.y + 2))
+                        if ruta_npc.startswith("npcs/"):
+                            screen.blit(
+                                tiny.render(
+                                    "Hitbox de personaje",
+                                    True,
+                                    (230, 160, 255),
+                                ),
+                                (sr.x + 2, sr.bottom + 2),
+                            )
 
         # Crop drag preview
         if deco_crop_dragging and deco_crop_start and deco_crop_current:
@@ -3001,12 +3191,39 @@ def main(forzar_selector=False):
             sx, sy = world_to_screen((nx, ny))
             npc_sr = pygame.Rect(0, 0, site_w, site_h)
             npc_sr.center = (int(sx), int(sy))
+            sprite = cargar_sprite_posicion_npc(
+                npc_name,
+                data.get("direccion", "abajo"),
+            )
+            if sprite is not None:
+                escala = min(
+                    npc_sr.width / sprite.get_width(),
+                    npc_sr.height / sprite.get_height(),
+                )
+                sprite = pygame.transform.scale(
+                    sprite,
+                    (
+                        max(1, round(sprite.get_width() * escala)),
+                        max(1, round(sprite.get_height() * escala)),
+                    ),
+                )
+                screen.blit(sprite, sprite.get_rect(center=npc_sr.center))
             pygame.draw.rect(screen, (255, 120, 200), npc_sr, 1)
             pygame.draw.circle(screen, (255, 80, 170), (int(sx), int(sy)), 10, 2)
             pygame.draw.line(screen, (255, 80, 170), (int(sx) - 7, int(sy)), (int(sx) + 7, int(sy)), 2)
             pygame.draw.line(screen, (255, 80, 170), (int(sx), int(sy) - 7), (int(sx), int(sy) + 7), 2)
+            hitbox_w = max(1, round(24 * world_rect.width / 960))
+            hitbox_h = max(1, round(10 * world_rect.height / 720))
+            npc_hitbox = pygame.Rect(0, 0, hitbox_w, hitbox_h)
+            npc_hitbox.center = (int(sx), int(sy))
+            pygame.draw.rect(screen, (50, 235, 225), npc_hitbox, 2)
             if show_labels:
-                screen.blit(small.render(f"NPC:{npc_name}", True, (255, 180, 220)),
+                direccion = data.get("direccion", "abajo")
+                screen.blit(small.render(
+                    f"NPC:{npc_name} ({direccion}) | hitbox",
+                    True,
+                    (255, 180, 220),
+                ),
                             (int(sx) + 12, int(sy) - 12))
 
         if pending_spawn_rect is not None:

@@ -1,3 +1,4 @@
+import math
 import os
 import unittest
 
@@ -66,6 +67,12 @@ def crear_sistema(puente=None, grafo=None):
         ),
     }
     return puente, grafo, SistemaReparacionPuente(puente, grafo, recursos)
+
+
+def posicionar_aguja_en_zona(sistema):
+    angulo = sistema._angulo_objetivo()
+    periodo = sistema.configuracion["duracion_recorrido_ms"]
+    sistema.tiempo_aguja_ms = (angulo + math.pi) / math.pi * periodo
 
 
 class ReparacionPuentesTests(unittest.TestCase):
@@ -183,7 +190,7 @@ class ReparacionPuentesTests(unittest.TestCase):
                 sistema.solicitar_recoleccion(objeto["id"])
         sistema.iniciar_reparacion()
         for _ in range(sistema.configuracion["aciertos_necesarios"]):
-            sistema.tiempo_aguja_ms = 800
+            posicionar_aguja_en_zona(sistema)
             sistema.intentar_reparacion()
         sistema.actualizar(sistema.configuracion["duracion_animacion_ms"])
         self.assertFalse(sistema.bloquea_paso)
@@ -198,6 +205,55 @@ class ReparacionPuentesTests(unittest.TestCase):
         self.assertTrue(sistema.iniciar_reparacion())
         self.assertTrue(sistema.minijuego_activo)
 
+    def test_correct_zone_matches_green_arc_and_moves_after_each_hit(self):
+        _, _, sistema = crear_sistema()
+        for objeto in sistema.objetos:
+            sistema.solicitar_recoleccion(objeto["id"])
+        sistema.iniciar_reparacion()
+
+        angulos_objetivo = []
+        indicadores = []
+        for progreso in range(sistema.configuracion["aciertos_necesarios"]):
+            sistema.estado_indicador = "normal"
+            angulos_objetivo.append(sistema._angulo_objetivo())
+            indicador = sistema._indicador_actual()
+            indicadores.append(indicador)
+            objetivo = sistema._angulo_objetivo()
+            tolerancia = sistema.configuracion["tolerancia_angulo"]
+            self.assertTrue(sistema._dentro_de_zona_correcta(objetivo))
+            self.assertFalse(
+                sistema._dentro_de_zona_correcta(objetivo + tolerancia + 0.02)
+            )
+            muestra = (
+                round(110 + 60 * math.cos(objetivo)),
+                round(110 + 60 * math.sin(objetivo)),
+            )
+            rojo, verde, azul, _ = indicador.get_at(muestra)
+            self.assertGreater(verde, rojo)
+            self.assertGreater(verde, azul)
+
+            posicionar_aguja_en_zona(sistema)
+            resultado = sistema.intentar_reparacion()
+            self.assertEqual(resultado["resultado"], "acierto")
+            self.assertEqual(sistema.progreso, progreso + 1)
+
+        self.assertAlmostEqual(
+            math.degrees(angulos_objetivo[0]),
+            -25,
+            delta=0.1,
+        )
+        self.assertAlmostEqual(
+            math.degrees(angulos_objetivo[1]),
+            -85,
+            delta=0.1,
+        )
+        self.assertAlmostEqual(
+            math.degrees(angulos_objetivo[2]),
+            -145,
+            delta=0.1,
+        )
+        self.assertEqual(len({id(indicador) for indicador in indicadores}), 3)
+
     def test_errors_are_nonlethal_and_three_hits_restore_bridge_route(self):
         puente, grafo, sistema = crear_sistema()
         for objeto in sistema.objetos:
@@ -210,7 +266,7 @@ class ReparacionPuentesTests(unittest.TestCase):
         self.assertEqual(grafo.puentes["puente_1"]["estado"], "bloqueado")
 
         for _ in range(sistema.configuracion["aciertos_necesarios"]):
-            sistema.tiempo_aguja_ms = 800
+            posicionar_aguja_en_zona(sistema)
             resultado = sistema.intentar_reparacion()
             self.assertEqual(resultado["resultado"], "acierto")
         self.assertEqual(sistema.estado, "REPAIR_ANIMATION")

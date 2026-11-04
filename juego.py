@@ -10,6 +10,7 @@ La logica de estructuras de datos queda en logica_juego.py y Arboles.py:
 import json
 import math
 import os
+import random
 import sys
 import unicodedata
 
@@ -78,6 +79,12 @@ TAMANO_HITBOX_PIES = (12, 8)
 VELOCIDAD_GUARDIAN = 155
 DISTANCIA_INTERACCION = 58
 ZOOM_MAPA_PRESENTE = 1.6
+CAMARA_RESPUESTA = 8.0
+VELOCIDAD_PATRULLA_NPC = 38.0
+VARIACION_VELOCIDAD_NPC = 0.1
+PAUSA_PATRULLA_NPC_MS = (500, 1500)
+PROBABILIDAD_PAUSA_NPC = 0.3
+RADIO_WAYPOINT_NPC = 5
 
 
 def normalizar_ruta(ruta):
@@ -194,6 +201,67 @@ ORIENTACIONES_SPRITE = (
     "abajo_izquierda",
 )
 
+TAMANO_JUGADOR = (36, 50)
+ESCALA_PERSONAJE_PRESENTE = 0.6
+ESCALA_NPC_PRESENTE = 0.5
+TAMANO_JUGADOR_PRESENTE = (
+    max(1, round(TAMANO_JUGADOR[0] * ESCALA_PERSONAJE_PRESENTE)),
+    max(1, round(TAMANO_JUGADOR[1] * ESCALA_PERSONAJE_PRESENTE)),
+)
+DIRECCION_A_FILA_REPOSO = {
+    "abajo": 1,
+    "abajo_derecha": 1,
+    "derecha": 2,
+    "arriba_derecha": 2,
+    "arriba": 3,
+    "arriba_izquierda": 3,
+    "izquierda": 4,
+    "abajo_izquierda": 1,
+}
+ARCHIVOS_REPOSO_PERSONAJES = {
+    "Guardián": (
+        "NPCS/Guardian/Reposo/Guardian_reposo_fila1.png",
+        "NPCS/Guardian/Reposo/Guardian_reposo_fila2.png",
+        "NPCS/Guardian/Reposo/Guardian_reposo_fila3.png",
+        "NPCS/Guardian/Reposo/Guardian_reposo_fila4.png",
+    ),
+    "Mensajero": (
+        "NPCS/mensajero/Reposo/Mensajero_reposo_fila1.png",
+        "NPCS/mensajero/Reposo/Mensajero_reposo_fila2.png",
+        "NPCS/mensajero/Reposo/Mensajero_reposo_fila3.png",
+        "NPCS/mensajero/Reposo/Mensajero_reposo_fila4.png",
+    ),
+    "Tarek": (
+        "NPCS/Habitante hombre/Reposo/Habitante_hombre_reposo_fila1.png",
+        "NPCS/Habitante hombre/Reposo/Habitante_hombre_reposo_fila2.png",
+        "NPCS/Habitante hombre/Reposo/Habitante_hombre_reposo_fila3.png",
+        "NPCS/Habitante hombre/Reposo/Habitante_hombre_reposo_fila4.png",
+    ),
+    "Luma": (
+        "NPCS/Habitante mujer/Reposo/Habitante_femenina-reposo_fila1.png",
+        "NPCS/Habitante mujer/Reposo/Habitante_femenina-reposo_fila2.png",
+        "NPCS/Habitante mujer/Reposo/Habitante_femenina-reposo_fila3.png",
+        "NPCS/Habitante mujer/Reposo/Habitante_femenina-reposo_fila4.png",
+    ),
+    "Mira": (
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo_fila1.png",
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo _fila2.png",
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo _fila3.png",
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo_ fila4.png",
+    ),
+    "Kael": (
+        "NPCS/Aspirante hombre/Reposo/Aspirante_a_cacique-reposo_fila1.png",
+        "NPCS/Aspirante hombre/Reposo/Aspirante_a_cacique-reposo_fila2.png",
+        "NPCS/Aspirante hombre/Reposo/Aspirante_a_cacique-reposo_fila3.png",
+        "NPCS/Aspirante hombre/Reposo/Aspirante_a_cacique-reposo_fila4.png",
+    ),
+}
+ARCHIVOS_DIRECCIONALES_PERSONAJES = {
+    "Darek": "NPCS/Darek/Darek_fila1-{indice}.png",
+    "Naira": "NPCS/Naira/Naira_fila1-{indice}.png",
+    "Sabio de las Raíces": "NPCS/Odran/Odran_fila1-{indice}.png",
+}
+
 
 def _escalar_frames(frames, tamano):
     return [
@@ -202,17 +270,78 @@ def _escalar_frames(frames, tamano):
     ]
 
 
+def _escalar_sprite_en_caja(imagen, tamano):
+    limites = imagen.get_bounding_rect(min_alpha=32)
+    if not limites.width or not limites.height:
+        return pygame.Surface(tamano, pygame.SRCALPHA)
+    sprite = imagen.subsurface(limites)
+    escala = min(tamano[0] / sprite.get_width(), tamano[1] / sprite.get_height())
+    sprite_escalado = pygame.transform.scale(
+        sprite,
+        (
+            max(1, round(sprite.get_width() * escala)),
+            max(1, round(sprite.get_height() * escala)),
+        ),
+    )
+    lienzo = pygame.Surface(tamano, pygame.SRCALPHA)
+    lienzo.blit(sprite_escalado, sprite_escalado.get_rect(midbottom=(tamano[0] // 2, tamano[1])))
+    return lienzo
+
+
 def _cargar_sprite_direccional(nombre, tamano):
-    frames = _escalar_frames(cargar_spritesheet_frames(nombre, 8), tamano)
+    frames = [
+        _escalar_sprite_en_caja(frame, tamano)
+        for frame in cargar_spritesheet_frames(nombre, 8)
+    ]
     if len(frames) != len(ORIENTACIONES_SPRITE):
         return {}
     return dict(zip(ORIENTACIONES_SPRITE, frames))
 
 
+def _direccion_desde_nombre_sprite(nombre):
+    ruta = normalizar_ruta(os.path.basename(nombre))
+    for indice, orientacion in enumerate(ORIENTACIONES_SPRITE, start=1):
+        if (
+            f"fila 1 - {indice}" in ruta
+            or f"fila 1- {indice}" in ruta
+            or f"fila1-{indice}" in ruta
+        ):
+            return orientacion
+    return "abajo"
+
+
+def _cargar_frames_idle_personaje(personaje, nombre_sprite=None):
+    archivos_reposo = ARCHIVOS_REPOSO_PERSONAJES.get(personaje)
+    if archivos_reposo:
+        frames_por_fila = {
+            fila: cargar_spritesheet_frames(archivo, 8)
+            for fila, archivo in enumerate(archivos_reposo, start=1)
+        }
+        return {
+            orientacion: frames_por_fila[DIRECCION_A_FILA_REPOSO[orientacion]]
+            for orientacion in ORIENTACIONES_SPRITE
+            if frames_por_fila[DIRECCION_A_FILA_REPOSO[orientacion]]
+        }
+
+    plantilla = ARCHIVOS_DIRECCIONALES_PERSONAJES.get(personaje)
+    if plantilla:
+        frames = {}
+        for indice, orientacion in enumerate(ORIENTACIONES_SPRITE, start=1):
+            imagen = cargar_imagen(
+                plantilla.format(indice=indice),
+                requerido=False,
+            )
+            if imagen is not None:
+                frames[orientacion] = [imagen]
+        return frames
+
+    return {}
+
+
 def cargar_personaje_periodista():
     """Carga reposo en ocho direcciones y caminata del periodista."""
     carpeta = os.path.join("NPCS", "NPC Mundo2")
-    tamano = (48, 64)
+    tamano = TAMANO_JUGADOR_PRESENTE
     idle = _cargar_sprite_direccional(
         os.path.join(carpeta, "NPC2-mundo2-Fila1.png"),
         tamano,
@@ -229,6 +358,13 @@ def cargar_personaje_periodista():
             8,
         )
         caminar[direccion] = _escalar_frames(frames, tamano)
+    if len(idle) != len(ORIENTACIONES_SPRITE) or any(
+        not caminar[direccion]
+        for direccion in ("abajo", "derecha", "izquierda", "arriba")
+    ):
+        raise RuntimeError(
+            "No se pudieron cargar los sprites direccionales del periodista."
+        )
     return {
         "id": "periodista",
         "tamano": tamano,
@@ -246,14 +382,25 @@ PERSONAJES_PRESENTES = (
             "Agente de verificación",
             "Agente_de_verificacion-Fila1.png",
         ),
+        "sprite_caminar": os.path.join(
+            "NPCS",
+            "Agente de verificación",
+            "Agente_de_verificacion-Fila{fila}.png",
+        ),
     },
     {
         "clave": "Kael",
         "nombre": "Kael (aspirante a alcalde)",
+        "escala": 0.42,
         "sprite": os.path.join(
             "NPCS",
             "Aspirante Contempóraneo",
             "Aspirante_contemporaneo-Fila1.png",
+        ),
+        "sprite_caminar": os.path.join(
+            "NPCS",
+            "Aspirante Contempóraneo",
+            "Aspirante_contemporaneo-Fila{fila}.png",
         ),
     },
     {
@@ -264,58 +411,185 @@ PERSONAJES_PRESENTES = (
             "Habitante Conectada",
             "Habitante_conectada-Fila1.png",
         ),
+        "sprite_caminar": os.path.join(
+            "NPCS",
+            "Habitante Conectada",
+            "Habitante_conectada-Fila{fila}.png",
+        ),
     },
     {
         "clave": "Influencer",
         "nombre": "Influencer",
         "sprite": os.path.join("NPCS", "Influencer", "Influencer_fila1.png"),
+        "sprite_caminar": os.path.join(
+            "NPCS",
+            "Influencer",
+            "Influencer_fila{fila}.png",
+        ),
     },
     {
         "clave": "Mensajero urbano",
         "nombre": "Mensajero urbano",
+        "escala": 0.42,
         "sprite": os.path.join(
             "NPCS",
             "Mensajero urbano",
             "Mensajero_urbano-Fila1.png",
         ),
+        "sprite_caminar": os.path.join(
+            "NPCS",
+            "Mensajero urbano",
+            "Mensajero_urbano-Fila{fila}.png",
+        ),
     },
 )
 
 
+def _cargar_ruta_npc(datos_ruta, rect_mapa, nombre):
+    if not isinstance(datos_ruta, dict):
+        return None
+    patron = datos_ruta.get("pattern")
+    puntos_datos = datos_ruta.get("points")
+    if patron not in ("loop", "ping_pong") or not isinstance(puntos_datos, list):
+        print(f"[Dimensiones] Ruta inválida para {nombre}; no se moverá.")
+        return None
+    puntos = []
+    try:
+        for punto in puntos_datos:
+            rx = float(punto["rx"])
+            ry = float(punto["ry"])
+            if not (math.isfinite(rx) and math.isfinite(ry) and 0 <= rx <= 1 and 0 <= ry <= 1):
+                raise ValueError("waypoint fuera del mapa")
+            puntos.append((
+                round(rect_mapa.x + rx * rect_mapa.width),
+                round(rect_mapa.y + ry * rect_mapa.height),
+            ))
+    except (KeyError, TypeError, ValueError) as error:
+        print(f"[Dimensiones] Ruta inválida para {nombre}: {error}; no se moverá.")
+        return None
+    if len(puntos) < 2:
+        print(f"[Dimensiones] Ruta incompleta para {nombre}; no se moverá.")
+        return None
+    return {"pattern": patron, "points": puntos}
+
+
 def _cargar_decoraciones_presentes(datos, rect_mapa):
     posiciones = datos.get("npc_positions", {})
+    rutas = datos.get("npc_routes", {})
+    if not isinstance(rutas, dict):
+        print("[Dimensiones] npc_routes inválido; no se moverán los NPC.")
+        rutas = {}
     decoraciones = []
     for personaje in PERSONAJES_PRESENTES:
         sitio = posiciones.get(personaje["clave"])
         if not isinstance(sitio, dict):
             continue
-        idle = _cargar_sprite_direccional(personaje["sprite"], (48, 62))
+        rx = float(sitio.get("rx", 0.5))
+        ry = float(sitio.get("ry", 0.5))
+        rw = max(0.01, float(sitio.get("rw", 0.06)))
+        rh = max(0.01, float(sitio.get("rh", 0.12)))
+        centro = (
+            round(rect_mapa.x + rx * rect_mapa.width),
+            round(rect_mapa.y + ry * rect_mapa.height),
+        )
+        rect_sitio = pygame.Rect(
+            0,
+            0,
+            max(1, round(rw * rect_mapa.width)),
+            max(1, round(rh * rect_mapa.height)),
+        )
+        rect_sitio.center = centro
+        ruta = _cargar_ruta_npc(
+            rutas.get(personaje["clave"], {}),
+            rect_mapa,
+            personaje["nombre"],
+        )
+        if ruta:
+            rect_sitio.midbottom = ruta["points"][0]
+        rect = pygame.Rect(
+            0,
+            0,
+            max(
+                1,
+                round(
+                    rect_sitio.width
+                    * personaje.get("escala", ESCALA_NPC_PRESENTE)
+                ),
+            ),
+            max(
+                1,
+                round(
+                    rect_sitio.height
+                    * personaje.get("escala", ESCALA_NPC_PRESENTE)
+                ),
+            ),
+        )
+        rect.midbottom = rect_sitio.midbottom
+        idle = _cargar_sprite_direccional(personaje["sprite"], rect.size)
         if not idle:
             print(
                 f"[Dimensiones] No se pudo cargar el reposo de "
                 f"{personaje['nombre']}."
             )
             continue
-        rx = float(sitio.get("rx", 0.5))
-        ry = float(sitio.get("ry", 0.5))
-        rw = float(sitio.get("rw", 0.06))
-        rh = float(sitio.get("rh", 0.12))
-        centro = (
-            round(rect_mapa.x + rx * rect_mapa.width),
-            round(rect_mapa.y + ry * rect_mapa.height),
+        caminar = {}
+        for direccion, fila in (
+            ("abajo", 2),
+            ("derecha", 3),
+            ("arriba", 4),
+            ("izquierda", 5),
+        ):
+            frames = cargar_spritesheet_frames(
+                personaje["sprite_caminar"].format(fila=fila),
+                8,
+            )
+            if not frames:
+                raise RuntimeError(
+                    f"No se pudieron cargar los frames de caminata de "
+                    f"{personaje['nombre']} ({direccion})."
+                )
+            caminar[direccion] = [
+                _escalar_sprite_en_caja(frame, rect.size)
+                for frame in frames
+            ]
+        hitbox = pygame.Rect(
+            0,
+            0,
+            max(1, round(rect.width * 0.45)),
+            max(1, round(rect.height * 0.25)),
         )
-        rect = pygame.Rect(0, 0, 48, 62)
-        rect.center = centro
-        hitbox = pygame.Rect(0, 0, 24, 10)
-        hitbox.center = centro
+        hitbox.midbottom = rect.midbottom
+        direccion = sitio.get("direccion", "abajo")
+        if direccion not in ORIENTACIONES_SPRITE:
+            direccion = "abajo"
+        generador_ruta = random.Random(
+            sum(ord(caracter) for caracter in personaje["clave"])
+        )
         decoraciones.append({
             "id": f"npc_presente_{personaje['clave'].lower().replace(' ', '_')}",
             "nombre": personaje["sprite"],
             "personaje": personaje["nombre"],
             "rect": rect,
             "hitbox": hitbox,
+            "posicion_ruta_x": float(rect.midbottom[0]),
+            "posicion_ruta_y": float(rect.midbottom[1]),
             "imagen": idle["abajo"],
             "frames_idle": idle,
+            "frames_caminar": caminar,
+            "ruta_npc": ruta,
+            "indice_waypoint": 1 if ruta else 0,
+            "direccion_ruta": 1,
+            "estado_ruta": "IDLE",
+            "tiempo_estado_ms": generador_ruta.uniform(*PAUSA_PATRULLA_NPC_MS),
+            "tiempo_frame_ms": 0.0,
+            "indice_frame": 0,
+            "random_ruta": generador_ruta,
+            "velocidad_ruta": VELOCIDAD_PATRULLA_NPC * generador_ruta.uniform(
+                1 - VARIACION_VELOCIDAD_NPC,
+                1 + VARIACION_VELOCIDAD_NPC,
+            ),
+            "sprite_preparado": True,
+            "direccion": direccion,
             "puente": False,
             "fondo_animado": False,
             "escalera": False,
@@ -337,23 +611,7 @@ def cargar_frames_tronco_eco():
 
 
 def cargar_frames_idle_guardian():
-    orientaciones = (
-        "abajo",
-        "abajo_derecha",
-        "derecha",
-        "arriba_derecha",
-        "arriba",
-        "arriba_izquierda",
-        "izquierda",
-        "abajo_izquierda",
-    )
-    return {
-        orientacion: cargar_imagen(
-            os.path.join("NPCS", "Guardian", f"Fila 1 - {indice}. Guardián.png"),
-            requerido=False,
-        )
-        for indice, orientacion in enumerate(orientaciones, start=1)
-    }
+    return _cargar_frames_idle_personaje("Guardián")
 
 
 def cargar_mapa_principal():
@@ -391,6 +649,12 @@ def cargar_mapa_principal():
             max(1, round(objeto["h"] * ALTO)),
         )
         personaje = personaje_de_decoracion(objeto["name"])
+        direccion = _direccion_desde_nombre_sprite(objeto["name"])
+        frames_idle = (
+            _cargar_frames_idle_personaje(personaje, objeto["name"])
+            if personaje
+            else {}
+        )
         es_fondo_animado = nombre_normalizado.endswith("cascada_animacion.png")
         es_puente = nombre_normalizado.startswith("puentes/")
         nombre_archivo = os.path.basename(nombre_normalizado)
@@ -437,6 +701,8 @@ def cargar_mapa_principal():
             "id": f"puente_{nombre_puente[6:].lower()}" if es_puente else None,
             "nombre": objeto["name"],
             "personaje": personaje,
+            "direccion": direccion,
+            "frames_idle": frames_idle,
             "rect": rect,
             "hitbox": hitbox,
             "imagen": imagen,
@@ -461,6 +727,7 @@ def cargar_mapa_principal():
                 and not objeto["puente"]
                 and not objeto["tronco_eco"]
                 and not objeto["frames"]
+                and not objeto["frames_idle"]
             ):
                 mapa_dia.blit(objeto["imagen"], objeto["rect"])
     mapa = mapas_dia[0]
@@ -612,7 +879,7 @@ def cargar_mapa_presente(configuracion):
     rect_mapa.center = (ANCHO // 2, ALTO // 2)
     mapa = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
     mapa.fill((18, 27, 38, 255))
-    mapa.blit(pygame.transform.smoothscale(imagen_original, tamano), rect_mapa)
+    mapa.blit(pygame.transform.scale(imagen_original, tamano), rect_mapa)
 
     ruta_hitboxes = os.path.join(
         os.path.dirname(__file__),
@@ -628,8 +895,10 @@ def cargar_mapa_presente(configuracion):
     except json.JSONDecodeError as error:
         print(f"[Dimensiones] JSON de hitboxes inválido: {error}")
         datos = {}
+    if not isinstance(datos, dict):
+        datos = {}
 
-    hitboxes_originales = datos.get("hitboxes", []) if isinstance(datos, dict) else []
+    hitboxes_originales = datos.get("hitboxes", [])
     hitboxes = [
         _mapear_hitbox_a_ventana(hitbox, rect_mapa)
         for hitbox in hitboxes_originales
@@ -739,7 +1008,7 @@ def cargar_mapa_presente(configuracion):
         "jugador_presente": cargar_personaje_periodista(),
         "spawn_dimension": posicion_spawn,
         "rect_mapa": rect_mapa,
-        "grafo": datos.get("grafo", {}) if isinstance(datos, dict) else {},
+        "grafo": datos.get("grafo", {}),
     }
 
 
@@ -902,25 +1171,56 @@ def dibujar_brillo_interaccion(superficie, imagen, rect, cache):
     superficie.blit(imagen, rect)
 
 
+def dibujar_sprite_en_rect(superficie, imagen, rect):
+    if not imagen:
+        return
+    limites = imagen.get_bounding_rect(min_alpha=32)
+    if not limites.width or not limites.height:
+        return
+    sprite = imagen.subsurface(limites)
+    escala = min(rect.width / sprite.get_width(), rect.height / sprite.get_height())
+    sprite_escalado = pygame.transform.scale(
+        sprite,
+        (
+            max(1, round(sprite.get_width() * escala)),
+            max(1, round(sprite.get_height() * escala)),
+        ),
+    )
+    superficie.blit(sprite_escalado, sprite_escalado.get_rect(midbottom=rect.midbottom))
+
+
 def crear_jugador_local(recursos):
+    es_dimension_presente = recursos.get("dimension") == DIMENSION_PRESENTE
     personaje_presente = (
         recursos.get("jugador_presente")
-        if recursos.get("dimension") == DIMENSION_PRESENTE
+        if es_dimension_presente
         else None
+    )
+    usa_personaje_presente = bool(
+        personaje_presente and personaje_presente.get("frames_idle")
+    )
+    tamano_jugador = (
+        TAMANO_JUGADOR_PRESENTE if usa_personaje_presente else TAMANO_JUGADOR
     )
     decoracion = recursos.get("guardian")
     if personaje_presente and personaje_presente.get("frames_idle"):
         sprite_rect = pygame.Rect(
             0,
             0,
-            *personaje_presente["tamano"],
+            *tamano_jugador,
         )
         imagen_idle = personaje_presente["frames_idle"].get("abajo")
     elif decoracion:
-        sprite_rect = decoracion["rect"].copy()
+        sprite_rect = pygame.Rect(0, 0, *tamano_jugador)
+        sprite_rect.midbottom = decoracion["rect"].midbottom
         imagen_idle = decoracion["imagen"]
+    elif es_dimension_presente:
+        raise RuntimeError(
+            "No se pudo cargar el personaje del Distrito Conecta; "
+            "se cancela la creación del jugador para no mostrar al Guardián."
+        )
     else:
-        sprite_rect = pygame.Rect(ANCHO // 2, ALTO // 2, 36, 58)
+        sprite_rect = pygame.Rect(ANCHO // 2, ALTO // 2, *tamano_jugador)
         imagen_idle = None
     pies = pygame.Rect(0, 0, *TAMANO_HITBOX_PIES)
     pies.midbottom = sprite_rect.midbottom
@@ -928,15 +1228,20 @@ def crear_jugador_local(recursos):
     if spawn is not None:
         pies.center = spawn
         sprite_rect.midbottom = pies.midbottom
+    direccion_inicial = (
+        "abajo"
+        if usa_personaje_presente
+        else decoracion.get("direccion", "abajo") if decoracion else "abajo"
+    )
     frames_caminar = (
         personaje_presente.get("frames_caminar", {})
-        if personaje_presente and personaje_presente.get("frames_idle")
+        if usa_personaje_presente
         else recursos.get("guardian_walk_frames")
     )
     if not isinstance(frames_caminar, dict):
         frames_caminar = {}
     return {
-        "id": personaje_presente.get("id", "guardian") if personaje_presente else "guardian",
+        "id": "periodista" if usa_personaje_presente else "guardian",
         "rect": sprite_rect,
         "pies": pies,
         "posicion_x": float(pies.x),
@@ -944,16 +1249,28 @@ def crear_jugador_local(recursos):
         "imagen_idle": imagen_idle,
         "frames_idle": (
             personaje_presente.get("frames_idle", {})
-            if personaje_presente and personaje_presente.get("frames_idle")
-            else recursos.get("guardian_idle_frames", {})
+            if usa_personaje_presente
+            else (
+                decoracion.get("frames_idle", {})
+                if decoracion
+                else recursos.get("guardian_idle_frames", {})
+            )
         ),
         "frames_caminar": frames_caminar,
-        "frames_hablar": recursos.get("guardian_talk_frames", []),
-        "frames_eco": recursos.get("guardian_eco_frames", []),
+        "frames_hablar": (
+            []
+            if usa_personaje_presente
+            else recursos.get("guardian_talk_frames", [])
+        ),
+        "frames_eco": (
+            []
+            if usa_personaje_presente
+            else recursos.get("guardian_eco_frames", [])
+        ),
         "tiempo_animacion": 0.0,
         "indice_frame": 0,
         "estado_visual": "idle",
-        "direccion": "abajo",
+        "direccion": direccion_inicial,
         "en_movimiento": False,
     }
 
@@ -1047,23 +1364,194 @@ def jugador_bloqueado(rect, mundo):
     )
 
 
+def _limitar_camara(camara, rect_mapa, ancho_vista, alto_vista):
+    if rect_mapa.width <= ancho_vista:
+        min_x = max_x = rect_mapa.left - (ancho_vista - rect_mapa.width) / 2
+    else:
+        min_x = rect_mapa.left
+        max_x = rect_mapa.right - ancho_vista
+    if rect_mapa.height <= alto_vista:
+        min_y = max_y = rect_mapa.top - (alto_vista - rect_mapa.height) / 2
+    else:
+        min_y = rect_mapa.top
+        max_y = rect_mapa.bottom - alto_vista
+
+    camara["x"] = min(max(camara["x"], min_x), max_x)
+    camara["y"] = min(max(camara["y"], min_y), max_y)
+    camara["x_render"] = round(camara["x"])
+    camara["y_render"] = round(camara["y"])
+
+
 def actualizar_camara_mundo(mundo, delta_ms=0, inmediata=False):
     camara = mundo.get("camara")
     if camara is None:
         return
     jugador = mundo["jugador"]
+    rect_mapa = mundo.get("rect_mapa") or pygame.Rect(0, 0, ANCHO, ALTO)
+    jugador_x, jugador_y = jugador["pies"].center
     zoom = camara["zoom"]
     ancho_vista = ANCHO / zoom
     alto_vista = ALTO / zoom
-    destino_x = jugador["pies"].centerx - ancho_vista / 2
-    destino_y = jugador["pies"].centery - alto_vista / 2
+    destino_x = jugador_x - ancho_vista / 2
+    destino_y = jugador_y - alto_vista / 2
     if inmediata:
         camara["x"] = destino_x
         camara["y"] = destino_y
+    else:
+        factor = 1 - math.exp(
+            -CAMARA_RESPUESTA * max(0.0, float(delta_ms)) / 1000
+        )
+        camara["x"] += (destino_x - camara["x"]) * factor
+        camara["y"] += (destino_y - camara["y"]) * factor
+    _limitar_camara(camara, rect_mapa, ancho_vista, alto_vista)
+
+
+def _direccion_npc(dx, dy):
+    if abs(dx) >= abs(dy):
+        return "derecha" if dx >= 0 else "izquierda"
+    return "abajo" if dy >= 0 else "arriba"
+
+
+def _siguiente_waypoint_npc(objeto):
+    ruta = objeto["ruta_npc"]
+    indice = objeto["indice_waypoint"]
+    if ruta["pattern"] == "loop":
+        objeto["indice_waypoint"] = (indice + 1) % len(ruta["points"])
         return
-    factor = 1 - math.exp(-max(0.0, float(delta_ms)) / 120)
-    camara["x"] += (destino_x - camara["x"]) * factor
-    camara["y"] += (destino_y - camara["y"]) * factor
+    siguiente = indice + objeto["direccion_ruta"]
+    if not 0 <= siguiente < len(ruta["points"]):
+        objeto["direccion_ruta"] *= -1
+        siguiente = indice + objeto["direccion_ruta"]
+    objeto["indice_waypoint"] = siguiente
+
+
+def actualizar_npcs_presentes(mundo, delta_ms):
+    if mundo.get("dimension") != DIMENSION_PRESENTE:
+        return
+    delta_ms = max(0.0, float(delta_ms))
+    jugador = mundo["jugador"]
+    rect_mapa = mundo["rect_mapa"]
+    pausados = mundo.get("npc_pausados", False)
+    hitboxes_muro = [
+        hitbox for hitbox in mundo["hitboxes"]
+        if hitbox.get("role") == "wall"
+    ]
+    zonas_caminables = [
+        hitbox for hitbox in mundo["hitboxes"]
+        if hitbox.get("role") == "walkable"
+    ]
+    for actor in mundo["personajes"]:
+        objeto = actor.get("objeto")
+        if not objeto or not objeto.get("ruta_npc"):
+            continue
+        estado = objeto["estado_ruta"]
+        if mundo.get("escena_actual") != ESCENA_MAPA or pausados:
+            objeto["estado_ruta"] = (
+                "INTERACTING"
+                if mundo.get("npc_en_dialogo") == actor["personaje"]
+                else "PAUSED_BY_EVENT"
+            )
+            continue
+        if estado in ("INTERACTING", "PAUSED_BY_EVENT"):
+            objeto["estado_ruta"] = "WAITING"
+            objeto["tiempo_estado_ms"] = 500
+            continue
+        if estado in ("IDLE", "WAITING", "TURNING"):
+            objeto["tiempo_estado_ms"] -= delta_ms
+            if objeto["tiempo_estado_ms"] > 0:
+                continue
+            objeto["estado_ruta"] = "WALKING"
+
+        ruta = objeto["ruta_npc"]
+        destino = ruta["points"][objeto["indice_waypoint"]]
+        x = objeto["posicion_ruta_x"]
+        y = objeto["posicion_ruta_y"]
+        dx = destino[0] - x
+        dy = destino[1] - y
+        distancia = math.hypot(dx, dy)
+        paso_maximo = objeto["velocidad_ruta"] * min(delta_ms, 100) / 1000
+        if distancia <= max(
+            RADIO_WAYPOINT_NPC,
+            paso_maximo,
+        ):
+            x, y = destino
+            objeto["posicion_ruta_x"] = x
+            objeto["posicion_ruta_y"] = y
+            direccion_anterior = objeto["direccion"]
+            _siguiente_waypoint_npc(objeto)
+            siguiente = ruta["points"][objeto["indice_waypoint"]]
+            objeto["direccion"] = _direccion_npc(
+                siguiente[0] - x,
+                siguiente[1] - y,
+            )
+            objeto["tiempo_frame_ms"] = 0.0
+            objeto["indice_frame"] = 0
+            if objeto["random_ruta"].random() < PROBABILIDAD_PAUSA_NPC:
+                objeto["estado_ruta"] = "WAITING"
+                objeto["tiempo_estado_ms"] = objeto["random_ruta"].uniform(
+                    *PAUSA_PATRULLA_NPC_MS
+                )
+            elif objeto["direccion"] != direccion_anterior:
+                objeto["estado_ruta"] = "TURNING"
+                objeto["tiempo_estado_ms"] = 120
+            else:
+                objeto["estado_ruta"] = "WALKING"
+                objeto["velocidad_ruta"] = VELOCIDAD_PATRULLA_NPC * (
+                    1 + objeto["random_ruta"].uniform(
+                        -VARIACION_VELOCIDAD_NPC,
+                        VARIACION_VELOCIDAD_NPC,
+                    )
+                )
+        elif distancia:
+            objeto["direccion"] = _direccion_npc(dx, dy)
+            paso = min(distancia, paso_maximo)
+            x += dx / distancia * paso
+            y += dy / distancia * paso
+            hitbox = objeto["hitbox"].copy()
+            hitbox.midbottom = (round(x), round(y))
+            colisiona = (
+                not rect_mapa.contains(hitbox)
+                or any(
+                    colision_hitbox_mapa(hitbox, pared)
+                    for pared in hitboxes_muro
+                )
+                or (
+                    zonas_caminables
+                    and not any(
+                        contiene_zona_caminable(hitbox, zona)
+                        for zona in zonas_caminables
+                    )
+                )
+                or hitbox.colliderect(jugador["pies"])
+                or any(
+                    otro is not actor and otro["rect"].colliderect(hitbox)
+                    for otro in mundo["personajes"]
+                )
+            )
+            if colisiona:
+                objeto["estado_ruta"] = "WAITING"
+                objeto["tiempo_estado_ms"] = 500
+                continue
+            objeto["posicion_ruta_x"] = x
+            objeto["posicion_ruta_y"] = y
+            objeto["tiempo_frame_ms"] += delta_ms
+            while objeto["tiempo_frame_ms"] >= 140:
+                objeto["tiempo_frame_ms"] -= 140
+                frames = objeto["frames_caminar"].get(
+                    objeto["direccion"],
+                    (),
+                )
+                if frames:
+                    objeto["indice_frame"] = (
+                        objeto["indice_frame"] + 1
+                    ) % len(frames)
+
+        objeto["rect"].midbottom = (
+            round(objeto["posicion_ruta_x"]),
+            round(objeto["posicion_ruta_y"]),
+        )
+        objeto["hitbox"].midbottom = objeto["rect"].midbottom
+        actor["rect"].update(objeto["hitbox"])
 
 
 def posicion_pantalla_a_mundo(posicion, mundo):
@@ -1072,8 +1560,8 @@ def posicion_pantalla_a_mundo(posicion, mundo):
         return posicion
     zoom = camara["zoom"]
     return (
-        round(camara["x"] + posicion[0] / zoom),
-        round(camara["y"] + posicion[1] / zoom),
+        round(camara.get("x_render", round(camara["x"])) + posicion[0] / zoom),
+        round(camara.get("y_render", round(camara["y"])) + posicion[1] / zoom),
     )
 
 
@@ -1083,8 +1571,8 @@ def posicion_mundo_a_pantalla(posicion, mundo):
         return posicion
     zoom = camara["zoom"]
     return (
-        round((posicion[0] - camara["x"]) * zoom),
-        round((posicion[1] - camara["y"]) * zoom),
+        round((posicion[0] - camara.get("x_render", round(camara["x"]))) * zoom),
+        round((posicion[1] - camara.get("y_render", round(camara["y"]))) * zoom),
     )
 
 
@@ -1098,9 +1586,15 @@ def dibujar_escena_con_camara(superficie, escena, mundo):
     alto_vista = max(1, round(ALTO / zoom))
     vista = pygame.Surface((ancho_vista, alto_vista), pygame.SRCALPHA)
     vista.fill((18, 27, 38, 255))
-    vista.blit(escena, (-round(camara["x"]), -round(camara["y"])))
+    vista.blit(
+        escena,
+        (
+            -camara.get("x_render", round(camara["x"])),
+            -camara.get("y_render", round(camara["y"])),
+        ),
+    )
     superficie.blit(
-        pygame.transform.smoothscale(vista, (ANCHO, ALTO)),
+        pygame.transform.scale(vista, (ANCHO, ALTO)),
         (0, 0),
     )
 
@@ -1256,11 +1750,24 @@ def crear_grafo_fisico(decoraciones):
     return GrafoFisico(PLATAFORMAS_ALDEA, puentes)
 
 
+def tecla_activa(teclas, *codigos):
+    if teclas is None:
+        return False
+    for codigo in codigos:
+        try:
+            valor = teclas[codigo]
+        except (KeyError, TypeError):
+            valor = False
+        if valor:
+            return True
+    return False
+
+
 def mover_jugador(jugador, mundo, teclas, delta_ms):
-    dx = int(teclas[pygame.K_d] or teclas[pygame.K_RIGHT]) - int(teclas[pygame.K_a] or teclas[pygame.K_LEFT])
-    dy = int(teclas[pygame.K_s] or teclas[pygame.K_DOWN]) - int(teclas[pygame.K_w] or teclas[pygame.K_UP])
+    dx = int(tecla_activa(teclas, pygame.K_d, pygame.K_RIGHT)) - int(tecla_activa(teclas, pygame.K_a, pygame.K_LEFT))
+    dy = int(tecla_activa(teclas, pygame.K_s, pygame.K_DOWN)) - int(tecla_activa(teclas, pygame.K_w, pygame.K_UP))
     velocidad = VELOCIDAD_GUARDIAN * (
-        1.65 if teclas[pygame.K_LSHIFT] or teclas[pygame.K_RSHIFT] else 1.0
+        1.65 if tecla_activa(teclas, pygame.K_LSHIFT, pygame.K_RSHIFT) else 1.0
     )
     habilidad = mundo.get("habilidad")
     if habilidad:
@@ -1380,6 +1887,26 @@ def dibujar_debug_mapa(
     pygame.draw.rect(superficie, (255, 230, 40), jugador["pies"], 1)
     for personaje in mundo["personajes"]:
         pygame.draw.rect(superficie, (200, 130, 255), personaje["rect"], 1)
+    for objeto in mundo["decoraciones"]:
+        ruta = objeto.get("ruta_npc")
+        if not ruta:
+            continue
+        puntos = ruta["points"]
+        pygame.draw.lines(
+            superficie,
+            (255, 110, 110),
+            ruta["pattern"] == "loop",
+            puntos,
+            1,
+        )
+        for indice, punto in enumerate(puntos):
+            pygame.draw.circle(superficie, (255, 210, 80), punto, 3)
+            etiqueta = pygame.font.Font(None, 12).render(
+                str(indice + 1),
+                True,
+                (255, 255, 255),
+            )
+            superficie.blit(etiqueta, (punto[0] + 4, punto[1] - 4))
     for objeto in mundo["interacciones"]:
         color = (
             (200, 130, 255) if objeto.get("role") == "other"
@@ -1401,9 +1928,37 @@ def dibujar_debug_mapa(
         f"luciernagas: {cantidad_luciernagas} | particulas: {cantidad_particulas}"
     )
     superficie.blit(fuente_debug.render(detalle, True, (255, 255, 255)), (8, 8))
+    rect_mapa = mundo.get("rect_mapa")
+    camara = mundo.get("camara")
+    if rect_mapa:
+        pygame.draw.rect(superficie, (255, 190, 75), rect_mapa, 1)
+    if camara:
+        ancho_vista = round(ANCHO / camara["zoom"])
+        alto_vista = round(ALTO / camara["zoom"])
+        rect_vista = pygame.Rect(
+            round(camara["x"]),
+            round(camara["y"]),
+            ancho_vista,
+            alto_vista,
+        )
+        pygame.draw.rect(superficie, (80, 235, 255), rect_vista, 1)
+        medida_mapa = (
+            f"{rect_mapa.width}x{rect_mapa.height}"
+            if rect_mapa
+            else f"{ANCHO}x{ALTO}"
+        )
+        detalle_camara = (
+            f"cam=({camara['x']:.1f},{camara['y']:.1f}) "
+            f"vista={ancho_vista}x{alto_vista} "
+            f"mapa={medida_mapa} zoom={camara['zoom']:.2f}"
+        )
+        superficie.blit(
+            fuente_debug.render(detalle_camara, True, (155, 235, 255)),
+            (8, 25),
+        )
     dibujar_debug_grafo(superficie, mundo["grafo_fisico"], mundo["decoraciones"])
     fuente_historial = pygame.font.Font(None, 15)
-    y_historial = 28
+    y_historial = 45 if camara else 28
     for propagacion in (propagaciones or [])[-3:]:
         tramos = " | ".join(
             f"{tramo['transmisor']} -> {tramo['receptor']} "
@@ -1445,6 +2000,28 @@ def dibujar_debug_mapa(
             fuente_debug.render(linea, True, (255, 244, 194)),
             (8, y_historial + 18 * (indice + 1)),
         )
+
+
+def buscar_ruta_transmision(grafo, origen_id, destino_id):
+    ruta = grafo.buscar_camino(origen_id, destino_id)
+    if ruta is None:
+        print(
+            f"[Grafo] No existe ruta transitable entre {origen_id} y "
+            f"{destino_id}; se omite la propagación visual."
+        )
+        return None
+
+    puente_ids = [
+        grafo.obtener_puente(origen, destino)
+        for origen, destino in zip(ruta, ruta[1:])
+    ]
+    if any(puente_id is None for puente_id in puente_ids):
+        print(
+            f"[Grafo] La ruta entre {origen_id} y {destino_id} contiene "
+            "un puente no transitable; se omite la propagación visual."
+        )
+        return None
+    return ruta, puente_ids
 
 
 def _posicion_en_mapa(plataforma, ancho=ANCHO, alto=ALTO):
@@ -1517,9 +2094,42 @@ def dibujar_decoraciones_editor(superficie, recursos, animar=True):
         ):
             continue
         if objeto.get("frames_idle"):
-            imagen_idle = objeto["frames_idle"].get("abajo")
+            frames_caminar = objeto.get("frames_caminar", {}).get(
+                objeto.get("direccion", "abajo"),
+                [],
+            )
+            if objeto.get("estado_ruta") == "WALKING" and frames_caminar:
+                imagen = frames_caminar[
+                    objeto.get("indice_frame", 0) % len(frames_caminar)
+                ]
+                superficie.blit(
+                    imagen,
+                    imagen.get_rect(midbottom=objeto["rect"].midbottom),
+                )
+                continue
+            frames = objeto["frames_idle"].get(
+                objeto.get("direccion", "abajo"),
+                objeto["frames_idle"].get("abajo", []),
+            )
+            if not isinstance(frames, (list, tuple)):
+                frames = [frames]
+            imagen_idle = (
+                frames[(pygame.time.get_ticks() // 180) % len(frames)]
+                if frames and animar
+                else frames[0] if frames else None
+            )
             if imagen_idle:
-                superficie.blit(imagen_idle, objeto["rect"])
+                if objeto.get("sprite_preparado"):
+                    superficie.blit(
+                        imagen_idle,
+                        imagen_idle.get_rect(midbottom=objeto["rect"].midbottom),
+                    )
+                else:
+                    dibujar_sprite_en_rect(
+                        superficie,
+                        imagen_idle,
+                        objeto["rect"],
+                    )
             continue
         if objeto.get("puente_animable"):
             dibujar_puente_balanceandose(superficie, objeto, tiempo)
@@ -1542,16 +2152,23 @@ def dibujar_jugador(superficie, jugador):
     elif jugador["en_movimiento"] and frames_caminar:
         imagen = frames_caminar[jugador["indice_frame"] % len(frames_caminar)]
     else:
-        imagen = jugador["frames_idle"].get(jugador["direccion"]) or jugador["imagen_idle"]
+        imagen = jugador["frames_idle"].get(
+            jugador["direccion"],
+            jugador["frames_idle"].get("abajo", jugador["imagen_idle"]),
+        )
+        if isinstance(imagen, (list, tuple)):
+            imagen = (
+                imagen[(pygame.time.get_ticks() // 180) % len(imagen)]
+                if imagen
+                else jugador["imagen_idle"]
+            )
     if imagen:
-        if imagen.get_size() != jugador["rect"].size:
-            imagen = pygame.transform.scale(imagen, jugador["rect"].size)
         if (
             jugador["direccion"] in ("izquierda", "arriba_izquierda", "abajo_izquierda")
             and jugador["estado_visual"] in ("hablar", "usar_eco")
         ):
             imagen = pygame.transform.flip(imagen, True, False)
-        superficie.blit(imagen, jugador["rect"])
+        dibujar_sprite_en_rect(superficie, imagen, jugador["rect"])
     else:
         pygame.draw.ellipse(superficie, (45, 93, 103), jugador["rect"])
         pygame.draw.ellipse(superficie, (196, 239, 226), jugador["rect"], 2)
@@ -2738,6 +3355,8 @@ def crear_mundo(recursos):
                 "zoom": ZOOM_MAPA_PRESENTE,
                 "x": 0.0,
                 "y": 0.0,
+                "x_render": 0,
+                "y_render": 0,
             }
             if recursos.get("dimension") == DIMENSION_PRESENTE
             else None
@@ -2786,7 +3405,7 @@ def tamano_ventana_inicial():
 
 
 def crear_ventana(pantalla_completa, maximizada=False):
-    """Crea ventana redimensionable o pantalla completa sin estirar el lienzo."""
+    """Crea una ventana cuyo lienzo se escala hasta ocupar todo el espacio."""
     if pantalla_completa:
         return pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     pantalla = pygame.display.set_mode(tamano_ventana_inicial(), pygame.RESIZABLE)
@@ -2798,10 +3417,8 @@ def crear_ventana(pantalla_completa, maximizada=False):
 
 
 def rect_lienzo_en_ventana(tamano_ventana):
-    # La interfaz ocupa el monitor completo.  La conversión del mouse usa los
-    # dos ejes por separado, así que los botones mantienen sus hitboxes aunque
-    # la relación del monitor sea distinta a la del lienzo base.
-    return pygame.Rect((0, 0), tamano_ventana)
+    ancho_ventana, alto_ventana = tamano_ventana
+    return pygame.Rect(0, 0, max(1, ancho_ventana), max(1, alto_ventana))
 
 
 def convertir_mouse_a_lienzo(posicion, rect_lienzo):
@@ -2815,8 +3432,9 @@ def convertir_mouse_a_lienzo(posicion, rect_lienzo):
 
 
 def presentar_lienzo(pantalla, lienzo):
-    """Amplía el juego a toda la pantalla, sin bandas ni fondos auxiliares."""
+    """Escala el lienzo para ocupar la ventana completa."""
     rect_destino = rect_lienzo_en_ventana(pantalla.get_size())
+    pantalla.fill((0, 0, 0))
     escalado = pygame.transform.scale(lienzo, rect_destino.size)
     pantalla.blit(escalado, rect_destino)
     return rect_destino
@@ -3103,11 +3721,14 @@ def main():
             return []
         origen_id = plataforma_cercana(origen_pos)
         destino_id = plataforma_cercana(destino_pos)
-        ruta = grafo.buscar_camino(origen_id, destino_id)
-        if ruta is None:
-            raise RuntimeError(
-                f"No existe ruta para la transmision entre {origen_id} y {destino_id}."
-            )
+        resultado_ruta = buscar_ruta_transmision(
+            grafo,
+            origen_id,
+            destino_id,
+        )
+        if resultado_ruta is None:
+            return []
+        ruta, puente_ids = resultado_ruta
         if propagacion is not None:
             propagacion.registrar_transmision(
                 transmisor,
@@ -3136,12 +3757,6 @@ def main():
             "receptor": receptor,
         }
         if len(ruta) > 1:
-            puente_ids = [
-                grafo.obtener_puente(origen, destino)
-                for origen, destino in zip(ruta, ruta[1:])
-            ]
-            if any(puente_id is None for puente_id in puente_ids):
-                raise RuntimeError("La ruta de propagacion contiene un puente inexistente.")
             visual = PropagacionVisual(
                 origen_id,
                 destino_id,
@@ -3204,6 +3819,7 @@ def main():
     def abrir_dialogo_personaje(nombre):
         nonlocal personaje_dialogo_activo, clave_dialogo_activo
         personaje_dialogo_activo = nombre
+        mundo["npc_en_dialogo"] = nombre
         jugador = mundo["jugador"]
         jugador["en_movimiento"] = False
         jugador["estado_visual"] = "hablar"
@@ -3285,11 +3901,6 @@ def main():
             )
             else "Añade una pantalla pública desde el editor de hitboxes para iniciar la misión."
         )
-        if recursos_presente["guardian"] is None:
-            print(
-                "[Dimensiones] No hay sprite moderno; "
-                "se conserva temporalmente el Guardián."
-            )
         mundo = crear_mundo(recursos)
         mundo["dimension"] = DIMENSION_PRESENTE
         mundo["spawn_presente"] = recursos_presente["spawn_dimension"]
@@ -3672,6 +4283,7 @@ def main():
                         if personaje_dialogo_activo in estado_personajes:
                             estado_personajes[personaje_dialogo_activo]["conversacion_vista"] = True
                         personaje_dialogo_activo = None
+                    mundo["npc_en_dialogo"] = None
                     mundo["jugador"]["estado_visual"] = "idle"
                     if tipo == "respuesta" and respuesta in ("Te ayudaré", "Entrega el mensaje"):
                         mensajero = next(
@@ -4022,6 +4634,10 @@ def main():
                 jugador["tiempo_animacion"] -= 150
                 if frames_estado:
                     jugador["indice_frame"] = (jugador["indice_frame"] + 1) % len(frames_estado)
+        mundo["npc_pausados"] = bool(
+            reparacion and reparacion.minijuego_activo
+        )
+        actualizar_npcs_presentes(mundo, delta_ms)
         actualizar_camara_mundo(mundo, delta_ms)
         interactuable_cercano, distancia_interactuable = buscar_interactuable_cercano(
             jugador, mundo

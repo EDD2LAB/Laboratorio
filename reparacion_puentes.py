@@ -22,7 +22,9 @@ class SistemaReparacionPuente:
     CONFIGURACION = {
         "aciertos_necesarios": 3,
         "duracion_recorrido_ms": 1200,
-        "tolerancia_angulo": 0.30,
+        "angulo_objetivo": math.radians(-25),
+        "tolerancia_angulo": math.radians(31),
+        "rotacion_objetivo_por_acierto": math.radians(60),
         "penalizacion_por_error": 1,
         "duracion_resultado_ms": 350,
         "duracion_animacion_ms": 800,
@@ -64,6 +66,7 @@ class SistemaReparacionPuente:
                 ("error", "indicador_error"),
             )
         }
+        self._indicadores_rotados = {}
         self.materiales_recogidos = set()
         self.objetos_recogidos = set()
         self.interacciones = []
@@ -274,12 +277,42 @@ class SistemaReparacionPuente:
         fraccion = (self.tiempo_aguja_ms % periodo) / periodo
         return -math.pi + fraccion * math.pi
 
+    def _angulo_objetivo(self):
+        return (
+            self.configuracion["angulo_objetivo"]
+            - self.progreso * self.configuracion["rotacion_objetivo_por_acierto"]
+        )
+
+    def _dentro_de_zona_correcta(self, angulo):
+        diferencia = abs(
+            (angulo - self._angulo_objetivo() + math.pi) % math.tau - math.pi
+        )
+        return diferencia <= self.configuracion["tolerancia_angulo"]
+
+    def _indicador_actual(self):
+        indicador = self.indicadores.get(self.estado_indicador)
+        if indicador is None or self.progreso == 0:
+            return indicador
+
+        clave = (self.estado_indicador, self.progreso)
+        if clave not in self._indicadores_rotados:
+            grados = math.degrees(
+                self.progreso
+                * self.configuracion["rotacion_objetivo_por_acierto"]
+            )
+            imagen_rotada = pygame.transform.rotate(indicador, grados)
+            lienzo = pygame.Surface(indicador.get_size(), pygame.SRCALPHA)
+            lienzo.blit(
+                imagen_rotada,
+                imagen_rotada.get_rect(center=lienzo.get_rect().center),
+            )
+            self._indicadores_rotados[clave] = lienzo
+        return self._indicadores_rotados[clave]
+
     def intentar_reparacion(self):
         if not self.minijuego_activo:
             return None
-        objetivo = -math.pi / 3
-        diferencia = abs((self._angulo_aguja() - objetivo + math.pi) % math.tau - math.pi)
-        if diferencia <= self.configuracion["tolerancia_angulo"]:
+        if self._dentro_de_zona_correcta(self._angulo_aguja()):
             self.progreso += 1
             self.estado_indicador = "acierto"
             self.mensaje = (
@@ -385,7 +418,7 @@ class SistemaReparacionPuente:
         titulo = fuente_titulo.render("REPARAR EL PUENTE", True, (255, 228, 148))
         superficie.blit(titulo, titulo.get_rect(center=(panel.centerx, panel.y + 30)))
 
-        indicador = self.indicadores.get(self.estado_indicador)
+        indicador = self._indicador_actual()
         if indicador:
             rect_indicador = indicador.get_rect(center=(panel.centerx, panel.y + 215))
             superficie.blit(indicador, rect_indicador)
