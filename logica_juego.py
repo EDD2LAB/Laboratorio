@@ -86,6 +86,9 @@ class EstadoJuego:
             "id": "contenido_sospechoso",
             "estado": "bloqueada",
             "pistas": [],
+            "publicacion_examinada": False,
+            "clasificacion": None,
+            "clasificacion_correcta": None,
             "decision": None,
             "correccion_difundida": False,
         }
@@ -160,6 +163,45 @@ class EstadoJuego:
             self.mision_presente["estado"] = "pendiente"
             self._aplicar_efecto({"sabiduria": 2})
             self.mision_presente["decision"] = decision
+            self.guardar_progreso_dimension()
+            return True
+        if decision in ("clasificar_ia", "clasificar_real") and any(
+            pista not in self.mision_presente["pistas"]
+            for pista in self.PISTAS_PARA_VERIFICAR
+        ):
+            return False
+        if decision in ("clasificar_ia", "clasificar_real"):
+            clasificacion = (
+                "generada_por_ia"
+                if decision == "clasificar_ia"
+                else "autentica"
+            )
+            correcta = clasificacion == "generada_por_ia"
+            self.mision_presente.update({
+                "clasificacion": clasificacion,
+                "clasificacion_correcta": correcta,
+            })
+            if correcta:
+                self._aplicar_efecto({
+                    "sabiduria": 8,
+                    "confianza_consejo": 3,
+                    "desinformación": -5,
+                    "susurros_falsos": -3,
+                })
+                self.mensajes_verificados.append("publicacion_aspirante")
+            else:
+                self._aplicar_efecto({
+                    "sabiduria": -6,
+                    "confianza_consejo": -5,
+                    "desinformación": 6,
+                    "susurros_falsos": 4,
+                })
+            self.mision_presente["estado"] = "completada"
+            self.mision_presente["decision"] = decision
+            self.gestor_dimensiones.registrar_completada(
+                DIMENSION_PRESENTE,
+                eventos_resueltos=1,
+            )
             self.guardar_progreso_dimension()
             return True
         if decision == "verificar" and any(

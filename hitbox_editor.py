@@ -225,6 +225,24 @@ def save_hitboxes(out_path, hitboxes, img_rect, image_path,
     else:
         image_rel = os.path.join("Imagenes", os.path.basename(image_path))
     image_rel = image_rel.replace("\\", "/")
+    preserved_payload = {}
+    if os.path.isfile(out_path):
+        with open(out_path, "r", encoding="utf-8") as fh:
+            existing_payload = json.load(fh)
+        if isinstance(existing_payload, dict):
+            editor_keys = {
+                "image",
+                "image_size",
+                "hitboxes",
+                "spawn",
+                "npc_positions",
+                "decoracion",
+            }
+            preserved_payload = {
+                key: value
+                for key, value in existing_payload.items()
+                if key not in editor_keys
+            }
     payload = {
         "image": image_rel,
         "image_size": [img_rect.width, img_rect.height],
@@ -233,8 +251,9 @@ def save_hitboxes(out_path, hitboxes, img_rect, image_path,
         "npc_positions": npc_positions or {},
         "decoracion": decoracion or [],
     }
+    preserved_payload.update(payload)
     with open(out_path, "w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2)
+        json.dump(preserved_payload, fh, indent=2, ensure_ascii=False)
 
 
 def load_hitboxes(in_path):
@@ -742,10 +761,31 @@ def main(forzar_selector=False):
         "estacion_mensajero",
         "portal_temporal",
         "entrada_edificio",
+        "entrar_edificio",
+        "salir_edificio",
         "publicacion_digital",
         "punto_spawn",
     ]
     current_interactable_action = "puerta"
+    edificios_ids = (
+        "distrito_conecta",
+        "alcaldia",
+        "centro_verificacion",
+        "centro_comunicaciones",
+        "estudio_lia",
+        "centro_comunitario",
+        "campana_ronaldo",
+    )
+    edificios_nombres = {
+        "distrito_conecta": "Distrito Conecta",
+        "alcaldia": "Alcaldía",
+        "centro_verificacion": "Centro de Verificación",
+        "centro_comunicaciones": "Centro de Comunicaciones",
+        "estudio_lia": "Estudio de Lía Nova",
+        "centro_comunitario": "Centro Comunitario",
+        "campana_ronaldo": "Sede de campaña",
+    }
+    current_building_id_idx = 0
     current_trunk_platform = ""
     eco_platform_modal = False
     eco_platform_edit_idx = None
@@ -1764,6 +1804,28 @@ def main(forzar_selector=False):
                     "activo": True,
                     "plataforma": current_trunk_platform,
                 })
+            elif current_interactable_action in ("entrada_edificio", "entrar_edificio"):
+                edificio_id = edificios_ids[current_building_id_idx]
+                payload.update({
+                    "action": "entrar_edificio",
+                    "id": f"entrada_{edificio_id}_{len(hitboxes) + 1}",
+                    "tipo": "entrada_edificio",
+                    "edificio_id": edificio_id,
+                    "nombre_edificio": edificios_nombres[edificio_id],
+                    "dimension": dimension,
+                    "datos": {},
+                    "tecla": "E",
+                    "activo": True,
+                })
+            elif current_interactable_action == "salir_edificio":
+                payload.update({
+                    "id": f"salida_edificio_{len(hitboxes) + 1}",
+                    "tipo": "salida_edificio",
+                    "dimension": dimension,
+                    "datos": {},
+                    "tecla": "E",
+                    "activo": True,
+                })
             elif current_interactable_action in ("tablilla", "otro"):
                 payload.update({
                     "id": f"{current_interactable_action}_{len(hitboxes) + 1}",
@@ -1777,7 +1839,8 @@ def main(forzar_selector=False):
                 "sede_aspirante",
                 "estacion_mensajero",
                 "portal_temporal",
-                "entrada_edificio",
+                "entrar_edificio",
+                "salir_edificio",
                 "publicacion_digital",
                 "punto_spawn",
             }:
@@ -1813,6 +1876,8 @@ def main(forzar_selector=False):
             "estacion_mensajero": "Estación del mensajero",
             "portal_temporal": "Portal temporal",
             "entrada_edificio": "Entrada de edificio",
+            "entrar_edificio": "Entrar a edificio",
+            "salir_edificio": "Salir de edificio",
             "publicacion_digital": "Publicación digital",
             "punto_spawn": "Spawn de dimensión",
         }.get(str(action).lower(), "Puerta")
@@ -1833,13 +1898,13 @@ def main(forzar_selector=False):
             char = h.get("npc_character", "")
             shape = h["type"]
             if role == "wall":
-                label = f"W{i+1} {shape[:3]}"
+                label = f"W{i+1} {h.get('zona', shape)[:14]}"
                 color = (100, 160, 255)
             elif role == "walkable":
-                label = f"S{i+1} caminar"
+                label = f"S{i+1} {h.get('zona', 'caminar')[:14]}"
                 color = (100, 220, 140)
             elif role == "other":
-                label = f"O{i+1} {h.get('id', _interactable_label(act))[:12]}"
+                label = f"O{i+1} {h.get('zona', h.get('id', _interactable_label(act)))[:14]}"
                 color = (200, 130, 255)
             elif act == "npc":
                 label = f"N{i+1} {char[:10]}"
@@ -2631,6 +2696,23 @@ def main(forzar_selector=False):
                     idx = interactable_actions.index(current_interactable_action)
                     current_interactable_action = interactable_actions[(idx + 1) % len(interactable_actions)]
 
+                elif event.key == pygame.K_F8:
+                    current_building_id_idx = (
+                        current_building_id_idx + 1
+                    ) % len(edificios_ids)
+                    if (
+                        selected_hitbox_idx is not None
+                        and 0 <= selected_hitbox_idx < len(hitboxes)
+                        and hitboxes[selected_hitbox_idx].get("action")
+                        in ("entrada_edificio", "entrar_edificio")
+                    ):
+                        edificio_id = edificios_ids[current_building_id_idx]
+                        hitboxes[selected_hitbox_idx].update({
+                            "edificio_id": edificio_id,
+                            "nombre_edificio": edificios_nombres[edificio_id],
+                        })
+                        push_history()
+
                 elif event.key == pygame.K_y and editor_mode == "hitbox":
                     seleccionado_es_tronco = (
                         selected_hitbox_idx is not None
@@ -3062,6 +3144,10 @@ def main(forzar_selector=False):
                         texto_lbl = act_lbl
                         if action == "usar_eco_tronco":
                             texto_lbl = f"{h.get('id', 'eco_tronco')} | {act_lbl}"
+                        elif action == "entrar_edificio":
+                            texto_lbl = (
+                                f"{h.get('edificio_id', 'sin asignar')} | {act_lbl}"
+                            )
                         lbl = small.render(texto_lbl, True, label_color)
                         screen.blit(lbl, lbl.get_rect(center=sr.center))
                         if action == "usar_eco_tronco":
@@ -3342,6 +3428,11 @@ def main(forzar_selector=False):
                     (available_objects[current_object_idx] if available_objects else "sin objetos"))
         if current_role in ("interactable", "other") and current_interactable_action == "usar_eco_tronco":
             tool_str += f"/plataforma:{current_trunk_platform or 'sin asignar'}"
+        elif current_role in ("interactable", "other") and current_interactable_action in (
+            "entrada_edificio",
+            "entrar_edificio",
+        ):
+            tool_str += f"/{edificios_ids[current_building_id_idx]} (F8 cambia)"
         status_parts = [
             f"Imagen: {os.path.basename(image_path)}",
             f"Modo: {mode_str}{'  MOVER' if move_mode else ''}{'  TEST' if test_mode else ''}",

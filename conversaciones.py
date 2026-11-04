@@ -48,24 +48,24 @@ REACCIONES = {
 }
 
 TESTIMONIOS_PRESENTE = {
-    "Agente de verificación": (
-        "Como periodista, tu tarea es rastrear la fuente y distinguir evidencia de rumor.",
-        "La imagen puede analizarse, pero una coincidencia visual no demuestra por sí sola quién la creó.",
+    "Darío Veraz": (
+        "Heredé de Odran el deber de separar los hechos de los ecos. No encontramos el archivo original; hay patrones compatibles con IA.",
+        "Sin el archivo fuente no se certifica el origen. El método de Odran exige contrastar también el testimonio y el contexto.",
     ),
-    "Kael (aspirante a alcalde)": (
-        "Estoy presentando mi candidatura a la alcaldía. Escucha mis propuestas, pero contrástalas con fuentes.",
-        "Una publicación sobre mi campaña no es prueba de culpabilidad. Investiga el origen y el contexto.",
+    "Ronaldo Vélez": (
+        "Soy descendiente de Kael y aspiro a la Alcaldía. Mi agenda me sitúa en un debate, no en el lugar de la imagen.",
+        "La publicación no demuestra culpabilidad. Mi agenda contradice el contexto que presenta la imagen.",
     ),
-    "Habitante conectada": (
-        "Vi la publicación, pero no conozco quién subió el archivo original.",
-        "Puedo compartir lo que observé; no puedo confirmar lo que no vi.",
+    "Tomás Red": (
+        "Como Tarek, estoy conectado a lo que comparte la comunidad. Vi la publicación, pero no el hecho ni su archivo original.",
+        "No vi a Ronaldo en ese lugar. Comprueba el contexto antes de compartir la imagen.",
     ),
-    "Influencer": (
-        "El video se está compartiendo mucho. Antes de amplificarlo, deberíamos comprobar su origen.",
-        "El alcance de una publicación no la convierte en verdadera. Busquemos una fuente verificable.",
+    "Lía Nova": (
+        "Luma compartía historias en la aldea; yo soy influencer. Este video circula mucho, pero primero comprobemos su origen.",
+        "El alcance no convierte una publicación en verdad. Busquemos una fuente verificable antes de amplificarla.",
     ),
-    "Mensajero urbano": (
-        "Puedo llevar una corrección, pero necesito saber qué dato está confirmado.",
+    "Mateo Ríos": (
+        "Como el Mensajero de antes, conecto a la gente por la ciudad. Puedo llevar una corrección con datos confirmados.",
         "Una corrección clara debe enlazar la fuente y explicar qué parte del mensaje era dudosa.",
     ),
 }

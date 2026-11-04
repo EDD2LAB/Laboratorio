@@ -18,7 +18,7 @@ import pygame
 
 from audio_manager import GestorAudio
 from conversaciones import construir_conversacion, construir_mensajes_eco, construir_respuesta_eco
-from dimensiones import DIMENSION_LA_COPA, DIMENSION_PRESENTE
+from dimensiones import DIMENSION_LA_COPA, DIMENSION_PRESENTE, EDIFICIOS_PRESENTE
 from grafo_fisico import GrafoFisico
 from habilidades_jugador import HabilidadJugador
 from interfaz.boton import Boton, GrupoBotones
@@ -50,6 +50,9 @@ ESCENA_CLASIFICACION = "clasificacion"
 ESCENA_RESULTADO = "resultado"
 ESCENA_DIALOGO = "dialogo"
 ESCENA_MENSAJE = "mensaje_privado"
+ESCENA_CELULAR = "celular"
+ESCENA_CODICE = "codice"
+ESCENA_TUTORIAL_DIMENSION = "tutorial_dimension"
 ESCENA_MAPA_DESTINO = "mapa_destino"
 ESCENA_TRANSICION_DIMENSION = "transicion_dimension"
 ESCENA_ANALISIS = "analisis_publicacion"
@@ -68,6 +71,9 @@ ESCENAS_CON_MAPA = (
     ESCENA_AYUDA,
     ESCENA_DIALOGO,
     ESCENA_MENSAJE,
+    ESCENA_CELULAR,
+    ESCENA_CODICE,
+    ESCENA_TUTORIAL_DIMENSION,
     ESCENA_ECO,
     ESCENA_ANALISIS,
     ESCENA_TRANSICION_DIMENSION,
@@ -85,6 +91,18 @@ VARIACION_VELOCIDAD_NPC = 0.1
 PAUSA_PATRULLA_NPC_MS = (500, 1500)
 PROBABILIDAD_PAUSA_NPC = 0.3
 RADIO_WAYPOINT_NPC = 5
+DURACION_MINIMA_HISTORIA_DIMENSION_MS = 3600
+DURACION_MINIMA_TUTORIAL_DIMENSION_MS = 2500
+NOMBRE_JUGADOR_PRESENTE = "Elías Vega"
+PAGINAS_CODICE = ("Misiones", "Información", "Continuidad")
+CONTINUIDAD_PERSONAJES = (
+    ("Guardián", "Elías Vega", "Periodista e investigador jugable"),
+    ("Kael", "Ronaldo Vélez", "Descendiente de Kael y aspirante a alcalde"),
+    ("Odran, Sabio de las Raíces", "Darío Veraz", "Agente de verificación digital"),
+    ("Mensajero", "Mateo Ríos", "Mensajero urbano y comunicador"),
+    ("Luma", "Lía Nova", "Influencer"),
+    ("Tarek", "Tomás Red", "Habitante conectado"),
+)
 
 
 def normalizar_ruta(ruta):
@@ -350,8 +368,8 @@ def cargar_personaje_periodista():
     for direccion, fila in (
         ("abajo", 2),
         ("derecha", 3),
-        ("izquierda", 4),
-        ("arriba", 5),
+        ("arriba", 4),
+        ("izquierda", 5),
     ):
         frames = cargar_spritesheet_frames(
             os.path.join(carpeta, f"NPC2-mundo2-Fila{fila}.png"),
@@ -367,16 +385,29 @@ def cargar_personaje_periodista():
         )
     return {
         "id": "periodista",
+        "nombre": NOMBRE_JUGADOR_PRESENTE,
         "tamano": tamano,
         "frames_idle": idle,
         "frames_caminar": caminar,
     }
 
 
+def cargar_retrato_publicacion():
+    frames = cargar_spritesheet_frames(
+        os.path.join(
+            "NPCS",
+            "Aspirante Contempóraneo",
+            "Aspirante_contemporaneo-Fila1.png",
+        ),
+        8,
+    )
+    return frames[0] if frames else None
+
+
 PERSONAJES_PRESENTES = (
     {
         "clave": "Agente de verificación",
-        "nombre": "Agente de verificación",
+        "nombre": "Darío Veraz",
         "sprite": os.path.join(
             "NPCS",
             "Agente de verificación",
@@ -390,7 +421,7 @@ PERSONAJES_PRESENTES = (
     },
     {
         "clave": "Kael",
-        "nombre": "Kael (aspirante a alcalde)",
+        "nombre": "Ronaldo Vélez",
         "escala": 0.42,
         "sprite": os.path.join(
             "NPCS",
@@ -405,7 +436,7 @@ PERSONAJES_PRESENTES = (
     },
     {
         "clave": "Habitante Conectada",
-        "nombre": "Habitante conectada",
+        "nombre": "Tomás Red",
         "sprite": os.path.join(
             "NPCS",
             "Habitante Conectada",
@@ -419,7 +450,7 @@ PERSONAJES_PRESENTES = (
     },
     {
         "clave": "Influencer",
-        "nombre": "Influencer",
+        "nombre": "Lía Nova",
         "sprite": os.path.join("NPCS", "Influencer", "Influencer_fila1.png"),
         "sprite_caminar": os.path.join(
             "NPCS",
@@ -429,7 +460,7 @@ PERSONAJES_PRESENTES = (
     },
     {
         "clave": "Mensajero urbano",
-        "nombre": "Mensajero urbano",
+        "nombre": "Mateo Ríos",
         "escala": 0.42,
         "sprite": os.path.join(
             "NPCS",
@@ -784,6 +815,32 @@ def cargar_mapa_principal():
             "frames": cargar_spritesheet_frames(objeto["nombre"], cantidad=4),
         })
 
+    portal = next(
+        (objeto for objeto in decoraciones if es_hoja_portales(objeto["nombre"])),
+        None,
+    )
+    if portal:
+        interaccion_portal = next(
+            (
+                interaccion for interaccion in interacciones
+                if interaccion.get("id") == "portal_zona_en_proceso"
+            ),
+            None,
+        )
+        if interaccion_portal is None:
+            interaccion_portal = {
+                "id": "portal_dimension_presente",
+                "rect": portal["rect"].copy(),
+                "activo": False,
+            }
+            interacciones.append(interaccion_portal)
+        interaccion_portal.update({
+            "tipo": "portal_temporal",
+            "accion": "portal_temporal",
+            "activo": False,
+            "zona_en_proceso": False,
+        })
+
     guardian = next(
         (objeto for objeto in decoraciones if objeto["personaje"] == "Guardián"),
         None,
@@ -908,6 +965,8 @@ def cargar_mapa_presente(configuracion):
     posicion_spawn = None
     for indice, hitbox in enumerate(hitboxes):
         accion = hitbox.get("action", hitbox.get("accion"))
+        if accion == "entrada_edificio":
+            accion = "entrar_edificio"
         tipo_objeto = hitbox.get("tipo")
         if accion == "punto_spawn" or tipo_objeto == "punto_spawn":
             rect_spawn = _rect_de_hitbox(hitbox)
@@ -925,6 +984,8 @@ def cargar_mapa_presente(configuracion):
             "id": hitbox.get("id", f"interaccion_presente_{indice + 1}"),
             "tipo": tipo_objeto or accion or "interaccion",
             "accion": accion or "otro",
+            "edificio_id": hitbox.get("edificio_id"),
+            "nombre_edificio": hitbox.get("nombre_edificio"),
             "personaje": hitbox.get("npc_character"),
             "npc_animation": hitbox.get("npc_animation"),
             "rect": rect,
@@ -936,12 +997,8 @@ def cargar_mapa_presente(configuracion):
         })
 
     if posicion_spawn is None and isinstance(datos, dict):
-        posicion_spawn = _posicion_spawn_desde_datos(
-            datos.get("spawn_presente"),
-            rect_mapa,
-        )
         spawn_datos = datos.get("spawn", {})
-        if posicion_spawn is None and isinstance(spawn_datos, dict):
+        if isinstance(spawn_datos, dict):
             candidatos_spawn = [spawn_datos.get("default")]
             by_origin = spawn_datos.get("by_origin", {})
             if isinstance(by_origin, dict):
@@ -958,6 +1015,11 @@ def cargar_mapa_presente(configuracion):
                     if posicion is not None
                 ),
                 None,
+            )
+        if posicion_spawn is None:
+            posicion_spawn = _posicion_spawn_desde_datos(
+                datos.get("spawn_presente"),
+                rect_mapa,
             )
 
     if posicion_spawn is None:
@@ -1009,6 +1071,80 @@ def cargar_mapa_presente(configuracion):
         "spawn_dimension": posicion_spawn,
         "rect_mapa": rect_mapa,
         "grafo": datos.get("grafo", {}),
+    }
+
+
+def cargar_mapa_edificio(edificio_id):
+    """Carga el interior existente y las hitboxes editables de un edificio."""
+    edificio = EDIFICIOS_PRESENTE.get(edificio_id)
+    if edificio is None:
+        raise ValueError(f"El edificio del presente no esta configurado: {edificio_id}")
+
+    ruta_imagen = buscar_asset(edificio["interior"])
+    if not os.path.isfile(ruta_imagen):
+        raise FileNotFoundError(
+            f"No existe el interior configurado para {edificio['nombre']}: {ruta_imagen}"
+        )
+    imagen_original = pygame.image.load(ruta_imagen).convert_alpha()
+    factor = min(ANCHO / imagen_original.get_width(), ALTO / imagen_original.get_height())
+    tamano = (
+        max(1, round(imagen_original.get_width() * factor)),
+        max(1, round(imagen_original.get_height() * factor)),
+    )
+    rect_mapa = pygame.Rect((0, 0), tamano)
+    rect_mapa.center = (ANCHO // 2, ALTO // 2)
+    mapa = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+    mapa.fill((18, 27, 38, 255))
+    mapa.blit(pygame.transform.scale(imagen_original, tamano), rect_mapa)
+
+    ruta_hitboxes = os.path.join(
+        os.path.dirname(__file__),
+        "Hitboxes",
+        *edificio["interior_hitboxes"].split("/"),
+    )
+    with open(ruta_hitboxes, "r", encoding="utf-8") as archivo:
+        datos = json.load(archivo)
+    hitboxes = [
+        _mapear_hitbox_a_ventana(hitbox, rect_mapa)
+        for hitbox in datos.get("hitboxes", [])
+        if isinstance(hitbox, dict)
+    ]
+    interacciones = []
+    for indice, hitbox in enumerate(hitboxes):
+        if hitbox.get("role") not in ("interactable", "other"):
+            continue
+        rect = _rect_de_hitbox(hitbox)
+        if rect is None:
+            continue
+        interacciones.append({
+            "id": hitbox.get("id", f"interior_{edificio_id}_{indice + 1}"),
+            "tipo": hitbox.get("tipo", hitbox.get("action", "interaccion")),
+            "accion": hitbox.get("action", "otro"),
+            "edificio_id": edificio_id,
+            "nombre_edificio": hitbox.get("nombre_edificio"),
+            "rect": rect,
+            "role": hitbox.get("role"),
+            "dimension": DIMENSION_PRESENTE,
+            "datos": hitbox.get("datos", {}),
+            "activo": hitbox.get("activo", True),
+            "distancia": hitbox.get("distancia", DISTANCIA_INTERACCION),
+        })
+
+    spawn = _posicion_spawn_desde_datos(datos.get("spawn", {}).get("default"), rect_mapa)
+    if spawn is None:
+        raise ValueError(f"No hay spawn editable configurado para {edificio['nombre']}.")
+    return {
+        "mapa": mapa,
+        "mapas_dia": [mapa],
+        "decoraciones": [],
+        "interacciones": interacciones,
+        "hitboxes": hitboxes,
+        "guardian": None,
+        "spawn_dimension": spawn,
+        "rect_mapa": rect_mapa,
+        "grafo": {},
+        "dimension": DIMENSION_PRESENTE,
+        "edificio_interior": edificio_id,
     }
 
 
@@ -1132,6 +1268,644 @@ def texto_tutorial_primer_evento(estado, mundo, conversaciones_vistas):
     )
 
 
+def celular_disponible(estado):
+    return estado.dimension_actual == DIMENSION_PRESENTE
+
+
+def instrucciones_dimension(dimension):
+    if dimension == DIMENSION_PRESENTE:
+        return (
+            "DISTRITO CONECTA · CONTROLES BÁSICOS",
+            (
+                "Muévete con WASD o las flechas. Acércate a alguien y pulsa E para hablar.",
+                "Investiga la publicación y reúne testimonios antes de clasificarla.",
+                "C abre el celular y su feed; J abre misiones, pistas e historia.",
+                "Q difunde una corrección después de verificarla. Esc abre/cierra menús.",
+            ),
+        )
+    return (
+        "LA COPA · CONTROLES BÁSICOS",
+        (
+            "Muévete con WASD o las flechas. Acércate a alguien y pulsa E para hablar.",
+            "Escucha testimonios y ve al Caldero para investigar y decidir sobre tablillas.",
+            "J abre misiones, pistas e historia. Q activa el impulso del Guardián.",
+            "Misión secundaria: reúne tablas, cuerda y herramientas; repara el Puente Norte.",
+        ),
+    )
+
+
+def construir_contenido_codice(estado, mundo, pagina, conversaciones_vistas=()):
+    dimension = estado.dimension_actual
+    if pagina == 0:
+        lineas = ["MISIONES ACTIVAS"]
+        if dimension == DIMENSION_LA_COPA:
+            principal = (
+                "completada"
+                if estado.juego_terminado()
+                else f"en progreso ({estado.tablillas_resueltas} tablillas resueltas)"
+            )
+            lineas.append(
+                f"Principal — Historias de La Copa: resuelve las tablillas con testimonios antes de decidir. Estado: {principal}."
+            )
+            reparacion = mundo.get("reparacion_puentes")
+            if reparacion is None:
+                lineas.append("Secundaria — Reconstruir el Puente Norte: reparación no disponible en esta zona.")
+            elif reparacion.estado == "REPAIRED":
+                lineas.append("Secundaria — Reconstruir el Puente Norte: completada; el paso está abierto.")
+            elif reparacion.estado == "REPAIR_ANIMATION":
+                lineas.append("Secundaria — Reconstruir el Puente Norte: reparación en curso.")
+            elif reparacion.estado == "REPAIR_MINIGAME":
+                lineas.append(
+                    "Secundaria — Reconstruir el Puente Norte: acierta "
+                    f"{reparacion.progreso}/3 veces en el minijuego."
+                )
+            else:
+                materiales = {
+                    "tablas": "tablas",
+                    "cuerda": "cuerda",
+                    "herramientas": "herramientas",
+                }
+                recogidos = reparacion.materiales_recogidos
+                faltantes = [
+                    nombre for clave, nombre in materiales.items()
+                    if clave not in recogidos
+                ]
+                estado_mision = (
+                    "materiales reunidos; ve al puente"
+                    if not faltantes
+                    else "faltan " + ", ".join(faltantes)
+                )
+                lineas.append(
+                    "Secundaria — Reconstruir el Puente Norte: "
+                    f"{len(recogidos)}/3 materiales; {estado_mision}."
+                )
+        elif dimension == DIMENSION_PRESENTE:
+            mision = estado.mision_presente
+            lineas.append(
+                "Principal — Investigar la publicación viral sobre Ronaldo: "
+                f"estado {mision['estado']}."
+            )
+            lineas.append(
+                f"Pistas reunidas: {len(mision['pistas'])}/"
+                f"{len(estado.PISTAS_PARA_VERIFICAR)}. "
+                "Habla con Darío Veraz, Tomás Red y Ronaldo Vélez."
+            )
+            if mision["estado"] == "completada":
+                lineas.append("Clasificación: " + (mision.get("clasificacion") or "resuelta").replace("_", " ") + ".")
+            lineas.append("Secundaria — Difundir una corrección: " + (
+                "completada" if mision.get("correccion_difundida") else "disponible al verificar la publicación"
+            ) + ".")
+        else:
+            lineas.append("No hay misiones disponibles en esta dimensión.")
+        return lineas
+
+    if pagina == 1:
+        lineas = ["INFORMACIÓN QUE YA CONOCES"]
+        evidencias = estado.historial_evidencias
+        if dimension == DIMENSION_PRESENTE:
+            descripciones = {
+                "fuente_ausente": "No se encontró el archivo original; hay patrones compatibles con IA.",
+                "testimonio_y_contexto": "El testigo no presenció el hecho ni conoce quién subió el archivo.",
+                "respuesta_kael": "La agenda de Ronaldo lo sitúa en un debate, no en el lugar de la imagen.",
+            }
+            for pista in estado.PISTAS_PARA_VERIFICAR:
+                marca = "✓" if pista in estado.mision_presente["pistas"] else "○"
+                lineas.append(
+                    f"{marca} {descripciones[pista]}"
+                )
+            clasificacion = estado.mision_presente.get("clasificacion")
+            if clasificacion:
+                lineas.append(f"Clasificaste la publicación como: {clasificacion.replace('_', ' ')}.")
+        else:
+            vistos = sorted({
+                clave[1]
+                for clave in conversaciones_vistas
+                if isinstance(clave, tuple) and len(clave) > 1
+            })
+            lineas.append(
+                "Personajes con quienes hablaste: "
+                + (", ".join(vistos) if vistos else "todavía no has reunido testimonios.")
+            )
+            lineas.append(
+                "Evidencias anotadas: "
+                + (", ".join(str(item).replace("_", " ") for item in evidencias)
+                   if evidencias else "ninguna por ahora.")
+            )
+            if estado.historial_decisiones:
+                ultima = estado.historial_decisiones[-1]
+                camino = ultima.get("camino") or ["sin registrar"]
+                lineas.append(
+                    "Última decisión: "
+                    + str(camino[0])
+                    + "."
+                )
+        lineas.append(
+            "Recuerda: distingue una observación directa de un rumor o una inferencia."
+        )
+        return lineas
+
+    lineas = ["CONTINUIDAD ENTRE DIMENSIONES"]
+    lineas.extend(
+        f"{pasado} → {presente}: {rol}."
+        for pasado, presente, rol in CONTINUIDAD_PERSONAJES
+    )
+    return lineas
+
+
+def dibujar_tutorial_dimension(
+    superficie, recursos, mundo, estado, hud, dimension, mouse_pos, puede_continuar
+):
+    dibujar_mapa(
+        superficie,
+        recursos,
+        mundo,
+        estado,
+        mouse_pos,
+        hud,
+        resaltar=False,
+    )
+    titulo, instrucciones = instrucciones_dimension(dimension)
+    panel = pygame.Rect(118, 166, 724, 390)
+    superficie.blit(
+        superficie_con_alpha(panel.size, (14, 31, 28, 245)),
+        panel.topleft,
+    )
+    pygame.draw.rect(superficie, ORO, panel, 3, border_radius=12)
+    texto_titulo = recursos["fuente_panel_titulo"].render(titulo, True, ORO)
+    superficie.blit(
+        texto_titulo,
+        texto_titulo.get_rect(center=(panel.centerx, panel.y + 42)),
+    )
+    y = panel.y + 92
+    for instruccion in instrucciones:
+        for linea in envolver_texto(
+            "• " + instruccion,
+            recursos["fuente_panel"],
+            panel.width - 64,
+        ):
+            render = recursos["fuente_panel"].render(linea, True, CREMA)
+            superficie.blit(render, (panel.x + 32, y))
+            y += 30
+        y += 8
+    tecla = recursos["fuente_mapa"].render(
+        "Pulsa una tecla para empezar"
+        if puede_continuar
+        else "Lee las instrucciones; podrás continuar en unos segundos",
+        True,
+        (255, 220, 136),
+    )
+    superficie.blit(tecla, tecla.get_rect(center=(panel.centerx, panel.bottom - 34)))
+
+
+def dibujar_codice(
+    superficie,
+    recursos,
+    estado,
+    mundo,
+    hud,
+    pagina,
+    conversaciones_vistas,
+    mouse_pos,
+    mision_seleccionada,
+):
+    dibujar_mapa(
+        superficie,
+        recursos,
+        mundo,
+        estado,
+        mouse_pos,
+        hud,
+        resaltar=False,
+    )
+    panel = pygame.Rect(88, 76, 784, 568)
+    superficie.blit(
+        superficie_con_alpha(panel.size, (13, 30, 27, 245)),
+        panel.topleft,
+    )
+    pygame.draw.rect(superficie, ORO, panel, 3, border_radius=12)
+    titulo = recursos["fuente_resultado"].render("BITÁCORA DE MISIÓN", True, ORO)
+    superficie.blit(titulo, titulo.get_rect(center=(panel.centerx, panel.y + 38)))
+
+    fuente = recursos["fuente_panel"]
+    for indice, etiqueta in enumerate(PAGINAS_CODICE):
+        x = panel.x + 28 + indice * 238
+        rect = pygame.Rect(x, panel.y + 68, 214, 32)
+        seleccionado = indice == pagina
+        pygame.draw.rect(
+            superficie,
+            (72, 97, 63) if seleccionado else (30, 52, 45),
+            rect,
+            border_radius=6,
+        )
+        pygame.draw.rect(
+            superficie,
+            ORO if seleccionado else (98, 125, 102),
+            rect,
+            1,
+            border_radius=6,
+        )
+        texto = fuente.render(f"{indice + 1}. {etiqueta}", True, CREMA)
+        superficie.blit(texto, texto.get_rect(center=rect.center))
+
+    y = panel.y + 124
+    if pagina == 0:
+        rectangulos_misiones = rectangulos_selector_mision()
+        for indice, (rect, nombre) in enumerate(zip(
+            rectangulos_misiones, ("Principal", "Secundaria")
+        )):
+            seleccionado = mision_seleccionada == nombre.lower()
+            pygame.draw.rect(
+                superficie,
+                (72, 97, 63) if seleccionado else (30, 52, 45),
+                rect,
+                border_radius=6,
+            )
+            pygame.draw.rect(
+                superficie,
+                ORO if seleccionado else (98, 125, 102),
+                rect,
+                2 if seleccionado else 1,
+                border_radius=6,
+            )
+            texto = fuente.render(
+                f"{indice + 1}. Flecha: {nombre}",
+                True,
+                CREMA,
+            )
+            superficie.blit(texto, texto.get_rect(center=rect.center))
+        y += 48
+    for linea in construir_contenido_codice(
+        estado,
+        mundo,
+        pagina,
+        conversaciones_vistas,
+    ):
+        for linea_envuelta in envolver_texto(linea, fuente, panel.width - 58):
+            if y > panel.bottom - 62:
+                break
+            render = fuente.render(linea_envuelta, True, CREMA)
+            superficie.blit(render, (panel.x + 30, y))
+            y += 24
+        y += 7
+        if y > panel.bottom - 62:
+            break
+    ayuda = fuente.render(
+        "←/→: sección · 1/2: elegir flecha · J o Esc: cerrar",
+        True,
+        (255, 220, 136),
+    )
+    superficie.blit(ayuda, ayuda.get_rect(center=(panel.centerx, panel.bottom - 28)))
+
+
+def rectangulos_selector_mision():
+    return (
+        pygame.Rect(116, 188, 350, 34),
+        pygame.Rect(494, 188, 350, 34),
+    )
+
+
+def controles_hud(estado):
+    controles = [
+        ("WASD / flechas", "Moverse"),
+        ("E", "Interactuar"),
+        ("J", "Bitácora"),
+        ("Q", "Habilidad"),
+        ("Tab", "Cambiar objetivo"),
+        ("Esc / P", "Pausa"),
+    ]
+    if celular_disponible(estado):
+        controles.append(("C", "Celular"))
+    return controles
+
+
+def rect_controles_hud(hud, estado):
+    alto_indicadores = max(58, len(hud.objetivos) * 52 + 10)
+    controles = controles_hud(estado)
+    return pygame.Rect(
+        9,
+        8 + alto_indicadores + 5,
+        216,
+        18 + len(controles) * 20,
+    )
+
+
+def dibujar_controles_hud(superficie, fuente, hud, estado):
+    controles = controles_hud(estado)
+    panel = rect_controles_hud(hud, estado)
+    pygame.draw.rect(superficie, (10, 27, 20, 200), panel, border_radius=8)
+    pygame.draw.rect(superficie, (202, 151, 77), panel, 1, border_radius=8)
+    for indice, (tecla, accion) in enumerate(controles):
+        y = panel.y + 7 + indice * 20
+        etiqueta_tecla = fuente.render(tecla, True, (255, 220, 136))
+        etiqueta_accion = fuente.render(accion, True, CREMA)
+        superficie.blit(etiqueta_tecla, (panel.x + 8, y))
+        superficie.blit(etiqueta_accion, (panel.x + 90, y))
+
+
+def objetivo_mision_actual(
+    estado,
+    mundo,
+    conversaciones_vistas,
+    mision_seleccionada="principal",
+):
+    """Devuelve el siguiente destino claro; las pistas abiertas no fuerzan una ruta."""
+    if mundo.get("edificio_interior"):
+        salida = next(
+            (
+                objeto for objeto in mundo.get("interacciones", [])
+                if objeto.get("accion") == "salir_edificio"
+                and objeto.get("activo", True)
+            ),
+            None,
+        )
+        return (
+            (salida["rect"].center, "Salir del edificio")
+            if salida else None
+        )
+    if mundo.get("dimension") == DIMENSION_LA_COPA:
+        if mision_seleccionada == "secundaria":
+            reparacion = mundo.get("reparacion_puentes")
+            if reparacion is None or reparacion.estado == "REPAIRED":
+                return None
+            faltantes = set(reparacion.MATERIALES) - reparacion.materiales_recogidos
+            if faltantes:
+                siguiente_material = next(
+                    (
+                        material
+                        for material in reparacion.PLATAFORMAS_MATERIALES.values()
+                        if material in faltantes
+                    ),
+                    None,
+                )
+                interaccion = next(
+                    (
+                        objeto for objeto in mundo["interacciones"]
+                        if objeto.get("accion") == "recolectar_material"
+                        and objeto.get("material") == siguiente_material
+                        and objeto.get("activo")
+                    ),
+                    None,
+                )
+                if interaccion:
+                    return (
+                        interaccion["rect"].center,
+                        f"Recoger {siguiente_material}",
+                    )
+                return None
+            puente = next(
+                (
+                    objeto for objeto in mundo["interacciones"]
+                    if objeto.get("accion") == "reparar_puente"
+                    and objeto.get("activo")
+                ),
+                None,
+            )
+            return (
+                (puente["rect"].center, "Reconstruir Puente Norte")
+                if puente else None
+            )
+        if estado.juego_terminado():
+            portal = next(
+                (
+                    objeto for objeto in mundo["interacciones"]
+                    if objeto.get("accion") == "portal_temporal" and objeto.get("activo")
+                ),
+                None,
+            )
+            return (portal["rect"].center, "Portal al presente") if portal else None
+        if estado.tablillas_resueltas or conversaciones_vistas:
+            caldero = next(
+                (
+                    objeto for objeto in mundo["interacciones"]
+                    if objeto.get("accion") == "tablilla"
+                ),
+                None,
+            )
+            return (
+                caldero["rect"].center if caldero else CENTRO_CALDERO,
+                "Caldero central",
+            )
+        return None
+
+    if mundo.get("dimension") != DIMENSION_PRESENTE:
+        return None
+    mision = estado.mision_presente
+    if mision["estado"] == "completada":
+        return None
+
+    if not mision.get("publicacion_examinada"):
+        pantalla = next(
+            (
+                objeto for objeto in mundo["interacciones"]
+                if objeto.get("accion") == "examinar_publicacion"
+                or objeto.get("tipo") == "pantalla_publica"
+            ),
+            None,
+        )
+        return (pantalla["rect"].center, "Publicación digital") if pantalla else None
+
+    personaje_por_pista = {
+        "fuente_ausente": "Darío Veraz",
+        "testimonio_y_contexto": "Tomás Red",
+        "respuesta_kael": "Ronaldo Vélez",
+    }
+    if any(pista not in mision["pistas"] for pista in personaje_por_pista):
+        return None
+
+    pantalla = next(
+        (
+            objeto for objeto in mundo["interacciones"]
+            if objeto.get("accion") == "examinar_publicacion"
+            or objeto.get("tipo") == "pantalla_publica"
+        ),
+        None,
+    )
+    return (pantalla["rect"].center, "Clasificar la publicación") if pantalla else None
+
+
+def dibujar_flecha_objetivo(superficie, mundo, objetivo, fuente):
+    posicion_objetivo, etiqueta = objetivo
+    jugador = mundo["jugador"]
+    origen = pygame.Vector2(posicion_mundo_a_pantalla(jugador["pies"].center, mundo))
+    destino = pygame.Vector2(posicion_mundo_a_pantalla(posicion_objetivo, mundo))
+    direccion = destino - origen
+    if direccion.length_squared() == 0:
+        return
+    direccion = direccion.normalize()
+    perpendicular = pygame.Vector2(-direccion.y, direccion.x)
+    centro = origen + direccion * 48
+    centro.x = max(30, min(ANCHO - 30, centro.x))
+    centro.y = max(42, min(ALTO - 122, centro.y))
+    punta = centro + direccion * 15
+    base = centro - direccion * 12
+    puntos = [
+        punta,
+        base + perpendicular * 9,
+        centro - direccion * 4 + perpendicular * 4,
+        centro - direccion * 4 - perpendicular * 4,
+        base - perpendicular * 9,
+    ]
+    pygame.draw.polygon(superficie, (34, 30, 17), [(x + 2, y + 3) for x, y in puntos])
+    pygame.draw.polygon(superficie, (255, 207, 48), puntos)
+    pygame.draw.polygon(superficie, (255, 244, 170), puntos, 2)
+
+    texto = fuente.render(f"OBJETIVO: {etiqueta}", True, (255, 226, 104))
+    panel = texto.get_rect(midtop=(ANCHO // 2, 14)).inflate(22, 12)
+    pygame.draw.rect(superficie, (18, 30, 25), panel, border_radius=7)
+    pygame.draw.rect(superficie, (255, 207, 48), panel, 2, border_radius=7)
+    superficie.blit(texto, texto.get_rect(center=panel.center))
+
+
+def dibujar_pistas_mision(superficie, recursos, estado):
+    if (
+        estado.dimension_actual != DIMENSION_PRESENTE
+        or estado.mision_presente["estado"] == "completada"
+        or not estado.mision_presente.get("publicacion_examinada")
+    ):
+        return
+    pistas = estado.mision_presente["pistas"]
+    tareas = {
+        "fuente_ausente": "Rastrea el archivo original.",
+        "testimonio_y_contexto": "Contrasta el contexto con habitantes.",
+        "respuesta_kael": "Revisa la agenda de Ronaldo Vélez.",
+    }
+    faltantes = [
+        texto for pista, texto in tareas.items()
+        if pista not in pistas
+    ]
+    if faltantes:
+        lineas = ["PISTAS: investiga antes de concluir.", *faltantes]
+    else:
+        lineas = ["PISTAS completas.", "Vuelve a la publicación y clasifica la imagen."]
+
+    fuente = recursos["fuente_categoria"]
+    panel = pygame.Rect(690, 438, 256, 150)
+    fondo = superficie_con_alpha(panel.size, (14, 30, 35, 226))
+    superficie.blit(fondo, panel.topleft)
+    pygame.draw.rect(superficie, (244, 194, 73), panel, 2, border_radius=8)
+    y = panel.y + 12
+    for texto in lineas:
+        for linea in envolver_texto(texto, fuente, panel.width - 22):
+            superficie.blit(fuente.render(linea, True, CREMA), (panel.x + 11, y))
+            y += 20
+
+
+def dibujar_celular_feed(superficie, recursos, estado):
+    feed = recursos.get("feed_digital", [])
+    superficie.blit(recursos["fondo_feed_digital"], (0, 0))
+    entradas = list(reversed(feed[-10:]))
+    actual = entradas[0] if entradas else {
+        "titulo": "Bitácora digital",
+        "texto": "Tus decisiones y publicaciones aparecerán aquí.",
+        "tipo": "inicial",
+    }
+
+    nombre = recursos["fuente_panel_titulo"].render(
+        "Elías Vega · Distrito Conecta",
+        True,
+        (31, 49, 62),
+    )
+    superficie.blit(nombre, (164, 91))
+    rect_imagen = pygame.Rect(104, 194, 126, 126)
+    pygame.draw.rect(superficie, (39, 50, 72), rect_imagen.inflate(6, 6), border_radius=5)
+    imagen_publicacion = recursos.get("imagen_publicacion_aspirante")
+    if imagen_publicacion:
+        dibujar_sprite_en_rect(superficie, imagen_publicacion, rect_imagen)
+    else:
+        pygame.draw.rect(superficie, (167, 193, 214), rect_imagen, border_radius=5)
+
+    fuente = recursos["fuente_panel"]
+    titulo = fuente.render(actual["titulo"][:48], True, (30, 42, 59))
+    superficie.blit(titulo, (246, 202))
+    texto = actual["texto"]
+    lineas = envolver_texto(texto, fuente, 355)
+    for indice, linea in enumerate(lineas[:4]):
+        render = fuente.render(linea, True, (44, 53, 69))
+        superficie.blit(render, (246, 228 + indice * 23))
+    clasificacion = estado.mision_presente.get("clasificacion")
+    if clasificacion:
+        etiqueta_clasificacion = (
+            "IMAGEN GENERADA POR IA"
+            if clasificacion == "generada_por_ia"
+            else "IMAGEN AUTÉNTICA"
+        )
+        resultado_clasificacion = (
+            "correcta" if estado.mision_presente.get("clasificacion_correcta")
+            else "incorrecta"
+        )
+        estado_clasificacion = (
+            f"{etiqueta_clasificacion} · clasificación {resultado_clasificacion}"
+        )
+    else:
+        estado_clasificacion = "ORIGEN DE LA IMAGEN SIN CONFIRMAR"
+    etiqueta_estado = recursos["fuente_categoria"].render(
+        estado_clasificacion,
+        True,
+        (129, 59, 39) if clasificacion and not estado.mision_presente.get("clasificacion_correcta") else (38, 70, 83),
+    )
+    superficie.blit(etiqueta_estado, (246, 326))
+
+    pistas = estado.mision_presente["pistas"]
+    resumen = (
+        f"Pistas reunidas: {len(pistas)}/{len(estado.PISTAS_PARA_VERIFICAR)}"
+        if estado.dimension_actual == DIMENSION_PRESENTE
+        else f"Decisiones registradas: {len(feed)}"
+    )
+    render_resumen = recursos["fuente_categoria"].render(
+        resumen,
+        True,
+        (38, 70, 83),
+    )
+    superficie.blit(render_resumen, (90, 392))
+
+    for indice in range(8):
+        y = 116 + indice * 51
+        if indice < len(entradas):
+            titulo_feed = entradas[indice]["titulo"]
+            texto_feed = recursos["fuente_categoria"].render(
+                titulo_feed[:24],
+                True,
+                (42, 53, 70),
+            )
+            superficie.blit(texto_feed, (729, y))
+        else:
+            texto_feed = recursos["fuente_categoria"].render(
+                "# DistritoConecta",
+                True,
+                (42, 53, 70),
+            )
+            superficie.blit(texto_feed, (729, y))
+
+    panel_actividad = pygame.Rect(51, 553, 618, 137)
+    pygame.draw.rect(superficie, (19, 39, 49), panel_actividad, border_radius=8)
+    pygame.draw.rect(superficie, (83, 181, 178), panel_actividad, 2, border_radius=8)
+    titulo_actividad = recursos["fuente_categoria"].render(
+        "ACTIVIDAD RECIENTE",
+        True,
+        (153, 222, 214),
+    )
+    superficie.blit(titulo_actividad, (panel_actividad.x + 14, panel_actividad.y + 10))
+    for indice, entrada in enumerate(entradas[1:4]):
+        render_actividad = recursos["fuente_categoria"].render(
+            entrada["titulo"][:60],
+            True,
+            CREMA,
+        )
+        superficie.blit(
+            render_actividad,
+            (panel_actividad.x + 14, panel_actividad.y + 34 + indice * 20),
+        )
+    instruccion = recursos["fuente_categoria"].render(
+        "C o Esc: cerrar el celular · tus decisiones actualizan el feed",
+        True,
+        (153, 222, 214),
+    )
+    superficie.blit(
+        instruccion,
+        (panel_actividad.x + 14, panel_actividad.bottom - 24),
+    )
+
+
 def interaccion_en_mapa(posicion, mundo):
     for objeto in reversed(mundo["decoraciones"]):
         if (
@@ -1242,6 +2016,9 @@ def crear_jugador_local(recursos):
         frames_caminar = {}
     return {
         "id": "periodista" if usa_personaje_presente else "guardian",
+        "nombre": (
+            NOMBRE_JUGADOR_PRESENTE if usa_personaje_presente else "Guardián"
+        ),
         "rect": sprite_rect,
         "pies": pies,
         "posicion_x": float(pies.x),
@@ -2266,7 +3043,7 @@ def dibujar_habilidad_jugador(superficie, recursos, mundo, estado):
             estado_habilidad = f"Recarga {habilidad.recarga_restante_ms / 1000:.1f}s"
     elif estado.mision_presente.get("correccion_difundida"):
         estado_habilidad = "Corrección difundida"
-    elif estado.mision_presente.get("decision") == "verificar":
+    elif estado.mision_presente.get("decision") in ("verificar", "clasificar_ia"):
         estado_habilidad = "Q: difundir corrección"
     else:
         estado_habilidad = "Requiere verificación"
@@ -2330,15 +3107,44 @@ def dibujar_mapa(
                 if interaccion.get("zona_en_proceso")
                 else "Clic para viajar al mapa Central"
             )
+        elif interaccion["accion"] == "portal_temporal":
+            texto = "Camina hasta el portal y pulsa E para ir al presente"
+        elif interaccion["accion"] == "entrar_edificio":
+            texto = f"Clic para entrar a {interaccion.get('nombre_edificio', 'edificio')}"
+        elif interaccion["accion"] == "salir_edificio":
+            texto = "Clic para volver a la calle"
         else:
             texto = "Objeto interactuable"
     if camara:
         dibujar_escena_con_camara(superficie, escena, mundo)
-    if interaccion is None:
-        texto = (
-            "WASD o flechas: moverse | E: interactuar | Q: habilidad | "
-            "Tab: alternar | F3: depuracion"
+    objetivo = objetivo_mision_actual(
+        estado,
+        mundo,
+        recursos.get("conversaciones_vistas", set()),
+        recursos.get("mision_objetivo_seleccionada", "principal"),
+    )
+    if objetivo:
+        dibujar_flecha_objetivo(
+            superficie,
+            mundo,
+            objetivo,
+            recursos["fuente_mapa"],
         )
+    dibujar_pistas_mision(superficie, recursos, estado)
+    if celular_disponible(estado):
+        etiqueta_celular = recursos["fuente_categoria"].render(
+            "C: celular",
+            True,
+            CREMA,
+        )
+        panel_celular = etiqueta_celular.get_rect(topright=(ANCHO - 14, 14)).inflate(18, 12)
+        pygame.draw.rect(superficie, (18, 31, 25), panel_celular, border_radius=6)
+        pygame.draw.rect(superficie, ORO, panel_celular, 1, border_radius=6)
+        superficie.blit(etiqueta_celular, etiqueta_celular.get_rect(center=panel_celular.center))
+    if interaccion is None:
+        texto = "WASD/flechas: moverse | E: interactuar | J: misiones"
+        if celular_disponible(estado):
+            texto += " | C: celular"
     texto_tutorial = texto_tutorial_primer_evento(
         estado,
         mundo,
@@ -2347,6 +3153,12 @@ def dibujar_mapa(
     if texto_tutorial:
         texto = texto_tutorial
     hud.dibujar(superficie)
+    dibujar_controles_hud(
+        superficie,
+        recursos["fuente_categoria"],
+        hud,
+        estado,
+    )
     dibujar_habilidad_jugador(superficie, recursos, mundo, estado)
     if reparacion:
         reparacion.dibujar_interfaz(
@@ -2361,6 +3173,8 @@ def dibujar_mapa(
             "tablilla": "Examinar el Caldero",
             "usar_eco_tronco": "Usar Eco de Troncos",
             "puerta": "Viajar",
+            "entrar_edificio": f"Entrar a {interactuable.get('nombre_edificio', 'edificio')}",
+            "salir_edificio": "Volver a la calle",
             "otro": "Interactuar",
             "examinar_publicacion": "Examinar publicación",
             "terminal_verificacion": "Usar terminal",
@@ -2422,8 +3236,8 @@ def dibujar_fondo_mundo(superficie, recursos, mundo, particulas=None):
 
 def rectangulos_opciones_mision():
     return [
-        pygame.Rect(200, 425 + indice * 42, 560, 36)
-        for indice in range(5)
+        pygame.Rect(200, 413 + indice * 34, 560, 30)
+        for indice in range(7)
     ]
 
 
@@ -2451,21 +3265,26 @@ def dibujar_analisis_publicacion(
     fuente = recursos["fuente_panel"]
     titulo = fuente_titulo.render("DISTRITO CONECTA · PUBLICACIÓN", True, (108, 227, 216))
     superficie.blit(titulo, titulo.get_rect(center=(panel.centerx, panel.y + 32)))
+    imagen_publicacion = recursos.get("imagen_publicacion_aspirante")
+    if imagen_publicacion:
+        rect_imagen = pygame.Rect(panel.x + 30, panel.y + 70, 112, 90)
+        pygame.draw.rect(superficie, (10, 20, 28), rect_imagen.inflate(6, 6), border_radius=5)
+        imagen_escalada = pygame.transform.smoothscale(imagen_publicacion, rect_imagen.size)
+        superficie.blit(imagen_escalada, rect_imagen)
     cuerpo = [
-        "Una publicación viral acusa al Aspirante mediante una imagen.",
-        "No se sabe si es auténtica, generada por IA o manipulada.",
-        "La fecha y la fuente original aún no están confirmadas.",
-        "Revisa las pistas antes de amplificar o retirar el contenido.",
+        "Una publicación viral acusa a Ronaldo mediante una imagen.",
+        "¿Es auténtica o fue generada por IA?",
+        "Reúne las pistas antes de clasificar o compartirla.",
     ]
     for indice, linea in enumerate(cuerpo):
         render = fuente.render(linea, True, CREMA)
-        superficie.blit(render, (panel.x + 30, panel.y + 75 + indice * 24))
+        superficie.blit(render, (panel.x + 165, panel.y + 82 + indice * 27))
 
     pistas = estado.mision_presente["pistas"]
     nombres_pistas = {
         "fuente_ausente": "fuente original no identificada",
         "testimonio_y_contexto": "testimonio y contexto contrastados",
-        "respuesta_kael": "respuesta de Kael",
+        "respuesta_kael": "respuesta de Ronaldo Vélez",
     }
     texto_pistas = "Pistas: " + (
         ", ".join(nombres_pistas.get(pista, pista) for pista in pistas)
@@ -2476,13 +3295,18 @@ def dibujar_analisis_publicacion(
     superficie.blit(render_pistas, (panel.x + 30, panel.y + 180))
     estado_mision = estado.mision_presente["estado"]
     if estado_mision == "completada":
-        if (
-            estado.mision_presente.get("decision") == "verificar"
-            and not estado.mision_presente.get("correccion_difundida")
-        ):
+        decision = estado.mision_presente.get("decision")
+        if decision in ("verificar", "clasificar_ia") and not estado.mision_presente.get("correccion_difundida"):
             linea_estado = "Verificación lista: pulsa Q en el mapa para difundir la corrección."
         elif estado.mision_presente.get("correccion_difundida"):
             linea_estado = "Corrección difundida. La evidencia no demuestra culpabilidad."
+        elif decision in ("clasificar_ia", "clasificar_real"):
+            resultado = "correcta" if estado.mision_presente.get("clasificacion_correcta") else "incorrecta"
+            linea_estado = (
+                "¡Correcto! La imagen era generada por IA. Pulsa Q para difundir la corrección."
+                if resultado == "correcta"
+                else "Clasificación incorrecta: la imagen era generada por IA."
+            )
         else:
             linea_estado = "Misión resuelta: la publicación quedó reportada."
     elif estado_mision == "pendiente":
@@ -2491,18 +3315,18 @@ def dibujar_analisis_publicacion(
         faltantes = [
             "revisar la fuente",
             "comparar testimonios",
-            "escuchar a Kael",
+            "escuchar a Ronaldo Vélez",
         ]
         if "fuente_ausente" in pistas:
             faltantes.remove("revisar la fuente")
         if "testimonio_y_contexto" in pistas:
             faltantes.remove("comparar testimonios")
         if "respuesta_kael" in pistas:
-            faltantes.remove("escuchar a Kael")
+            faltantes.remove("escuchar a Ronaldo Vélez")
         linea_estado = (
             "Investiga: " + ", ".join(faltantes) + "."
             if faltantes
-            else "1-5 o flechas + Enter para elegir."
+            else "1-7 o flechas + Enter para elegir."
         )
     texto_estado = fuente.render(linea_estado, True, CREMA)
     superficie.blit(texto_estado, (panel.x + 30, panel.y + 215))
@@ -2510,6 +3334,8 @@ def dibujar_analisis_publicacion(
     opciones = (
         ("Revisar la fuente", "revisar_fuente"),
         ("Comparar con testimonios y contexto", "comparar_evidencia"),
+        ("Clasificar la imagen como generada por IA", "clasificar_ia"),
+        ("Clasificar la imagen como auténtica", "clasificar_real"),
         ("Dejar pendiente", "dejar_pendiente"),
         ("Reportar la publicación", "reportar"),
         ("Verificar antes de compartir", "verificar"),
@@ -2580,7 +3406,7 @@ def dibujar_transicion_dimension(
         alpha = round(255 * min(1.0, (tiempo_ms - 2750) / 420))
         titulo.set_alpha(alpha)
         superficie.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 108)))
-        panel = pygame.Rect(104, 151, 752, 128)
+        panel = pygame.Rect(104, 151, 752, 238)
         fondo_historia = pygame.Surface(panel.size, pygame.SRCALPHA)
         fondo_historia.fill((11, 27, 30, round(220 * alpha / 255)))
         superficie.blit(fondo_historia, panel.topleft)
@@ -2592,15 +3418,24 @@ def dibujar_transicion_dimension(
             border_radius=10,
         )
         lineas = (
-            "Hace generaciones, el Guardián defendió la verdad de los Ecos.",
-            "Su legado vive en un periodista, descendiente lejano que investiga en el presente.",
-            "Kael también sigue su camino: ahora aspira a la alcaldía.",
-            "La publicación aún no prueba culpabilidad. Investiga antes de compartir.",
+            "El Guardián investiga ahora como el periodista Elías Vega.",
+            "Ronaldo Vélez, descendiente de Kael, aspira a la Alcaldía.",
+            "Darío Veraz sigue el legado de Odran como agente de verificación.",
+            "Mateo Ríos comunica por la ciudad, como hacía el Mensajero.",
+            "Lía Nova difunde historias como influencer; Tomás Red participa en la comunidad.",
+            "La publicación no demuestra culpabilidad: reúne pruebas antes de compartir.",
         )
         for indice, linea in enumerate(lineas):
             render = recursos["fuente_panel"].render(linea, True, (232, 247, 235))
             render.set_alpha(alpha)
-            superficie.blit(render, (panel.x + 22, panel.y + 14 + indice * 25))
+            superficie.blit(render, (panel.x + 22, panel.y + 13 + indice * 28))
+        if tiempo_ms >= DURACION_MINIMA_HISTORIA_DIMENSION_MS:
+            instruccion = recursos["fuente_mapa"].render(
+                "Pulsa cualquier tecla para continuar",
+                True,
+                (172, 231, 218),
+            )
+            superficie.blit(instruccion, instruccion.get_rect(center=(ANCHO // 2, 421)))
 
 
 def buscar_imagen_para_opcion(texto, imagenes):
@@ -2905,7 +3740,15 @@ def dibujar_arbol_decision(superficie, estado, fuente_titulo, fuente):
 
 def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
     """Anima la tablilla real para que la decisión afecte al objeto, no a un icono."""
-    progreso = 1 - animacion["restante"] / animacion["duracion"]
+    tiempo_efecto = (
+        animacion["tiempo_transcurrido"]
+        - animacion["duracion_lanzamiento"]
+        - animacion["duracion_splash"]
+    )
+    progreso = max(
+        0.0,
+        min(1.0, tiempo_efecto / animacion["duracion_efecto"]),
+    )
     tablilla = recursos["tablilla"].copy()
     lineas = envolver_texto(estado.texto_actual(), recursos["fuente_texto"], 365)
     y = 265 - len(lineas) * 31 // 2
@@ -3091,10 +3934,15 @@ def dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion):
 def dibujar_escena_tablilla(superficie, recursos, estado, botones, mouse_pos, hud, animacion=None):
     superficie.blit(fondo_tablilla_actual(recursos, estado), (0, 0))
     hud.dibujar(superficie)
-    if animacion:
+    if animacion and animacion["tiempo_transcurrido"] >= (
+        animacion["duracion_lanzamiento"] + animacion["duracion_splash"]
+    ):
         dibujar_tablilla_en_efecto(superficie, recursos, estado, animacion)
     else:
         dibujar_tablilla(superficie, recursos["tablilla"], estado, recursos["fuente_texto"], recursos["fuente_categoria"])
+
+    if animacion:
+        dibujar_animacion_pocion(superficie, recursos, animacion)
 
     if estado.juego_terminado():
         aviso = recursos["fuente_boton"].render("Ronda terminada - Presiona ESC para salir", True, CREMA)
@@ -3124,10 +3972,83 @@ def accion_tablilla(opcion):
 
 
 def iniciar_animacion_decision(opcion):
-    """La quema necesita tiempo suficiente para consumir toda la tablilla."""
+    """Muestra el lanzamiento y el impacto antes de aplicar la decisión."""
     clave = clave_pocion(opcion)
-    duracion = 1.65 if clave == "quemar" else 1.25
-    return {"clave": clave, "opcion": opcion, "restante": duracion, "duracion": duracion}
+    duracion_efecto = 1.65 if clave == "quemar" else 1.25
+    duracion_lanzamiento = 0.48
+    duracion_splash = 0.32
+    duracion = duracion_lanzamiento + duracion_splash + duracion_efecto
+    return {
+        "clave": clave,
+        "opcion": opcion,
+        "restante": duracion,
+        "duracion": duracion,
+        "duracion_lanzamiento": duracion_lanzamiento,
+        "duracion_splash": duracion_splash,
+        "duracion_efecto": duracion_efecto,
+        "tiempo_transcurrido": 0.0,
+    }
+
+
+def dibujar_animacion_pocion(superficie, recursos, animacion):
+    tiempo = animacion["tiempo_transcurrido"]
+    lanzamiento = animacion["duracion_lanzamiento"]
+    splash = animacion["duracion_splash"]
+    imagen = recursos["pociones"][animacion["clave"]]
+    nombre = {
+        "colgar": "Colgar",
+        "consultar": "Consultar",
+        "quemar": "Quemar",
+        "ignorar": "Ignorar",
+    }[animacion["clave"]]
+    if tiempo < lanzamiento:
+        progreso = tiempo / lanzamiento
+        inicio = pygame.Vector2(350, 610)
+        fin = pygame.Vector2(*CENTRO_TABLILLA)
+        posicion = inicio.lerp(fin, progreso)
+        posicion.y -= math.sin(progreso * math.pi) * 76
+        botella = pygame.transform.smoothscale(imagen, (74, 74))
+        botella = pygame.transform.rotate(botella, -progreso * 300)
+        botella.set_alpha(255)
+        superficie.blit(botella, botella.get_rect(center=posicion))
+        texto_fase = f"Lanzando poción de {nombre}..."
+    elif tiempo < lanzamiento + splash:
+        progreso = (tiempo - lanzamiento) / splash
+        duracion_alfa = max(0, round(255 * (1 - progreso)))
+        color = {
+            "colgar": (255, 207, 48),
+            "consultar": (80, 181, 255),
+            "quemar": (255, 87, 32),
+            "ignorar": (179, 97, 230),
+        }[animacion["clave"]]
+        splash_surface = pygame.Surface((ANCHO, ALTO), pygame.SRCALPHA)
+        centro = CENTRO_TABLILLA
+        radio = int(20 + progreso * 82)
+        pygame.draw.circle(splash_surface, (*color, duracion_alfa // 3), centro, radio)
+        pygame.draw.circle(splash_surface, (*color, duracion_alfa), centro, radio, 6)
+        for indice in range(10):
+            angulo = indice * math.tau / 10
+            distancia = 24 + progreso * 66
+            gota = (
+                round(centro[0] + math.cos(angulo) * distancia),
+                round(centro[1] + math.sin(angulo) * distancia),
+            )
+            pygame.draw.circle(
+                splash_surface,
+                (*color, duracion_alfa),
+                gota,
+                max(2, round(7 * (1 - progreso * 0.6))),
+            )
+        superficie.blit(splash_surface, (0, 0))
+        texto_fase = "¡Splash! Aplicando la decisión..."
+    else:
+        texto_fase = f"Efecto de la poción: {nombre}"
+
+    render_fase = recursos["fuente_panel_titulo"].render(texto_fase, True, CREMA)
+    caja_fase = render_fase.get_rect(midtop=(ANCHO // 2, 116)).inflate(24, 12)
+    pygame.draw.rect(superficie, (18, 31, 25), caja_fase, border_radius=7)
+    pygame.draw.rect(superficie, ORO, caja_fase, 2, border_radius=7)
+    superficie.blit(render_fase, render_fase.get_rect(center=caja_fase.center))
 
 
 def rectangulos_pociones(recursos):
@@ -3352,7 +4273,11 @@ def crear_mundo(recursos):
         "dimension": recursos.get("dimension", DIMENSION_LA_COPA),
         "camara": (
             {
-                "zoom": ZOOM_MAPA_PRESENTE,
+                "zoom": (
+                    1.0
+                    if recursos.get("edificio_interior")
+                    else ZOOM_MAPA_PRESENTE
+                ),
                 "x": 0.0,
                 "y": 0.0,
                 "x_render": 0,
@@ -3558,6 +4483,11 @@ def main():
         "quemar": cargar_imagen("Quemar.png", (190, 127)),
         "ignorar": cargar_imagen("Ignorar.png", (190, 127)),
         "pergamino_mensaje": cargar_imagen("Mensaje_privado.png", (570, 410)),
+        "fondo_feed_digital": cargar_imagen(
+            os.path.join("Iconos", "Objetos varios", "FeedRedSocial.jpg"),
+            (ANCHO, ALTO),
+        ),
+        "imagen_publicacion_aspirante": cargar_retrato_publicacion(),
         "pociones": {
             "colgar": cargar_imagen(os.path.join("Pociones", "pocion_amarilla.png"), (42, 42)),
             "consultar": cargar_imagen(os.path.join("Pociones", "pocion_azul.png"), (42, 42)),
@@ -3651,29 +4581,29 @@ def main():
             "texto": "Los ecos del tronco guardan lo que la aldea comparte. Escucha antes de decidir.",
             "respuestas": [],
         },
-        "Agente de verificación": {
-            "personaje": "Agente de verificación",
-            "texto": "Como periodista, rastrea la fuente antes de publicar.",
+        "Darío Veraz": {
+            "personaje": "Darío Veraz",
+            "texto": "Heredé el método de Odran: separo lo observado de lo supuesto. No hay archivo fuente; revisemos el contexto.",
             "respuestas": [],
         },
-        "Kael (aspirante a alcalde)": {
-            "personaje": "Kael (aspirante a alcalde)",
-            "texto": "Estoy presentando mi candidatura a la alcaldía. Contrasta cada versión.",
+        "Ronaldo Vélez": {
+            "personaje": "Ronaldo Vélez",
+            "texto": "Soy descendiente de Kael. La agenda me sitúa en un debate, no en el lugar de la imagen.",
             "respuestas": [],
         },
-        "Habitante conectada": {
-            "personaje": "Habitante conectada",
-            "texto": "Vi la publicación, pero no conozco la fuente original.",
+        "Tomás Red": {
+            "personaje": "Tomás Red",
+            "texto": "Como Tarek, suelo estar conectado a lo que comparte la comunidad; vi el post, no el hecho.",
             "respuestas": [],
         },
-        "Influencer": {
-            "personaje": "Influencer",
-            "texto": "El alcance no confirma que una publicación sea verdadera.",
+        "Lía Nova": {
+            "personaje": "Lía Nova",
+            "texto": "Luma contaba historias en la aldea; yo las difundo como influencer, pero el alcance no confirma su verdad.",
             "respuestas": [],
         },
-        "Mensajero urbano": {
-            "personaje": "Mensajero urbano",
-            "texto": "Puedo llevar una corrección si sus datos están confirmados.",
+        "Mateo Ríos": {
+            "personaje": "Mateo Ríos",
+            "texto": "Como el antiguo Mensajero, conecto a la gente por la ciudad. Llevaré una corrección con datos confirmados.",
             "respuestas": [],
         },
     }
@@ -3809,7 +4739,7 @@ def main():
             if not personaje.get("activo", True):
                 continue
             registrar_transmision(
-                "Guardián",
+                mundo["jugador"]["nombre"],
                 personaje["personaje"],
                 "tablilla",
                 origen,
@@ -3849,14 +4779,85 @@ def main():
         if objetivo:
             registrar_transmision(
                 nombre,
-                "Guardián",
+                mundo["jugador"]["nombre"],
                 "conversacion",
                 objetivo["rect"].center,
                 jugador["pies"].center,
             )
 
+    def agregar_publicacion_feed(evento):
+        if not celular_disponible(estado):
+            return
+        tipo = evento.get("tipo", "actividad")
+        titulos = {
+            "cambio_dimension": "Llegada al Distrito Conecta",
+            "examinar_publicacion": "Nueva publicación en revisión",
+            "correccion_publicada": "Corrección difundida",
+            "correccion_recibida": "La comunidad recibió la corrección",
+            "interaccion_personaje": "Conversación con la comunidad",
+            "usar_caldero": "Decisión sobre una tablilla",
+            "usar_eco_tronco": "Mensaje compartido por un Eco",
+            "decision_tablilla": "Decisión sobre un rumor",
+            "clasificacion_publicacion": "Clasificación de imagen",
+            "decision_mision": "Decisión sobre la publicación",
+            "clasificacion_evento": "Clasificación de un evento",
+        }
+        titulo = titulos.get(tipo, tipo.replace("_", " ").capitalize())
+        detalle = evento.get("texto")
+        if tipo == "decision_tablilla":
+            nombres_decisiones = {
+                "colgar": "difundir",
+                "consultar": "consultar",
+                "quemar": "quemar",
+                "ignorar": "ignorar",
+            }
+            detalle = (
+                "Elegiste "
+                + nombres_decisiones.get(evento.get("decision"), "resolver")
+                + " la tablilla."
+            )
+        elif tipo == "decision_mision":
+            nombres_decisiones = {
+                "revisar_fuente": "revisar la fuente",
+                "comparar_evidencia": "comparar testimonios y contexto",
+                "clasificar_ia": "imagen generada por IA",
+                "clasificar_real": "imagen auténtica",
+                "dejar_pendiente": "dejarla pendiente",
+                "reportar": "reportarla",
+                "verificar": "verificarla antes de compartir",
+            }
+            detalle = (
+                "Decidiste "
+                + nombres_decisiones.get(evento.get("decision"), "continuar investigando")
+                + "."
+            )
+        elif tipo == "clasificacion_publicacion":
+            detalle = f"Clasificaste la imagen como {evento.get('clasificacion', 'sin especificar')}."
+        elif tipo == "clasificacion_evento":
+            resultado = "correctamente" if evento.get("acerto") else "de forma incorrecta"
+            detalle = (
+                f"Clasificaste el evento como {evento.get('clasificacion', 'sin especificar')} "
+                f"{resultado}."
+            )
+        elif tipo == "correccion_publicada":
+            detalle = "La corrección se difundió con las pistas reunidas."
+        elif tipo == "interaccion_personaje":
+            detalle = f"Conversaste con {evento.get('objetivo_id', 'un personaje').replace('_', ' ')}."
+        elif tipo == "cambio_dimension":
+            detalle = "La historia continúa en el presente."
+        if not detalle:
+            detalle = f"Se registró la acción: {tipo.replace('_', ' ')}."
+        feed = recursos.setdefault("feed_digital", [])
+        feed.append({
+            "titulo": titulo,
+            "texto": detalle,
+            "tipo": tipo,
+        })
+        del feed[:-20]
+
     def registrar_evento(evento):
             eventos_serializables.append(evento)
+            agregar_publicacion_feed(evento)
             print(f"[evento local] {json.dumps(evento, ensure_ascii=False)}")
 
     def cargar_dimension_presente():
@@ -3906,6 +4907,17 @@ def main():
         mundo["spawn_presente"] = recursos_presente["spawn_dimension"]
         recursos["mundo"] = mundo
         estado.iniciar_mision_presente()
+        if not recursos.get("publicacion_inicial_feed_creada"):
+            feed = recursos.setdefault("feed_digital", [])
+            feed.append({
+                "titulo": "Publicación viral sobre Ronaldo",
+                "texto": (
+                    "Una imagen acusa a Ronaldo, pero su origen no está confirmado. "
+                    "Investiga antes de compartirla."
+                ),
+                "tipo": "publicacion_sospechosa",
+            })
+            recursos["publicacion_inicial_feed_creada"] = True
         estado.guardar_progreso_dimension()
         sistema_particulas.configurar_dimension(DIMENSION_PRESENTE)
         sistema_particulas.particulas.clear()
@@ -3924,6 +4936,94 @@ def main():
             gestor_audio.reproducir_musica("ambiente", en_bucle=True, fade_ms=900)
         return True
 
+    def entrar_edificio(edificio_id, mundo_actual, estado_actual):
+        nonlocal mundo, interactuable_cercano, distancia_interactuable
+        if estado_actual.dimension_actual != DIMENSION_PRESENTE:
+            recursos["mensaje_dimension"] = "Los edificios solo se pueden abrir en el presente."
+            return False
+        if mundo_actual.get("edificio_interior"):
+            return False
+        edificio = EDIFICIOS_PRESENTE.get(edificio_id)
+        if edificio is None:
+            recursos["mensaje_dimension"] = "Esta puerta no tiene un edificio configurado."
+            return False
+        try:
+            recursos_interior = cargar_mapa_edificio(edificio_id)
+        except (FileNotFoundError, ValueError, json.JSONDecodeError, pygame.error) as error:
+            print(f"[Edificios] No se pudo abrir {edificio['nombre']}: {error}")
+            recursos["mensaje_dimension"] = (
+                f"No se puede entrar a {edificio['nombre']}: falta configurar su interior."
+            )
+            return False
+
+        rect_mapa_exterior = recursos.get("rect_mapa") or pygame.Rect(0, 0, ANCHO, ALTO)
+        rx, ry = edificio["spawn_exterior"]
+        posicion_salida = (
+            rect_mapa_exterior.x + round(rx * rect_mapa_exterior.width),
+            rect_mapa_exterior.y + round(ry * rect_mapa_exterior.height),
+        )
+        recursos_anteriores = {
+            clave: (clave in recursos, recursos.get(clave))
+            for clave in recursos_interior
+        }
+        recursos["contexto_edificio"] = {
+            "mundo_exterior": mundo_actual,
+            "recursos_exteriores": recursos_anteriores,
+            "posicion_salida": posicion_salida,
+        }
+        recursos.update(recursos_interior)
+        mundo = crear_mundo(recursos)
+        mundo["dimension"] = DIMENSION_PRESENTE
+        mundo["edificio_interior"] = edificio_id
+        recursos["mundo"] = mundo
+        recursos["mensaje_dimension"] = (
+            f"{edificio['nombre']}: {edificio['funcion']}. "
+            "La flecha amarilla marca la salida; pulsa E."
+        )
+        interactuable_cercano, distancia_interactuable = buscar_interactuable_cercano(
+            mundo["jugador"],
+            mundo,
+        )
+        registrar_evento({
+            "tipo": "entrada_edificio",
+            "edificio_id": edificio_id,
+        })
+        return True
+
+    def salir_edificio(mundo_actual, estado_actual):
+        nonlocal mundo, interactuable_cercano, distancia_interactuable
+        contexto = recursos.get("contexto_edificio")
+        if estado_actual.dimension_actual != DIMENSION_PRESENTE or not contexto:
+            return False
+
+        for clave, (existia, valor) in contexto["recursos_exteriores"].items():
+            if existia:
+                recursos[clave] = valor
+            else:
+                recursos.pop(clave, None)
+        mundo = contexto["mundo_exterior"]
+        recursos["mundo"] = mundo
+        jugador = mundo["jugador"]
+        jugador["pies"].center = contexto["posicion_salida"]
+        jugador["rect"].midbottom = jugador["pies"].midbottom
+        jugador["posicion_x"] = float(jugador["pies"].x)
+        jugador["posicion_y"] = float(jugador["pies"].y)
+        jugador["en_movimiento"] = False
+        jugador["estado_visual"] = "idle"
+        jugador["direccion"] = "arriba"
+        mundo["interaccion_seleccionada"] = None
+        recursos.pop("contexto_edificio", None)
+        recursos["mensaje_dimension"] = "Volviste a la calle del Distrito Conecta."
+        interactuable_cercano, distancia_interactuable = buscar_interactuable_cercano(
+            mundo["jugador"],
+            mundo,
+        )
+        registrar_evento({
+            "tipo": "salida_edificio",
+            "edificio_id": mundo_actual.get("edificio_interior", "edificio"),
+        })
+        return True
+
     def abrir_publicacion(interaccion):
         nonlocal escena, indice_opcion_mision, mensaje_mision
         jugador = mundo["jugador"]
@@ -3932,8 +5032,10 @@ def main():
         jugador["indice_frame"] = 0
         indice_opcion_mision = 0
         mensaje_mision = ""
+        estado.mision_presente["publicacion_examinada"] = True
         if estado.mision_presente["estado"] == "bloqueada":
             estado.iniciar_mision_presente()
+        estado.guardar_progreso_dimension()
         escena = ESCENA_ANALISIS
         registrar_evento({
             "tipo": "examinar_publicacion",
@@ -3948,6 +5050,8 @@ def main():
         decisiones = (
             "revisar_fuente",
             "comparar_evidencia",
+            "clasificar_ia",
+            "clasificar_real",
             "dejar_pendiente",
             "reportar",
             "verificar",
@@ -3964,16 +5068,28 @@ def main():
                 if pista not in estado.mision_presente["pistas"]
             ]
             mensaje_mision = (
-                "Aún no puedes verificar. Reúne estas pistas: "
+                "Investiga antes de verificar o clasificar. Reúne estas pistas: "
                 + ", ".join(faltantes)
                 + "."
             )
             return
+        tipo_evento = (
+            "clasificacion_publicacion"
+            if decision in ("clasificar_ia", "clasificar_real")
+            else "decision_mision"
+        )
         registrar_evento({
-            "tipo": "decision_mision",
+            "tipo": tipo_evento,
             "dimension": DIMENSION_PRESENTE,
             "mision": estado.mision_actual,
             "decision": decision,
+            "clasificacion": (
+                "imagen generada por IA"
+                if decision == "clasificar_ia"
+                else "imagen auténtica"
+                if decision == "clasificar_real"
+                else None
+            ),
             "evidencias": list(estado.mision_presente["pistas"]),
         })
         if decision in ("revisar_fuente", "comparar_evidencia"):
@@ -3982,6 +5098,14 @@ def main():
                 if decision == "revisar_fuente"
                 else "El contexto disponible no confirma la acusación."
             )
+            return
+        if decision in ("clasificar_ia", "clasificar_real"):
+            mensaje_mision = (
+                "¡Correcto! La evidencia confirma una imagen generada por IA."
+                if estado.mision_presente.get("clasificacion_correcta")
+                else "La imagen sí fue generada por IA. La clasificación incorrecta afectó tus indicadores."
+            )
+            recursos["mensaje_dimension"] = mensaje_mision
             return
         if decision == "verificar":
             recursos["mensaje_dimension"] = (
@@ -3993,7 +5117,11 @@ def main():
     def difundir_correccion_publica():
         if (
             estado.dimension_actual != DIMENSION_PRESENTE
-            or estado.mision_presente.get("decision") != "verificar"
+            or estado.mision_presente.get("decision") not in ("verificar", "clasificar_ia")
+            or (
+                estado.mision_presente.get("decision") == "clasificar_ia"
+                and not estado.mision_presente.get("clasificacion_correcta")
+            )
             or estado.mision_presente.get("correccion_difundida")
         ):
             return False
@@ -4030,6 +5158,8 @@ def main():
 
     def iniciar_transicion_presente():
         nonlocal escena, tiempo_transicion_dimension, dimension_presente_cargada
+        if not estado.juego_terminado():
+            return False
         gestor_dimensiones = estado.gestor_dimensiones
         gestor_dimensiones.desbloquear_dimension(DIMENSION_PRESENTE)
         estado.guardar_progreso_dimension()
@@ -4042,6 +5172,40 @@ def main():
         mundo["jugador"]["en_movimiento"] = False
         escena = ESCENA_TRANSICION_DIMENSION
         return True
+
+    def saltar_a_dimension_siguiente():
+        nonlocal escena, tiempo_tutorial_dimension
+        if estado.dimension_actual != DIMENSION_LA_COPA:
+            return False
+
+        gestor_dimensiones = estado.gestor_dimensiones
+        gestor_dimensiones.desbloquear_dimension(DIMENSION_PRESENTE)
+        if gestor_dimensiones.iniciar_transicion(DIMENSION_PRESENTE) is None:
+            return False
+        if not cargar_dimension_presente():
+            recursos["error_dimension"] = (
+                "No se pudo cargar Distrito Conecta. La dimensión actual sigue disponible."
+            )
+            escena = ESCENA_ZONA_EN_PROCESO
+            return False
+
+        tiempo_tutorial_dimension = DURACION_MINIMA_TUTORIAL_DIMENSION_MS
+        escena = ESCENA_MAPA
+        return True
+
+    def usar_portal_temporal():
+        if (
+            estado.dimension_actual == DIMENSION_LA_COPA
+            and estado.juego_terminado()
+            and DIMENSION_PRESENTE in estado.dimensiones_desbloqueadas
+        ):
+            return iniciar_transicion_presente()
+        recursos["mensaje_dimension"] = (
+            "El portal se abrirá al completar La Copa."
+            if estado.dimension_actual == DIMENSION_LA_COPA
+            else "No hay otra dimensión disponible desde aquí."
+        )
+        return False
 
     def abrir_caldero():
             if estado.evento_resuelto():
@@ -4070,11 +5234,13 @@ def main():
     tiempo_transicion_dimension = 0
     dimension_presente_cargada = False
     indice_opcion_mision = 0
+    indice_pagina_codice = 0
     mensaje_mision = ""
+    tiempo_tutorial_dimension = 0
     estado_caldero_efectos = estado_caldero(estado)
     usos_pociones = {"colgar": 1, "consultar": 1, "quemar": 1, "ignorar": 1}
     pocion_animacion = None
-    escena = ESCENA_MAPA
+    escena = ESCENA_TUTORIAL_DIMENSION
     escena_anterior = ESCENA_MAPA
     gestor_audio.al_cambiar_escena(None, escena)
     escena_audio_anterior = escena
@@ -4125,8 +5291,73 @@ def main():
                     configurar_menu_visual()
             elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_F3:
                 depuracion_activa = not depuracion_activa
+            elif (
+                evento.type == pygame.KEYDOWN
+                and evento.key == pygame.K_F1
+                and estado.dimension_actual == DIMENSION_LA_COPA
+                and escena not in (
+                    ESCENA_FINAL,
+                    ESCENA_TRANSICION_DIMENSION,
+                    ESCENA_ZONA_EN_PROCESO,
+                )
+            ):
+                saltar_a_dimension_siguiente()
+            elif escena == ESCENA_CELULAR and evento.type == pygame.KEYDOWN and evento.key in (
+                pygame.K_c,
+                pygame.K_ESCAPE,
+            ):
+                escena = ESCENA_MAPA
+            elif escena == ESCENA_CODICE and evento.type == pygame.KEYDOWN:
+                if evento.key in (pygame.K_j, pygame.K_ESCAPE):
+                    escena = ESCENA_MAPA
+                elif evento.key in (pygame.K_1, pygame.K_2):
+                    if indice_pagina_codice == 0:
+                        recursos["mision_objetivo_seleccionada"] = (
+                            "principal" if evento.key == pygame.K_1 else "secundaria"
+                        )
+                    else:
+                        indice_pagina_codice = evento.key - pygame.K_1
+                elif evento.key in (pygame.K_LEFT, pygame.K_a):
+                    indice_pagina_codice = (
+                        indice_pagina_codice - 1
+                    ) % len(PAGINAS_CODICE)
+                elif evento.key in (pygame.K_RIGHT, pygame.K_d):
+                    indice_pagina_codice = (
+                        indice_pagina_codice + 1
+                    ) % len(PAGINAS_CODICE)
+                elif evento.key == pygame.K_3:
+                    indice_pagina_codice = 2
+            elif escena == ESCENA_CODICE and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                if indice_pagina_codice == 0:
+                    posicion = convertir_mouse_a_lienzo(evento.pos, rect_lienzo)
+                    for rect, mision in zip(
+                        rectangulos_selector_mision(),
+                        ("principal", "secundaria"),
+                    ):
+                        if rect.collidepoint(posicion):
+                            recursos["mision_objetivo_seleccionada"] = mision
+                            break
+            elif escena == ESCENA_TUTORIAL_DIMENSION and evento.type == pygame.KEYDOWN:
+                if tiempo_tutorial_dimension >= DURACION_MINIMA_TUTORIAL_DIMENSION_MS:
+                    escena = ESCENA_MAPA
+            elif (
+                escena == ESCENA_MAPA
+                and evento.type == pygame.KEYDOWN
+                and evento.key == pygame.K_c
+                and celular_disponible(estado)
+            ):
+                escena = ESCENA_CELULAR
+            elif escena == ESCENA_MAPA and evento.type == pygame.KEYDOWN and evento.key == pygame.K_j:
+                indice_pagina_codice = 0
+                escena = ESCENA_CODICE
             elif escena == ESCENA_TRANSICION_DIMENSION:
-                pass
+                if (
+                    evento.type == pygame.KEYDOWN
+                    and dimension_presente_cargada
+                    and tiempo_transicion_dimension >= DURACION_MINIMA_HISTORIA_DIMENSION_MS
+                ):
+                    tiempo_tutorial_dimension = 0
+                    escena = ESCENA_TUTORIAL_DIMENSION
             elif escena == ESCENA_ANALISIS:
                 if evento.type == pygame.KEYDOWN:
                     if evento.key == pygame.K_ESCAPE:
@@ -4137,10 +5368,10 @@ def main():
                             paso = -1 if evento.key == pygame.K_UP else 1
                             indice_opcion_mision = (
                                 indice_opcion_mision + paso
-                            ) % 5
+                            ) % len(rectangulos_opciones_mision())
                         elif evento.key in (
                             pygame.K_1, pygame.K_2, pygame.K_3,
-                            pygame.K_4, pygame.K_5,
+                                pygame.K_4, pygame.K_5, pygame.K_6, pygame.K_7,
                         ):
                             procesar_opcion_mision(evento.key - pygame.K_1)
                         elif evento.key in (
@@ -4190,7 +5421,7 @@ def main():
                             if persona["personaje"] == receptor
                         )
                         registrar_transmision(
-                            "Guardián",
+                            mundo["jugador"]["nombre"],
                             receptor,
                             "eco",
                             mundo["jugador"]["pies"].center,
@@ -4268,9 +5499,9 @@ def main():
                         and estado.mision_presente["estado"] in ("activa", "pendiente")
                     ):
                         pistas_por_personaje = {
-                            "Agente de verificación": "fuente_ausente",
-                            "Habitante conectada": "testimonio_y_contexto",
-                            "Kael (aspirante a alcalde)": "respuesta_kael",
+                            "Darío Veraz": "fuente_ausente",
+                            "Tomás Red": "testimonio_y_contexto",
+                            "Ronaldo Vélez": "respuesta_kael",
                         }
                         pista = pistas_por_personaje.get(personaje_que_respondio)
                         if pista and estado.registrar_pista_presente(pista):
@@ -4296,14 +5527,14 @@ def main():
                         if mensajero and personaje_que_respondio == "Mensajero":
                             registrar_transmision(
                                 "Mensajero",
-                                "Guardián",
+                                mundo["jugador"]["nombre"],
                                 "mensajero",
                                 mensajero["rect"].center,
                                 mundo["jugador"]["pies"].center,
                             )
                         mensajes.abrir({
                             "remitente": "Sabio de las Raíces",
-                            "destinatario": "Guardián",
+                            "destinatario": mundo["jugador"]["nombre"],
                             "texto": "El puente norte necesita una revisión. Consulta a quienes vieron el rayo antes de compartir la tablilla.",
                         })
                         escena = ESCENA_MENSAJE
@@ -4332,6 +5563,8 @@ def main():
                     recursos.pop("spawn_dimension", None)
                     recursos.pop("rect_mapa", None)
                     recursos.pop("mensaje_dimension", None)
+                    recursos["feed_digital"] = []
+                    recursos.pop("publicacion_inicial_feed_creada", None)
                     recursos["dia"] = 0
                     estado.gestor_dimensiones.guardar_recursos(
                         DIMENSION_LA_COPA,
@@ -4396,7 +5629,18 @@ def main():
                             f"{habilidad.recarga_restante_ms / 1000:.1f}s."
                         )
                 elif habilidad and habilidad.personaje == "periodista":
-                    if estado.mision_presente.get("decision") != "verificar":
+                    if estado.mision_presente.get("decision") == "clasificar_real":
+                        recursos["mensaje_dimension"] = (
+                            "La imagen era generada por IA; no se puede difundir una corrección con una clasificación incorrecta."
+                        )
+                    elif (
+                        estado.mision_presente.get("decision")
+                        not in ("verificar", "clasificar_ia")
+                        or (
+                            estado.mision_presente.get("decision") == "clasificar_ia"
+                            and not estado.mision_presente.get("clasificacion_correcta")
+                        )
+                    ):
                         recursos["mensaje_dimension"] = (
                             "Reúne las pistas y verifica la publicación antes de corregirla."
                         )
@@ -4433,6 +5677,14 @@ def main():
                             )
                     elif accion == "reparar_puente" and reparacion:
                         reparacion.iniciar_reparacion()
+                    elif accion == "entrar_edificio":
+                        entrar_edificio(
+                            interactuable_cercano.get("edificio_id"),
+                            mundo,
+                            estado,
+                        )
+                    elif accion == "salir_edificio":
+                        salir_edificio(mundo, estado)
                     elif accion == "npc":
                         abrir_dialogo_personaje(interactuable_cercano["personaje"])
                         registrar_evento({
@@ -4466,17 +5718,7 @@ def main():
                                 recursos["mapa_destino"] = destino
                                 escena = ESCENA_MAPA_DESTINO
                     elif accion == "portal_temporal":
-                        if (
-                            estado.dimension_actual == DIMENSION_LA_COPA
-                            and DIMENSION_PRESENTE in estado.dimensiones_desbloqueadas
-                        ):
-                            iniciar_transicion_presente()
-                        else:
-                            recursos["mensaje_dimension"] = (
-                                "El portal se abrirá al completar La Copa."
-                                if estado.dimension_actual == DIMENSION_LA_COPA
-                                else "No hay otra dimensión disponible desde aquí."
-                            )
+                        usar_portal_temporal()
                     elif (
                         accion == "examinar_publicacion"
                         or interactuable_cercano.get("tipo") == "pantalla_publica"
@@ -4528,12 +5770,18 @@ def main():
                         "objetivo_id": interaccion["personaje"].lower().replace(" ", "_"),
                     })
                     escena = ESCENA_DIALOGO
+                elif interaccion and interaccion["accion"] == "entrar_edificio":
+                    entrar_edificio(interaccion.get("edificio_id"), mundo, estado)
+                elif interaccion and interaccion["accion"] == "salir_edificio":
+                    salir_edificio(mundo, estado)
                 elif interaccion and interaccion["accion"] == "puerta":
                     if interaccion.get("zona_en_proceso"):
                         escena = ESCENA_ZONA_EN_PROCESO
                     else:
                         recursos["mapa_destino"] = interaccion["imagen_destino"]
                         escena = ESCENA_MAPA_DESTINO
+                elif interaccion and interaccion["accion"] == "portal_temporal":
+                    usar_portal_temporal()
                 elif interaccion and interaccion["accion"] == "otro":
                     registrar_evento({
                         "tipo": "interaccion_otro",
@@ -4545,6 +5793,12 @@ def main():
                 opcion_teclado = grupo_botones.manejar_teclado(evento)
                 if opcion_teclado and escena == ESCENA_CLASIFICACION:
                     estado.clasificar_evento(opcion_teclado)
+                    resultado_clasificacion = estado.resultado_evento_actual()
+                    registrar_evento({
+                        "tipo": "clasificacion_evento",
+                        "clasificacion": opcion_teclado,
+                        "acerto": resultado_clasificacion["clasificacion_correcta"],
+                    })
                     reproducir_audio_clasificacion(gestor_audio, estado)
                     estado_caldero_anterior = estado_caldero_actual
                     estado_caldero_actual = sincronizar_audio_caldero(
@@ -4562,7 +5816,21 @@ def main():
                 botones = construir_botones(estado.opciones_actuales(), recursos, fuente_boton)
                 grupo_botones.reemplazar(botones)
                 if estado.juego_terminado():
-                    iniciar_transicion_presente()
+                    estado.gestor_dimensiones.desbloquear_dimension(DIMENSION_PRESENTE)
+                    estado.guardar_progreso_dimension()
+                    portal = next(
+                        (
+                            objeto for objeto in mundo["interacciones"]
+                            if objeto.get("accion") == "portal_temporal"
+                        ),
+                        None,
+                    )
+                    if portal:
+                        portal["activo"] = True
+                    recursos["mensaje_dimension"] = (
+                        "La Copa está completa. Camina hasta el portal y pulsa E para viajar al presente."
+                    )
+                    escena = ESCENA_MAPA
                 else:
                     escena = ESCENA_MAPA
             elif escena == ESCENA_CONSECUENCIA and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
@@ -4576,6 +5844,12 @@ def main():
                 for boton in botones:
                     if boton.fue_clickeado(pos_lienzo):
                         estado.clasificar_evento(boton.texto)
+                        resultado_clasificacion = estado.resultado_evento_actual()
+                        registrar_evento({
+                            "tipo": "clasificacion_evento",
+                            "clasificacion": boton.texto,
+                            "acerto": resultado_clasificacion["clasificacion_correcta"],
+                        })
                         reproducir_audio_clasificacion(gestor_audio, estado)
                         estado_caldero_anterior = estado_caldero_actual
                         estado_caldero_actual = sincronizar_audio_caldero(
@@ -4603,12 +5877,8 @@ def main():
                         "La Copa sigue disponible."
                     )
                     escena = ESCENA_ZONA_EN_PROCESO
-            if (
-                escena == ESCENA_TRANSICION_DIMENSION
-                and dimension_presente_cargada
-                and tiempo_transicion_dimension >= 3600
-            ):
-                escena = ESCENA_MAPA
+        elif escena == ESCENA_TUTORIAL_DIMENSION:
+            tiempo_tutorial_dimension += delta_ms
         jugador = mundo["jugador"]
         reparacion = mundo.get("reparacion_puentes")
         if reparacion:
@@ -4646,13 +5916,22 @@ def main():
         hud.actualizar(estado.indicadores, delta_segundos)
 
         if pocion_animacion:
-            pocion_animacion["restante"] -= delta_segundos
+            pocion_animacion["tiempo_transcurrido"] += delta_segundos
+            pocion_animacion["restante"] = (
+                pocion_animacion["duracion"] - pocion_animacion["tiempo_transcurrido"]
+            )
             if pocion_animacion["restante"] <= 0:
                 opcion = pocion_animacion["opcion"]
                 if opcion in estado.opciones_actuales():
                     estado.elegir_opcion(opcion)
                     accion = accion_tablilla(opcion)
                     if accion:
+                        registrar_evento({
+                            "tipo": "decision_tablilla",
+                            "decision": accion,
+                            "actor_id": jugador["id"],
+                            "texto": estado.texto_actual(),
+                        })
                         gestor_audio.procesar_evento({
                             "tipo": "decision_tablilla",
                             "accion": accion,
@@ -4725,22 +6004,51 @@ def main():
             volumen.dibujar(lienzo, "VOLUMEN", ["Ajusta la música y los efectos de sonido."], mouse_pos)
         elif escena == ESCENA_AYUDA:
             dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud, resaltar=False)
+            controles = [
+                "Muévete con WASD o flechas; acércate y pulsa E para interactuar.",
+                "J: abre la bitácora de misiones, pistas e historia.",
+                "Habla con personajes para reunir testimonios; Tab cambia el objetivo cercano.",
+                "Mantén Sabiduría, Confianza y Armonía saludables; evita que crezcan Desinformación y Susurros Falsos.",
+            ]
+            if estado.dimension_actual == DIMENSION_PRESENTE:
+                controles.extend((
+                    "C: abre el celular/feed. Investiga a Darío, Tomás y Ronaldo antes de clasificar.",
+                    "Q: difunde una corrección después de verificar la publicación.",
+                ))
+            else:
+                controles.extend((
+                    "Misión secundaria: reúne tablas, cuerda y herramientas; repara el Puente Norte con tres aciertos.",
+                    "Q: activa el impulso de viento del Guardián.",
+                    "Escucha testimonios y revisa las tablillas en el Caldero central.",
+                ))
             ayuda.dibujar(
                 lienzo,
                 "AYUDA",
-                [
-                    "Acércate al Caldero y pulsa E para abrir la tablilla; Tab alterna interacciones cercanas.",
-                    "Impulso de viento (Q): velocidad x2,2 durante 0,85 s; recarga de 6 s. En el presente, Q difunde una corrección verificada.",
-                    "Puente Norte: recoge tablas, cuerda y herramientas; pulsa E en el puente y acierta tres veces.",
-                    "Clic en los personajes: conversar y reunir testimonios.",
-                    "Clic en la salida derecha: visitar la zona Central; clic o Esc para volver.",
-                    "Tablillas: decide si colgar, consultar, quemar o ignorar.",
-                    "Ecos y Mensajero: comparten pistas entre plataformas.",
-                    "Pócimas: anticipan consecuencias; úsalas con cuidado.",
-                    "Mantén Sabiduría, Confianza y Armonía saludables.",
-                    "Evita que Susurros Falsos y Desinformación crezcan.",
-                ],
+                controles,
                 mouse_pos,
+            )
+        elif escena == ESCENA_TUTORIAL_DIMENSION:
+            dibujar_tutorial_dimension(
+                lienzo,
+                recursos,
+                mundo,
+                estado,
+                hud,
+                estado.dimension_actual,
+                mouse_pos,
+                tiempo_tutorial_dimension >= DURACION_MINIMA_TUTORIAL_DIMENSION_MS,
+            )
+        elif escena == ESCENA_CODICE:
+            dibujar_codice(
+                lienzo,
+                recursos,
+                estado,
+                mundo,
+                hud,
+                indice_pagina_codice,
+                conversaciones_vistas,
+                mouse_pos,
+                recursos.get("mision_objetivo_seleccionada", "principal"),
             )
         elif escena == ESCENA_DIALOGO:
             dialogos.actualizar(delta_segundos)
@@ -4757,6 +6065,9 @@ def main():
             dibujar_interfaz_eco(
                 lienzo, recursos, mundo["jugador"], eco_ui, nombres_contacto, mensajes_eco, mundo
             )
+        elif escena == ESCENA_CELULAR:
+            dibujar_mapa(lienzo, recursos, mundo, estado, mouse_pos, hud)
+            dibujar_celular_feed(lienzo, recursos, estado)
         elif escena == ESCENA_ANALISIS:
             dibujar_analisis_publicacion(
                 lienzo,

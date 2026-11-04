@@ -1,0 +1,50 @@
+{
+  "image": "Imagenes/Fondos/Mapas/Presente/EstacionMensajeroInt.png",
+  "image_size": [344, 192],
+  "hitboxes": [
+    {
+      "id": "muro_estacion_fondo",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.02,
+      "ry": 0.02,
+      "rw": 0.96,
+      "rh": 0.055,
+      "zona": "Paredes del fondo de la estación"
+    },
+    {
+      "id": "mesa_estacion",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.37,
+      "ry": 0.47,
+      "rw": 0.34,
+      "rh": 0.25,
+      "zona": "Mesa de clasificación de mensajes"
+    },
+    {
+      "id": "salida_estacion",
+      "role": "interactable",
+      "type": "rect",
+      "rx": 0.42,
+      "ry": 0.08,
+      "rw": 0.16,
+      "rh": 0.16,
+      "action": "salir_edificio",
+      "tipo": "salida_edificio",
+      "dimension": "presente",
+      "activo": true,
+      "distancia": 58,
+      "tecla": "E",
+      "nombre_edificio": "Volver a la calle"
+    }
+  ],
+  "spawn": {
+    "default": {
+      "rx": 0.47,
+      "ry": 0.25,
+      "rw": 0.035,
+      "rh": 0.06
+    }
+  }
+}

@@ -1,0 +1,59 @@
+{
+  "image": "Imagenes/Fondos/Mapas/Presente/CaféDigitalInt.png",
+  "image_size": [344, 192],
+  "hitboxes": [
+    {
+      "id": "muro_cafe_fondo",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.02,
+      "ry": 0.02,
+      "rw": 0.96,
+      "rh": 0.06,
+      "zona": "Paredes del fondo del cafe"
+    },
+    {
+      "id": "barra_cafe",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.69,
+      "ry": 0.28,
+      "rw": 0.25,
+      "rh": 0.31,
+      "zona": "Barra y equipo del cafe"
+    },
+    {
+      "id": "mesa_cafe_central",
+      "role": "wall",
+      "type": "circle",
+      "cx": 0.49,
+      "cy": 0.57,
+      "r": 0.075,
+      "zona": "Mesa central del cafe"
+    },
+    {
+      "id": "salida_cafe",
+      "role": "interactable",
+      "type": "rect",
+      "rx": 0.07,
+      "ry": 0.51,
+      "rw": 0.15,
+      "rh": 0.18,
+      "action": "salir_edificio",
+      "tipo": "salida_edificio",
+      "dimension": "presente",
+      "activo": true,
+      "distancia": 58,
+      "tecla": "E",
+      "nombre_edificio": "Volver a la calle"
+    }
+  ],
+  "spawn": {
+    "default": {
+      "rx": 0.22,
+      "ry": 0.56,
+      "rw": 0.035,
+      "rh": 0.06
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "image": "Imagenes/Fondos/Mapas/Presente/SededelAspiranteInt.png",
+  "image_size": [344, 192],
+  "hitboxes": [
+    {
+      "id": "muro_sede_ventanales",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.02,
+      "ry": 0.02,
+      "rw": 0.96,
+      "rh": 0.06,
+      "zona": "Paredes y ventanales del fondo"
+    },
+    {
+      "id": "mesa_reunion_sede",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.42,
+      "ry": 0.35,
+      "rw": 0.27,
+      "rh": 0.22,
+      "zona": "Mesa central de reuniones"
+    },
+    {
+      "id": "mostrador_sede",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.71,
+      "ry": 0.59,
+      "rw": 0.18,
+      "rh": 0.12,
+      "zona": "Mueble del extremo derecho"
+    },
+    {
+      "id": "salida_sede",
+      "role": "interactable",
+      "type": "rect",
+      "rx": 0.17,
+      "ry": 0.72,
+      "rw": 0.15,
+      "rh": 0.16,
+      "action": "salir_edificio",
+      "tipo": "salida_edificio",
+      "dimension": "presente",
+      "activo": true,
+      "distancia": 58,
+      "tecla": "E",
+      "nombre_edificio": "Volver a la calle"
+    }
+  ],
+  "spawn": {
+    "default": {
+      "rx": 0.29,
+      "ry": 0.68,
+      "rw": 0.035,
+      "rh": 0.06
+    }
+  }
+}
