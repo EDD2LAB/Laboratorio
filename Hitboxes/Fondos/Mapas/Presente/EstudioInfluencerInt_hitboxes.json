@@ -1,0 +1,60 @@
+{
+  "image": "Imagenes/Fondos/Mapas/Presente/EstudioInfluencerInt.png",
+  "image_size": [344, 192],
+  "hitboxes": [
+    {
+      "id": "muro_estudio_fondo",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.02,
+      "ry": 0.02,
+      "rw": 0.96,
+      "rh": 0.06,
+      "zona": "Paredes del estudio"
+    },
+    {
+      "id": "tripodes_estudio",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.42,
+      "ry": 0.36,
+      "rw": 0.27,
+      "rh": 0.26,
+      "zona": "Camaras y tripodes"
+    },
+    {
+      "id": "sofa_estudio",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.73,
+      "ry": 0.51,
+      "rw": 0.2,
+      "rh": 0.18,
+      "zona": "Sofa del estudio"
+    },
+    {
+      "id": "salida_estudio",
+      "role": "interactable",
+      "type": "rect",
+      "rx": 0.92,
+      "ry": 0.52,
+      "rw": 0.075,
+      "rh": 0.23,
+      "action": "salir_edificio",
+      "tipo": "salida_edificio",
+      "dimension": "presente",
+      "activo": true,
+      "distancia": 58,
+      "tecla": "E",
+      "nombre_edificio": "Volver a la calle"
+    }
+  ],
+  "spawn": {
+    "default": {
+      "rx": 0.89,
+      "ry": 0.48,
+      "rw": 0.035,
+      "rh": 0.06
+    }
+  }
+}

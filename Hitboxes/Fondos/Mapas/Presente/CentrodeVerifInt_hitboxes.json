@@ -1,0 +1,60 @@
+{
+  "image": "Imagenes/Fondos/Mapas/Presente/CentrodeVerifInt.png",
+  "image_size": [344, 192],
+  "hitboxes": [
+    {
+      "id": "muro_verificacion_norte",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.02,
+      "ry": 0.02,
+      "rw": 0.96,
+      "rh": 0.06,
+      "zona": "Paredes y ventanas del centro"
+    },
+    {
+      "id": "mesa_verificacion",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.37,
+      "ry": 0.39,
+      "rw": 0.29,
+      "rh": 0.23,
+      "zona": "Mesa de revision de evidencias"
+    },
+    {
+      "id": "mostrador_verificacion",
+      "role": "wall",
+      "type": "rect",
+      "rx": 0.77,
+      "ry": 0.43,
+      "rw": 0.13,
+      "rh": 0.19,
+      "zona": "Mostrador de pantallas"
+    },
+    {
+      "id": "salida_verificacion",
+      "role": "interactable",
+      "type": "rect",
+      "rx": 0.39,
+      "ry": 0.83,
+      "rw": 0.21,
+      "rh": 0.15,
+      "action": "salir_edificio",
+      "tipo": "salida_edificio",
+      "dimension": "presente",
+      "activo": true,
+      "distancia": 58,
+      "tecla": "E",
+      "nombre_edificio": "Volver a la calle"
+    }
+  ],
+  "spawn": {
+    "default": {
+      "rx": 0.48,
+      "ry": 0.76,
+      "rw": 0.035,
+      "rh": 0.06
+    }
+  }
+}

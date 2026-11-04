@@ -8,12 +8,19 @@ como funciona el arbol por dentro.
 Este modulo depende de arboles.py (NodoDecision, construir_tablilla_*).
 """
 
+import copy
+
 from Arboles import (
     construir_tablilla_rumor_politico,
     construir_tablilla_suceso_natural,
     construir_tablilla_dia_tres,
 )
 from propagacion_informacion import PropagacionInformacion
+from dimensiones import (
+    DIMENSION_LA_COPA,
+    DIMENSION_PRESENTE,
+    GestorDimensiones,
+)
 
 
 OPCIONES_CLASIFICACION = {
@@ -31,7 +38,14 @@ class EstadoJuego:
     - el nodo actual dentro de la tablilla que se esta jugando
     """
 
+    PISTAS_PARA_VERIFICAR = (
+        "fuente_ausente",
+        "testimonio_y_contexto",
+        "respuesta_kael",
+    )
+
     def __init__(self):
+        self.gestor_dimensiones = GestorDimensiones()
         self.indicadores = {
             "sabiduria": 50,
             "confianza_consejo": 50,
@@ -62,8 +76,164 @@ class EstadoJuego:
         # el jugador todavía está tomando decisiones sobre la tablilla.
         self.resultado_evento = None
         self.terminado = False
+        self.puntuacion = 0
+        self.historial_evidencias = []
+        self.mensajes_verificados = []
+        self.reputacion = 0
+        self.rol_jugador = "periodista"
+        self.mision_actual = "tablillas_iniciales"
+        self.mision_presente = {
+            "id": "contenido_sospechoso",
+            "estado": "bloqueada",
+            "pistas": [],
+            "publicacion_examinada": False,
+            "clasificacion": None,
+            "clasificacion_correcta": None,
+            "decision": None,
+            "correccion_difundida": False,
+        }
+        self.progreso_guardado = {}
 
         self._cargar_siguiente_tablilla()
+
+    @property
+    def dimension_actual(self):
+        return self.gestor_dimensiones.dimension_actual
+
+    @dimension_actual.setter
+    def dimension_actual(self, dimension):
+        self.gestor_dimensiones.dimension_actual = dimension
+
+    @property
+    def dimensiones_desbloqueadas(self):
+        return self.gestor_dimensiones.desbloqueadas
+
+    @property
+    def progreso_dimensiones(self):
+        return self.gestor_dimensiones.progreso_dimensiones
+
+    def guardar_progreso_dimension(self):
+        """Toma una copia del progreso sin reiniciar el estado compartido."""
+        if self.dimension_actual == DIMENSION_LA_COPA:
+            self.gestor_dimensiones.registrar_completada(
+                DIMENSION_LA_COPA,
+                self.tablillas_resueltas,
+            )
+        self.progreso_guardado[self.dimension_actual] = {
+            "indicadores": copy.deepcopy(self.indicadores),
+            "puntuacion": self.puntuacion,
+            "historial_decisiones": copy.deepcopy(self.historial_decisiones),
+            "historial_evidencias": copy.deepcopy(self.historial_evidencias),
+            "mensajes_verificados": copy.deepcopy(self.mensajes_verificados),
+            "reputacion": self.reputacion,
+            "rol_jugador": self.rol_jugador,
+            "mision_actual": self.mision_actual,
+            "mision_presente": copy.deepcopy(self.mision_presente),
+            "dimensiones": self.gestor_dimensiones.snapshot(),
+        }
+        return self.progreso_guardado[self.dimension_actual]
+
+    def iniciar_mision_presente(self):
+        self.mision_actual = "contenido_sospechoso"
+        self.mision_presente["estado"] = "activa"
+
+    def registrar_pista_presente(self, pista):
+        if pista not in self.mision_presente["pistas"]:
+            self.mision_presente["pistas"].append(pista)
+            self.historial_evidencias.append(pista)
+            return True
+        return False
+
+    def resolver_mision_presente(self, decision):
+        """Aplica una decisión de la primera publicación al estado compartido."""
+        if self.dimension_actual != DIMENSION_PRESENTE:
+            return False
+        if self.mision_presente["estado"] == "completada":
+            return False
+
+        if decision == "revisar_fuente":
+            self.registrar_pista_presente("fuente_ausente")
+            self.guardar_progreso_dimension()
+            return True
+        if decision == "comparar_evidencia":
+            self.registrar_pista_presente("testimonio_y_contexto")
+            self.guardar_progreso_dimension()
+            return True
+        if decision == "dejar_pendiente":
+            self.mision_presente["estado"] = "pendiente"
+            self._aplicar_efecto({"sabiduria": 2})
+            self.mision_presente["decision"] = decision
+            self.guardar_progreso_dimension()
+            return True
+        if decision in ("clasificar_ia", "clasificar_real") and any(
+            pista not in self.mision_presente["pistas"]
+            for pista in self.PISTAS_PARA_VERIFICAR
+        ):
+            return False
+        if decision in ("clasificar_ia", "clasificar_real"):
+            clasificacion = (
+                "generada_por_ia"
+                if decision == "clasificar_ia"
+                else "autentica"
+            )
+            correcta = clasificacion == "generada_por_ia"
+            self.mision_presente.update({
+                "clasificacion": clasificacion,
+                "clasificacion_correcta": correcta,
+            })
+            if correcta:
+                self._aplicar_efecto({
+                    "sabiduria": 8,
+                    "confianza_consejo": 3,
+                    "desinformación": -5,
+                    "susurros_falsos": -3,
+                })
+                self.mensajes_verificados.append("publicacion_aspirante")
+            else:
+                self._aplicar_efecto({
+                    "sabiduria": -6,
+                    "confianza_consejo": -5,
+                    "desinformación": 6,
+                    "susurros_falsos": 4,
+                })
+            self.mision_presente["estado"] = "completada"
+            self.mision_presente["decision"] = decision
+            self.gestor_dimensiones.registrar_completada(
+                DIMENSION_PRESENTE,
+                eventos_resueltos=1,
+            )
+            self.guardar_progreso_dimension()
+            return True
+        if decision == "verificar" and any(
+            pista not in self.mision_presente["pistas"]
+            for pista in self.PISTAS_PARA_VERIFICAR
+        ):
+            return False
+        if decision == "reportar":
+            self._aplicar_efecto({
+                "confianza_consejo": -2,
+                "desinformación": -3,
+            })
+        elif decision == "verificar":
+            self._aplicar_efecto({
+                "sabiduria": 5,
+                "confianza_consejo": 3,
+                "armonia": 2,
+                "susurros_falsos": -3,
+                "desinformación": -5,
+            })
+            self.mensajes_verificados.append("publicacion_aspirante")
+        else:
+            raise ValueError(f"Decisión de misión inválida: {decision}")
+
+        self.mision_presente["estado"] = "completada"
+        self.mision_presente["decision"] = decision
+        self.gestor_dimensiones.registrar_completada(
+            DIMENSION_PRESENTE,
+            eventos_resueltos=1,
+        )
+        self.guardar_progreso_dimension()
+        return True
 
     # -----------------------------------------------------------------
     # Funciones que la interfaz grafica (botones) puede llamar

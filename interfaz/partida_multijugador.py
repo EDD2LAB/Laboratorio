@@ -12,6 +12,19 @@ COLORES = ((83, 222, 212), (241, 199, 86), (183, 137, 246), (247, 140, 120))
 DIRECCIONES = ("abajo", "derecha", "arriba", "izquierda")
 
 
+def tecla_activa(teclas, *codigos):
+    if teclas is None:
+        return False
+    for codigo in codigos:
+        try:
+            valor = teclas[codigo]
+        except (KeyError, TypeError):
+            valor = False
+        if valor:
+            return True
+    return False
+
+
 def separar_frames(imagen, cantidad=8):
     """Usar los espacios transparentes para separar hojas de cuadros desiguales."""
     ocupadas = [imagen.subsurface((x, 0, 1, imagen.get_height())).get_bounding_rect().height > 0
@@ -143,8 +156,8 @@ class VistaPartida:
 
     def actualizar(self, segundos, cliente):
         teclas = pygame.key.get_pressed()
-        dx = int(teclas[pygame.K_d] or teclas[pygame.K_RIGHT]) - int(teclas[pygame.K_a] or teclas[pygame.K_LEFT])
-        dy = int(teclas[pygame.K_s] or teclas[pygame.K_DOWN]) - int(teclas[pygame.K_w] or teclas[pygame.K_UP])
+        dx = int(tecla_activa(teclas, pygame.K_d, pygame.K_RIGHT)) - int(tecla_activa(teclas, pygame.K_a, pygame.K_LEFT))
+        dy = int(tecla_activa(teclas, pygame.K_s, pygame.K_DOWN)) - int(tecla_activa(teclas, pygame.K_w, pygame.K_UP))
         if not pygame.key.get_focused() or self.panel.activo:
             dx = dy = 0
         cliente.mover(dx, dy)

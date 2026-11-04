@@ -4,6 +4,7 @@ import sys
 import pygame
 import math
 import copy
+import re
 
 from animacion import crear_frame_animado_suave, extraer_frames_horizontales
 
@@ -19,11 +20,98 @@ CHARACTER_FOLDERS = {
 PANEL_W = 230   # right sidebar width
 STATUS_H = 36   # bottom status bar height
 PLAYER_HITBOX_SIZE = (12, 8)
+NPC_POSITION_SPRITES = {
+    "Agente de verificación": (
+        "NPCS/Agente de verificación/Agente_de_verificacion-Fila1.png"
+    ),
+    "Kael": "NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila1.png",
+    "Habitante Conectada": (
+        "NPCS/Habitante Conectada/Habitante_conectada-Fila1.png"
+    ),
+    "Influencer": "NPCS/Influencer/Influencer_fila1.png",
+    "Mensajero urbano": "NPCS/Mensajero urbano/Mensajero_urbano-Fila1.png",
+}
+NPC_POSITION_DIRECTIONS = (
+    "abajo",
+    "abajo_derecha",
+    "derecha",
+    "arriba_derecha",
+    "arriba",
+    "arriba_izquierda",
+    "izquierda",
+    "abajo_izquierda",
+)
+_NPC_POSITION_SPRITE_CACHE = {}
+NPC_IDLE_SHEETS = {
+    "guardian": tuple(
+        f"NPCS/Guardian/Reposo/Guardian_reposo_fila{row}.png"
+        for row in range(1, 5)
+    ),
+    "mensajero": tuple(
+        f"NPCS/mensajero/Reposo/Mensajero_reposo_fila{row}.png"
+        for row in range(1, 5)
+    ),
+    "habitante hombre": tuple(
+        "NPCS/Habitante hombre/Reposo/"
+        f"Habitante_hombre_reposo_fila{row}.png"
+        for row in range(1, 5)
+    ),
+    "habitante mujer": tuple(
+        "NPCS/Habitante mujer/Reposo/"
+        f"Habitante_femenina-reposo_fila{row}.png"
+        for row in range(1, 5)
+    ),
+    "aspirante mujer": (
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo_fila1.png",
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo _fila2.png",
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo _fila3.png",
+        "NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo_ fila4.png",
+    ),
+    "aspirante hombre": tuple(
+        "NPCS/Aspirante hombre/Reposo/"
+        f"Aspirante_a_cacique-reposo_fila{row}.png"
+        for row in range(1, 5)
+    ),
+}
+NPC_IDLE_ROW_BY_SPRITE = (1, 1, 2, 2, 3, 3, 4, 1)
 
 # ── Helper functions ──────────────────────────────────────────────────────────
 
 def load_image(path):
     return pygame.image.load(path)
+
+
+def cargar_sprite_posicion_npc(nombre, direccion="abajo"):
+    ruta_relativa = NPC_POSITION_SPRITES.get(nombre)
+    if ruta_relativa is None:
+        return None
+    ruta = os.path.join(PROJECT_ROOT, "Imagenes", *ruta_relativa.split("/"))
+    if ruta not in _NPC_POSITION_SPRITE_CACHE:
+        _NPC_POSITION_SPRITE_CACHE[ruta] = load_image(ruta).convert_alpha()
+    spritesheet = _NPC_POSITION_SPRITE_CACHE[ruta]
+    indice = (
+        NPC_POSITION_DIRECTIONS.index(direccion)
+        if direccion in NPC_POSITION_DIRECTIONS
+        else 0
+    )
+    x1 = round(indice * spritesheet.get_width() / len(NPC_POSITION_DIRECTIONS))
+    x2 = round((indice + 1) * spritesheet.get_width() / len(NPC_POSITION_DIRECTIONS))
+    frame = spritesheet.subsurface((x1, 0, x2 - x1, spritesheet.get_height()))
+    limites = frame.get_bounding_rect(min_alpha=32)
+    return frame.subsurface(limites).copy() if limites.width and limites.height else None
+
+
+def tecla_activa(teclas, *codigos):
+    if teclas is None:
+        return False
+    for codigo in codigos:
+        try:
+            valor = teclas[codigo]
+        except (KeyError, TypeError):
+            valor = False
+        if valor:
+            return True
+    return False
 
 
 def es_hoja_portales(nombre):
@@ -137,6 +225,24 @@ def save_hitboxes(out_path, hitboxes, img_rect, image_path,
     else:
         image_rel = os.path.join("Imagenes", os.path.basename(image_path))
     image_rel = image_rel.replace("\\", "/")
+    preserved_payload = {}
+    if os.path.isfile(out_path):
+        with open(out_path, "r", encoding="utf-8") as fh:
+            existing_payload = json.load(fh)
+        if isinstance(existing_payload, dict):
+            editor_keys = {
+                "image",
+                "image_size",
+                "hitboxes",
+                "spawn",
+                "npc_positions",
+                "decoracion",
+            }
+            preserved_payload = {
+                key: value
+                for key, value in existing_payload.items()
+                if key not in editor_keys
+            }
     payload = {
         "image": image_rel,
         "image_size": [img_rect.width, img_rect.height],
@@ -145,8 +251,9 @@ def save_hitboxes(out_path, hitboxes, img_rect, image_path,
         "npc_positions": npc_positions or {},
         "decoracion": decoracion or [],
     }
+    preserved_payload.update(payload)
     with open(out_path, "w", encoding="utf-8") as fh:
-        json.dump(payload, fh, indent=2)
+        json.dump(preserved_payload, fh, indent=2, ensure_ascii=False)
 
 
 def load_hitboxes(in_path):
@@ -641,8 +748,44 @@ def main(forzar_selector=False):
     current_rect = None
     current_shape = "rect"
     current_role = "wall"
-    interactable_actions = ["puerta", "npc", "usar_eco_tronco", "tablilla", "otro"]
+    interactable_actions = [
+        "puerta",
+        "npc",
+        "usar_eco_tronco",
+        "tablilla",
+        "otro",
+        "examinar_publicacion",
+        "terminal_verificacion",
+        "estudio_influencer",
+        "sede_aspirante",
+        "estacion_mensajero",
+        "portal_temporal",
+        "entrada_edificio",
+        "entrar_edificio",
+        "salir_edificio",
+        "publicacion_digital",
+        "punto_spawn",
+    ]
     current_interactable_action = "puerta"
+    edificios_ids = (
+        "distrito_conecta",
+        "alcaldia",
+        "centro_verificacion",
+        "centro_comunicaciones",
+        "estudio_lia",
+        "centro_comunitario",
+        "campana_ronaldo",
+    )
+    edificios_nombres = {
+        "distrito_conecta": "Distrito Conecta",
+        "alcaldia": "Alcaldía",
+        "centro_verificacion": "Centro de Verificación",
+        "centro_comunicaciones": "Centro de Comunicaciones",
+        "estudio_lia": "Estudio de Lía Nova",
+        "centro_comunitario": "Centro Comunitario",
+        "campana_ronaldo": "Sede de campaña",
+    }
+    current_building_id_idx = 0
     current_trunk_platform = ""
     eco_platform_modal = False
     eco_platform_edit_idx = None
@@ -1022,6 +1165,7 @@ def main(forzar_selector=False):
     pending_placement_frames = 1   # frames que se asignarán al próximo objeto colocado
     object_cache = {}
     animation_frame_cache = {}
+    npc_idle_frame_cache = {}
     placement_sizes = {}
     decoracion = []
     deco_history = [copy.deepcopy(decoracion)]
@@ -1085,6 +1229,55 @@ def main(forzar_selector=False):
         except (OSError, pygame.error):
             object_cache[obj_name] = None
             return None
+
+    def get_npc_idle_frame(obj):
+        normalized = str(obj.get("name", "")).replace("\\", "/").casefold()
+        character = next(
+            (
+                name for name in (
+                    "guardian",
+                    "mensajero",
+                    "habitante hombre",
+                    "habitante mujer",
+                    "aspirante mujer",
+                    "aspirante hombre",
+                )
+                if name in normalized
+            ),
+            None,
+        )
+        if character is None:
+            return None
+        match = re.search(
+            r"fila\s*1\s*-\s*(\d+)",
+            os.path.basename(normalized),
+        )
+        if match is None:
+            return None
+        sprite_direction = int(match.group(1))
+        if not 1 <= sprite_direction <= len(NPC_IDLE_ROW_BY_SPRITE):
+            return None
+        row = NPC_IDLE_ROW_BY_SPRITE[sprite_direction - 1]
+        sheet_path = NPC_IDLE_SHEETS[character][row - 1]
+        if sheet_path not in npc_idle_frame_cache:
+            sheet = load_object_image(sheet_path)
+            if sheet is None:
+                npc_idle_frame_cache[sheet_path] = []
+            else:
+                npc_idle_frame_cache[sheet_path] = [
+                    sheet.subsurface((
+                        round(index * sheet.get_width() / 8),
+                        0,
+                        round((index + 1) * sheet.get_width() / 8)
+                        - round(index * sheet.get_width() / 8),
+                        sheet.get_height(),
+                    )).copy()
+                    for index in range(8)
+                ]
+        frames = npc_idle_frame_cache[sheet_path]
+        if not frames:
+            return None
+        return frames[(pygame.time.get_ticks() // 180) % len(frames)]
 
     def get_deco_world_rect(obj):
         return pygame.Rect(
@@ -1586,6 +1779,11 @@ def main(forzar_selector=False):
         payload = {"role": current_role, **shape_data}
         if current_role in ("interactable", "other"):
             payload["action"] = current_interactable_action
+            dimension = (
+                "presente"
+                if os.path.basename(image_path).casefold() == "mapapresente.png"
+                else "la_copa"
+            )
             if current_interactable_action == "puerta":
                 payload["target_image"] = available_backgrounds[current_target_bg_idx]
             elif current_interactable_action == "npc":
@@ -1606,9 +1804,60 @@ def main(forzar_selector=False):
                     "activo": True,
                     "plataforma": current_trunk_platform,
                 })
+            elif current_interactable_action in ("entrada_edificio", "entrar_edificio"):
+                edificio_id = edificios_ids[current_building_id_idx]
+                payload.update({
+                    "action": "entrar_edificio",
+                    "id": f"entrada_{edificio_id}_{len(hitboxes) + 1}",
+                    "tipo": "entrada_edificio",
+                    "edificio_id": edificio_id,
+                    "nombre_edificio": edificios_nombres[edificio_id],
+                    "dimension": dimension,
+                    "datos": {},
+                    "tecla": "E",
+                    "activo": True,
+                })
+            elif current_interactable_action == "salir_edificio":
+                payload.update({
+                    "id": f"salida_edificio_{len(hitboxes) + 1}",
+                    "tipo": "salida_edificio",
+                    "dimension": dimension,
+                    "datos": {},
+                    "tecla": "E",
+                    "activo": True,
+                })
             elif current_interactable_action in ("tablilla", "otro"):
                 payload.update({
                     "id": f"{current_interactable_action}_{len(hitboxes) + 1}",
+                    "tecla": "E",
+                    "activo": True,
+                })
+            elif current_interactable_action in {
+                "examinar_publicacion",
+                "terminal_verificacion",
+                "estudio_influencer",
+                "sede_aspirante",
+                "estacion_mensajero",
+                "portal_temporal",
+                "entrar_edificio",
+                "salir_edificio",
+                "publicacion_digital",
+                "punto_spawn",
+            }:
+                tipo = (
+                    "pantalla_publica"
+                    if current_interactable_action == "examinar_publicacion"
+                    else current_interactable_action
+                )
+                payload.update({
+                    "id": (
+                        "spawn_presente"
+                        if current_interactable_action == "punto_spawn"
+                        else f"{tipo}_{len(hitboxes) + 1}"
+                    ),
+                    "tipo": tipo,
+                    "dimension": dimension,
+                    "datos": {},
                     "tecla": "E",
                     "activo": True,
                 })
@@ -1620,6 +1869,17 @@ def main(forzar_selector=False):
             "usar_eco_tronco": "Tronco de Ecos",
             "tablilla": "Caldero",
             "otro": "Otro",
+            "examinar_publicacion": "Pantalla pública",
+            "terminal_verificacion": "Terminal de verificación",
+            "estudio_influencer": "Estudio influencer",
+            "sede_aspirante": "Sede del aspirante",
+            "estacion_mensajero": "Estación del mensajero",
+            "portal_temporal": "Portal temporal",
+            "entrada_edificio": "Entrada de edificio",
+            "entrar_edificio": "Entrar a edificio",
+            "salir_edificio": "Salir de edificio",
+            "publicacion_digital": "Publicación digital",
+            "punto_spawn": "Spawn de dimensión",
         }.get(str(action).lower(), "Puerta")
 
     # ── Panel helpers ─────────────────────────────────────────────────────────
@@ -1638,13 +1898,13 @@ def main(forzar_selector=False):
             char = h.get("npc_character", "")
             shape = h["type"]
             if role == "wall":
-                label = f"W{i+1} {shape[:3]}"
+                label = f"W{i+1} {h.get('zona', shape)[:14]}"
                 color = (100, 160, 255)
             elif role == "walkable":
-                label = f"S{i+1} caminar"
+                label = f"S{i+1} {h.get('zona', 'caminar')[:14]}"
                 color = (100, 220, 140)
             elif role == "other":
-                label = f"O{i+1} {h.get('id', _interactable_label(act))[:12]}"
+                label = f"O{i+1} {h.get('zona', h.get('id', _interactable_label(act)))[:14]}"
                 color = (200, 130, 255)
             elif act == "npc":
                 label = f"N{i+1} {char[:10]}"
@@ -1653,7 +1913,7 @@ def main(forzar_selector=False):
                 label = f"E{i+1} {h.get('id', 'eco_tronco')[:12]}"
                 color = (55, 220, 200)
             else:
-                label = f"P{i+1} puerta"
+                label = f"P{i+1} {_interactable_label(act)[:12]}"
                 color = (255, 200, 80)
             items.append((label, color, "hitbox", i))
         if show_objects:
@@ -2406,6 +2666,18 @@ def main(forzar_selector=False):
                     current_role = "other"
                     current_interactable_action = "tablilla"
 
+                elif event.key == pygame.K_5:
+                    current_role = "interactable"
+                    current_interactable_action = "examinar_publicacion"
+
+                elif event.key == pygame.K_6:
+                    current_role = "interactable"
+                    current_interactable_action = "terminal_verificacion"
+
+                elif event.key == pygame.K_7:
+                    current_role = "interactable"
+                    current_interactable_action = "punto_spawn"
+
                 elif event.key == pygame.K_j:
                     if editor_mode == "object":
                         current_object_idx = (current_object_idx + 1) % max(1, len(available_objects))
@@ -2423,6 +2695,23 @@ def main(forzar_selector=False):
                 elif event.key == pygame.K_k:
                     idx = interactable_actions.index(current_interactable_action)
                     current_interactable_action = interactable_actions[(idx + 1) % len(interactable_actions)]
+
+                elif event.key == pygame.K_F8:
+                    current_building_id_idx = (
+                        current_building_id_idx + 1
+                    ) % len(edificios_ids)
+                    if (
+                        selected_hitbox_idx is not None
+                        and 0 <= selected_hitbox_idx < len(hitboxes)
+                        and hitboxes[selected_hitbox_idx].get("action")
+                        in ("entrada_edificio", "entrar_edificio")
+                    ):
+                        edificio_id = edificios_ids[current_building_id_idx]
+                        hitboxes[selected_hitbox_idx].update({
+                            "edificio_id": edificio_id,
+                            "nombre_edificio": edificios_nombres[edificio_id],
+                        })
+                        push_history()
 
                 elif event.key == pygame.K_y and editor_mode == "hitbox":
                     seleccionado_es_tronco = (
@@ -2600,8 +2889,8 @@ def main(forzar_selector=False):
         # ── Test mode physics ─────────────────────────────────────────────────
         if test_mode:
             keys = pygame.key.get_pressed()
-            mx = ((1 if keys[pygame.K_d] else 0) - (1 if keys[pygame.K_a] else 0)) * test_speed
-            my = ((1 if keys[pygame.K_s] else 0) - (1 if keys[pygame.K_w] else 0)) * test_speed
+            mx = ((1 if tecla_activa(keys, pygame.K_d) else 0) - (1 if tecla_activa(keys, pygame.K_a) else 0)) * test_speed
+            my = ((1 if tecla_activa(keys, pygame.K_s) else 0) - (1 if tecla_activa(keys, pygame.K_w) else 0)) * test_speed
             prev_x = test_player.x
             test_player.x += mx
             test_player.clamp_ip(world_rect)
@@ -2634,12 +2923,12 @@ def main(forzar_selector=False):
             keys = pygame.key.get_pressed()
             cam_speed = 10
             camera_x += (
-                (1 if keys[pygame.K_d] or keys[pygame.K_RIGHT] else 0)
-                - (1 if keys[pygame.K_a] or keys[pygame.K_LEFT] else 0)
+                (1 if tecla_activa(keys, pygame.K_d, pygame.K_RIGHT) else 0)
+                - (1 if tecla_activa(keys, pygame.K_a, pygame.K_LEFT) else 0)
             ) * cam_speed
             camera_y += (
-                (1 if keys[pygame.K_s] or keys[pygame.K_DOWN] else 0)
-                - (1 if keys[pygame.K_w] or keys[pygame.K_UP] else 0)
+                (1 if tecla_activa(keys, pygame.K_s, pygame.K_DOWN) else 0)
+                - (1 if tecla_activa(keys, pygame.K_w, pygame.K_UP) else 0)
             ) * cam_speed
             clamp_camera()
 
@@ -2693,11 +2982,31 @@ def main(forzar_selector=False):
                 if obj_img:
                     r = get_deco_world_rect(obj)
                     sx, sy = world_to_screen((r.x, r.y))
+                    npc_frame = get_npc_idle_frame(obj)
                     frames = (
                         1 if es_hoja_portales(obj["name"])
                         else int(obj.get("frames", 1))
                     )
-                    if frames > 1:
+                    if npc_frame is not None:
+                        bounds = npc_frame.get_bounding_rect(min_alpha=32)
+                        if bounds.width and bounds.height:
+                            sprite = npc_frame.subsurface(bounds)
+                            scale = min(
+                                r.width / sprite.get_width(),
+                                r.height / sprite.get_height(),
+                            )
+                            sprite = pygame.transform.scale(
+                                sprite,
+                                (
+                                    max(1, round(sprite.get_width() * scale)),
+                                    max(1, round(sprite.get_height() * scale)),
+                                ),
+                            )
+                            sprite_rect = sprite.get_rect(
+                                midbottom=(sx + r.width // 2, sy + r.height)
+                            )
+                            screen.blit(sprite, sprite_rect)
+                    elif frames > 1:
                         cache_key = (obj["name"], frames)
                         if cache_key not in animation_frame_cache:
                             animation_frame_cache[cache_key] = extraer_frames_horizontales(
@@ -2711,10 +3020,33 @@ def main(forzar_selector=False):
                     else:
                         source_img = get_cropped_deco_image(obj, obj_img)
                         scaled = pygame.transform.smoothscale(source_img, (r.width, r.height))
-                    screen.blit(scaled, (sx, sy))
+                    if npc_frame is None:
+                        screen.blit(scaled, (sx, sy))
                     sr = pygame.Rect(sx, sy, r.width, r.height)
-                    border_col = (255, 235, 80) if selected_deco_idx == j else (80, 220, 100)
-                    pygame.draw.rect(screen, border_col, sr, 2 if selected_deco_idx != j else 3)
+                    ruta_npc = obj.get("name", "").replace("\\", "/").casefold()
+                    seleccionado_visible = (
+                        selected_deco_idx == j
+                        and (not ruta_npc.startswith("npcs/") or npc_frame is not None)
+                    )
+                    border_col = (
+                        (255, 235, 80)
+                        if seleccionado_visible
+                        else (80, 220, 100)
+                    )
+                    pygame.draw.rect(
+                        screen,
+                        border_col,
+                        sr,
+                        3 if seleccionado_visible else 2,
+                    )
+                    if ruta_npc.startswith("npcs/"):
+                        hitbox_npc = sr.copy()
+                        if "guardian" in ruta_npc:
+                            hitbox_npc.inflate_ip(
+                                -round(sr.width * 0.4),
+                                -round(sr.height * 0.4),
+                            )
+                        pygame.draw.rect(screen, (220, 110, 255), hitbox_npc, 2)
                     if show_labels:
                         crop_tag  = " [C]" if "crop" in obj else ""
                         anim_tag  = f" [{frames}f]" if frames > 1 else ""
@@ -2722,6 +3054,15 @@ def main(forzar_selector=False):
                         object_label = os.path.basename(obj["name"])[:12]
                         lbl = tiny.render(f"D{j+1} {object_label}{crop_tag}{anim_tag}{owner_tag}", True, (130, 240, 130))
                         screen.blit(lbl, (sr.x + 2, sr.y + 2))
+                        if ruta_npc.startswith("npcs/"):
+                            screen.blit(
+                                tiny.render(
+                                    "Hitbox de personaje",
+                                    True,
+                                    (230, 160, 255),
+                                ),
+                                (sr.x + 2, sr.bottom + 2),
+                            )
 
         # Crop drag preview
         if deco_crop_dragging and deco_crop_start and deco_crop_current:
@@ -2803,6 +3144,10 @@ def main(forzar_selector=False):
                         texto_lbl = act_lbl
                         if action == "usar_eco_tronco":
                             texto_lbl = f"{h.get('id', 'eco_tronco')} | {act_lbl}"
+                        elif action == "entrar_edificio":
+                            texto_lbl = (
+                                f"{h.get('edificio_id', 'sin asignar')} | {act_lbl}"
+                            )
                         lbl = small.render(texto_lbl, True, label_color)
                         screen.blit(lbl, lbl.get_rect(center=sr.center))
                         if action == "usar_eco_tronco":
@@ -2932,12 +3277,39 @@ def main(forzar_selector=False):
             sx, sy = world_to_screen((nx, ny))
             npc_sr = pygame.Rect(0, 0, site_w, site_h)
             npc_sr.center = (int(sx), int(sy))
+            sprite = cargar_sprite_posicion_npc(
+                npc_name,
+                data.get("direccion", "abajo"),
+            )
+            if sprite is not None:
+                escala = min(
+                    npc_sr.width / sprite.get_width(),
+                    npc_sr.height / sprite.get_height(),
+                )
+                sprite = pygame.transform.scale(
+                    sprite,
+                    (
+                        max(1, round(sprite.get_width() * escala)),
+                        max(1, round(sprite.get_height() * escala)),
+                    ),
+                )
+                screen.blit(sprite, sprite.get_rect(center=npc_sr.center))
             pygame.draw.rect(screen, (255, 120, 200), npc_sr, 1)
             pygame.draw.circle(screen, (255, 80, 170), (int(sx), int(sy)), 10, 2)
             pygame.draw.line(screen, (255, 80, 170), (int(sx) - 7, int(sy)), (int(sx) + 7, int(sy)), 2)
             pygame.draw.line(screen, (255, 80, 170), (int(sx), int(sy) - 7), (int(sx), int(sy) + 7), 2)
+            hitbox_w = max(1, round(24 * world_rect.width / 960))
+            hitbox_h = max(1, round(10 * world_rect.height / 720))
+            npc_hitbox = pygame.Rect(0, 0, hitbox_w, hitbox_h)
+            npc_hitbox.center = (int(sx), int(sy))
+            pygame.draw.rect(screen, (50, 235, 225), npc_hitbox, 2)
             if show_labels:
-                screen.blit(small.render(f"NPC:{npc_name}", True, (255, 180, 220)),
+                direccion = data.get("direccion", "abajo")
+                screen.blit(small.render(
+                    f"NPC:{npc_name} ({direccion}) | hitbox",
+                    True,
+                    (255, 180, 220),
+                ),
                             (int(sx) + 12, int(sy) - 12))
 
         if pending_spawn_rect is not None:
@@ -3056,6 +3428,11 @@ def main(forzar_selector=False):
                     (available_objects[current_object_idx] if available_objects else "sin objetos"))
         if current_role in ("interactable", "other") and current_interactable_action == "usar_eco_tronco":
             tool_str += f"/plataforma:{current_trunk_platform or 'sin asignar'}"
+        elif current_role in ("interactable", "other") and current_interactable_action in (
+            "entrada_edificio",
+            "entrar_edificio",
+        ):
+            tool_str += f"/{edificios_ids[current_building_id_idx]} (F8 cambia)"
         status_parts = [
             f"Imagen: {os.path.basename(image_path)}",
             f"Modo: {mode_str}{'  MOVER' if move_mode else ''}{'  TEST' if test_mode else ''}",
@@ -3117,7 +3494,7 @@ def main(forzar_selector=False):
 
         lines = [
             ("Puentes: boton/U | Animaciones ambiente: elige cascada, vegetacion, energia o puente | clic mapa para colocar; [ ] cambia frames", (210, 210, 160)),
-            ("Hitboxes: arrastra=crear | F=forma | I=roles | 4=Otros | K=puerta/NPC/Tronco/Caldero/Otro | Y=asignar plataforma", (235, 235, 235)),
+            ("Hitboxes: arrastra=crear | F=forma | I=roles | 5=pantalla | 6=terminal | 7=spawn | K=otras acciones", (235, 235, 235)),
             ("Clic derecho=borrar | M=mover | T=prueba | P=spawn; Shift+P=crear spawn | WASD=camara | J/H=imagen o destino | G=cuadricula | L=etiquetas | +/-=tamano", (190, 195, 210)),
             ("Ctrl+C/V: hitboxes en modo hitbox; objetos, personajes y puentes en modo objeto. Ctrl+Shift+C/V: seleccionado. Ctrl+D=duplicar | Enter=guardar | Ctrl+L=cargar | Ctrl+Z/Y=deshacer/rehacer | Esc=salir", (175, 185, 205)),
         ]
