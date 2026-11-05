@@ -52,6 +52,33 @@ VARIANTES = {
     }, "Se retira la copia descontextualizada del simulacro: no existe una orden real de evacuar."),
 }
 
+SEMANTICA_PRUEBAS = {
+    "Acta del consejo": {"problema_parcial": True},
+    "Registro de la ruta": {"problema_parcial": True},
+    "Testimonio de Luma": {"problema_parcial": True},
+    "Propuesta de Mira": {"problema_parcial": True},
+    "Fecha del informe": {"antigua": True, "indica_descontextualizacion": True},
+    "Ruta del suministro": {"fuente_actual_alternativa": True},
+    "Muestra comunitaria": {"confirma_ausencia_de_riesgo": True},
+    "Acta de sustitución": {"indica_descontextualizacion": True},
+    "Informe vigente": {"confirma_riesgo_actual": True},
+    "Ruta alternativa": {"confirma_riesgo_actual": True},
+    "Control de muestras": {"confirma_riesgo_actual": True},
+    "Protocolo de cuidado": {"confirma_riesgo_actual": True},
+    "Boletín firmado": {"confirma_riesgo_actual": True},
+    "Registro de señales": {"confirma_riesgo_actual": True},
+    "Observación del mirador": {"confirma_riesgo_actual": True},
+    "Plan preventivo": {"confirma_riesgo_actual": True},
+    "Encabezado omitido": {"indica_descontextualizacion": True},
+    "Registro del envío": {"indica_descontextualizacion": True},
+    "Puesto del mirador": {"indica_descontextualizacion": True},
+    "Calendario de ejercicios": {"indica_descontextualizacion": True},
+    "Libro de reparto": {"problema_parcial": True},
+    "Carga retenida": {"problema_parcial": True},
+    "Recibos familiares": {"problema_parcial": True},
+    "Inventario de Mira": {"problema_parcial": True},
+}
+
 
 class CampanaCopa(MisionPuente):
     def __init__(self, jugadores, datos_mapa):
@@ -59,6 +86,7 @@ class CampanaCopa(MisionPuente):
         self.opciones = {"corregir": "Publicar una aclaración", "difundir": "Difundir el aviso", "descartar": "Retirar el aviso"}
         self.casos = tuple(random.choice((caso, VARIANTES[caso[0]])) if caso[0] in VARIANTES else caso for caso in CASOS)
         self.ronda = 0
+        self.metadatos_pruebas = self._metadatos(self.pruebas)
         self.resumen = []
         self.preparados = set()
         self.materiales = set()
@@ -69,6 +97,13 @@ class CampanaCopa(MisionPuente):
         self.bono_equipo = False
         self.puntos = 0
         self.puntos_caso = 0
+
+    @staticmethod
+    def _metadatos(pruebas):
+        return {
+            rol: dict(SEMANTICA_PRUEBAS.get(prueba[0], {}))
+            for rol, prueba in pruebas.items()
+        }
 
     @property
     def fase(self):
@@ -144,12 +179,19 @@ class CampanaCopa(MisionPuente):
             return {"mensaje": "Listo para continuar. Esperando al resto del equipo."}
         if self.fase != "investigacion" and accion in ("votar",):
             raise ValueError("La investigación ya terminó.")
-        return super()._ejecutar(identificador, solicitud, ahora, presentes)
+        respuesta = super()._ejecutar(identificador, solicitud, ahora, presentes)
+        if accion == "interactuar" and respuesta.get("titulo"):
+            rol = self.jugadores[identificador]["rol"]
+            metadatos = self.metadatos_pruebas.get(rol)
+            if metadatos:
+                respuesta["metadatos"] = dict(metadatos)
+        return respuesta
 
     def _siguiente(self):
         self.resumen.append({"caso": self.casos[self.ronda][1], **self.resultado})
         self.ronda += 1
         self.pruebas = self.casos[self.ronda][4]
+        self.metadatos_pruebas = self._metadatos(self.pruebas)
         self.correcta = self.casos[self.ronda][3]
         self.conocidas = {i: set() for i in self.jugadores}
         self.halladas.clear()

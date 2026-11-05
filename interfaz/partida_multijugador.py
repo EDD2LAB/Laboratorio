@@ -100,6 +100,7 @@ class VistaPartida:
         self.panel = PanelCooperativo(self)
         self.seleccion = None
         self.mouse = (-1, -1)
+        self.depurar = False
         self.recibir(estado)
 
     def recibir(self, estado):
@@ -137,6 +138,9 @@ class VistaPartida:
         return objetivos
 
     def manejar_evento(self, evento, posicion, cliente):
+        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F3:
+            self.depurar = not self.depurar
+            return True
         if self.panel.manejar(evento, posicion, cliente):
             return True
         if evento.type == pygame.KEYDOWN and evento.key in (pygame.K_e, pygame.K_TAB):
@@ -195,6 +199,8 @@ class VistaPartida:
             rect = frame.get_rect(midbottom=(x, y))
             superficie.blit(frame, rect)
             nombre = datos["nombre"] + (" (tú)" if datos["id"] == self.identificador else "")
+            if datos.get("controlador") == "bot":
+                nombre = "Bot · " + nombre
             etiqueta = self.fuente.render(nombre, True, color)
             caja = etiqueta.get_rect(midbottom=(x, rect.top - 7))
             caja.clamp_ip(superficie.get_rect().inflate(-8, -8))
@@ -245,7 +251,42 @@ class VistaPartida:
                 self.panel.texto_lineas(superficie, f"{nombre.capitalize()}: {valor}", 632, 22 + i * 23, 300, self.fuente)
             estado_puente = {"sin_verificar": "Puente: información sin verificar", "revision_programada": "Puente: revisión mañana", "alarma_injustificada": "Puente: falsa alarma", "aviso_pendiente": "Puente: aviso pendiente"}[caso["estado_puente"]]
             self.panel.texto_lineas(superficie, estado_puente, 632, 93, 300, self.fuente, (237, 185, 87))
+        if self.depurar:
+            bots = [
+                jugador["datos"] for jugador in self.jugadores.values()
+                if jugador["datos"].get("controlador") == "bot"
+            ]
+            caja = pygame.Surface((338, 206), pygame.SRCALPHA)
+            caja.fill((8, 24, 19, 238))
+            superficie.blit(caja, (610, 137))
+            pygame.draw.rect(superficie, (237, 185, 87), (610, 137, 338, 206), 2)
+            self.panel.texto_lineas(
+                superficie, "DEPURACIÓN DE BOTS · F3", 622, 146, 312,
+                self.titulo, (237, 185, 87),
+            )
+            for indice, bot in enumerate(bots):
+                y = 176 + indice * 48
+                self.panel.texto_lineas(
+                    superficie,
+                    f"{bot['nombre']} · {bot.get('bot_estado', 'ESPERANDO')}",
+                    622, y, 312, self.fuente,
+                )
+                self.panel.texto_lineas(
+                    superficie,
+                    f"Destino: {bot.get('bot_objetivo') or '—'} · Pruebas: {len(bot.get('bot_pruebas', []))} · Confianza: {bot.get('bot_confianza', 0):.2f}",
+                    622, y + 18, 312, self.fuente,
+                )
+                if bot.get("bot_error"):
+                    self.panel.texto_lineas(
+                        superficie,
+                        "Error: " + bot["bot_error"],
+                        622, y + 34, 312, self.fuente, (255, 161, 145),
+                    )
         if self.aviso_red or time.monotonic() - self.ultimo_paquete > 1:
-            aviso = self.titulo.render(self.aviso_red or "Esperando al servidor…", True, (255, 207, 110))
-            superficie.blit(aviso, aviso.get_rect(center=(480, 45)))
+            mensaje = self.aviso_red or "Esperando al servidor…"
+            if self.estado.get("fase") == "partida" and self.estado.get("revision") is not None:
+                mensaje = ""
+            if mensaje:
+                aviso = self.titulo.render(mensaje, True, (255, 207, 110))
+                superficie.blit(aviso, aviso.get_rect(center=(480, 45)))
         self.panel.dibujar(superficie)

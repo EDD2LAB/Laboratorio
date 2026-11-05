@@ -248,7 +248,15 @@ class MisionPuente:
         for pista in sorted(self.conocidas[identificador]):
             rol_pista = pista.removeprefix("pista_")
             titulo, texto = self.pruebas[rol_pista]
-            inventario.append({"id": pista, "titulo": titulo, "texto": texto, "origen": self.halladas[pista]})
+            inventario.append({
+                "id": pista,
+                "titulo": titulo,
+                "texto": texto,
+                "origen": self.halladas[pista],
+                "metadatos": dict(
+                    getattr(self, "metadatos_pruebas", {}).get(rol_pista, {})
+                ),
+            })
         if self.resultado:
             instruccion = "Revisa el resultado común en el caldero."
         elif "pista_" + rol not in self.conocidas[identificador]:

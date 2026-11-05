@@ -57,6 +57,9 @@ class MenuInicio:
         self.identificador = None
         self.estado = {"jugadores": [], "iniciada": False}
         self.partida = None
+        self.campana_local = False
+        self.rol_solo = ROLES[0]
+        self.dificultad_solo = "normal"
         self.mensaje = ""
         self.error = False
         self.conectando = False
@@ -119,6 +122,7 @@ class MenuInicio:
         self.codigo_sala = ""
         self.estado = {"jugadores": [], "iniciada": False}
         self.partida = None
+        self.campana_local = False
         self.conectando = False
 
     def conectar(self):
@@ -227,6 +231,40 @@ class MenuInicio:
         self.mensaje, self.error = "", False
         if clave == "individual":
             return "individual"
+        if clave == "campana_local":
+            self.campos["nombre"] = self.campos["nombre"] or "Jugador"
+            self.vista = "campana_rol"
+            pygame.key.start_text_input()
+        elif clave.startswith("rol_solo:"):
+            self.rol_solo = clave.split(":", 1)[1]
+        elif clave.startswith("dificultad_solo:"):
+            self.dificultad_solo = clave.split(":", 1)[1]
+        elif clave == "iniciar_campana_solo":
+            nombre = self.campos["nombre"].strip()
+            if not nombre:
+                self.mensaje, self.error = "Escribe tu nombre para iniciar.", True
+                return
+            try:
+                from interfaz.partida_multijugador import VistaPartida
+                from multijugador.partida_local import ClienteCampanaLocal
+                self.limpiar_conexion()
+                self.cliente = ClienteCampanaLocal(
+                    nombre,
+                    self.rol_solo,
+                    self.dificultad_solo,
+                )
+                self.campana_local = True
+                self.identificador = self.cliente.identificador
+                self.codigo_sala = "LOCAL"
+                self.estado = self.cliente.eventos.get_nowait()
+                self.partida = VistaPartida(self.identificador, self.estado)
+                self.vista = "partida"
+                pygame.key.stop_text_input()
+            except (OSError, ValueError, RuntimeError) as error:
+                self.limpiar_conexion()
+                self.vista = "campana_rol"
+                self.mensaje, self.error = str(error), True
+            return
         if clave == "salir":
             return "salir"
         if clave == "multi":
@@ -239,9 +277,17 @@ class MenuInicio:
         elif clave == "conectar":
             self.conectar()
         elif clave == "volver":
-            self.limpiar_conexion()
-            self.vista = "principal" if self.vista == "multijugador" else "multijugador"
-            pygame.key.stop_text_input()
+            if self.vista == "campana_rol":
+                self.vista = "principal"
+                pygame.key.stop_text_input()
+            elif self.campana_local:
+                self.limpiar_conexion()
+                self.vista = "campana_rol"
+                pygame.key.start_text_input()
+            else:
+                self.limpiar_conexion()
+                self.vista = "principal" if self.vista == "multijugador" else "multijugador"
+                pygame.key.stop_text_input()
         elif clave.startswith("rol:") and self.cliente:
             rol = clave.split(":")[1]
             yo = next((j for j in self.estado["jugadores"] if j["id"] == self.identificador), {})
@@ -259,12 +305,49 @@ class MenuInicio:
         velo.fill((4, 17, 13, 120))
         self.lienzo.blit(velo, (0, 0))
         if self.vista == "principal":
-            self.panel(pygame.Rect(240, 100, 480, 510))
+            self.panel(pygame.Rect(240, 70, 480, 590))
             self.texto("LA COPA", 480, 145, 44, ORO, True)
             self.texto("Consejo de los Ecos", 480, 207, 24, centro=True)
-            self.boton("individual", "Un jugador", (480, 315))
-            self.boton("multi", "Multijugador", (480, 385))
-            self.boton("salir", "Salir", (480, 455))
+            self.boton("individual", "Historia · un jugador", (480, 300))
+            self.boton("campana_local", "Campaña con bots", (480, 380))
+            self.boton("multi", "Multijugador", (480, 460))
+            self.boton("salir", "Salir", (480, 540))
+        elif self.vista == "campana_rol":
+            self.panel(pygame.Rect(150, 45, 660, 630))
+            self.texto("CAMPAÑA LOCAL CON BOTS", 480, 75, 32, ORO, True)
+            self.texto("Un jugador y tres compañeros controlados por IA", 480, 121, 16, centro=True)
+            self.texto("Tu nombre", 235, 159, 16)
+            rect_nombre = pygame.Rect(235, 184, 490, 42)
+            self.panel(rect_nombre, (9, 24, 20, 255), ORO)
+            self.areas_campos["nombre"] = rect_nombre
+            self.texto(self.campos["nombre"] or "Jugador", 249, 194, 18)
+            for indice, (rol, nombre) in enumerate(zip(ROLES, NOMBRES_ROLES)):
+                columna, fila = indice % 2, indice // 2
+                x, y = 325 + columna * 300, 290 + fila * 80
+                self.boton(
+                    "rol_solo:" + rol,
+                    ("✓ " if rol == self.rol_solo else "") + nombre,
+                    (x, y),
+                    260,
+                )
+            self.texto("Dificultad de los bots", 480, 460, 18, ORO, True)
+            for indice, dificultad in enumerate(("facil", "normal", "dificil")):
+                etiqueta = dificultad.capitalize()
+                self.boton(
+                    "dificultad_solo:" + dificultad,
+                    ("✓ " if dificultad == self.dificultad_solo else "") + etiqueta,
+                    (300 + indice * 180, 504),
+                    155,
+                )
+            self.boton("iniciar_campana_solo", "Iniciar campaña", (570, 580), 250)
+            self.boton("volver", "Volver", (340, 580), 190)
+            if self.mensaje:
+                self.parrafo(
+                    self.mensaje,
+                    pygame.Rect(205, 620, 550, 38),
+                    14,
+                    (255, 161, 145) if self.error else CREMA,
+                )
         elif self.vista == "multijugador":
             self.panel(pygame.Rect(200, 95, 560, 540))
             self.texto("MULTIJUGADOR", 480, 140, 32, ORO, True)
@@ -302,7 +385,8 @@ class MenuInicio:
         elif self.vista == "sala":
             self.dibujar_sala()
         elif self.vista == "partida" and self.partida:
-            self.partida.dibujar(self.lienzo, self.codigo_sala, self.mouse)
+            titulo = "CAMPAÑA LOCAL" if self.campana_local else self.codigo_sala
+            self.partida.dibujar(self.lienzo, titulo, self.mouse)
             if not self.partida.panel.activo:
                 self.boton("volver", "Salir", (869, 689), 125)
 
@@ -371,6 +455,9 @@ class MenuInicio:
                 # Preparar las áreas clicables antes de procesar la entrada.
                 if self.vista == "partida" and self.partida and self.cliente:
                     self.partida.actualizar(segundos, self.cliente)
+                    if self.campana_local:
+                        self.cliente.actualizar(segundos)
+                        self.recibir()
                 self.dibujar()
                 for evento in pygame.event.get():
                     if evento.type != pygame.QUIT and self.vista == "partida" and self.partida:
@@ -381,7 +468,7 @@ class MenuInicio:
                         return "salir"
                     if evento.type == pygame.VIDEORESIZE:
                         self.pantalla = pygame.display.set_mode((max(640, evento.w), max(480, evento.h)), pygame.RESIZABLE)
-                    elif evento.type == pygame.TEXTINPUT and self.vista == "formulario" and not self.conectando:
+                    elif evento.type == pygame.TEXTINPUT and self.vista in ("formulario", "campana_rol") and not self.conectando:
                         limites = {"nombre": 20, "ip": 45, "puerto": 5, "servidor": 180, "codigo": 6}
                         caracteres = evento.text
                         if self.foco == "puerto":
@@ -389,15 +476,21 @@ class MenuInicio:
                         if self.foco == "codigo":
                             caracteres = "".join(c for c in caracteres.upper() if c.isascii() and c.isalnum())
                         caracteres = "".join(c for c in caracteres if c.isprintable())
-                        self.campos[self.foco] = (self.campos[self.foco] + caracteres)[:limites[self.foco]]
+                        if self.vista == "campana_rol":
+                            self.campos["nombre"] = (self.campos["nombre"] + caracteres)[:20]
+                        else:
+                            self.campos[self.foco] = (self.campos[self.foco] + caracteres)[:limites[self.foco]]
                     elif evento.type == pygame.KEYDOWN:
                         if evento.key == pygame.K_ESCAPE:
                             if self.vista == "principal":
                                 return "salir"
                             self.accionar("volver")
-                        elif self.vista == "formulario":
+                        elif self.vista in ("formulario", "campana_rol"):
                             if evento.key == pygame.K_BACKSPACE and not self.conectando:
-                                self.campos[self.foco] = self.campos[self.foco][:-1]
+                                if self.vista == "campana_rol":
+                                    self.campos["nombre"] = self.campos["nombre"][:-1]
+                                else:
+                                    self.campos[self.foco] = self.campos[self.foco][:-1]
                             elif evento.key == pygame.K_TAB:
                                 campos = list(self.areas_campos)
                                 self.foco = campos[(campos.index(self.foco) + 1) % len(campos)]
