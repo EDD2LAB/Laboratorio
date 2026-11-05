@@ -10,13 +10,13 @@ OPCIONES = {
     "difundir": "Difundir sin verificar",
     "descartar": "Descartar el aviso",
 }
-MENSAJES = ("Necesito ayuda con una fuente.", "Ven al caldero para comparar pruebas.",
-            "Tengo una prueba para compartir.", "No difundamos la noticia todavía.")
+MENSAJES = ("¿Me ayudas a buscar una pista?", "Ven al caldero para comparar pistas.",
+            "Tengo una pista para compartir.", "No difundamos la noticia todavía.")
 PRUEBAS = {
-    "guardian": ("Acta del consejo", "El acta anuncia mantenimiento parcial para mañana. No ordena cerrar hoy el puente."),
-    "mensajero": ("Registro de la ruta", "La ruta del puente funcionó hoy. El registro señala una revisión parcial para mañana."),
-    "habitante": ("Testimonio de Luma", "Luma cruzó hoy y leyó el aviso: mañana revisarán unas tablas. Nadie le comunicó un cierre total."),
-    "aspirante": ("Propuesta de Mira", "La propuesta presentada al consejo pide reparar unas tablas mañana; no pide cerrar hoy el puente por decisión de Kael."),
+    "guardian": ("Acta del consejo", "El papel del consejo dice: mañana arreglarán unas tablas. Hoy el puente está abierto."),
+    "mensajero": ("Registro de la ruta", "Hoy llevé mensajes por el puente. Mañana revisarán unas tablas."),
+    "habitante": ("Testimonio de Luma", "Luma cuenta: crucé hoy sin problemas. El aviso dice que mañana arreglarán unas tablas."),
+    "aspirante": ("Propuesta de Mira", "Mira pidió arreglar unas tablas mañana. No pidió cerrar hoy el puente."),
 }
 
 
@@ -73,7 +73,7 @@ class MisionPuente:
     def _objetivo(self, identificador, clave):
         objetivo = next((o for o in self.objetivos if o["id"] == clave), None)
         if objetivo is None or not self._cerca(identificador, objetivo):
-            raise ValueError("Acércate al personaje u objeto para interactuar.")
+            raise ValueError("Acércate a la luz y pulsa E.")
         return objetivo
 
     def _avisar(self, receptores, texto, tipo="info"):
@@ -124,19 +124,19 @@ class MisionPuente:
                 self.conocidas[identificador].add(pista)
                 if pista not in self.halladas:
                     self.halladas[pista] = identificador
-                    self._avisar([identificador], "Registraste una prueba. Abre I para leerla y compartirla.")
+                    self._avisar([identificador], "¡Encontraste una pista! Abre I para leerla y compartirla.")
                     self._registrar(f"{jugador['nombre']} registró una prueba de su fuente.")
                 titulo, texto = self.pruebas[jugador["rol"]]
                 return {"mensaje": texto, "titulo": titulo, "vista": "eco" if objetivo["tipo"] == "eco" else "fuente"}
             if objetivo["tipo"] == "caldero":
-                return {"mensaje": "Comparen las pruebas y decidan juntos qué comunicar.", "vista": "resultado" if self.resultado else "caldero"}
+                return {"mensaje": "Lean sus pistas y elijan juntos qué contar a la aldea.", "vista": "resultado" if self.resultado else "caldero"}
             if objetivo["tipo"] == "eco":
                 return {"mensaje": "Envía mensajes breves o copias de tus pruebas al equipo.", "vista": "eco"}
-            return {"mensaje": "Esta fuente aporta una prueba a otro rol. Busca tu objetivo marcado en el mapa.", "vista": "fuente", "titulo": objetivo["nombre"]}
+            return {"mensaje": "Este personaje ayuda a otro compañero. Tu personaje está marcado con una luz.", "vista": "fuente", "titulo": objetivo["nombre"]}
         if accion == "entregar":
             receptor, pista = solicitud.get("destinatario"), solicitud.get("pista")
             if not isinstance(pista, str) or pista not in self.conocidas[identificador]:
-                raise ValueError("No tienes esa prueba para compartir.")
+                raise ValueError("Primero busca una pista para compartir.")
             if not isinstance(receptor, str) or receptor == identificador or receptor not in self.jugadores or receptor not in presentes:
                 raise ValueError("El destinatario no está disponible.")
             medio = solicitud.get("medio")
@@ -152,10 +152,10 @@ class MisionPuente:
                 return {"mensaje": "Ese jugador ya tiene esta prueba."}
             self.conocidas[receptor].add(pista)
             self.entregas.append({"emisor": identificador, "receptor": receptor, "pista": pista, "medio": medio})
-            self._avisar([receptor], f"{jugador['nombre']} te entregó una prueba. Puedes leerla con I.", "entrega")
-            self._avisar([identificador], f"Entrega confirmada a {self.jugadores[receptor]['nombre']}.", "entrega")
+            self._avisar([receptor], f"{jugador['nombre']} te mandó una pista. Léela con I.", "entrega")
+            self._avisar([identificador], f"{self.jugadores[receptor]['nombre']} recibió tu pista.", "entrega")
             self._registrar(f"{jugador['nombre']} compartió una prueba con {self.jugadores[receptor]['nombre']}.")
-            return {"mensaje": "Prueba entregada y recepción confirmada."}
+            return {"mensaje": "¡Tu compañero recibió la pista!"}
         if accion == "eco":
             if not any(o["tipo"] == "eco" and self._cerca(identificador, o) for o in self.objetivos):
                 raise ValueError("Acércate a un Tronco de los Ecos.")
@@ -175,20 +175,20 @@ class MisionPuente:
                 self.rectificacion = True
                 self.resultado = None
                 self.votos.clear()
-                self._avisar(presentes, "El equipo revisará su decisión. Vuelvan a votar en el caldero.")
-                return {"mensaje": "Se abrió una única oportunidad de rectificación.", "vista": "caldero"}
+                self._avisar(presentes, "¡Podemos intentarlo otra vez! Lean las pistas y elijan en el caldero.")
+                return {"mensaje": "Pueden intentarlo una vez más.", "vista": "caldero"}
             if self.resultado:
                 raise ValueError("El caso ya tiene un resultado.")
             if len(presentes) < 2 or len(set(self.halladas.values())) < 2 or not self.entregas:
-                raise ValueError("Necesitan pruebas de dos jugadores distintos y una entrega confirmada.")
+                raise ValueError("Dos compañeros deben buscar sus pistas y compartir al menos una.")
             if len(self.conocidas[identificador]) < 2:
-                raise ValueError("Necesitas dos pruebas en tu registro. Pide a un compañero que te comparta una.")
+                raise ValueError("Te falta una pista. Pulsa Pedir una pista para pedir ayuda.")
             opcion = solicitud.get("opcion")
             if not isinstance(opcion, str) or opcion not in OPCIONES:
                 raise ValueError("Decisión inválida.")
             self.votos[identificador] = opcion
             self.resolver(presentes)
-            return {"mensaje": "Voto registrado. Puedes cambiarlo mientras no haya resultado."}
+            return {"mensaje": "¡Ya elegiste! Espera a tu equipo. Puedes cambiar tu elección."}
         raise ValueError("Acción desconocida.")
 
     def resolver(self, presentes):

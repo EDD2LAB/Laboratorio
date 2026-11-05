@@ -113,7 +113,7 @@ class ServicioSalas:
             self.limpiar()
             self.limitar(ip)
             if metodo == "GET" and ruta == "/health":
-                return {"ok": True, "protocolo": VERSION, "movimiento": True, "mision": "puente_norte", "campana": "la_copa", "casos": 4,
+                return {"ok": True, "protocolo": VERSION, "movimiento": True, "mision": "puente_norte", "campana": "la_copa", "casos": 4, "guia": True, "actividades": 3,
                         "build": os.environ.get("RENDER_GIT_COMMIT", "local")[:12]}
             if metodo == "POST" and ruta in ("/v1/crear", "/v1/unirse"):
                 crear = ruta == "/v1/crear"

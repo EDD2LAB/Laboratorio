@@ -1,28 +1,30 @@
 """Campaña cooperativa de La Copa; todo el progreso pertenece al servidor."""
 from .mision import MisionPuente
 import random
+from .suministros import EncargoSuministros
+from .guia import GuiaCooperativa
 
 
 CASOS = (
     ("puente_norte", "¿Cerraron el puente norte?",
-     "Circula que Kael cerró hoy todo el puente norte por decisión propia.", "corregir", None,
+     "Alguien dice que Kael cerró hoy el puente. ¿Será verdad?", "corregir", None,
      "El puente sigue abierto hoy; mañana habrá mantenimiento parcial."),
     ("agua", "Agua bajo sospecha",
-     "Un eco antiguo asegura que el agua del depósito actual está contaminada.", "descartar", {
+     "Un mensaje viejo dice que el agua de hoy está sucia. ¿Habla del mismo lugar?", "descartar", {
          "guardian": ("Fecha del informe", "El documento citado corresponde a un depósito clausurado hace diez años."),
          "mensajero": ("Ruta del suministro", "La entrega actual procede del manantial nuevo, no del depósito del informe."),
          "habitante": ("Muestra comunitaria", "La muestra de hoy del manantial nuevo superó el control comunitario."),
          "aspirante": ("Acta de sustitución", "El depósito antiguo fue sustituido y desconectado de la red hace diez años."),
      }, "El aviso mezcla fechas y depósitos. Se retira ese aviso antiguo de la circulación."),
     ("tormenta", "La tormenta se acerca",
-     "El consejo avisa de una tormenta esta tarde y recomienda asegurar las rutas.", "difundir", {
+     "El consejo avisa: esta tarde habrá tormenta. ¿Debemos avisar a los vecinos?", "difundir", {
          "guardian": ("Boletín firmado", "El boletín de hoy está firmado por dos observadores del consejo: tormenta esta tarde."),
          "mensajero": ("Registro de señales", "Dos puestos independientes enviaron hoy la misma alerta de tormenta."),
          "habitante": ("Observación del mirador", "Los observadores registraron hoy viento y nubes compatibles con el boletín."),
          "aspirante": ("Plan preventivo", "El plan vigente confirma la alerta y pide asegurar suministros sin sembrar pánico."),
      }, "La alerta es actual y está contrastada. Difundirla permite preparar a la aldea."),
     ("ayuda", "¿Quién se quedó con la ayuda?",
-     "Acusan a Mira de quedarse con todos los materiales enviados a las familias.", "corregir", {
+     "Dicen que Mira guardó para ella toda la ayuda. ¿Qué pasó con las entregas?", "corregir", {
          "guardian": ("Libro de reparto", "El libro firmado registra entregas a tres familias; dos entregas siguen pendientes."),
          "mensajero": ("Carga retenida", "Las dos entregas pendientes están en tránsito: una ruta quedó temporalmente interrumpida."),
          "habitante": ("Recibos familiares", "Tres familias confirman que recibieron materiales hoy y conservan sus recibos."),
@@ -31,20 +33,20 @@ CASOS = (
 )
 
 HABILIDADES = {
-    "guardian": ("Contrastar archivo", "Audita tu prueba en la fuente y reduce 4 puntos de desinformación."),
-    "mensajero": ("Correo urgente", "Comparte una prueba con todos los conectados desde cualquier lugar."),
-    "habitante": ("Asamblea vecinal", "Reúne a otro jugador en tu fuente para recuperar 4 puntos de confianza."),
-    "aspirante": ("Rendir cuentas", "Presenta dos pruebas en el caldero y recupera 4 puntos de armonía."),
+    "guardian": ("Revisar mi pista", "Vuelve a Naira y revisa tu pista para reducir los rumores."),
+    "mensajero": ("Correo urgente", "Manda tu pista a todos tus compañeros."),
+    "habitante": ("Reunir a los vecinos", "Ve con un compañero a ver a Luma. La aldea confiará más en ustedes."),
+    "aspirante": ("Explicar con pistas", "Lleva dos pistas al caldero. Ayudarás a que la aldea se lleve mejor."),
 }
 
 VARIANTES = {
-    "agua": ("agua", "Agua bajo sospecha", "Un aviso pide no beber del depósito hasta terminar una inspección.", "difundir", {
+    "agua": ("agua", "Agua bajo sospecha", "Un aviso dice: no beban esa agua, usen el manantial seguro. ¿Es un aviso de hoy?", "difundir", {
         "guardian": ("Informe vigente", "El informe de hoy confirma contaminación y recomienda suspender el consumo del depósito."),
         "mensajero": ("Ruta alternativa", "Dos inspectores confirmaron la alerta. Ya se distribuye agua segura por una ruta alternativa."),
         "habitante": ("Control de muestras", "Dos muestras independientes de hoy dieron resultado no apto en el depósito señalado."),
         "aspirante": ("Protocolo de cuidado", "El consejo firmó hoy el aviso preventivo y garantiza una fuente alternativa de agua potable."),
     }, "La advertencia estaba contrastada. Se difunde junto con la ubicación del agua segura."),
-    "tormenta": ("tormenta", "La tormenta se acerca", "Un mensaje exige evacuar hoy por una supuesta tormenta extrema.", "descartar", {
+    "tormenta": ("tormenta", "La tormenta se acerca", "Un mensaje dice: ¡salgan de sus casas, viene una gran tormenta! ¿Es un aviso real?", "descartar", {
         "guardian": ("Encabezado omitido", "El mensaje completo dice SIMULACRO. La copia eliminó ese encabezado."),
         "mensajero": ("Registro del envío", "La copia procede del ensayo de alertas; no existe un aviso real de evacuación hoy."),
         "habitante": ("Puesto del mirador", "Los dos observadores confirman condiciones estables. Participaron en un simulacro esta mañana."),
@@ -56,12 +58,14 @@ VARIANTES = {
 class CampanaCopa(MisionPuente):
     def __init__(self, jugadores, datos_mapa):
         super().__init__(jugadores, datos_mapa)
-        self.opciones = {"corregir": "Publicar una aclaración", "difundir": "Difundir el aviso", "descartar": "Retirar el aviso"}
+        self.opciones = {"corregir": "Corregir las partes equivocadas", "difundir": "Compartirlo: las pistas lo confirman", "descartar": "No compartirlo: es un aviso falso"}
         self.casos = tuple(random.choice((caso, VARIANTES[caso[0]])) if caso[0] in VARIANTES else caso for caso in CASOS)
         self.ronda = 0
         self.resumen = []
         self.preparados = set()
-        self.materiales = set()
+        self.encargo = EncargoSuministros(0, self.objetivos)
+        self.obras = []
+        self.materiales = self.encargo.cargas
         self.depositos = set()
         self.habilidades_usadas = set()
         self.presion = 0.0
@@ -69,6 +73,9 @@ class CampanaCopa(MisionPuente):
         self.bono_equipo = False
         self.puntos = 0
         self.puntos_caso = 0
+        self.acompanante = GuiaCooperativa(jugadores)
+        self.reloj = 0.0
+        self.presentes = set(jugadores)
 
     @property
     def fase(self):
@@ -82,15 +89,31 @@ class CampanaCopa(MisionPuente):
         if solicitud.get("ronda", 0) != self.ronda:
             raise ValueError("La acción pertenece a otro caso. Revisa el objetivo actual.")
         accion = solicitud.get("accion")
+        self.presentes = set(presentes)
+        if accion in ("iniciar_tutorial", "saltar_tutorial") or (accion == "interactuar" and self.fase == "investigacion"):
+            respuesta = self.acompanante.tutorial(self, identificador, solicitud)
+            if respuesta is not None:
+                return respuesta
+        if accion == "pedir_pista":
+            return self.acompanante.pedir(self, identificador, self.reloj, presentes)
+        if accion in ("sujetar", "trabajar"):
+            if self.fase != "preparacion":
+                raise ValueError("Ahora sigue la tarea que aparece en el mapa.")
+            mensaje = self.encargo.actividad(identificador, accion, self.reloj, presentes, self.jugadores)
+            self._premiar_encargo(presentes)
+            return {"mensaje": mensaje, "vista": "actividad"}
         if accion == "interactuar" and self.fase == "preparacion":
             objetivo = self._objetivo(identificador, solicitud.get("objetivo"))
-            if objetivo.get("rol") == self.jugadores[identificador]["rol"]:
-                respuesta = self._ejecutar(identificador, {**solicitud, "accion": "recoger_suministro"}, ahora, presentes)
-                return {**respuesta, "vista": "introduccion"}
+            if objetivo["id"] == self.encargo.destino["id"]:
+                if identificador in self.encargo.cargas:
+                    return self._ejecutar(identificador, {**solicitud, "accion": "depositar"}, ahora, presentes)
+                if self.encargo.materiales_listos and not self.encargo.completo:
+                    return {"mensaje": "Uno ayuda y el otro hace la tarea. ¡Pueden turnarse!", "vista": "actividad"}
+                return {"mensaje": self.encargo.config["motivo"], "vista": "introduccion"}
+            if any(m[2] == objetivo["id"] for m in self.encargo.config["materiales"]):
+                return self._ejecutar(identificador, {**solicitud, "accion": "recoger_suministro", "objetivo": objetivo["id"]}, ahora, presentes)
             if objetivo["id"] == "caldero":
-                if identificador in self.materiales:
-                    self.depositos.add(identificador)
-                return {"mensaje": "Preparen los suministros y confirmen el próximo caso.", "vista": "introduccion"}
+                return {"mensaje": "Revisen el encargo y confirmen aquí el próximo caso cuando esté completo.", "vista": "introduccion"}
         if accion == "rectificar":
             respuesta = super()._ejecutar(identificador, solicitud, ahora, presentes)
             self.preparados.clear()
@@ -125,18 +148,22 @@ class CampanaCopa(MisionPuente):
             if self.fase != "preparacion":
                 raise ValueError("Esta tarea solo está disponible entre investigaciones.")
             if accion == "recoger_suministro":
-                fuente = next(o for o in self.objetivos if o.get("rol") == self.jugadores[identificador]["rol"])
-                self._objetivo(identificador, fuente["id"])
-                self.materiales.add(identificador)
-                return {"mensaje": "Recogiste suministros. Llévalos al caldero."}
-            self._objetivo(identificador, "caldero")
+                clave = solicitud.get("objetivo")
+                if clave is None:
+                    fuente = self.encargo.objetivo(identificador, presentes)
+                    clave = fuente["id"]
+                self._objetivo(identificador, clave)
+                mensaje = self.encargo.recoger(identificador, clave, solicitud.get("material"))
+                return {"mensaje": mensaje, "vista": "introduccion"}
             if accion == "depositar":
-                if identificador not in self.materiales:
-                    raise ValueError("Recoge primero los suministros en tu fuente.")
-                self.depositos.add(identificador)
-                return {"mensaje": "Suministros depositados. Se necesitan aportes de dos jugadores."}
-            if len(self.depositos) < 2 or len(presentes) < 2:
-                raise ValueError("Faltan suministros de dos jugadores distintos y dos conectados.")
+                self._objetivo(identificador, self.encargo.destino["id"])
+                mensaje = self.encargo.entregar(identificador)
+                self.depositos = set(self.encargo.entregados.values())
+                self._premiar_encargo(presentes)
+                return {"mensaje": mensaje + (" Encargo completo: " + self.encargo.config["efecto"] if self.encargo.completo else " ¡Materiales listos! Ahora hagan la actividad juntos." if self.encargo.materiales_listos else " Falta el otro material. Pídele ayuda a un compañero."), "vista": "introduccion"}
+            self._objetivo(identificador, "caldero")
+            if not self.encargo.completo or len(presentes) < 2:
+                raise ValueError("Entreguen ambos materiales con dos jugadores distintos en el destino señalado.")
             self.preparados.add(identificador)
             if set(presentes).issubset(self.preparados):
                 self._siguiente()
@@ -148,7 +175,9 @@ class CampanaCopa(MisionPuente):
 
     def _siguiente(self):
         self.resumen.append({"caso": self.casos[self.ronda][1], **self.resultado})
+        self.obras.append(self.encargo.publico())
         self.ronda += 1
+        self.encargo = EncargoSuministros(self.ronda, self.objetivos) if self.ronda < 3 else None
         self.pruebas = self.casos[self.ronda][4]
         self.correcta = self.casos[self.ronda][3]
         self.conocidas = {i: set() for i in self.jugadores}
@@ -158,7 +187,8 @@ class CampanaCopa(MisionPuente):
         self.resultado = None
         self.rectificacion = False
         self.preparados.clear()
-        self.materiales.clear()
+        self.acompanante.pedidos.clear()
+        self.materiales = self.encargo.cargas if self.encargo else {}
         self.depositos.clear()
         self.habilidades_usadas.clear()
         self.presion = 0.0
@@ -168,31 +198,52 @@ class CampanaCopa(MisionPuente):
         # No borrar los acuses: una retransmisión antigua nunca afecta al nuevo caso.
         self._avisar(self.jugadores, "Nuevo caso: " + self.casos[self.ronda][1])
 
+    def _premiar_encargo(self, presentes):
+        if not self.encargo.completo or self.encargo.recompensado:
+            return
+        self.encargo.recompensado = True
+        config = self.encargo.config
+        nombre = config["indicador"]
+        self.indicadores[nombre] = max(0, min(100, self.indicadores[nombre] + config["delta"]))
+        self.puntos += 30
+        self.acompanante.estrellas.add("encargo:" + str(self.ronda))
+        self._registrar(config["efecto"] + ": +30 puntos de cooperación.")
+        self._avisar(presentes, "¡Lo hicieron juntos! " + config["efecto"] + ". Ganaron una estrella.", "logro")
+
     def texto_resultado(self, texto, correcto):
+        if correcto:
+            self.acompanante.estrellas.add("caso:" + str(self.ronda))
         premio = ((80 if self.rectificacion else 100) if correcto else 0) + (20 if self.bono_equipo else 0)
         self.puntos += premio - self.puntos_caso
         self.puntos_caso = premio
         if self.ronda:
             texto = (self.casos[self.ronda][5] if correcto else
-                "La decisión no coincide con las pruebas. " + ("La rectificación terminó." if self.rectificacion else "Pueden rectificar una vez o asumir las consecuencias."))
-        return texto + " " + ("Campaña terminada. Revisen el balance del equipo." if self.ronda == len(self.casos) - 1 else "Ahora lleven suministros de sus fuentes al caldero y confirmen el siguiente caso.")
+                "Las pistas cuentan otra cosa. " + ("La aldea sigue aprendiendo. Vamos a ayudar con la siguiente tarea." if self.rectificacion else "Pueden leer las pistas e intentarlo una vez más."))
+        return texto + " " + ("Campaña terminada. Revisen el balance del equipo." if self.ronda == len(self.casos) - 1 else "Ahora abran M: la aldea necesita materiales concretos en el destino señalado.")
 
     def actualizar(self, segundos, presentes):
+        self.presentes = set(presentes)
+        self.reloj += max(0, min(segundos, 1))
+        self.acompanante.actualizar(self)
+        if self.encargo:
+            self.encargo.revisar_ayudante(presentes, self.jugadores)
         if self.fase != "investigacion" or len(presentes) < 2:
             return
-        self.presion += max(0, min(segundos, 1))
+        if self.ronda > 0:
+            self.presion += max(0, min(segundos, 1))
         oleadas = int(self.presion // 60)
         if oleadas > self.oleadas:
             self.oleadas = oleadas
             self.indicadores["desinformacion"] = min(100, self.indicadores["desinformacion"] + 3)
-            self._avisar(presentes, "El rumor sigue circulando: +3 desinformación. Comparen las pruebas.")
+            self._avisar(presentes, "El rumor está creciendo. ¡Comparen sus pistas! No perderán la partida por tardar.")
         if not self.bono_equipo and all(len(self.conocidas[i]) >= 2 for i in self.jugadores):
             self.bono_equipo = True
+            self.acompanante.estrellas.add("equipo:" + str(self.ronda))
             self.indicadores["confianza"] = min(100, self.indicadores["confianza"] + 3)
-            self._avisar(presentes, "Objetivo de equipo: todos tienen dos pruebas. +3 confianza y bono al resolver.")
+            self._avisar(presentes, "¡Todos tienen dos pistas! Ganaron una estrella por ayudarse.")
 
     def resolver(self, presentes):
-        if (self.fase == "preparacion" and len(presentes) >= 2 and len(self.depositos) >= 2
+        if (self.fase == "preparacion" and len(presentes) >= 2 and self.encargo.completo
                 and set(presentes).issubset(self.preparados)):
             self._siguiente()
             return
@@ -206,9 +257,12 @@ class CampanaCopa(MisionPuente):
         caso = self.casos[self.ronda]
         estado.update(id=caso[0], titulo=f"{self.ronda + 1}/{len(self.casos)} · {caso[1]}", noticia=caso[2],
                       fase=self.fase, ronda=self.ronda, total_casos=len(self.casos),
+                      encargo=self.encargo.publico() if self.fase == "preparacion" else None, obras=list(self.obras),
                       suministros=len(self.depositos), preparados=len(set(presentes) & self.preparados),
                       balance=list(self.resumen) + ([{"caso": caso[1], **self.resultado}] if self.resultado else []),
-                      puntos=self.puntos, bono_equipo=self.bono_equipo,
+                      estrellas=len(self.acompanante.estrellas), estrellas_total=11,
+                      tutorial_cargas=[i for i, t in self.acompanante.tutoriales.items() if t["estado"] == "activo" and t["paso"] == 2],
+                      sin_prisa=self.ronda == 0, puntos=self.puntos, bono_equipo=self.bono_equipo,
                       proxima_oleada=max(0, 60 - int(self.presion % 60)),
                       opciones=dict(self.opciones))
         return estado
@@ -216,16 +270,21 @@ class CampanaCopa(MisionPuente):
     def privado(self, identificador):
         estado = super().privado(identificador)
         if not estado:
-            return estado
+            return {}
         rol = self.jugadores[identificador]["rol"]
         estado.update(habilidad=HABILIDADES[rol][0], descripcion_habilidad=HABILIDADES[rol][1],
                       habilidad_usada=identificador in self.habilidades_usadas,
                       suministro=identificador in self.materiales, depositado=identificador in self.depositos,
                       preparado=identificador in self.preparados)
         if self.fase == "preparacion":
-            estado["instruccion"] = ("En el caldero, confirma el siguiente caso." if identificador in self.depositos else
-                                      "Lleva tus suministros al caldero." if identificador in self.materiales else
-                                      "Vuelve a tu fuente y recoge suministros con M.")
+            objetivo = self.encargo.objetivo(identificador, self.jugadores)
+            estado["objetivo"] = objetivo
+            carga = self.encargo.cargas.get(identificador)
+            estado["carga"] = self.encargo.nombre(carga) if carga else None
+            estado["instruccion"] = ("Encargo completo. Confirmen en el caldero." if self.encargo.completo else
+                                      "Tu aporte está entregado. Ayuda a coordinar al equipo." if identificador in self.depositos else
+                                      "Llevas " + estado["carga"] + ". Ve a " + self.encargo.config["lugar"] + " y pulsa E." if carga and carga not in self.encargo.entregados else
+                                      "Ve a " + objetivo["nombre"] + " y pulsa E.")
         elif self.fase == "final":
             estado["instruccion"] = "Campaña completada. Abre M para ver el balance."
-        return estado
+        return self.acompanante.datos(self, identificador, estado)

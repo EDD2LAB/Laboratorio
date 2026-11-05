@@ -84,12 +84,18 @@ class VistaPartida:
     def __init__(self, identificador, estado):
         import juego
         self.identificador = identificador
-        self.firma = ColisionesMapa().firma
+        self.colisiones = ColisionesMapa()
+        self.firma = self.colisiones.firma
+        self.ruta_guia = []
+        self.clave_ruta = None
+        self.destino_ruta = None
+        self.ultima_ruta = 0
+        self.boton_guia = pygame.Rect(25, 112, 330, 37)
         self.personajes = cargar_personajes()
         _, decoraciones, _, _, _, _ = juego.cargar_mapa_principal()
         self.decoraciones = [o for o in decoraciones if not es_personaje_jugable(o["nombre"])]
         self.fondo = juego.cargar_imagen("Fondos/Mapas/Pr_MañanaLumi.png", (960, 720))
-        self.fuente = juego.cargar_fuente(13)
+        self.fuente = juego.cargar_fuente(16)
         self.titulo = juego.cargar_fuente(20)
         self.jugadores = {}
         self.ultimo_paquete = time.monotonic()
@@ -99,6 +105,7 @@ class VistaPartida:
         from interfaz.cooperativo import PanelCooperativo
         self.panel = PanelCooperativo(self)
         self.seleccion = None
+        self.ultima_guia_seleccion = None
         self.mouse = (-1, -1)
         self.recibir(estado)
 
@@ -107,6 +114,10 @@ class VistaPartida:
         if mundo.get("firma_mapa") != self.firma:
             raise ValueError("El mapa no coincide con el servidor. Actualiza la rama multijugador en todas las PC y Render.")
         self.estado = estado
+        destino_guia = (mundo.get("privado", {}).get("guia", {}).get("objetivo") or {}).get("id")
+        if destino_guia != self.ultima_guia_seleccion:
+            self.seleccion = None
+            self.ultima_guia_seleccion = destino_guia
         self.ultimo_paquete = time.monotonic()
         self.aviso_red = ""
         presentes = set()
@@ -131,13 +142,39 @@ class VistaPartida:
         if not yo:
             return []
         objetivos = [dict(o) for o in mundo.get("caso", {}).get("objetivos", []) if self.cerca(o)]
+        encargo = mundo.get("caso", {}).get("encargo")
+        if encargo:
+            for o in objetivos:
+                for material in encargo["materiales"]:
+                    if o["id"] == material["fuente"]["id"]:
+                        o["nombre"] = "Recoger " + material["nombre"]
+                if o["id"] == encargo["destino"]["id"]:
+                    o["nombre"] = "Entregar: " + encargo["destino"]["nombre"]
+                if o["id"] == "caldero":
+                    o["nombre"] = "Confirmar el siguiente caso"
         objetivos.extend({"id": "jugador:" + j["id"], "nombre": "Compartir con " + j["nombre"], "x": j["x"], "y": j["y"]}
                          for j in mundo.get("jugadores", []) if j["id"] != self.identificador and j.get("conectado", True) and self.cerca(j, 64))
-        objetivos.sort(key=lambda o: math.hypot(yo["x"] - o["x"], yo["y"] - o["y"]) - (15 if o.get("rol") == yo["rol"] else 0))
+        recomendado = mundo.get("privado", {}).get("guia", {}).get("objetivo") or {}
+        objetivos.sort(key=lambda o: math.hypot(yo["x"] - o["x"], yo["y"] - o["y"]) - (1000 if o["id"] == recomendado.get("id") else 15 if o.get("rol") == yo["rol"] else 0))
         return objetivos
+
+    def accion_guiada(self, cliente):
+        guia = self.estado.get("mundo", {}).get("privado", {}).get("guia", {})
+        accion = guia.get("accion")
+        if accion == "pedir_pista":
+            cliente.actuar("pedir_pista")
+        elif accion == "inventario":
+            self.panel.abrir("inventario")
+        elif accion == "interactuar" and guia.get("objetivo") and self.cerca(guia["objetivo"]):
+            cliente.actuar("interactuar", objetivo=guia["objetivo"]["id"])
+        else:
+            self.panel.abrir("introduccion")
 
     def manejar_evento(self, evento, posicion, cliente):
         if self.panel.manejar(evento, posicion, cliente):
+            return True
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1 and self.boton_guia.collidepoint(posicion):
+            self.accion_guiada(cliente)
             return True
         if evento.type == pygame.KEYDOWN and evento.key in (pygame.K_e, pygame.K_TAB):
             opciones = self.candidatos()
@@ -161,6 +198,18 @@ class VistaPartida:
         if not pygame.key.get_focused() or self.panel.activo:
             dx = dy = 0
         cliente.mover(dx, dy)
+        mundo = self.estado.get("mundo", {})
+        destino = mundo.get("privado", {}).get("guia", {}).get("objetivo")
+        yo = next((j for j in mundo.get("jugadores", []) if j["id"] == self.identificador), None)
+        if destino and yo:
+            clave = (destino["id"], round(yo["x"]/24), round(yo["y"]/24))
+            if destino["id"] != self.destino_ruta or (clave != self.clave_ruta and time.monotonic()-self.ultima_ruta > .8):
+                from interfaz.guia import buscar_camino
+                self.ruta_guia = buscar_camino(self.colisiones, (yo["x"], yo["y"]), (destino["x"], destino["y"]))
+                self.clave_ruta, self.ultima_ruta = clave, time.monotonic()
+                self.destino_ruta = destino["id"]
+        else:
+            self.ruta_guia = []
         for jugador in self.jugadores.values():
             factor = 1 - math.exp(-24 * min(segundos, .1))
             jugador["posicion"] = jugador["posicion"].lerp(jugador["destino"], factor)
@@ -181,7 +230,13 @@ class VistaPartida:
                 superficie.blit(frames[(pygame.time.get_ticks() // 140) % len(frames)], objeto["rect"])
             else:
                 superficie.blit(objeto["imagen"], objeto["rect"])
+        for i, punto in enumerate(self.ruta_guia):
+            if i % 3 == (pygame.time.get_ticks()//280) % 3:
+                pygame.draw.circle(superficie, (255, 224, 121), punto, 3)
         etiquetas = []
+        from interfaz.suministros import dibujar_carga, dibujar_encargos
+        caso_actual = self.estado.get("mundo", {}).get("caso", {})
+        dibujar_encargos(superficie, caso_actual, self.fuente)
         for jugador in sorted(self.jugadores.values(), key=lambda j: j["posicion"].y):
             datos = jugador["datos"]
             rol = datos["rol"]
@@ -194,6 +249,11 @@ class VistaPartida:
             pygame.draw.ellipse(superficie, color, (x - 14, y - 6, 28, 9), 2)
             rect = frame.get_rect(midbottom=(x, y))
             superficie.blit(frame, rect)
+            carga = (caso_actual.get("encargo") or {}).get("cargas", {}).get(datos["id"])
+            if carga:
+                dibujar_carga(superficie, carga, (x + 22, y - 24))
+            if datos["id"] in caso_actual.get("tutorial_cargas", []):
+                dibujar_carga(superficie, "farol", (x + 22, y - 24))
             nombre = datos["nombre"] + (" (tú)" if datos["id"] == self.identificador else "")
             etiqueta = self.fuente.render(nombre, True, color)
             caja = etiqueta.get_rect(midbottom=(x, rect.top - 7))
@@ -217,35 +277,49 @@ class VistaPartida:
         if self.seleccion not in claves:
             self.seleccion = claves[0] if claves else None
         seleccion = next((o for o in opciones if o["id"] == self.seleccion), None)
-        instruccion = ("[E] " + seleccion["nombre"] + (" | Tab: cambiar" if len(opciones) > 1 else "")) if seleccion else "WASD: caminar | E: interactuar | I: pruebas | Q: habilidad | M: caso"
+        instruccion = ("[E] " + seleccion["nombre"] + (" | Tab: cambiar" if len(opciones) > 1 else "")) if seleccion else "Flechas: caminar | E: ayudar | I: pistas | M: tarea"
         ayuda = self.fuente.render(instruccion, True, (255, 243, 210))
         superficie.blit(ayuda, (22, 695))
         caso = self.estado.get("mundo", {}).get("caso", {})
         privado = self.estado.get("mundo", {}).get("privado", {})
         if caso:
-            hud = pygame.Surface((590, 107), pygame.SRCALPHA)
-            hud.fill((8, 28, 20, 235))
-            superficie.blit(hud, (12, 12))
-            self.panel.texto_lineas(superficie, caso["titulo"], 25, 22, 560, self.titulo, (237, 185, 87))
-            objetivo = privado.get("objetivo", {})
-            self.panel.texto_lineas(superficie, privado.get("instruccion", "Tu fuente: " + objetivo.get("nombre", "")), 25, 54, 560, self.fuente)
-            progreso = (f"Suministros: {caso.get('suministros', 0)}/2 | Listos: {caso.get('preparados', 0)}/{caso['votantes']} | M: preparar" if caso.get("fase") == "preparacion" else
-                        f"Puntos: {caso.get('puntos', 0)} | M: balance" if caso.get("fase") == "final" else
-                        f"Pruebas: {caso['pruebas_halladas']} | Eco en {caso.get('proxima_oleada', 60)}s | Q: habilidad | I: leer")
-            self.panel.texto_lineas(superficie, progreso, 25, 83, 560, self.fuente)
+            guia = privado.get("guia", {})
+            hud = pygame.Surface((590, 150), pygame.SRCALPHA)
+            hud.fill((8, 28, 20, 240)); superficie.blit(hud, (12, 12))
+            self.panel.texto_lineas(superficie, guia.get("titulo", caso["titulo"]), 25, 23, 560, self.titulo, (237, 185, 87))
+            self.panel.texto_lineas(superficie, guia.get("detalle", privado.get("instruccion", "")), 25, 58, 560, self.fuente)
+            if not self.panel.activo:
+                pygame.draw.rect(superficie, (126, 81, 45), self.boton_guia, border_radius=7)
+                pygame.draw.rect(superficie, (237, 185, 87), self.boton_guia, 2, border_radius=7)
+                objetivo = guia.get("objetivo") or {}
+                etiqueta = guia.get("boton", "Ver mi tarea")
+                if objetivo and guia.get("accion") == "interactuar" and not self.cerca(objetivo):
+                    etiqueta = "Ver mi tarea · M"
+                texto = self.panel.pequena.render(etiqueta, True, (255, 243, 210))
+                superficie.blit(texto, texto.get_rect(center=self.boton_guia.center))
+            objetivo = guia.get("objetivo") or privado.get("objetivo", {})
             for o in caso["objetivos"]:
-                if o.get("rol") == objetivo.get("rol") or o["id"] == "caldero":
-                    color = (126, 231, 188) if o.get("rol") else (237, 185, 87)
-                    radio = 9 + round(math.sin(pygame.time.get_ticks() / 250) * 2)
-                    pygame.draw.circle(superficie, color, (o["x"], o["y"] + 5), radio, 2)
-            badge = pygame.Surface((330, 110), pygame.SRCALPHA)
-            badge.fill((8, 28, 20, 235))
-            superficie.blit(badge, (618, 12))
-            for i, (nombre, valor) in enumerate(caso["indicadores"].items()):
-                self.panel.texto_lineas(superficie, f"{nombre.capitalize()}: {valor}", 632, 22 + i * 23, 300, self.fuente)
-            estado_puente = {"sin_verificar": "Puente: información sin verificar", "revision_programada": "Puente: revisión mañana", "alarma_injustificada": "Puente: falsa alarma", "aviso_pendiente": "Puente: aviso pendiente"}[caso["estado_puente"]]
-            self.panel.texto_lineas(superficie, estado_puente, 632, 93, 300, self.fuente, (237, 185, 87))
+                if o["id"] == objetivo.get("id"):
+                    radio = 16 + round(math.sin(pygame.time.get_ticks()/220)*3)
+                    pygame.draw.circle(superficie, (255, 224, 121), (o["x"], o["y"]+5), radio, 3)
+            badge = pygame.Surface((330, 116), pygame.SRCALPHA)
+            badge.fill((8, 28, 20, 240)); superficie.blit(badge, (618, 12))
+            from interfaz.guia import estrella
+            estrella(superficie, (646, 36), 15, (255, 215, 90))
+            self.panel.texto_lineas(superficie, f"{caso.get('estrellas', 0)} / {caso.get('estrellas_total', 11)} estrellas", 672, 25, 260, self.titulo)
+            self.panel.texto_lineas(superficie, "Primera aventura: sin reloj" if caso.get("sin_prisa") else f"El rumor crece en {caso.get('proxima_oleada',60)} s", 632, 65, 300, self.fuente, (237, 185, 87))
+            self.panel.texto_lineas(superficie, "I: pistas · M: mi tarea", 632, 96, 300, self.fuente)
+            # Las estrellas llenan de luz la aldea sin tapar los controles.
+            for i in range(min(11, caso.get("estrellas", 0))):
+                estrella(superficie, (305+i*30, 630), 7, (255, 222, 112))
         if self.aviso_red or time.monotonic() - self.ultimo_paquete > 1:
             aviso = self.titulo.render(self.aviso_red or "Esperando al servidor…", True, (255, 207, 110))
             superficie.blit(aviso, aviso.get_rect(center=(480, 45)))
         self.panel.dibujar(superficie)
+        if time.monotonic() < self.panel.celebrar_hasta:
+            from interfaz.guia import estrella
+            reloj = pygame.time.get_ticks()/350
+            for i in range(14):
+                x = 48 if i < 7 else 912
+                y = 165+(i%7)*65+int(10*math.sin(reloj+i))
+                estrella(superficie, (x, y), 8+int(3*math.sin(reloj*2+i)), (255, 223, 104))

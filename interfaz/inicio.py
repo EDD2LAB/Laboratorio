@@ -313,7 +313,7 @@ class MenuInicio:
         cabecera = (f"Código de sala: {self.codigo_sala} · Comparte este código" if self.internet else
                     f"IP: {direccion}   Puerto: {self.campos['puerto']}")
         self.parrafo(cabecera, pygame.Rect(44, 84, 866, 45), 16)
-        self.texto("2–4 jugadores · Cada rol solo puede elegirse una vez", 44, 132, 14)
+        self.texto("Elijan personajes distintos y pulsen Estoy listo.", 44, 132, 14)
         jugadores = self.estado["jugadores"]
         yo = next((j for j in jugadores if j["id"] == self.identificador), {})
         for i in range(4):
@@ -330,8 +330,8 @@ class MenuInicio:
             if jugador["anfitrion"]:
                 self.lienzo.blit(self.corona, (x + 173, 167))
         descripciones = (
-            "Contrasta fuentes y verifica la información.", "Transporta mensajes y conecta al equipo.",
-            "Escucha testimonios de la comunidad.", "Presenta propuestas y responde rumores.")
+            "Busca pistas y revisa los mensajes.", "Lleva pistas a tus compañeros.",
+            "Habla con los vecinos y ayuda.", "Explica lo que pasó usando pistas.")
         for i, rol in enumerate(ROLES):
             x = 32 + i * 228
             dueno = next((j for j in jugadores if j["rol"] == rol), None)
@@ -341,7 +341,7 @@ class MenuInicio:
             self.lienzo.blit(self.retratos[i], self.retratos[i].get_rect(midbottom=(x + 106, 425)))
             self.lienzo.blit(self.iconos[i], (x + 12, 350))
             self.parrafo(descripciones[i], pygame.Rect(x + 14, 434, 184, 55), 14)
-            self.boton("rol:" + rol, "Liberar rol" if mio else "Ocupado" if dueno else "Elegir", (x + 106, 512), 176,
+            self.boton("rol:" + rol, "Elegir otro" if mio else "Ocupado" if dueno else "Elegir", (x + 106, 512), 176,
                        (not dueno or mio) and not self.estado["iniciada"])
         self.boton("volver", "Salir de sala", (157, 605), 220)
         self.boton("listo", "No estoy listo" if yo.get("listo") else "Estoy listo", (480, 605), 240,
