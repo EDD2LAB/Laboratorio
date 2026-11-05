@@ -74,7 +74,7 @@ class PruebasCaso(unittest.TestCase):
                 self.assertIsNone(p.mision.resultado)
                 self.assertTrue(actuar(p, "1", "votar", opcion="corregir")["ok"])
                 self.assertTrue(p.mision.resultado["correcto"])
-                self.assertEqual(p.mision.indicadores["confianza"], 62)
+                self.assertEqual(p.mision.indicadores["confianza"], 65)  # 12 de decisión + 3 de cooperación.
 
     def test_distancia_rol_y_prueba_fabricada(self):
         p = partida()
@@ -110,7 +110,7 @@ class PruebasCaso(unittest.TestCase):
         actuar(p, "0", "votar", opcion="corregir")
         voto = {"accion": "votar", "id_solicitud": uuid.uuid4().hex, "opcion": "corregir"}
         p.actuar("1", voto, 0); p.actuar("1", voto, 0)
-        self.assertEqual(p.mision.indicadores["confianza"], 62)
+        self.assertEqual(p.mision.indicadores["confianza"], 65)  # 12 de decisión + 3 de cooperación.
 
     def test_eco_distancia_mensajes_y_recepcion(self):
         p = partida(); recoger(p, "0")

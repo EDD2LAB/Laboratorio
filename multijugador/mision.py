@@ -26,6 +26,9 @@ def normalizar(texto):
 
 class MisionPuente:
     def __init__(self, jugadores, datos_mapa):
+        self.pruebas = PRUEBAS
+        self.opciones = OPCIONES
+        self.correcta = "corregir"
         self.jugadores = jugadores  # referencia al estado autoritativo
         self.conocidas = {i: set() for i in jugadores}
         self.halladas = {}
@@ -123,7 +126,7 @@ class MisionPuente:
                     self.halladas[pista] = identificador
                     self._avisar([identificador], "Registraste una prueba. Abre I para leerla y compartirla.")
                     self._registrar(f"{jugador['nombre']} registró una prueba de su fuente.")
-                titulo, texto = PRUEBAS[jugador["rol"]]
+                titulo, texto = self.pruebas[jugador["rol"]]
                 return {"mensaje": texto, "titulo": titulo, "vista": "eco" if objetivo["tipo"] == "eco" else "fuente"}
             if objetivo["tipo"] == "caldero":
                 return {"mensaje": "Comparen las pruebas y decidan juntos qué comunicar.", "vista": "resultado" if self.resultado else "caldero"}
@@ -196,7 +199,7 @@ class MisionPuente:
         opcion, cantidad = conteo.most_common(1)[0]
         if cantidad <= len(presentes) / 2:
             return  # Empate: los participantes pueden cambiar su voto.
-        correcto = opcion == "corregir"
+        correcto = opcion == self.correcta
         if correcto:
             efectos = {"confianza": 8 if self.rectificacion else 12, "armonia": 8, "desinformacion": -10}
             texto = "El cierre total de hoy era un rumor. Publicaron una aclaración con fuentes: mañana habrá mantenimiento parcial."
@@ -214,9 +217,13 @@ class MisionPuente:
             self.estado_puente = "aviso_pendiente"
         for nombre, cambio in efectos.items():
             self.indicadores[nombre] = max(0, min(100, self.indicadores[nombre] + cambio))
+        texto = self.texto_resultado(texto, correcto)
         self.resultado = {"opcion": opcion, "correcto": correcto, "texto": texto, "efectos": efectos}
-        self._registrar("Decisión del equipo: " + OPCIONES[opcion])
+        self._registrar("Decisión del equipo: " + self.opciones[opcion])
         self._avisar(self.jugadores.keys(), texto, "resultado")
+
+    def texto_resultado(self, texto, correcto):
+        return texto
 
     def publico(self, presentes):
         participantes = set(presentes) & self.jugadores.keys()
@@ -229,7 +236,7 @@ class MisionPuente:
             "votos_emitidos": sum(i in self.votos for i in participantes), "votantes": len(participantes),
             "empate": empate, "resultado": self.resultado, "rectificacion": self.rectificacion,
             "indicadores": dict(self.indicadores), "estado_puente": self.estado_puente,
-            "historial": list(self.historial), "opciones": dict(OPCIONES), "mensajes_eco": list(MENSAJES),
+            "historial": list(self.historial), "opciones": dict(self.opciones), "mensajes_eco": list(MENSAJES),
         }
 
     def privado(self, identificador):
@@ -240,7 +247,7 @@ class MisionPuente:
         inventario = []
         for pista in sorted(self.conocidas[identificador]):
             rol_pista = pista.removeprefix("pista_")
-            titulo, texto = PRUEBAS[rol_pista]
+            titulo, texto = self.pruebas[rol_pista]
             inventario.append({"id": pista, "titulo": titulo, "texto": texto, "origen": self.halladas[pista]})
         if self.resultado:
             instruccion = "Revisa el resultado común en el caldero."

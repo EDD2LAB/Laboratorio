@@ -217,7 +217,7 @@ class VistaPartida:
         if self.seleccion not in claves:
             self.seleccion = claves[0] if claves else None
         seleccion = next((o for o in opciones if o["id"] == self.seleccion), None)
-        instruccion = ("[E] " + seleccion["nombre"] + (" | Tab: cambiar" if len(opciones) > 1 else "")) if seleccion else "WASD: caminar | E: interactuar | I: pruebas | M: caso | Esc: salir"
+        instruccion = ("[E] " + seleccion["nombre"] + (" | Tab: cambiar" if len(opciones) > 1 else "")) if seleccion else "WASD: caminar | E: interactuar | I: pruebas | Q: habilidad | M: caso"
         ayuda = self.fuente.render(instruccion, True, (255, 243, 210))
         superficie.blit(ayuda, (22, 695))
         caso = self.estado.get("mundo", {}).get("caso", {})
@@ -229,7 +229,10 @@ class VistaPartida:
             self.panel.texto_lineas(superficie, caso["titulo"], 25, 22, 560, self.titulo, (237, 185, 87))
             objetivo = privado.get("objetivo", {})
             self.panel.texto_lineas(superficie, privado.get("instruccion", "Tu fuente: " + objetivo.get("nombre", "")), 25, 54, 560, self.fuente)
-            self.panel.texto_lineas(superficie, f"Pruebas: {caso['pruebas_halladas']} | Entregas: {caso['entregas']} | Votos: {caso['votos_emitidos']}/{caso['votantes']} | I: leer", 25, 83, 560, self.fuente)
+            progreso = (f"Suministros: {caso.get('suministros', 0)}/2 | Listos: {caso.get('preparados', 0)}/{caso['votantes']} | M: preparar" if caso.get("fase") == "preparacion" else
+                        f"Puntos: {caso.get('puntos', 0)} | M: balance" if caso.get("fase") == "final" else
+                        f"Pruebas: {caso['pruebas_halladas']} | Eco en {caso.get('proxima_oleada', 60)}s | Q: habilidad | I: leer")
+            self.panel.texto_lineas(superficie, progreso, 25, 83, 560, self.fuente)
             for o in caso["objetivos"]:
                 if o.get("rol") == objetivo.get("rol") or o["id"] == "caldero":
                     color = (126, 231, 188) if o.get("rol") else (237, 185, 87)

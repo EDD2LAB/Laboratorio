@@ -124,9 +124,9 @@ class PartidaMovimiento:
                 "id": jugador["id"], "nombre": jugador["nombre"], "rol": jugador["rol"],
                 "x": x, "y": y, "direccion": "abajo", "animacion": "reposo", "seq": -1,
             }
-        from .mision import MisionPuente
+        from .campana import CampanaCopa
         self.conectados = set(self.jugadores)
-        self.mision = MisionPuente(self.jugadores, self.colisiones.datos)
+        self.mision = CampanaCopa(self.jugadores, self.colisiones.datos)
 
     def actuar(self, identificador, datos, ahora):
         self.actualizar(ahora)
@@ -161,6 +161,7 @@ class PartidaMovimiento:
             elif dy:
                 jugador["direccion"] = "abajo" if dy > 0 else "arriba"
         self.mision.resolver(self.conectados)
+        self.mision.actualizar(ahora - desde, self.conectados)
 
     def quitar(self, identificador):
         self.jugadores.pop(identificador, None)

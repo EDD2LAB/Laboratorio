@@ -1,4 +1,45 @@
-# Multijugador: primera misión cooperativa
+# Multijugador: campaña cooperativa de La Copa
+
+## Campaña actual (protocolo 4)
+
+Una sala recorre cuatro investigaciones sin desconectarse: puente norte, agua,
+tormenta y reparto de ayuda. El agua y la tormenta tienen dos versiones posibles,
+seleccionadas por el servidor al crear la partida. La decisión correcta depende
+de las pruebas de esa versión; los clientes nunca reciben la solución oficial.
+Las opciones son publicar una aclaración, difundir el aviso o retirarlo.
+
+Cada minuto de investigación con al menos dos conectados suma tres puntos de
+desinformación. La cuenta se pausa si falta equipo y durante la preparación.
+No hay una derrota automática por tiempo. Informar a todos los integrantes con
+dos pruebas concede un bono de confianza una vez por caso y 20 puntos extra.
+Resolver bien concede 100 puntos, o 80 tras una rectificación; las puntuaciones
+se acumulan y el balance final conserva los cuatro resultados.
+
+Entre casos, al menos dos jugadores recogen suministros en sus respectivas
+fuentes y los depositan en el caldero. E permite recoger/depositar, y M abre el
+panel de preparación. Todos los conectados confirman allí el siguiente caso.
+Los suministros son una tarea de transporte; no modifican las colisiones de los
+puentes ni incorporan el minijuego de reparación del modo individual.
+
+Q activa una habilidad, una vez por investigación:
+
+| Rol | Acción y requisito |
+| --- | --- |
+| Guardián | Auditar su prueba en la fuente: -4 desinformación. |
+| Mensajero | Entregar su prueba a todos los conectados, desde cualquier lugar. |
+| Habitante | Asamblea en su fuente junto a otro jugador: +4 confianza. |
+| Aspirante | Rendir cuentas en el caldero con dos pruebas: +4 armonía. |
+
+Todas requieren haber recogido primero la prueba propia. El servidor valida
+posiciones y consumos. Las acciones llevan el número de caso y se rechazan si
+pertenecen a otra ronda; el historial de acuses se conserva entre casos.
+
+Para publicar esta versión hay que actualizar clientes y servidor a protocolo 4,
+desplegar el commit en Render y crear una sala nueva. `/health` debe indicar
+`protocolo: 4`, `campana: "la_copa"` y `casos: 4`.
+
+El contenido de Distrito Conecta continúa exclusivamente en el modo individual.
+La campaña no guarda partidas después de cerrar el juego o reiniciar el servidor.
 
 ## Actualizar cada PC
 
@@ -81,9 +122,9 @@ para pruebas con la variable `COPA_SERVIDOR_INTERNET`.
 - Al salir un invitado desaparece del mapa; los demás continúan.
 - Al salir el anfitrión se cierra la sala para todos.
 
-El modo individual se conserva. Esta entrega añade un caso cooperativo completo,
-no todo el contenido individual: faltan el catálogo de tablillas, conversaciones
-libres, habilidades, objetos consumibles, portales y las otras dimensiones.
+El modo individual se conserva. La campaña incluye habilidades de rol y cuatro
+casos, con variantes. El catálogo individual de tablillas, las conversaciones
+libres, los objetos consumibles y las otras dimensiones no se comparten por red.
 Los cortes breves de WebSocket tienen hasta tres reintentos automáticos y
 conservan temporalmente el rol, posición y sesión. Cerrar el juego o salir
 explícitamente no recupera la sesión al abrirlo de nuevo. No hay predicción
@@ -91,14 +132,14 @@ local; con latencia alta la respuesta al teclado puede tardar en llegar.
 
 ## Actualizar el servidor de Render
 
-Esta entrega usa **protocolo 3**. No es compatible con el servidor anterior:
+Esta entrega usa **protocolo 4**. No es compatible con el servidor anterior:
 actualizar tanto Render como las PC antes de probar una sala.
 
 1. Publicar el commit de esta entrega en la rama `multijugador`.
 2. En Render abrir el servicio `la-copa-salas`.
 3. Seleccionar **Manual Deploy → Deploy latest commit** y esperar a Live.
 4. Abrir `https://la-copa-salas.onrender.com/health`.
-5. La respuesta debe incluir `"protocolo": 3`, `"movimiento": true` y
+5. La respuesta debe incluir `"protocolo": 4`, `"movimiento": true` y
    `"mision": "puente_norte"`. El campo `build` identifica el commit desplegado.
 
 Docker instala aiohttp y copia solo el código del servidor y los JSON de
@@ -125,7 +166,12 @@ Incluyen cuatro clientes WebSocket reales, autenticación, inicio, movimiento,
 colisiones, límites de velocidad, desconexión, aislamiento de salas y compatibilidad.
 Las pruebas locales no sustituyen una prueba manual entre dos PC con redes distintas.
 
-Validación de esta entrega (31 de octubre de 2026): 32 pruebas aprobadas,
+La campaña se comprueba con las seis parejas de roles, un equipo de cuatro y
+dos clientes WebSocket reales completando los cuatro casos. Las regresiones
+incluyen variantes, habilidades, presión, preparación con una ausencia temporal,
+rectificación sin duplicar puntos y rechazo de acciones de rondas anteriores.
+
+Validación de la entrega anterior (31 de octubre de 2026): 32 pruebas aprobadas,
 caso completo comprobado desde la interfaz con dos clientes y prueba prolongada
 de 600 segundos con cuatro clientes, 42.517 estados y tres cortes recuperados.
 El servidor y los clientes de estas verificaciones se ejecutaron localmente.

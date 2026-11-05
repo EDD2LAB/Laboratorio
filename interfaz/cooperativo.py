@@ -27,6 +27,7 @@ class PanelCooperativo:
         self.toast_hasta = 0
         self.aviso_id = 0
         self.resultado_visto = None
+        self.ronda_vista = None
 
     @property
     def activo(self):
@@ -45,13 +46,19 @@ class PanelCooperativo:
         self.destino_fijo = None
 
     def actualizar(self):
+        ronda = self.caso.get("ronda", 0)
+        if self.ronda_vista != ronda:
+            self.ronda_vista = ronda
+            self.resultado_visto = None
+            self.indice_pista = 0
+            self.abrir("introduccion")
         for aviso in self.privado.get("avisos", []):
             if aviso["id"] > self.aviso_id:
                 self.aviso_id = aviso["id"]
                 self.notificar(aviso["texto"])
         resultado = self.caso.get("resultado")
         if resultado:
-            clave = (resultado["opcion"], self.caso.get("rectificacion"))
+            clave = (ronda, resultado["opcion"], self.caso.get("rectificacion"))
             if clave != self.resultado_visto:
                 self.resultado_visto = clave
                 self.abrir("resultado")
@@ -96,18 +103,36 @@ class PanelCooperativo:
         velo = pygame.Surface((960, 720), pygame.SRCALPHA)
         velo.fill((2, 12, 8, 155))
         superficie.blit(velo, (0, 0))
+        if time.monotonic() < self.toast_hasta and self.modo in ("introduccion", "resultado"):
+            pygame.draw.rect(superficie, (10, 30, 23), (25, 5, 910, 63), border_radius=8)
+            self.texto_lineas(superficie, self.toast, 40, 13, 880, self.pequena, VERDE)
         rect = pygame.Rect(165, 75, 630, 570)
         pygame.draw.rect(superficie, (17, 39, 29), rect, border_radius=16)
         pygame.draw.rect(superficie, ORO, rect, 3, border_radius=16)
-        titulos = {"introduccion": "NUEVO CASO COOPERATIVO", "inventario": "MIS PRUEBAS", "caldero": "CONSEJO DEL CALDERO", "eco": "TRONCO DE LOS ECOS",
+        titulos = {"introduccion": ("PREPARAR EL EQUIPO" if self.caso.get("fase") == "preparacion" else "BALANCE DE LA CAMPAÑA" if self.caso.get("fase") == "final" else "NUEVO CASO COOPERATIVO"), "inventario": "MIS PRUEBAS", "caldero": "CONSEJO DEL CALDERO", "eco": "TRONCO DE LOS ECOS",
                    "eco_mensajes": "MENSAJES AL EQUIPO", "resultado": "RESULTADO DEL EQUIPO", "fuente": self.titulo}
         t = self.encabezado.render(titulos.get(self.modo, "INVESTIGACIÓN"), True, ORO)
         superficie.blit(t, t.get_rect(midtop=(480, 100)))
         inventario = self.privado.get("inventario", [])
         if self.modo == "introduccion":
-            self.texto_lineas(superficie, self.caso.get("noticia", ""), 210, 175, color=ORO)
-            self.texto_lineas(superficie, "Cada rol conoce una parte de la historia. Visita tu fuente con E, lee tu prueba con I y compártela con un compañero. Reúnan al menos dos pruebas y decidan juntos en el caldero.", 210, 280)
-            self.texto_lineas(superficie, "Tu fuente: " + self.privado.get("objetivo", {}).get("nombre", ""), 210, 458, fuente=self.pequena, color=VERDE)
+            self.texto_lineas(superficie, self.caso.get("titulo", ""), 210, 150, fuente=self.pequena, color=ORO)
+            self.texto_lineas(superficie, self.caso.get("noticia", ""), 210, 183)
+            if self.caso.get("fase") == "preparacion":
+                self.texto_lineas(superficie, "Recoge suministros cerca de tu fuente. Dos jugadores deben llevarlos al caldero. Allí, todos confirman que están listos para el próximo caso.", 210, 290)
+                self.texto_lineas(superficie, f"Aportes: {self.caso.get('suministros', 0)}/2 · Listos: {self.caso.get('preparados', 0)}/{self.caso.get('votantes', 0)}", 210, 410, fuente=self.pequena, color=VERDE)
+                self.boton(superficie, "recoger_suministro", "Recoger en mi fuente", 480, 465, 410, not self.privado.get("suministro"))
+                self.boton(superficie, "depositar", "Depositar en el caldero", 480, 515, 410, self.privado.get("suministro") and not self.privado.get("depositado"))
+                self.boton(superficie, "continuar", "Listo para el siguiente caso", 480, 565, 410, self.en_caldero() and not self.privado.get("preparado"))
+            elif self.caso.get("fase") == "final":
+                aciertos = sum(c.get("correcto", False) for c in self.caso.get("balance", []))
+                self.texto_lineas(superficie, f"Campaña completada: {aciertos}/{self.caso.get('total_casos', 4)} casos correctos. Puntos: {self.caso.get('puntos', 0)}.", 210, 280, color=VERDE)
+                for i, caso in enumerate(self.caso.get("balance", [])):
+                    self.texto_lineas(superficie, ("Bien: " if caso["correcto"] else "Error: ") + caso["caso"], 210, 360 + i * 36, fuente=self.pequena)
+            else:
+                self.texto_lineas(superficie, "E: investigar. I: compartir. Voten según las pruebas. El rumor crece cada minuto; con menos de dos conectados se pausa. Bono: todos con dos pruebas.", 210, 275, fuente=self.pequena)
+                self.texto_lineas(superficie, self.privado.get("habilidad", "") + ": " + self.privado.get("descripcion_habilidad", ""), 210, 390, fuente=self.pequena, color=VERDE)
+                self.boton(superficie, "habilidad", "Usar habilidad de mi rol", 480, 485, 410, not self.privado.get("habilidad_usada"))
+                self.texto_lineas(superficie, "Tu fuente: " + self.privado.get("objetivo", {}).get("nombre", ""), 210, 525, fuente=self.pequena)
         elif self.modo == "fuente":
             self.texto_lineas(superficie, self.texto, 210, 175)
             self.boton(superficie, "inventario", "Leer mis pruebas", 480, 470)
@@ -157,7 +182,7 @@ class PanelCooperativo:
                 self.boton(superficie, "votar:" + clave, texto, 480, 392 + i * 58, 430, listo and self.en_caldero())
         elif self.modo == "resultado":
             resultado = self.caso.get("resultado") or {}
-            self.texto_lineas(superficie, resultado.get("texto", ""), 210, 175)
+            self.texto_lineas(superficie, resultado.get("texto", ""), 210, 160, fuente=self.pequena)
             for i, (nombre, valor) in enumerate(self.caso.get("indicadores", {}).items()):
                 etiqueta = {"confianza": "Confianza", "armonia": "Armonía", "desinformacion": "Desinformación"}.get(nombre, nombre)
                 self.texto_lineas(superficie, f"{etiqueta}: {valor}", 240, 346 + i * 31, color=VERDE if resultado.get("correcto") else ORO)
@@ -165,10 +190,11 @@ class PanelCooperativo:
                 self.boton(superficie, "rectificar", "Revisar decisión", 480, 493, 330, self.en_caldero())
                 if not self.en_caldero():
                     self.texto_lineas(superficie, "Acércate al caldero para rectificar.", 210, 525, fuente=self.pequena)
+            self.boton(superficie, "introduccion", "Balance" if self.caso.get("fase") == "final" else "Preparar siguiente caso", 480, 565, 410)
         # Área separada para la confirmación; nunca tapa las pruebas ni botones.
-        if time.monotonic() < self.toast_hasta and self.modo != "resultado":
+        if time.monotonic() < self.toast_hasta and self.modo not in ("resultado", "introduccion"):
             self.texto_lineas(superficie, self.toast, 195, 552, 570, self.pequena, VERDE)
-        self.boton(superficie, "cerrar", "Investigar" if self.modo == "introduccion" else "Cerrar · Esc", 480, 614, 260)
+        self.boton(superficie, "cerrar", "Volver al mapa" if self.modo == "introduccion" else "Cerrar · Esc", 480, 614, 260)
 
     def en_caldero(self):
         return any(o["id"] == "caldero" and self.vista.cerca(o) for o in self.caso.get("objetivos", []))
@@ -191,6 +217,9 @@ class PanelCooperativo:
             if evento.key == pygame.K_m:
                 self.abrir("introduccion")
                 return True
+            if evento.key == pygame.K_q and not self.activo:
+                cliente.actuar("habilidad")
+                return True
             if self.activo:
                 return True
         if not self.activo or evento.type != pygame.MOUSEBUTTONDOWN or evento.button != 1:
@@ -200,8 +229,10 @@ class PanelCooperativo:
                 continue
             if clave == "cerrar":
                 self.modo = None
-            elif clave in ("inventario", "eco_mensajes"):
+            elif clave in ("inventario", "eco_mensajes", "introduccion"):
                 self.abrir(clave)
+            elif clave in ("habilidad", "recoger_suministro", "depositar", "continuar"):
+                cliente.actuar(clave)
             elif clave == "pista_anterior":
                 self.indice_pista -= 1
             elif clave == "pista_siguiente":

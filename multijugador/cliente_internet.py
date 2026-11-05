@@ -50,6 +50,7 @@ class ClienteInternet:
         self._pendientes = {}
         self._lock_acciones = threading.Lock()
         self._ultimo_estado = 0
+        self._ronda = 0
         self._http = urllib.request.build_opener(SinRedirecciones())
         threading.Thread(target=self._ejecutar, daemon=True).start()
 
@@ -78,6 +79,7 @@ class ClienteInternet:
         return valor
 
     def _evento(self, evento):
+        self._ronda = evento.get("mundo", {}).get("caso", {}).get("ronda", self._ronda)
         try:
             self.eventos.put_nowait(evento)
         except queue.Full:
@@ -94,7 +96,7 @@ class ClienteInternet:
         self._movimiento = (dx, dy)
 
     def actuar(self, accion, **datos):
-        solicitud = {"tipo": "accion", "accion": accion, "id_solicitud": uuid.uuid4().hex, **datos}
+        solicitud = {"tipo": "accion", "accion": accion, "id_solicitud": uuid.uuid4().hex, "ronda": self._ronda, **datos}
         with self._lock_acciones:
             if len(self._pendientes) >= 16:
                 self._evento({"tipo": "error", "mensaje": "Espera a que el servidor confirme tus acciones."})
