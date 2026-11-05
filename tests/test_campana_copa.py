@@ -29,12 +29,27 @@ class CampanaTests(unittest.TestCase):
             otro = next(j for j in p.jugadores if j != i)
             self.assertTrue(self.accion(p, otro, "entregar", pista="pista_" + p.jugadores[otro]["rol"], destinatario=i, medio="directo")["ok"])
 
+    def hacer_actividad(self, p):
+        ids = list(p.jugadores)[:2]
+        d = p.mision.encargo.destino
+        for i in ids:
+            p.jugadores[i].update(x=d["x"], y=d["y"])
+        self.assertTrue(self.accion(p, ids[0], "sujetar")["ok"])
+        for _ in range(3):
+            p.actualizar(p.ultima + 1)
+            self.assertTrue(self.accion(p, ids[1], "trabajar")["ok"])
+
     def avanzar(self, p):
-        for i in p.jugadores:
-            self.fuente(p, i)
-            self.assertTrue(self.accion(p, i, "recoger_suministro")["ok"])
-            p.jugadores[i].update(x=480, y=380)
+        for i in list(p.jugadores)[:2]:
+            if i not in p.mision.materiales:
+                self.fuente(p, i)
+                self.assertTrue(self.accion(p, i, "recoger_suministro")["ok"])
+            d = p.mision.encargo.destino
+            p.jugadores[i].update(x=d["x"], y=d["y"])
             self.assertTrue(self.accion(p, i, "depositar")["ok"])
+        self.hacer_actividad(p)
+        for j in p.jugadores.values():
+            j.update(x=480, y=380)
         for i in p.jugadores:
             self.assertTrue(self.accion(p, i, "continuar")["ok"])
 
@@ -54,6 +69,7 @@ class CampanaTests(unittest.TestCase):
                         self.assertFalse(p.mision.conocidas["0"])
                 self.assertEqual(p.mision.fase, "final")
                 self.assertEqual(len(p.mision.publico(p.conectados)["balance"]), 4)
+                self.assertEqual(p.mision.publico(p.conectados)["estrellas"], 11)
 
     def test_suministros_distancia_dos_aportes_y_acuses_antiguos(self):
         p = self.crear(("guardian", "habitante"))
@@ -94,8 +110,8 @@ class CampanaTests(unittest.TestCase):
         p.conectados.add("1")
         for segundo in range(65, 126):
             p.actualizar(segundo)
-        self.assertEqual(p.mision.oleadas, 1)
-        self.assertEqual(p.mision.indicadores["desinformacion"], 3)
+        self.assertEqual(p.mision.oleadas, 0)  # El primer caso no tiene presión.
+        self.assertEqual(p.mision.indicadores["desinformacion"], 0)
         self.preparar(p)
         p.mision.actualizar(0, p.conectados)
         confianza = p.mision.indicadores["confianza"]
@@ -136,9 +152,12 @@ class CampanaTests(unittest.TestCase):
         for i in ("0", "1"):
             self.fuente(p, i)
             self.accion(p, i, "recoger_suministro")
-            p.jugadores[i].update(x=480, y=380)
+            d = p.mision.encargo.destino
+            p.jugadores[i].update(x=d["x"], y=d["y"])
             self.accion(p, i, "depositar")
+        self.hacer_actividad(p)
         for i in ("0", "1"):
+            p.jugadores[i].update(x=480, y=380)
             self.accion(p, i, "continuar")
         self.assertEqual(p.mision.ronda, 0)
         p.conectados.discard("2")
@@ -196,8 +215,17 @@ class CampanaRedTests(unittest.IsolatedAsyncioTestCase):
                                 o = p.mision.privado(j["id"])["objetivo"]
                                 p.jugadores[j["id"]].update(x=o["x"], y=o["y"])
                                 await actuar(i, "recoger_suministro")
-                                p.jugadores[j["id"]].update(x=480, y=380)
+                                d = p.mision.encargo.destino
+                                p.jugadores[j["id"]].update(x=d["x"], y=d["y"])
                                 await actuar(i, "depositar")
+                            for j in p.jugadores.values():
+                                j.update(x=d["x"], y=d["y"])
+                            await actuar(0, "sujetar")
+                            for _ in range(3):
+                                await asyncio.sleep(.7)
+                                await actuar(1, "trabajar")
+                            for j in p.jugadores.values():
+                                j.update(x=480, y=380)
                             for i in range(2):
                                 await actuar(i, "continuar")
                     self.assertEqual(p.mision.fase, "final")
