@@ -1,0 +1,57 @@
+         42830916 function calls (42744795 primitive calls) in 30.007 seconds
+
+   Ordered by: internal time
+   List reduced from 423 to 15 due to restriction <15>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+37581/28857    9.053    0.000   11.773    0.000 C:\Users\Sebastian\Laboratorio\multijugador\movimiento.py:57(bloqueado)
+ 21288347    3.255    0.000    3.255    0.000 {method 'get' of 'dict' objects}
+ 21623/39    3.241    0.000    0.001    0.000 {built-in method _overlapped.GetQueuedCompletionStatus}
+     1188    2.830    0.002    2.839    0.002 {method 'tick' of 'pygame.time.Clock' objects}
+   145520    1.948    0.000    1.948    0.000 {method 'blit' of 'pygame.surface.Surface' objects}
+  7172692    1.027    0.000    1.027    0.000 {built-in method builtins.max}
+465426/457743    0.832    0.000    1.512    0.000 C:\Users\Sebastian\Laboratorio\multijugador\movimiento.py:46(rectangulo)
+  3094405    0.695    0.000    0.695    0.000 {built-in method math.hypot}
+  3145734    0.474    0.000    0.474    0.000 {built-in method builtins.min}
+     1188    0.361    0.000    4.036    0.003 C:\Users\Sebastian\Laboratorio\interfaz\partida_multijugador.py:476(dibujar)
+    27324    0.338    0.000    0.338    0.000 {method 'render' of 'pygame.font.Font' objects}
+  2025758    0.338    0.000    0.338    0.000 {built-in method builtins.round}
+   962280    0.253    0.000    0.385    0.000 C:\Users\Sebastian\Laboratorio\juego.py:111(<genexpr>)
+     3856    0.209    0.000    0.209    0.000 C:\Users\Sebastian\AppData\Local\Python\pythoncore-3.14-64\Lib\json\encoder.py:207(iterencode)
+     3856    0.207    0.000    0.207    0.000 C:\Users\Sebastian\AppData\Local\Python\pythoncore-3.14-64\Lib\json\decoder.py:351(raw_decode)
+
+
+
+         42830916 function calls (42744795 primitive calls) in 30.007 seconds
+
+   Ordered by: cumulative time
+   List reduced from 423 to 25 due to restriction <25>
+
+   ncalls  tottime  percall  cumtime  percall filename:lineno(function)
+13980/13976    0.137    0.000   78.217    0.006 C:\Users\Sebastian\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\base_events.py:1966(_run_once)
+21770/10592    0.063    0.000   42.332    0.004 C:\Users\Sebastian\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\events.py:92(_run)
+21770/10592    0.063    0.000   18.269    0.002 {method 'run' of '_contextvars.Context' objects}
+13976/6718    0.053    0.000   13.261    0.002 C:\Users\Sebastian\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\windows_events.py:444(select)
+37581/28857    9.053    0.000   11.773    0.000 C:\Users\Sebastian\Laboratorio\multijugador\movimiento.py:57(bloqueado)
+13976/6718    0.206    0.000   11.305    0.002 C:\Users\Sebastian\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\windows_events.py:762(_poll)
+    10108    0.062    0.000   10.236    0.001 C:\Users\Sebastian\Laboratorio\multijugador\movimiento.py:102(mover)
+     1862    0.004    0.000    9.780    0.005 C:\Users\Sebastian\Laboratorio\.venv\Lib\site-packages\aiohttp\web_protocol.py:567(_handle_request)
+     1862    0.003    0.000    9.561    0.005 C:\Users\Sebastian\Laboratorio\.venv\Lib\site-packages\aiohttp\web_app.py:521(_handle)
+     1862    0.025    0.000    9.319    0.005 C:\Users\Sebastian\Laboratorio\multijugador\tiempo_real.py:61(websocket)
+     2527    0.060    0.000    9.079    0.004 C:\Users\Sebastian\Laboratorio\multijugador\movimiento.py:214(actualizar)
+     2084    0.011    0.000    7.631    0.004 C:\Users\Sebastian\Laboratorio\multijugador\movimiento.py:201(recibir)
+3856/3015    0.025    0.000    6.756    0.002 C:\Users\Sebastian\Laboratorio\.venv\Lib\site-packages\aiohttp\_websocket\writer.py:74(send_frame)
+2084/1730    0.034    0.000    6.716    0.004 C:\Users\Sebastian\Laboratorio\multijugador\cliente_internet.py:150(controles)
+2084/1730    0.009    0.000    5.977    0.003 C:\Users\Sebastian\Laboratorio\.venv\Lib\site-packages\aiohttp\client_ws.py:309(send_json)
+2084/1730    0.018    0.000    5.709    0.003 C:\Users\Sebastian\Laboratorio\.venv\Lib\site-packages\aiohttp\client_ws.py:297(send_str)
+3856/3015    0.030    0.000    5.290    0.002 C:\Users\Sebastian\Laboratorio\.venv\Lib\site-packages\aiohttp\_websocket\writer.py:131(_write_websocket_frame)
+     1188    0.361    0.000    4.036    0.003 C:\Users\Sebastian\Laboratorio\interfaz\partida_multijugador.py:476(dibujar)
+     1772    0.018    0.000    3.474    0.002 C:\Users\Sebastian\Laboratorio\multijugador\tiempo_real.py:78(escribir)
+ 21288347    3.255    0.000    3.255    0.000 {method 'get' of 'dict' objects}
+5316/3134    0.019    0.000    3.041    0.001 C:\Users\Sebastian\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\tasks.py:440(wait_for)
+     1772    0.017    0.000    2.870    0.002 C:\Users\Sebastian\Laboratorio\.venv\Lib\site-packages\aiohttp\web_ws.py:483(send_str)
+     1188    2.830    0.002    2.839    0.002 {method 'tick' of 'pygame.time.Clock' objects}
+3856/3015    0.013    0.000    2.291    0.001 C:\Users\Sebastian\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\proactor_events.py:338(write)
+3796/3315    0.029    0.000    2.186    0.001 C:\Users\Sebastian\AppData\Local\Python\pythoncore-3.14-64\Lib\asyncio\proactor_events.py:276(_loop_reading)
+
+
