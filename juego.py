@@ -156,6 +156,13 @@ from mundo.jugador import (  # noqa: F401  (transición del refactor)
     reiniciar_jugador_en_casa,
     tecla_activa,
 )
+from mundo.grafo_aldea import (  # noqa: F401  (transición del refactor)
+    CONEXIONES_PUENTES_ALDEA,
+    PLATAFORMAS_ALDEA,
+    _posicion_en_mapa,
+    buscar_ruta_transmision,
+    crear_grafo_fisico,
+)
 
 
 def dibujar_mensaje_mapa(superficie, fuente, texto):
@@ -880,50 +887,6 @@ def dibujar_capas_mundo(superficie, recursos, mundo, mapa, particulas=None):
         particulas.dibujar(superficie)
 
 
-PLATAFORMAS_ALDEA = (
-    {"id": "plataforma_central", "nombre": "Plataforma Central", "posicion": [0.50, 0.50]},
-    {"id": "plataforma_noroeste", "nombre": "Plataforma Noroeste", "posicion": [0.20, 0.22]},
-    {"id": "plataforma_noreste", "nombre": "Plataforma Noreste", "posicion": [0.80, 0.22]},
-    {"id": "plataforma_suroeste", "nombre": "Plataforma Suroeste", "posicion": [0.20, 0.68]},
-    {"id": "plataforma_sureste", "nombre": "Plataforma Sureste", "posicion": [0.80, 0.68]},
-    {"id": "plataforma_borde_oeste_norte", "nombre": "Borde Oeste Norte", "posicion": [0.02, 0.45]},
-    {"id": "plataforma_borde_este_norte", "nombre": "Borde Este Norte", "posicion": [0.98, 0.45]},
-    {"id": "plataforma_borde_oeste_sur", "nombre": "Borde Oeste Sur", "posicion": [0.02, 0.91]},
-    {"id": "plataforma_borde_este_sur", "nombre": "Borde Este Sur", "posicion": [0.98, 0.91]},
-)
-
-CONEXIONES_PUENTES_ALDEA = (
-    ("puente_1", "plataforma_noroeste", "plataforma_central"),
-    ("puente_2", "plataforma_noreste", "plataforma_central"),
-    ("puente_3", "plataforma_noroeste", "plataforma_borde_oeste_norte"),
-    ("puente_4", "plataforma_noreste", "plataforma_borde_este_norte"),
-    ("puente_5", "plataforma_suroeste", "plataforma_borde_oeste_sur"),
-    ("puente_6", "plataforma_suroeste", "plataforma_central"),
-    ("puente_7", "plataforma_central", "plataforma_sureste"),
-    ("puente_8", "plataforma_sureste", "plataforma_borde_este_sur"),
-)
-
-
-def crear_grafo_fisico(decoraciones):
-    """Asocia plataformas (posiciones normalizadas 0..1) y puentes del mapa."""
-    puentes_visuales = {
-        objeto["id"]: objeto
-        for objeto in decoraciones
-        if objeto.get("puente") and objeto.get("id")
-    }
-    puentes = []
-    for puente_id, origen, destino in CONEXIONES_PUENTES_ALDEA:
-        if puente_id not in puentes_visuales:
-            raise RuntimeError(f"No se encontro la decoracion del {puente_id}.")
-        puentes.append({
-            "id": puente_id,
-            "origen": origen,
-            "destino": destino,
-            "estado": "normal",
-        })
-    return GrafoFisico(PLATAFORMAS_ALDEA, puentes)
-
-
 def dibujar_debug_mapa(
     superficie, mundo, jugador, interactuable, distancia, particulas, estado_control,
     propagaciones=None,
@@ -1091,33 +1054,6 @@ def dibujar_debug_mapa(
             fuente_debug.render(linea, True, (255, 244, 194)),
             (8, y_historial + 18 * (indice + 1)),
         )
-
-
-def buscar_ruta_transmision(grafo, origen_id, destino_id):
-    ruta = grafo.buscar_camino(origen_id, destino_id)
-    if ruta is None:
-        print(
-            f"[Grafo] No existe ruta transitable entre {origen_id} y "
-            f"{destino_id}; se omite la propagación visual."
-        )
-        return None
-
-    puente_ids = [
-        grafo.obtener_puente(origen, destino)
-        for origen, destino in zip(ruta, ruta[1:])
-    ]
-    if any(puente_id is None for puente_id in puente_ids):
-        print(
-            f"[Grafo] La ruta entre {origen_id} y {destino_id} contiene "
-            "un puente no transitable; se omite la propagación visual."
-        )
-        return None
-    return ruta, puente_ids
-
-
-def _posicion_en_mapa(plataforma, ancho=ANCHO, alto=ALTO):
-    x, y = plataforma["posicion"]
-    return round(x * ancho), round(y * alto)
 
 
 def dibujar_debug_grafo(superficie, grafo, decoraciones):
