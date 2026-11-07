@@ -77,13 +77,15 @@ async def websocket(request):
     sala.partida.conectados.add(sesion["id"])
     async def escribir():
         metricas = request.app[METRICAS]
+        def medir(datos):
+            texto = json.dumps(datos)
+            metricas["mensajes"] += 1
+            metricas["bytes"] += len(texto)
+            return texto
         try:
             while not ws.closed:
                 estado = await cola.siguiente()
-                texto = json.dumps(estado, ensure_ascii=False, separators=(",", ":"))
-                metricas["mensajes"] += 1
-                metricas["bytes"] += len(texto.encode("utf-8"))
-                await asyncio.wait_for(ws.send_str(texto), timeout=3)
+                await asyncio.wait_for(ws.send_json(estado, dumps=medir), timeout=3)
                 if estado.get("tipo") == "desconectado":
                     break
         except (OSError, TimeoutError, RuntimeError):

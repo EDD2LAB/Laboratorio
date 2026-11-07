@@ -12,5 +12,11 @@ servidor, eliminar el modo un jugador (solo con paridad completa), optimizar a
   `herramientas/benchmark.py`, `multijugador/servidor_local.py`, métricas de red
   aditivas. Números en `docs/rendimiento.md`.
 
+## Pausa
+La tarea se pausó tras la Fase 0 porque se pidió primero modularizar el
+proyecto (rama `refactor/modularizar`, creada desde este punto). Al retomar,
+partir de esa rama: las rutas de los módulos cambian (solo `juego.py` queda en
+la raíz).
+
 ## Falta
 - Fases 1 a 8.
