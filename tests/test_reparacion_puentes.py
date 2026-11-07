@@ -7,13 +7,10 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 import pygame
 
 from logica.grafo_fisico import GrafoFisico
-from juego import (
-    cargar_mapa_principal,
-    cargar_spritesheet_frames,
-    colision_hitbox_mapa,
-    crear_grafo_fisico,
-    jugador_bloqueado,
-)
+from mundo.colisiones import colision_hitbox_mapa, jugador_bloqueado
+from mundo.grafo_aldea import crear_grafo_fisico
+from mundo.mapas import cargar_mapa_principal
+from nucleo.recursos import cargar_spritesheet_frames
 from mundo.reparacion_puentes import SistemaReparacionPuente
 
 

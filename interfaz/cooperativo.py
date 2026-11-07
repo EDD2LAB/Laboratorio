@@ -13,7 +13,7 @@ VERDE = (130, 222, 158)
 
 class PanelCooperativo:
     def __init__(self, vista):
-        import juego
+        from nucleo.recursos import cargar_fuente
         self.vista = vista
         self.modo = "introduccion"
         self.titulo = ""
@@ -21,9 +21,9 @@ class PanelCooperativo:
         self.indice_pista = self.indice_destino = 0
         self.destino_fijo = None
         self.botones = {}
-        self.fuente = juego.cargar_fuente(18)
-        self.pequena = juego.cargar_fuente(14)
-        self.encabezado = juego.cargar_fuente(24)
+        self.fuente = cargar_fuente(18)
+        self.pequena = cargar_fuente(14)
+        self.encabezado = cargar_fuente(24)
         self.toast = ""
         self.toast_hasta = 0
         self.aviso_id = 0
@@ -161,9 +161,9 @@ class PanelCooperativo:
         return any(o["tipo"] == "eco" and self.vista.cerca(o) for o in self.caso.get("objetivos", []))
 
     def texto_lineas(self, superficie, texto, x, y, ancho=535, fuente=None, color=CREMA):
-        import juego
+        from nucleo.recursos import envolver_texto
         fuente = fuente or self.fuente
-        for linea in juego.envolver_texto(texto, fuente, ancho):
+        for linea in envolver_texto(texto, fuente, ancho):
             superficie.blit(fuente.render(linea, True, color), (x, y))
             y += fuente.get_linesize() + 4
         return y
@@ -217,7 +217,11 @@ class PanelCooperativo:
     def _dibujar_pantalla_completa(self, superficie):
         """Escenas del modo de un jugador; devuelve True si dibujó una."""
         from interfaz import escenas_multijugador as escenas
-        import juego
+        from un_jugador.tablilla import (
+            construir_botones_clasificacion,
+            dibujar_pregunta_clasificacion,
+            dibujar_resultado_evento,
+        )
         contexto = self.contexto()
         if self.modo == "caldero":
             opciones = contexto.get("opciones", {})
@@ -256,9 +260,9 @@ class PanelCooperativo:
             opciones = tuple(contexto.get("clasificacion_opciones") or ())
             r = self.vista.escenas.r
             if opciones not in self.botones_clasificacion:
-                self.botones_clasificacion[opciones] = juego.construir_botones_clasificacion(list(opciones), r, r["fuente_boton"])
+                self.botones_clasificacion[opciones] = construir_botones_clasificacion(list(opciones), r, r["fuente_boton"])
             botones = self.botones_clasificacion[opciones]
-            juego.dibujar_pregunta_clasificacion(superficie, r, escenas.AdaptadorEstado(), botones, self.vista.mouse)
+            dibujar_pregunta_clasificacion(superficie, r, escenas.AdaptadorEstado(), botones, self.vista.mouse)
             for boton in botones:
                 self.botones["clasificar:" + boton.texto] = boton
             return True
@@ -271,7 +275,7 @@ class PanelCooperativo:
                 categoria=propia["categoria"], clasificacion_jugador=propia["opcion"],
                 clasificacion_correcta=propia["correcta"], efecto_clasificacion=propia["efectos"],
                 resultado=resultado.get("texto", "")))
-            juego.dibujar_resultado_evento(superficie, self.vista.escenas.r, adaptador)
+            dibujar_resultado_evento(superficie, self.vista.escenas.r, adaptador)
             return True
         if self.modo == "reparar":
             escenas.dibujar_minijuego(self, superficie, self.caso.get("puente") or {}, self.tiempo_aguja_ms, self.estado_indicador)

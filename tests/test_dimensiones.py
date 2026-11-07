@@ -15,33 +15,32 @@ from logica.dimensiones import (
     EDIFICIOS_PRESENTE,
     GestorDimensiones,
 )
-from juego import (
-    ESCENA_DIALOGO,
-    ESCENA_MAPA,
-    cargar_mapa_edificio,
-    cargar_mapa_presente,
-    cargar_mapa_principal,
-    crear_mundo,
+from mundo.camara import (
+    actualizar_camara_mundo,
     dibujar_escena_con_camara,
-    iniciar_animacion_decision,
-    mover_jugador,
     posicion_mundo_a_pantalla,
     posicion_pantalla_a_mundo,
-    rect_lienzo_en_ventana,
-    actualizar_camara_mundo,
-    actualizar_npcs_presentes,
-    buscar_ruta_transmision,
-    cargar_personaje_periodista,
-    cargar_spritesheet_frames,
+)
+from mundo.colisiones import jugador_bloqueado
+from mundo.creacion import crear_mundo
+from mundo.grafo_aldea import buscar_ruta_transmision
+from mundo.jugador import mover_jugador
+from mundo.mapas import cargar_mapa_edificio, cargar_mapa_presente, cargar_mapa_principal
+from mundo.npcs import actualizar_npcs_presentes
+from mundo.personajes import cargar_personaje_periodista
+from nucleo.config import ESCENA_DIALOGO, ESCENA_MAPA
+from nucleo.recursos import cargar_spritesheet_frames
+from un_jugador.codice import construir_contenido_codice
+from un_jugador.hud import (
     celular_disponible,
-    construir_contenido_codice,
     controles_hud,
     instrucciones_dimension,
-    jugador_bloqueado,
     objetivo_mision_actual,
     rect_controles_hud,
     texto_tutorial_primer_evento,
 )
+from un_jugador.tablilla import iniciar_animacion_decision
+from un_jugador.ventana import rect_lienzo_en_ventana
 from logica.logica_juego import EstadoJuego
 from logica.conversaciones import construir_conversacion
 from logica.grafo_fisico import GrafoFisico

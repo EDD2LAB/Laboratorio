@@ -1,6 +1,6 @@
 """Red de seguridad del refactor: el juego arranca y corre frames sin errores.
 
-- Modo un jugador: ~120 frames del bucle real de juego.main().
+- Modo un jugador: ~120 frames del bucle real de un_jugador.partida.main().
 - Menú inicial: unos frames de MenuInicio.ejecutar().
 - Multijugador: sala real en 127.0.0.1 (servidor de producción en un hilo)
   con dos clientes por WebSocket y ~120 frames de la vista de partida.
@@ -42,11 +42,11 @@ class _ContadorFrames:
 
 class ArranqueTests(unittest.TestCase):
     def test_un_jugador_corre_120_frames(self):
-        import juego
+        from un_jugador.partida import main
         pygame.init()
         with _ContadorFrames(120) as contador:
             with self.assertRaises(SystemExit):  # main() termina con sys.exit()
-                juego.main()
+                main()
         self.assertGreaterEqual(contador.frames, 120)
 
     def test_menu_inicio_corre_y_sale(self):

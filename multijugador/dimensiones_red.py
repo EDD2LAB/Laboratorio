@@ -2,7 +2,7 @@
 
 Reutiliza los mismos JSON de hitboxes que el modo de un jugador
 (``dimensiones.DIMENSIONES``). Distrito Conecta se dibuja escalado y centrado
-en 960x720, igual que ``juego.cargar_mapa_presente``; aquí se replica esa
+en 960x720, igual que ``mundo.mapas.cargar_mapa_presente``; aquí se replica esa
 transformación con ``image_size`` del JSON porque el servidor no carga PNG.
 """
 import json
@@ -39,7 +39,7 @@ def rect_mapa_presente(datos):
 
 
 def mapear_hitbox(hitbox, rect):
-    """Misma fórmula que juego._mapear_hitbox_a_ventana."""
+    """Misma fórmula que mundo.mapas._mapear_hitbox_a_ventana."""
     x, y, w, h = rect
     salida = dict(hitbox)
     tipo = hitbox.get("type", "rect")

@@ -57,7 +57,7 @@ def separar_frames(imagen, cantidad=8):
 
 
 def cargar_personajes():
-    import juego
+    from nucleo.recursos import cargar_imagen
     carpetas = ("Guardian", "mensajero", "Habitante hombre", "Aspirante hombre")
     caminar = (
         [f"Fila {i}. Guardián.png" for i in range(2, 6)],
@@ -73,7 +73,7 @@ def cargar_personajes():
         for estado in ("caminar", "reposo"):
             for i, direccion in enumerate(DIRECCIONES):
                 archivo = caminar[indice][i] if estado == "caminar" else f"Reposo/{reposo[indice]}{i + 1}.png"
-                imagen = juego.cargar_imagen(os.path.join("NPCS", carpetas[indice], archivo))
+                imagen = cargar_imagen(os.path.join("NPCS", carpetas[indice], archivo))
                 clips[(estado, direccion)] = separar_frames(imagen)
         alto = max(f.get_height() for frames in clips.values() for f in frames)
         escala = 53 / alto
@@ -86,7 +86,9 @@ def cargar_personajes():
 
 class VistaPartida:
     def __init__(self, identificador, estado):
-        import juego
+        from mundo.mapas import cargar_mapa_principal
+        from mundo.personajes import cargar_frames_tronco_eco
+        from nucleo.recursos import cargar_fuente, cargar_imagen
         from interfaz.efectos_visuales import AdornosMapa, FlechaGuia
         from interfaz.escenas_multijugador import RecursosEscenas
         from interfaz.hud import HUDIndicadores
@@ -102,16 +104,16 @@ class VistaPartida:
         self.ultima_ruta = 0
         self.boton_guia = pygame.Rect(25, 112, 330, 37)
         self.personajes = cargar_personajes()
-        _, decoraciones, _, _, _, _ = juego.cargar_mapa_principal()
+        _, decoraciones, _, _, _, _ = cargar_mapa_principal()
         self.decoraciones = [o for o in decoraciones if not es_personaje_jugable(o["nombre"])]
-        self.fondo = juego.cargar_imagen("Fondos/Mapas/Pr_MañanaLumi.png", (960, 720))
-        self.fuente = juego.cargar_fuente(16)
-        self.titulo = juego.cargar_fuente(20)
+        self.fondo = cargar_imagen("Fondos/Mapas/Pr_MañanaLumi.png", (960, 720))
+        self.fuente = cargar_fuente(16)
+        self.titulo = cargar_fuente(20)
         self.jugadores = {}
         self.ultimo_paquete = time.monotonic()
         self.aviso_red = ""
         self.estado = estado
-        self.frames_eco = juego.cargar_frames_tronco_eco()
+        self.frames_eco = cargar_frames_tronco_eco()
         # --- Features del modo de un jugador (cargadas una sola vez) ---
         self.dimension = LA_COPA
         self.mapas = {LA_COPA: {"fondo": self.fondo, "decoraciones": self.decoraciones, "colisiones": self.colisiones}}
@@ -119,7 +121,7 @@ class VistaPartida:
         configurar_sprites(self.escenas.materiales)
         self.flecha = FlechaGuia()
         self.adornos = AdornosMapa()
-        self.hud = HUDIndicadores(juego.cargar_fuente(11), self.escenas.iconos_hud,
+        self.hud = HUDIndicadores(cargar_fuente(11), self.escenas.iconos_hud,
                                   negativos={k for k, v in POLARIDAD.items() if v == "malo"},
                                   colores_avisos=(COLOR_VERDE, COLOR_ROJO), etiquetar_avisos=True)
         self.etiquetas = ETIQUETAS
@@ -179,10 +181,10 @@ class VistaPartida:
     # ------------------------------------------------------------ dimensiones
     def _cargar_dimension(self, dimension):
         if dimension not in self.mapas:
-            import juego
             from logica.dimensiones import DIMENSIONES
             from multijugador.dimensiones_red import cargar_datos
-            recursos = juego.cargar_mapa_presente(DIMENSIONES[dimension])
+            from mundo.mapas import cargar_mapa_presente
+            recursos = cargar_mapa_presente(DIMENSIONES[dimension])
             if recursos is None:
                 raise ValueError("No se pudo cargar " + dimension)
             self.mapas[dimension] = {"fondo": recursos["mapa"], "decoraciones": recursos["decoraciones"],
@@ -440,7 +442,8 @@ class VistaPartida:
         return next((o for o in presente.get("objetivos", []) if o["id"] == "presente:pantalla"), None)
 
     def _dibujar_mapa(self, superficie, ahora_ms):
-        import juego
+        from nucleo.recursos import es_hoja_portales
+        from un_jugador.dibujo_mapa import dibujar_puente_balanceandose
         superficie.blit(self.fondo, (0, 0))
         puente = self.estado.get("mundo", {}).get("caso", {}).get("puente") or {}
         for objeto in self.decoraciones:
@@ -448,13 +451,13 @@ class VistaPartida:
                 # Puente 1 roto (imagen real Puente1Roto.png) hasta repararlo.
                 superficie.blit(self.puente_roto or objeto["imagen"], objeto["rect"])
                 continue
-            if juego.es_hoja_portales(objeto.get("nombre", "")) and self.adornos.portal:
+            if es_hoja_portales(objeto.get("nombre", "")) and self.adornos.portal:
                 continue  # se dibuja el portal animado
             if objeto.get("tronco_eco") and self.frames_eco:
                 frame = self.frames_eco[(ahora_ms // 140) % len(self.frames_eco)]
                 superficie.blit(pygame.transform.scale(frame, objeto["rect"].size), objeto["rect"])
             elif objeto.get("puente_animable"):
-                juego.dibujar_puente_balanceandose(superficie, objeto, ahora_ms)
+                dibujar_puente_balanceandose(superficie, objeto, ahora_ms)
             elif objeto.get("frames"):
                 frames = objeto["frames"]
                 superficie.blit(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
