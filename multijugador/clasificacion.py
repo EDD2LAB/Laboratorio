@@ -1,5 +1,5 @@
 """Clasificación de los eventos multijugador con el árbol NodoCategoria."""
-from Arboles import buscar_categoria, construir_arbol_categorias_multijugador
+from logica.Arboles import buscar_categoria, construir_arbol_categorias_multijugador
 
 ARBOL = construir_arbol_categorias_multijugador()
 

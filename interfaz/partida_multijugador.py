@@ -180,7 +180,7 @@ class VistaPartida:
     def _cargar_dimension(self, dimension):
         if dimension not in self.mapas:
             import juego
-            from dimensiones import DIMENSIONES
+            from logica.dimensiones import DIMENSIONES
             from multijugador.dimensiones_red import cargar_datos
             recursos = juego.cargar_mapa_presente(DIMENSIONES[dimension])
             if recursos is None:

@@ -9,7 +9,7 @@ import sys
 
 import pygame
 
-from logica_juego import EstadoJuego
+from logica.logica_juego import EstadoJuego
 
 
 ANCHO, ALTO = 960, 720

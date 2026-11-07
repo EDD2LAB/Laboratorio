@@ -8,7 +8,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from dimensiones import (
+from logica.dimensiones import (
     DIMENSION_FUTURO,
     DIMENSION_LA_COPA,
     DIMENSION_PRESENTE,
@@ -42,9 +42,9 @@ from juego import (
     rect_controles_hud,
     texto_tutorial_primer_evento,
 )
-from logica_juego import EstadoJuego
-from conversaciones import construir_conversacion
-from grafo_fisico import GrafoFisico
+from logica.logica_juego import EstadoJuego
+from logica.conversaciones import construir_conversacion
+from logica.grafo_fisico import GrafoFisico
 
 
 class GestorDimensionesTests(unittest.TestCase):

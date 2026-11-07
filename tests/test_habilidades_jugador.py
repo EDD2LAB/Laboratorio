@@ -1,6 +1,6 @@
 import unittest
 
-from habilidades_jugador import HabilidadJugador
+from logica.habilidades_jugador import HabilidadJugador
 
 
 class HabilidadJugadorTests(unittest.TestCase):

@@ -6,7 +6,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 
 import pygame
 
-from grafo_fisico import GrafoFisico
+from logica.grafo_fisico import GrafoFisico
 from juego import (
     cargar_mapa_principal,
     cargar_spritesheet_frames,

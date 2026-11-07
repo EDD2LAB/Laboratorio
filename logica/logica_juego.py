@@ -10,13 +10,13 @@ Este modulo depende de arboles.py (NodoDecision, construir_tablilla_*).
 
 import copy
 
-from Arboles import (
+from logica.Arboles import (
     construir_tablilla_rumor_politico,
     construir_tablilla_suceso_natural,
     construir_tablilla_dia_tres,
 )
-from propagacion_informacion import PropagacionInformacion
-from dimensiones import (
+from logica.propagacion_informacion import PropagacionInformacion
+from logica.dimensiones import (
     DIMENSION_LA_COPA,
     DIMENSION_PRESENTE,
     GestorDimensiones,

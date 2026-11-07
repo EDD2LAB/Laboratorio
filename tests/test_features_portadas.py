@@ -5,7 +5,7 @@ import unittest
 import uuid
 
 import test_campana_copa as campana_pruebas
-from Arboles import ARBOL_CATEGORIAS
+from logica.Arboles import ARBOL_CATEGORIAS
 from multijugador import clasificacion
 from multijugador.campana import CASOS, VARIANTES
 from multijugador.dimensiones_red import LA_COPA, PRESENTE, jugadores_visibles
@@ -222,7 +222,7 @@ class IndicadoresTests(unittest.TestCase):
             self.assertEqual(color_cambio(nombre, -5), COLOR_VERDE)
 
     def test_mismos_indicadores_y_valores_iniciales_que_un_jugador(self):
-        from logica_juego import EstadoJuego
+        from logica.logica_juego import EstadoJuego
         inicial = EstadoJuego().indicadores
         p = crear()
         equivalencias = {"sabiduria": "sabiduria", "confianza": "confianza_consejo", "armonia": "armonia",
