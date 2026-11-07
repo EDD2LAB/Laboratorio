@@ -14,7 +14,7 @@ from juego import (
     crear_grafo_fisico,
     jugador_bloqueado,
 )
-from reparacion_puentes import SistemaReparacionPuente
+from mundo.reparacion_puentes import SistemaReparacionPuente
 
 
 ROOT = os.path.dirname(os.path.dirname(__file__))

@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pygame
 
-RAIZ_IMAGENES = Path(__file__).resolve().parent / "Imagenes"
+RAIZ_IMAGENES = Path(__file__).resolve().parent.parent / "Imagenes"
 RUTA_LUCIERNAGA = RAIZ_IMAGENES / "Animales" / "Luciernaga.png"
 RUTA_DESTELLO = RAIZ_IMAGENES / "Animaciones" / "Destello.png"
 

@@ -16,7 +16,7 @@ import unicodedata
 
 import pygame
 
-from audio_manager import GestorAudio
+from audio.audio_manager import GestorAudio
 from logica.conversaciones import construir_conversacion, construir_mensajes_eco, construir_respuesta_eco
 from logica.dimensiones import DIMENSION_LA_COPA, DIMENSION_PRESENTE, EDIFICIOS_PRESENTE
 from logica.grafo_fisico import GrafoFisico
@@ -27,9 +27,9 @@ from interfaz.hud import HUDIndicadores
 from interfaz.menu import MenuModal
 from interfaz.mensaje_privado import ControladorMensajePrivado
 from logica.logica_juego import EstadoJuego
-from particulas import SistemaParticulas
-from propagacion_visual import PropagacionVisual
-from reparacion_puentes import SistemaReparacionPuente
+from graficos.particulas import SistemaParticulas
+from graficos.propagacion_visual import PropagacionVisual
+from mundo.reparacion_puentes import SistemaReparacionPuente
 
 ANCHO, ALTO = 960, 720
 RELACION_ASPECTO = ANCHO / ALTO

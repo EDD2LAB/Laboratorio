@@ -60,7 +60,7 @@ class RecursosEscenas:
 
     def __init__(self, fondo_mapa, decoraciones):
         import juego
-        from reparacion_puentes import SistemaReparacionPuente
+        from mundo.reparacion_puentes import SistemaReparacionPuente
         cargar = juego.cargar_imagen
         fondo = fondo_mapa.copy()
         for objeto in decoraciones:

@@ -6,9 +6,9 @@ import math
 import copy
 import re
 
-from animacion import crear_frame_animado_suave, extraer_frames_horizontales
+from graficos.animacion import crear_frame_animado_suave, extraer_frames_horizontales
 
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CHARACTER_FOLDERS = {
     "aspirante hombre",
     "aspirante mujer",

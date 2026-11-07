@@ -92,7 +92,7 @@ class VistaPartida:
         from interfaz.hud import HUDIndicadores
         from interfaz.suministros import configurar_sprites
         from multijugador.presentacion import COLOR_ROJO, COLOR_VERDE, ETIQUETAS, POLARIDAD
-        from particulas import SistemaParticulas
+        from graficos.particulas import SistemaParticulas
         self.identificador = identificador
         self.colisiones = ColisionesMapa()
         self.firma = self.colisiones.firma
@@ -138,7 +138,7 @@ class VistaPartida:
         self.puente_roto = None
         if self.puente_1 is not None and self.escenas.puente_roto is not None:
             self.puente_roto = pygame.transform.scale(self.escenas.puente_roto, self.puente_1["rect"].size)
-        from reparacion_puentes import SistemaReparacionPuente
+        from mundo.reparacion_puentes import SistemaReparacionPuente
         self.frames_reparacion = [SistemaReparacionPuente._escalar_conservar_proporcion(f, self.puente_1["rect"].size)
                                   for f in self.escenas.efecto_reparacion] if self.puente_1 else []
         from interfaz.cooperativo import PanelCooperativo
@@ -155,9 +155,9 @@ class VistaPartida:
         """GestorAudio del modo de un jugador; si no hay audio, se ignora."""
         if self.audio is None:
             try:
-                import juego
-                from audio_manager import GestorAudio
-                self.audio = GestorAudio(os.path.dirname(os.path.abspath(juego.__file__)))
+                from audio.audio_manager import GestorAudio
+                from nucleo.rutas import RAIZ
+                self.audio = GestorAudio(str(RAIZ))
             except Exception as error:  # sin mezclador (pruebas, servidores)
                 print("[Multijugador] Audio desactivado:", error)
                 self.audio = False
