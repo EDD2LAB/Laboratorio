@@ -30,78 +30,58 @@ from logica.logica_juego import EstadoJuego
 from graficos.particulas import SistemaParticulas
 from graficos.propagacion_visual import PropagacionVisual
 from mundo.reparacion_puentes import SistemaReparacionPuente
-
-ANCHO, ALTO = 960, 720
-RELACION_ASPECTO = ANCHO / ALTO
-FPS = 60
-RUTA_ASSETS = os.path.join(os.path.dirname(__file__), "Imagenes")
-RUTA_FUENTE = os.path.join(os.path.dirname(__file__), "Fuentes", "determination.ttf")
-
-CREMA = (255, 243, 210)
-TINTA = (61, 37, 25)
-MADERA = (111, 75, 43)
-ORO = (237, 185, 87)
-PANEL_OSCURO = (16, 31, 25, 218)
-
-ESCENA_MAPA = "mapa"
-ESCENA_TABLILLA = "tablilla"
-ESCENA_CONSECUENCIA = "consecuencia"
-ESCENA_CLASIFICACION = "clasificacion"
-ESCENA_RESULTADO = "resultado"
-ESCENA_DIALOGO = "dialogo"
-ESCENA_MENSAJE = "mensaje_privado"
-ESCENA_CELULAR = "celular"
-ESCENA_CODICE = "codice"
-ESCENA_TUTORIAL_DIMENSION = "tutorial_dimension"
-ESCENA_MAPA_DESTINO = "mapa_destino"
-ESCENA_TRANSICION_DIMENSION = "transicion_dimension"
-ESCENA_ANALISIS = "analisis_publicacion"
-ESCENA_FINAL = "final"
-ESCENA_PAUSA = "pausa"
-ESCENA_ZONA_EN_PROCESO = "zona_en_proceso"
-ESCENA_VISUAL = "visual"
-ESCENA_VOLUMEN = "volumen"
-ESCENA_AYUDA = "ayuda"
-ESCENA_ECO = "eco_tronco"
-ESCENAS_CON_MAPA = (
+from nucleo.rutas import RAIZ
+from nucleo.config import (  # noqa: F401  (transición del refactor)
+    ALTO,
+    ANCHO,
+    CAMARA_RESPUESTA,
+    CENTRO_CALDERO,
+    CENTRO_TABLILLA,
+    CENTRO_TABLILLA_CENTRADA,
+    CONTINUIDAD_PERSONAJES,
+    CREMA,
+    DISTANCIA_INTERACCION,
+    DURACION_MINIMA_HISTORIA_DIMENSION_MS,
+    DURACION_MINIMA_TUTORIAL_DIMENSION_MS,
+    ESCENAS_CON_MAPA,
+    ESCENA_ANALISIS,
+    ESCENA_AYUDA,
+    ESCENA_CELULAR,
+    ESCENA_CLASIFICACION,
+    ESCENA_CODICE,
+    ESCENA_CONSECUENCIA,
+    ESCENA_DIALOGO,
+    ESCENA_ECO,
+    ESCENA_FINAL,
     ESCENA_MAPA,
+    ESCENA_MAPA_DESTINO,
+    ESCENA_MENSAJE,
     ESCENA_PAUSA,
+    ESCENA_RESULTADO,
+    ESCENA_TABLILLA,
+    ESCENA_TRANSICION_DIMENSION,
+    ESCENA_TUTORIAL_DIMENSION,
     ESCENA_VISUAL,
     ESCENA_VOLUMEN,
-    ESCENA_AYUDA,
-    ESCENA_DIALOGO,
-    ESCENA_MENSAJE,
-    ESCENA_CELULAR,
-    ESCENA_CODICE,
-    ESCENA_TUTORIAL_DIMENSION,
-    ESCENA_ECO,
-    ESCENA_ANALISIS,
-    ESCENA_TRANSICION_DIMENSION,
-)
-CENTRO_TABLILLA = (ANCHO // 2, 330)
-CENTRO_TABLILLA_CENTRADA = (ANCHO // 2, 330)
-CENTRO_CALDERO = (ANCHO // 2, 380)
-TAMANO_HITBOX_PIES = (12, 8)
-VELOCIDAD_GUARDIAN = 155
-DISTANCIA_INTERACCION = 58
-ZOOM_MAPA_PRESENTE = 1.6
-CAMARA_RESPUESTA = 8.0
-VELOCIDAD_PATRULLA_NPC = 38.0
-VARIACION_VELOCIDAD_NPC = 0.1
-PAUSA_PATRULLA_NPC_MS = (500, 1500)
-PROBABILIDAD_PAUSA_NPC = 0.3
-RADIO_WAYPOINT_NPC = 5
-DURACION_MINIMA_HISTORIA_DIMENSION_MS = 3600
-DURACION_MINIMA_TUTORIAL_DIMENSION_MS = 2500
-NOMBRE_JUGADOR_PRESENTE = "Elías Vega"
-PAGINAS_CODICE = ("Misiones", "Información", "Continuidad")
-CONTINUIDAD_PERSONAJES = (
-    ("Guardián", "Elías Vega", "Periodista e investigador jugable"),
-    ("Kael", "Ronaldo Vélez", "Descendiente de Kael y aspirante a alcalde"),
-    ("Odran, Sabio de las Raíces", "Darío Veraz", "Agente de verificación digital"),
-    ("Mensajero", "Mateo Ríos", "Mensajero urbano y comunicador"),
-    ("Luma", "Lía Nova", "Influencer"),
-    ("Tarek", "Tomás Red", "Habitante conectado"),
+    ESCENA_ZONA_EN_PROCESO,
+    FPS,
+    MADERA,
+    NOMBRE_JUGADOR_PRESENTE,
+    ORO,
+    PAGINAS_CODICE,
+    PANEL_OSCURO,
+    PAUSA_PATRULLA_NPC_MS,
+    PROBABILIDAD_PAUSA_NPC,
+    RADIO_WAYPOINT_NPC,
+    RELACION_ASPECTO,
+    RUTA_ASSETS,
+    RUTA_FUENTE,
+    TAMANO_HITBOX_PIES,
+    TINTA,
+    VARIACION_VELOCIDAD_NPC,
+    VELOCIDAD_GUARDIAN,
+    VELOCIDAD_PATRULLA_NPC,
+    ZOOM_MAPA_PRESENTE,
 )
 
 
@@ -648,7 +628,7 @@ def cargar_frames_idle_guardian():
 def cargar_mapa_principal():
     """Carga el mapa usando en todos los momentos las hitboxes del fondo de mañana."""
     ruta_hitboxes = os.path.join(
-        os.path.dirname(__file__),
+        str(RAIZ),
         "Hitboxes",
         "Mapas",
         "Pr_MañanaLumi_hitboxes.json",
@@ -939,7 +919,7 @@ def cargar_mapa_presente(configuracion):
     mapa.blit(pygame.transform.scale(imagen_original, tamano), rect_mapa)
 
     ruta_hitboxes = os.path.join(
-        os.path.dirname(__file__),
+        str(RAIZ),
         "Hitboxes",
         *configuracion["hitboxes"].split("/"),
     )
@@ -1098,7 +1078,7 @@ def cargar_mapa_edificio(edificio_id):
     mapa.blit(pygame.transform.scale(imagen_original, tamano), rect_mapa)
 
     ruta_hitboxes = os.path.join(
-        os.path.dirname(__file__),
+        str(RAIZ),
         "Hitboxes",
         *edificio["interior_hitboxes"].split("/"),
     )
@@ -4360,7 +4340,7 @@ def presentar_lienzo(pantalla, lienzo):
 
 def main():
     pygame.init()
-    gestor_audio = GestorAudio(os.path.dirname(__file__))
+    gestor_audio = GestorAudio(str(RAIZ))
     pantalla_completa = True
     ventana_maximizada = False
     pantalla = crear_ventana(pantalla_completa, ventana_maximizada)
