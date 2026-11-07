@@ -2,6 +2,8 @@ FROM python:3.12-slim
 WORKDIR /app
 COPY multijugador/ /app/multijugador/
 COPY Hitboxes/Mapas/ /app/Hitboxes/Mapas/
+# Árbol de clasificación compartido con el modo de un jugador (sin Pygame).
+COPY Arboles.py /app/Arboles.py
 RUN pip install --no-cache-dir -r /app/multijugador/requirements.txt
 ENV PYTHONUNBUFFERED=1
 ENV PORT=10000

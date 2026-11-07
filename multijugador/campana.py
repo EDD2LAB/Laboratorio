@@ -3,6 +3,9 @@ from .mision import MisionPuente
 import random
 from .suministros import EncargoSuministros
 from .guia import GuiaCooperativa
+from . import clasificacion
+from .presentacion import aplicar_efectos, tipo_pocion
+from .reparacion import PuenteRed
 
 
 CASOS = (
@@ -104,6 +107,75 @@ class CampanaCopa(MisionPuente):
         self.acompanante = GuiaCooperativa(jugadores)
         self.reloj = 0.0
         self.presentes = set(jugadores)
+        # Puente 1 (arriba a la izquierda) roto desde el inicio de la partida.
+        self.puente = PuenteRed(datos_mapa)
+        self.objetivos.append(self._objetivo_puente(datos_mapa))
+        self.clasificaciones = {}
+        # Ganchos que instala PartidaMovimiento (portal y Distrito Conecta).
+        self.viajar = None
+        self.presente = None
+        self.presentes_presente = set()
+
+    def _objetivo_puente(self, datos_mapa):
+        from .movimiento import ColisionesMapa
+        colisiones = ColisionesMapa(datos_mapa)
+        colisiones.bloqueos = [self.puente.rect]
+        x, y, w, h = self.puente.rect
+        # Extremo inferior derecho: el lado de la plataforma central.
+        px, py = colisiones.inicio_libre(x + w + 6, y + h + 4)
+        return {"id": PuenteRed.ID, "nombre": "Puente 1 · reparar", "tipo": "puente", "x": round(px), "y": round(py)}
+
+    @property
+    def objetivo_puente(self):
+        return next(o for o in self.objetivos if o["id"] == PuenteRed.ID)
+
+    def _cerca_presente(self, jugador, objetivo, radio=68):
+        import math
+        return (jugador.get("dimension") == "presente"
+                and math.hypot(jugador["x"] - objetivo["x"], jugador["y"] - objetivo["y"]) <= radio)
+
+    def _ejecutar_presente(self, identificador, solicitud):
+        if self.presente is None:
+            raise ValueError("Distrito Conecta no está disponible.")
+        accion = solicitud.get("accion")
+        jugador = self.jugadores[identificador]
+        if accion == "interactuar":
+            return self.presente.interactuar(identificador, jugador, solicitud.get("objetivo"), self._cerca_presente)
+        if accion == "presente_votar":
+            return self.presente.votar(identificador, jugador, solicitud.get("opcion"), self.presentes_presente, self._cerca_presente)
+        if accion == "presente_clasificar":
+            return self.presente.clasificar(identificador, solicitud.get("categoria"))
+        raise ValueError("Acción desconocida.")
+
+    def _clasificar(self, identificador, opcion):
+        if not self.resultado:
+            raise ValueError("Primero decidan qué contar a la aldea.")
+        if identificador in self.clasificaciones:
+            raise ValueError("Ya clasificaste este evento.")
+        evento = self.casos[self.ronda][0]
+        correcta = clasificacion.evaluar(evento, opcion, "la_copa")
+        # Misma regla que el modo de un jugador: la trivia vale ±5 de sabiduría.
+        efectos = {"sabiduria": 5 if correcta else -5}
+        aplicar_efectos(self.indicadores, efectos)
+        self.clasificaciones[identificador] = {"opcion": opcion, "correcta": correcta, "efectos": efectos,
+                                               "categoria": clasificacion.ruta_evento(evento)}
+        return {"mensaje": "¡Clasificación correcta!" if correcta else "Esa no era la categoría.",
+                "vista": "clasificacion_resultado"}
+
+    def _reparar(self, identificador, solicitud):
+        accion = solicitud.get("accion")
+        if accion == "cerrar_reparacion":
+            self.puente.cerrar(identificador)
+            return {"mensaje": "Puedes volver a intentarlo cuando quieras."}
+        if accion == "intento_reparacion":
+            return self.puente.intentar(identificador, solicitud.get("tiempo_aguja_ms"), self.reloj)
+        self._objetivo(identificador, PuenteRed.ID)
+        if self.puente.reparado:
+            return {"mensaje": "El Puente 1 ya está reparado. ¡La ruta está abierta!"}
+        if self.ronda or self.fase != "preparacion":
+            return {"mensaje": "El Puente 1 está roto. Lo repararán después de resolver el primer caso.",
+                    "titulo": "Puente 1", "vista": "fuente"}
+        return self.puente.abrir(identificador, self.jugadores, self.reloj)
 
     @staticmethod
     def _metadatos(pruebas):
@@ -121,6 +193,16 @@ class CampanaCopa(MisionPuente):
         return "preparacion"
 
     def _ejecutar(self, identificador, solicitud, ahora, presentes):
+        accion = solicitud.get("accion")
+        # El portal y Distrito Conecta no pertenecen a un caso de La Copa.
+        if accion == "usar_portal":
+            if self.viajar is None:
+                raise ValueError("El portal no está disponible.")
+            return self.viajar(identificador, solicitud.get("destino"))
+        objetivo_pedido = solicitud.get("objetivo")
+        if accion in ("presente_votar", "presente_clasificar") or (
+                accion == "interactuar" and isinstance(objetivo_pedido, str) and objetivo_pedido.startswith("presente:")):
+            return self._ejecutar_presente(identificador, solicitud)
         if solicitud.get("ronda", 0) != self.ronda:
             raise ValueError("La acción pertenece a otro caso. Revisa el objetivo actual.")
         accion = solicitud.get("accion")
@@ -129,6 +211,10 @@ class CampanaCopa(MisionPuente):
             respuesta = self.acompanante.tutorial(self, identificador, solicitud)
             if respuesta is not None:
                 return respuesta
+        if accion in ("intento_reparacion", "cerrar_reparacion") or (accion == "interactuar" and objetivo_pedido == PuenteRed.ID):
+            return self._reparar(identificador, solicitud)
+        if accion == "clasificar":
+            return self._clasificar(identificador, solicitud.get("categoria"))
         if accion == "pedir_pista":
             return self.acompanante.pedir(self, identificador, self.reloj, presentes)
         if accion in ("sujetar", "trabajar"):
@@ -142,8 +228,10 @@ class CampanaCopa(MisionPuente):
             if objetivo["id"] == self.encargo.destino["id"]:
                 if identificador in self.encargo.cargas:
                     return self._ejecutar(identificador, {**solicitud, "accion": "depositar"}, ahora, presentes)
-                if self.encargo.materiales_listos and not self.encargo.completo:
+                if self.encargo.materiales_listos and not self.encargo.materiales_colocados:
                     return {"mensaje": "Uno ayuda y el otro hace la tarea. ¡Pueden turnarse!", "vista": "actividad"}
+                if self.encargo.materiales_colocados and not self.encargo.completo:
+                    return {"mensaje": "¡Materiales colocados! Ahora vayan al Puente 1 y pulsen E para repararlo.", "vista": "introduccion"}
                 return {"mensaje": self.encargo.config["motivo"], "vista": "introduccion"}
             if any(m[2] == objetivo["id"] for m in self.encargo.config["materiales"]):
                 return self._ejecutar(identificador, {**solicitud, "accion": "recoger_suministro", "objetivo": objetivo["id"]}, ahora, presentes)
@@ -237,6 +325,7 @@ class CampanaCopa(MisionPuente):
         self.oleadas = 0
         self.bono_equipo = False
         self.puntos_caso = 0
+        self.clasificaciones.clear()
         # No borrar los acuses: una retransmisión antigua nunca afecta al nuevo caso.
         self._avisar(self.jugadores, "Nuevo caso: " + self.casos[self.ronda][1])
 
@@ -266,6 +355,16 @@ class CampanaCopa(MisionPuente):
     def actualizar(self, segundos, presentes):
         self.presentes = set(presentes)
         self.reloj += max(0, min(segundos, 1))
+        if self.ronda == 0 and self.encargo and self.encargo.config.get("requiere_puente"):
+            self.puente.preparar(self.encargo.materiales_colocados)
+        if self.puente.actualizar(self.reloj, presentes):
+            self._avisar(self.jugadores, "¡El Puente 1 quedó reparado! La ruta vuelve a estar abierta.", "logro")
+            self._registrar("El equipo reparó el Puente 1.")
+            if self.encargo and self.encargo.config.get("requiere_puente"):
+                self.encargo.puente_reparado = True
+                self._premiar_encargo(presentes)
+        if self.presente is not None:
+            self.presente.resolver(self.presentes_presente)
         self.acompanante.actualizar(self)
         if self.encargo:
             self.encargo.revisar_ayudante(presentes, self.jugadores)
@@ -306,7 +405,11 @@ class CampanaCopa(MisionPuente):
                       tutorial_cargas=[i for i, t in self.acompanante.tutoriales.items() if t["estado"] == "activo" and t["paso"] == 2],
                       sin_prisa=self.ronda == 0, puntos=self.puntos, bono_equipo=self.bono_equipo,
                       proxima_oleada=max(0, 60 - int(self.presion % 60)),
-                      opciones=dict(self.opciones))
+                      opciones=dict(self.opciones),
+                      tipos_pocion={clave: tipo_pocion(clave) for clave in self.opciones},
+                      clasificacion_opciones=list(clasificacion.OPCIONES["la_copa"]),
+                      puente=self.puente.publico(), dimension_completa=self.fase == "final",
+                      presente=self.presente.publico(self.presentes_presente) if self.presente else None)
         return estado
 
     def privado(self, identificador):
@@ -318,15 +421,24 @@ class CampanaCopa(MisionPuente):
                       habilidad_usada=identificador in self.habilidades_usadas,
                       suministro=identificador in self.materiales, depositado=identificador in self.depositos,
                       preparado=identificador in self.preparados)
-        if self.fase == "preparacion":
+        estado["clasificacion"] = self.clasificaciones.get(identificador)
+        if self.presente is not None:
+            estado["presente"] = self.presente.privado(identificador)
+        if self.fase == "preparacion" and self.encargo.materiales_colocados and not self.encargo.completo:
+            estado["objetivo"] = dict(self.objetivo_puente)
+            reparador = self.puente.reparador
+            estado["instruccion"] = ("¡El puente se está reparando!" if self.puente.estado == "REPAIR_ANIMATION" else
+                                     self.jugadores[reparador]["nombre"] + " está reparando el Puente 1." if reparador not in (None, identificador) else
+                                     "Ve al Puente 1 (arriba a la izquierda) y pulsa E. Acierta 3 veces en la zona verde.")
+        elif self.fase == "preparacion":
             objetivo = self.encargo.objetivo(identificador, self.jugadores)
             estado["objetivo"] = objetivo
             carga = self.encargo.cargas.get(identificador)
             estado["carga"] = self.encargo.nombre(carga) if carga else None
             estado["instruccion"] = ("Encargo completo. Confirmen en el caldero." if self.encargo.completo else
-                                      "Tu aporte está entregado. Ayuda a coordinar al equipo." if identificador in self.depositos else
+                                      "Tu aporte está entregado. Ayuda a coordinar al equipo." if identificador in self.depositos and objetivo.get("id") == "caldero" else
                                       "Llevas " + estado["carga"] + ". Ve a " + self.encargo.config["lugar"] + " y pulsa E." if carga and carga not in self.encargo.entregados else
                                       "Ve a " + objetivo["nombre"] + " y pulsa E.")
         elif self.fase == "final":
-            estado["instruccion"] = "Campaña completada. Abre M para ver el balance."
+            estado["instruccion"] = "¡La Copa está completa! Sigue la flecha hasta el portal y pulsa E. (M: balance)"
         return self.acompanante.datos(self, identificador, estado)

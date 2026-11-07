@@ -1,9 +1,17 @@
 """Encargos de transporte con carga, dos aportes distintos y efectos únicos."""
 
 ENCARGOS = (
-    {"titulo": "Asegurar la pasarela", "motivo": "Preparen el mantenimiento anunciado: lleven tablas y cuerdas al puesto de trabajo.",
-     "materiales": (("tablas", "Tablas", "archivo"), ("cuerdas", "Cuerdas", "propuesta")),
-     "destino": "eco_central", "lugar": "Puesto de mantenimiento", "efecto": "Pasarela preparada", "indicador": "armonia", "delta": 4},
+    # Primer evento: SIEMPRE 3 objetos (tablas, cuerda y canasta de
+    # herramientas), sin importar cuántos jugadores haya. Antes eran 2 porque
+    # esta configuración solo listaba dos materiales y materiales_listos exigía
+    # exactamente 2; no dependía del número de jugadores.
+    {"titulo": "Reparar el Puente 1", "motivo": "El Puente 1 está roto. Lleven tablas, cuerda y la canasta de herramientas al puesto; después reparen el puente.",
+     "materiales": (("tablas", "Tablas", "archivo"), ("cuerdas", "Cuerda", "propuesta"),
+                    ("herramientas", "Canasta de herramientas", "testigo")),
+     "destino": "eco_central", "lugar": "Puesto de mantenimiento", "efecto": "Puente 1 reparado", "indicador": "armonia", "delta": 4,
+     # Cada objeto es único (nadie puede llevar el que ya carga otro) y una
+     # misma persona puede aportar más de uno, de a uno por vez.
+     "objetos_unicos": True, "aportes_libres": True, "requiere_puente": True},
     {"titulo": "Abastecer a las familias", "motivo": "Después de investigar el agua, entreguen agua segura y provisiones a las familias.",
      "materiales": (("agua", "Agua segura", "archivo"), ("provisiones", "Provisiones", "propuesta")),
      "destino": "testigo", "lugar": "Familias de Luma", "efecto": "Reserva comunitaria abastecida", "indicador": "confianza", "delta": 4},
@@ -23,16 +31,24 @@ class EncargoSuministros:
         self.progreso = 0
         self.ultima_accion = -10
         self.objetivos = {o["id"]: o for o in objetivos}
+        self.puente_reparado = False
         central = next(o["id"] for o in objetivos if o.get("rol") == "mensajero")
         self.destino = self.objetivos[central if self.config["destino"] == "eco_central" else self.config["destino"]]
 
     @property
     def materiales_listos(self):
-        return len(self.entregados) == 2 and len(set(self.entregados.values())) == 2
+        total = len(self.config["materiales"])
+        aportantes = 1 if self.config.get("aportes_libres") else total
+        return len(self.entregados) == total and len(set(self.entregados.values())) >= aportantes
+
+    @property
+    def materiales_colocados(self):
+        """Materiales entregados y actividad de colocación terminada."""
+        return self.materiales_listos and self.progreso >= 3
 
     @property
     def completo(self):
-        return self.materiales_listos and self.progreso >= 3
+        return self.materiales_colocados and (self.puente_reparado or not self.config.get("requiere_puente"))
 
     def revisar_ayudante(self, presentes, jugadores):
         import math
@@ -44,9 +60,11 @@ class EncargoSuministros:
         import math
         def cerca(i):
             j = jugadores[i]
+            if j.get("dimension", "la_copa") != "la_copa":
+                return False
             return math.hypot(j["x"] - self.destino["x"], j["y"] - self.destino["y"]) <= 68
-        if not self.materiales_listos or self.completo:
-            raise ValueError("Primero traigan los dos materiales. Si ya terminaron, vuelvan al caldero.")
+        if not self.materiales_listos or self.materiales_colocados:
+            raise ValueError("Primero traigan los materiales. Si ya terminaron, vuelvan al caldero.")
         if jugador not in presentes or not cerca(jugador):
             raise ValueError("Acércate al círculo verde del puesto para ayudar.")
         self.revisar_ayudante(presentes, jugadores)
@@ -70,9 +88,13 @@ class EncargoSuministros:
         return next(m[1] for m in self.config["materiales"] if m[0] == material)
 
     def recoger(self, jugador, objetivo, material=None):
-        if self.materiales_listos or jugador in self.entregados.values():
+        if self.materiales_listos or (jugador in self.entregados.values() and not self.config.get("aportes_libres")):
             raise ValueError("Tu aporte ya está entregado o el encargo está completo.")
-        disponibles = [m[0] for m in self.config["materiales"] if m[2] == objetivo and m[0] not in self.entregados]
+        ocupados = {m for i, m in self.cargas.items() if i != jugador} if self.config.get("objetos_unicos") else set()
+        disponibles = [m[0] for m in self.config["materiales"] if m[2] == objetivo and m[0] not in self.entregados
+                       and m[0] not in ocupados]
+        if self.config.get("objetos_unicos") and material in ocupados:
+            raise ValueError("Otro compañero ya lleva ese objeto.")
         if material is not None and (not isinstance(material, str) or material not in disponibles):
             raise ValueError("Ese material no está disponible en este punto.")
         if not disponibles:
@@ -83,7 +105,7 @@ class EncargoSuministros:
 
     def entregar(self, jugador):
         material = self.cargas.get(jugador)
-        if jugador in self.entregados.values():
+        if jugador in self.entregados.values() and not (self.config.get("aportes_libres") and material):
             return "Tu entrega ya quedó registrada."
         if not material:
             raise ValueError("Primero recoge uno de los materiales del encargo.")
@@ -94,19 +116,26 @@ class EncargoSuministros:
         return "Entrega confirmada: " + self.nombre(material) + "."
 
     def objetivo(self, jugador, jugadores):
-        if self.materiales_listos and not self.completo:
+        if self.materiales_listos and not self.materiales_colocados:
             return dict(self.destino, nombre=self.config["lugar"])
-        if self.completo or jugador in self.entregados.values():
-            return self.objetivos["caldero"]
+        if self.materiales_colocados and not self.completo:
+            return None  # La campaña indica el Puente 1.
         if jugador in self.cargas and self.cargas[jugador] not in self.entregados:
             return dict(self.destino, nombre=self.config["lugar"])
         faltantes = [m[0] for m in self.config["materiales"] if m[0] not in self.entregados]
+        if self.completo or not faltantes or (jugador in self.entregados.values() and not self.config.get("aportes_libres")):
+            return self.objetivos["caldero"]
         reservados = {m for i, m in self.cargas.items() if i != jugador and i in jugadores}
-        material = next((m for m in faltantes if m not in reservados), faltantes[0])
+        material = next((m for m in faltantes if m not in reservados), None)
+        if material is None:
+            if self.config.get("objetos_unicos"):
+                return dict(self.destino, nombre=self.config["lugar"])
+            material = faltantes[0]
         return dict(self.fuente(material), nombre="Recoger " + self.nombre(material))
 
     def publico(self):
         return {"titulo": self.config["titulo"], "motivo": self.config["motivo"],
+                "requiere_puente": bool(self.config.get("requiere_puente")), "materiales_colocados": self.materiales_colocados,
                 "materiales": [{"id": m, "nombre": nombre, "fuente": dict(self.fuente(m)), "entregado": m in self.entregados}
                                for m, nombre, _ in self.config["materiales"]],
                 "destino": dict(self.destino, nombre=self.config["lugar"]), "completo": self.completo,

@@ -85,11 +85,14 @@ class GuiaCooperativa:
             e = m.encargo
             guia.update(paso="encargo", titulo="4. Ayuda a la aldea", detalle=estado["instruccion"],
                         objetivo=estado["objetivo"], boton="Ayudar · E")
-            if e.materiales_listos and not e.completo:
+            if e.materiales_listos and not e.materiales_colocados:
                 guia.update(titulo="¡Hagan la tarea juntos!", detalle="Uno ayuda y el otro trabaja. Acérquense al puesto.",
                             objetivo=dict(e.destino, nombre=e.config["lugar"]), boton="Abrir actividad · E")
+            elif e.materiales_colocados and not e.completo:
+                guia.update(paso="puente", titulo="¡Reparen el Puente 1!", detalle=estado["instruccion"],
+                            objetivo=estado["objetivo"], boton="Reparar · E")
         elif m.fase == "final":
-            guia.update(paso="final", titulo="¡Aldea a salvo!", detalle="Abre M para ver las estrellas del equipo.", objetivo=None, accion="balance", boton="Ver estrellas")
+            guia.update(paso="final", titulo="¡Aldea a salvo!", detalle="Sigue la flecha hasta el portal y pulsa E para viajar. M: estrellas del equipo.", objetivo=None, accion="balance", boton="Ver estrellas")
         elif not m.resultado:
             rol = m.jugadores[i]["rol"]
             if "pista_" + rol not in m.conocidas[i]:

@@ -39,6 +39,7 @@ class InterfazGuiadaTests(unittest.TestCase):
 
     def dibujar(self, modo):
         self.v.recibir({"mundo": self.p.estado(self.v.identificador)})
+        self.v.actualizar(5, self.c)  # deja terminar la animación de poción (bloquea la entrada)
         self.v.panel.abrir(modo)
         self.v.dibujar(self.lienzo, "PRUEBA")
         botones = list(self.v.panel.botones.values())
@@ -82,6 +83,7 @@ class InterfazGuiadaTests(unittest.TestCase):
             self.h.accion(self.p, i, "recoger_suministro")
             self.p.jugadores[i].update(x=e.destino["x"], y=e.destino["y"])
             self.h.accion(self.p, i, "depositar")
+        self.h.completar_materiales(self.p)
         self.dibujar("actividad")
         self.assertTrue(self.v.panel.botones["trabajar"].desactivado)
         self.pulsar("sujetar")

@@ -1,7 +1,7 @@
 """Mensajes JSON delimitados por nueva línea; sin dependencias externas."""
 import json
 
-VERSION = 5
+VERSION = 6  # 6: pociones, clasificación, puente 1, portal y Distrito Conecta
 PUERTO = 45871
 ROLES = ("guardian", "mensajero", "habitante", "aspirante")
 NOMBRES_ROLES = ("Guardián", "Mensajero", "Habitante", "Aspirante")

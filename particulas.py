@@ -1,9 +1,56 @@
-"""Efectos ambientales ligeros para el mapa, sin colisiones ni hojas."""
+"""Efectos ambientales ligeros para el mapa, sin colisiones ni hojas.
+
+Usa el arte real del proyecto: ``Animales/Luciernaga.png`` (8 cuadros) para
+las luciérnagas y ``Animaciones/Destello.png`` (8 cuadros) para las chispas
+mágicas. Los sprites se cargan y escalan UNA vez (vecino más cercano) y los
+halos se generan una vez y se reutilizan; nada se crea dentro del bucle.
+Si falta un PNG se registra su ruta y se usa el dibujo de respaldo.
+"""
 
 import math
 import random
+from pathlib import Path
 
 import pygame
+
+RAIZ_IMAGENES = Path(__file__).resolve().parent / "Imagenes"
+RUTA_LUCIERNAGA = RAIZ_IMAGENES / "Animales" / "Luciernaga.png"
+RUTA_DESTELLO = RAIZ_IMAGENES / "Animaciones" / "Destello.png"
+
+
+def _cargar_tira(ruta, cantidad, alto_objetivo):
+    """Separa una tira horizontal en cuadros recortados y escalados."""
+    try:
+        imagen = pygame.image.load(str(ruta))
+        if pygame.display.get_surface() is not None:
+            imagen = imagen.convert_alpha()
+    except (pygame.error, FileNotFoundError, OSError) as error:
+        print(f"[Partículas] Falta el recurso {ruta}: {error}")
+        return []
+    ancho = imagen.get_width() / cantidad
+    cuadros = []
+    for indice in range(cantidad):
+        x = round(indice * ancho)
+        cuadro = imagen.subsurface((x, 0, round((indice + 1) * ancho) - x, imagen.get_height()))
+        # Umbral de alfa: ignora halos casi transparentes al recortar.
+        rects = pygame.mask.from_surface(cuadro, 48).get_bounding_rects()
+        if not rects:
+            continue
+        cuadro = cuadro.subsurface(rects[0].unionall(rects[1:]))
+        escala = alto_objetivo / cuadro.get_height()
+        cuadros.append(pygame.transform.scale(
+            cuadro, (max(1, round(cuadro.get_width() * escala)), max(1, round(alto_objetivo)))))
+    return cuadros
+
+
+def _halo(radio, color):
+    """Gradiente radial en RGB para mezclar con suma (sin alfa por píxel)."""
+    superficie = pygame.Surface((radio * 2, radio * 2))
+    superficie.fill((0, 0, 0))
+    for r in range(radio, 0, -1):
+        intensidad = (1 - r / radio) ** 2
+        pygame.draw.circle(superficie, tuple(round(c * intensidad) for c in color), (radio, radio), r)
+    return superficie
 
 
 class SistemaParticulas:
@@ -13,6 +60,7 @@ class SistemaParticulas:
     MAX_PARTICULAS = 60
     PALETA = ((111, 219, 150), (93, 218, 205), (238, 201, 92))
     RADIO_BRILLO = 9
+    _sprites = None
 
     def __init__(self, ancho, alto, semilla=None):
         self.ancho = ancho
@@ -26,14 +74,24 @@ class SistemaParticulas:
         ]
         self.particulas = []
         self._superficies_luciernaga = {}
-        for tamano in (1, 2, 3):
-            try:
-                pixel = pygame.Surface((tamano, tamano), pygame.SRCALPHA)
-                pixel.fill((255, 212, 89, 255))
-                self._superficies_luciernaga[tamano] = pixel
-            except (pygame.error, MemoryError) as error:
-                print(f"[advertencia] No se pudo crear el pixel de luciernaga: {error}")
-                break
+        self._halos = {}
+
+    @classmethod
+    def _recursos(cls):
+        if cls._sprites is None:
+            luciernaga = _cargar_tira(RUTA_LUCIERNAGA, 8, 11)
+            cls._sprites = {
+                "luciernaga": luciernaga,
+                "luciernaga_izquierda": [pygame.transform.flip(c, True, False) for c in luciernaga],
+                "destellos": {tam: _cargar_tira(RUTA_DESTELLO, 8, tam) for tam in (7, 10, 13, 16)},
+            }
+        return cls._sprites
+
+    def _halo(self, radio, color):
+        clave = (radio, color)
+        if clave not in self._halos:
+            self._halos[clave] = _halo(radio, color)
+        return self._halos[clave]
 
     def configurar_dimension(self, dimension):
         if dimension == "presente":
@@ -44,9 +102,12 @@ class SistemaParticulas:
             self.paleta = self.PALETA
 
     def _nueva_luciernaga(self, indice):
+        angulo = self.rng.random() * math.tau
         return {
             "x": self.rng.randrange(self.ancho),
             "y": self.rng.randrange(self.alto),
+            "vx": math.cos(angulo) * self.rng.uniform(4, 10),
+            "vy": math.sin(angulo) * self.rng.uniform(2, 5),
             "fase": self.rng.random() * math.tau,
             "velocidad": self.rng.uniform(0.12, 0.42),
             "amplitud": self.rng.uniform(3, 11),
@@ -76,6 +137,13 @@ class SistemaParticulas:
         self.tiempo += delta
         for luciernaga in self.luciernagas:
             luciernaga["fase"] += luciernaga["velocidad"] * delta
+            # Deriva lenta con giro suave; reaparece por el borde contrario.
+            giro = math.sin(self.tiempo * .3 + luciernaga["fase_brillo"]) * .6 * delta
+            vx, vy = luciernaga.get("vx", 0), luciernaga.get("vy", 0)
+            luciernaga["vx"] = vx * math.cos(giro) - vy * math.sin(giro)
+            luciernaga["vy"] = vx * math.sin(giro) + vy * math.cos(giro)
+            luciernaga["x"] = (luciernaga["x"] + luciernaga["vx"] * delta) % self.ancho
+            luciernaga["y"] = (luciernaga["y"] + luciernaga["vy"] * delta) % self.alto
 
         vivas = []
         for particula in self.particulas:
@@ -84,54 +152,42 @@ class SistemaParticulas:
                 continue
             particula["x"] += particula["vx"] * delta
             particula["y"] += particula["vy"] * delta
+            particula["vy"] -= 6 * delta  # las chispas flotan hacia arriba
             vivas.append(particula)
         self.particulas = vivas
 
     def dibujar(self, superficie):
-        brillos = pygame.Surface(superficie.get_size(), pygame.SRCALPHA)
+        sprites = self._recursos()
         if self.mostrar_luciernagas:
             for luciernaga in self.luciernagas:
                 x = int(luciernaga["x"] + math.sin(luciernaga["fase"]) * luciernaga["amplitud"])
                 y = int(luciernaga["y"] + math.sin(luciernaga["fase"] * 0.7) * 3)
                 brillo = (math.sin(self.tiempo * 1.6 + luciernaga["fase_brillo"]) + 1) / 2
-                alpha = int(100 + brillo * 155)
-                tamano = luciernaga["tamano"]
-                pygame.draw.circle(
-                    brillos,
-                    (255, 207, 92, int(38 + brillo * 42)),
-                    (x + tamano // 2, y + tamano // 2),
-                    self.RADIO_BRILLO,
-                )
-                pixel = self._superficies_luciernaga.get(tamano)
-                if pixel is not None:
-                    pixel.set_alpha(alpha)
-                    superficie.blit(pixel, (x, y))
-                elif alpha > 2:
-                    color = (alpha, alpha * 3 // 4, alpha // 3)
-                    pygame.draw.rect(superficie, color, pygame.Rect(x, y, tamano, tamano))
+                nivel = 1 + round(brillo * 5)
+                halo = self._halo(self.RADIO_BRILLO + 3, tuple(round(c * nivel / 6 * .55) for c in (255, 207, 92)))
+                superficie.blit(halo, halo.get_rect(center=(x, y)), special_flags=pygame.BLEND_RGB_ADD)
+                cuadros = sprites["luciernaga" if luciernaga.get("vx", 1) >= 0 else "luciernaga_izquierda"]
+                if cuadros:
+                    cuadro = cuadros[int(self.tiempo * 10 + luciernaga["fase_brillo"] * 3) % len(cuadros)]
+                    superficie.blit(cuadro, cuadro.get_rect(center=(x, y)))
+                else:
+                    tamano = luciernaga["tamano"]
+                    alpha = int(100 + brillo * 155)
+                    pygame.draw.rect(superficie, (alpha, alpha * 3 // 4, alpha // 3), (x, y, tamano, tamano))
 
         for particula in self.particulas:
-            proporcion_vida = max(
-                0, min(1, particula["vida"] / particula["vida_max"])
-            )
-            intensidad = int(110 + 145 * proporcion_vida)
+            vida = max(0, min(1, particula["vida"] / particula["vida_max"]))
             x, y = int(particula["x"]), int(particula["y"])
-            pygame.draw.circle(
-                brillos,
-                (*particula["color"], int(35 + 55 * proporcion_vida)),
-                (x + particula["tamano"] // 2, y + particula["tamano"] // 2),
-                particula["tamano"] + 4,
-            )
-            color = tuple(min(255, c * intensidad // 180) for c in particula["color"])
-            if intensidad > 0:
-                pygame.draw.rect(
-                    superficie,
-                    color,
-                    pygame.Rect(
-                        x,
-                        y,
-                        particula["tamano"],
-                        particula["tamano"],
-                    ),
-                )
-        superficie.blit(brillos, (0, 0))
+            nivel = max(1, round(vida * 4))
+            halo = self._halo(particula["tamano"] + 5, tuple(round(c * nivel / 4 * .5) for c in particula["color"]))
+            superficie.blit(halo, halo.get_rect(center=(x, y)), special_flags=pygame.BLEND_RGB_ADD)
+            tamano = min((7, 10, 13, 16), key=lambda t: abs(t - particula["tamano"] * 2.6))
+            cuadros = sprites["destellos"].get(tamano)
+            if cuadros:
+                # La chispa recorre los 8 cuadros del destello durante su vida.
+                cuadro = cuadros[min(len(cuadros) - 1, int((1 - vida) * len(cuadros)))]
+                superficie.blit(cuadro, cuadro.get_rect(center=(x, y)))
+            else:
+                intensidad = int(110 + 145 * vida)
+                color = tuple(min(255, c * intensidad // 180) for c in particula["color"])
+                pygame.draw.rect(superficie, color, (x, y, particula["tamano"], particula["tamano"]))

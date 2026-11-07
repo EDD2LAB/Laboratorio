@@ -1,11 +1,44 @@
-"""Iconos y señales del encargo, dibujados con píxeles y formas simples."""
+"""Iconos y señales del encargo.
+
+Tablas, cuerda y canasta de herramientas usan el arte real
+(Herramientas/HerramientasReparación.png, recortado una vez por
+SistemaReparacionPuente.recortar_spritesheet_materiales). Los materiales sin
+arte en el repositorio conservan su icono de píxeles.
+"""
 import pygame
 
+# id de material en red -> clave del recorte del spritesheet.
+CLAVES_SPRITE = {"tablas": "tablas", "cuerdas": "cuerda", "herramientas": "herramientas"}
+_sprites = {}
 
-def dibujar_carga(superficie, material, centro):
+
+def configurar_sprites(materiales):
+    """Escala una vez cada material a los dos tamaños que se dibujan."""
+    _sprites.clear()
+    for material, clave in CLAVES_SPRITE.items():
+        imagen = (materiales or {}).get(clave)
+        if imagen is None:
+            continue
+        for tamano in (26, 34):
+            escala = min(tamano / imagen.get_width(), tamano / imagen.get_height())
+            _sprites[(material, tamano)] = pygame.transform.scale(
+                imagen, (max(1, round(imagen.get_width() * escala)), max(1, round(imagen.get_height() * escala))))
+
+
+def dibujar_carga(superficie, material, centro, tamano=26):
     x, y = centro
+    sprite = _sprites.get((material, tamano))
+    if sprite is not None:
+        placa = pygame.Rect(0, 0, tamano + 10, tamano + 8)
+        placa.center = centro
+        pygame.draw.ellipse(superficie, (10, 24, 18), placa.move(0, tamano // 2 - 2).inflate(-6, -placa.height + 8))
+        superficie.blit(sprite, sprite.get_rect(center=centro))
+        return
     pygame.draw.rect(superficie, (15, 35, 27), (x-16, y-15, 32, 30), border_radius=4)
-    if material == "farol":
+    if material == "herramientas":
+        pygame.draw.ellipse(superficie, (169, 120, 67), (x-12, y-4, 24, 15))
+        pygame.draw.arc(superficie, (218, 185, 111), (x-9, y-12, 18, 16), 0, 3.14, 2)
+    elif material == "farol":
         pygame.draw.circle(superficie, (255, 226, 116), (x, y), 10)
         pygame.draw.rect(superficie, (186, 123, 57), (x-9, y-12, 18, 5))
         pygame.draw.rect(superficie, (186, 123, 57), (x-9, y+8, 18, 5))
@@ -32,11 +65,19 @@ def dibujar_carga(superficie, material, centro):
 def dibujar_encargos(superficie, caso, fuente):
     encargo = caso.get("encargo")
     if encargo:
+        llevados = set(encargo.get("cargas", {}).values())
+        colocados = [m for m in encargo["materiales"] if m["entregado"]]
+        d = encargo["destino"]
+        for i, material in enumerate(colocados):
+            # Los objetos entregados quedan colocados junto al puesto.
+            dibujar_carga(superficie, material["id"], (d["x"] - (len(colocados) - 1) * 15 + i * 30, d["y"] - 4))
         for material in encargo["materiales"]:
+            if material["entregado"] or material["id"] in llevados:
+                continue  # El objeto ya no está en su punto de recogida.
             o = material["fuente"]
             x, y = o["x"] + 23, o["y"] - 22
-            dibujar_carga(superficie, material["id"], (x, y))
-            texto = fuente.render(material["nombre"] + (": listo" if material["entregado"] else " · E"), True, (255, 239, 191))
+            dibujar_carga(superficie, material["id"], (x, y), 34)
+            texto = fuente.render(material["nombre"] + " · E", True, (255, 239, 191))
             caja = texto.get_rect(midtop=(x, y+17))
             caja.clamp_ip(superficie.get_rect().inflate(-10, -10))
             pygame.draw.rect(superficie, (15, 35, 27), caja.inflate(6, 4))
@@ -49,7 +90,8 @@ def dibujar_encargos(superficie, caso, fuente):
                 x, y = d["x"]-27+i*19, d["y"]-25
                 color = (246, 202, 105) if i < progreso else (48, 74, 51)
                 pygame.draw.rect(superficie, color, (x, y, 15, 8), border_radius=2)
-        etiqueta = fuente.render(("AYUDAR JUNTOS · E" if encargo.get("materiales_listos") else "ENTREGAR · E") if not encargo["completo"] else "¡GRACIAS, EQUIPO!", True, (128, 238, 180))
+        etiqueta = fuente.render("¡GRACIAS, EQUIPO!" if encargo["completo"] else "AHORA: REPARAR EL PUENTE 1" if encargo.get("materiales_colocados")
+                                 else "AYUDAR JUNTOS · E" if encargo.get("materiales_listos") else "ENTREGAR · E", True, (128, 238, 180))
         superficie.blit(etiqueta, etiqueta.get_rect(midtop=(d["x"], d["y"]+28)))
     for obra in caso.get("obras", []) + ([encargo] if encargo and encargo["completo"] else []):
         d = obra["destino"]

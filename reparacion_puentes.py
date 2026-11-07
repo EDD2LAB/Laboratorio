@@ -4,6 +4,13 @@ import math
 
 import pygame
 
+from multijugador.reparacion import (
+    CONFIGURACION as CONFIGURACION_MINIJUEGO,
+    angulo_aguja,
+    angulo_objetivo,
+    dentro_de_zona,
+)
+
 
 class SistemaReparacionPuente:
     """Gestiona el ciclo de reparacion y expone eventos serializables."""
@@ -19,16 +26,8 @@ class SistemaReparacionPuente:
         "plataforma_suroeste": (53, 75),
         "plataforma_sureste": (-18, 85),
     }
-    CONFIGURACION = {
-        "aciertos_necesarios": 3,
-        "duracion_recorrido_ms": 1200,
-        "angulo_objetivo": math.radians(-25),
-        "tolerancia_angulo": math.radians(31),
-        "rotacion_objetivo_por_acierto": math.radians(60),
-        "penalizacion_por_error": 1,
-        "duracion_resultado_ms": 350,
-        "duracion_animacion_ms": 800,
-    }
+    # Misma configuración que el minijuego multijugador (un solo origen).
+    CONFIGURACION = dict(CONFIGURACION_MINIJUEGO)
 
     def __init__(self, puente, grafo, recursos, estado_guardado=None):
         if puente.get("id") != "puente_1":
@@ -273,21 +272,13 @@ class SistemaReparacionPuente:
         return True
 
     def _angulo_aguja(self):
-        periodo = self.configuracion["duracion_recorrido_ms"]
-        fraccion = (self.tiempo_aguja_ms % periodo) / periodo
-        return -math.pi + fraccion * math.pi
+        return angulo_aguja(self.tiempo_aguja_ms, self.configuracion)
 
     def _angulo_objetivo(self):
-        return (
-            self.configuracion["angulo_objetivo"]
-            - self.progreso * self.configuracion["rotacion_objetivo_por_acierto"]
-        )
+        return angulo_objetivo(self.progreso, self.configuracion)
 
     def _dentro_de_zona_correcta(self, angulo):
-        diferencia = abs(
-            (angulo - self._angulo_objetivo() + math.pi) % math.tau - math.pi
-        )
-        return diferencia <= self.configuracion["tolerancia_angulo"]
+        return dentro_de_zona(angulo, self.progreso, self.configuracion)
 
     def _indicador_actual(self):
         indicador = self.indicadores.get(self.estado_indicador)

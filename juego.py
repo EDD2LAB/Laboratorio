@@ -1723,6 +1723,9 @@ def objetivo_mision_actual(
     return (pantalla["rect"].center, "Clasificar la publicación") if pantalla else None
 
 
+_FLECHA_GUIA = None
+
+
 def dibujar_flecha_objetivo(superficie, mundo, objetivo, fuente):
     posicion_objetivo, etiqueta = objetivo
     jugador = mundo["jugador"]
@@ -1731,23 +1734,13 @@ def dibujar_flecha_objetivo(superficie, mundo, objetivo, fuente):
     direccion = destino - origen
     if direccion.length_squared() == 0:
         return
-    direccion = direccion.normalize()
-    perpendicular = pygame.Vector2(-direccion.y, direccion.x)
-    centro = origen + direccion * 48
-    centro.x = max(30, min(ANCHO - 30, centro.x))
-    centro.y = max(42, min(ALTO - 122, centro.y))
-    punta = centro + direccion * 15
-    base = centro - direccion * 12
-    puntos = [
-        punta,
-        base + perpendicular * 9,
-        centro - direccion * 4 + perpendicular * 4,
-        centro - direccion * 4 - perpendicular * 4,
-        base - perpendicular * 9,
-    ]
-    pygame.draw.polygon(superficie, (34, 30, 17), [(x + 2, y + 3) for x, y in puntos])
-    pygame.draw.polygon(superficie, (255, 207, 48), puntos)
-    pygame.draw.polygon(superficie, (255, 244, 170), puntos, 2)
+    # Flecha de hojas animada (arte real IndicadorDirrKael.png) en lugar del
+    # polígono dibujado por código; misma orientación y mismos márgenes.
+    global _FLECHA_GUIA
+    if _FLECHA_GUIA is None:
+        from interfaz.efectos_visuales import FlechaGuia
+        _FLECHA_GUIA = FlechaGuia()
+    _FLECHA_GUIA.dibujar(superficie, origen, destino, pygame.time.get_ticks())
 
     texto = fuente.render(f"OBJETIVO: {etiqueta}", True, (255, 226, 104))
     panel = texto.get_rect(midtop=(ANCHO // 2, 14)).inflate(22, 12)

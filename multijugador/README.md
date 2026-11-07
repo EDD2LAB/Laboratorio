@@ -247,3 +247,34 @@ python juego.py
 HTTP sin cifrar se admite únicamente en loopback. El transporte TCP de la
 primera sala se conserva para pruebas, pero no aparece en el menú ni implementa
 el nuevo movimiento compartido.
+
+## Features del modo de un jugador en multijugador (protocolo 6)
+
+Todo es aditivo: los mensajes `mover`/`accion`, los acuses y el estado anterior
+no cambiaron de forma; solo se agregaron acciones y campos.
+
+Acciones nuevas (`{"tipo": "accion", "accion": ...}`):
+
+| Acción | Datos | Qué valida el servidor |
+| --- | --- | --- |
+| `clasificar` | `categoria` (p. ej. `"Rumor Político"`) | Hay resultado del caso y el jugador no clasificó aún. ±5 de sabiduría. |
+| `interactuar` con `objetivo="puente_1"` | — | Caso 1 en preparación, materiales colocados, cercanía, nadie más reparando. |
+| `intento_reparacion` | `tiempo_aguja_ms` | Es quien repara, cadencia ≥0,25 s, tiempo creciente y ≤ reloj del servidor + 1,5 s. El acierto se recalcula con `multijugador/reparacion.py`. |
+| `cerrar_reparacion` | — | Libera el minijuego para otro jugador. |
+| `usar_portal` | `destino` (`la_copa`, `presente`, `futuro`) | Cercanía al portal de su dimensión y destino disponible. Funciona siempre. |
+| `interactuar` con `objetivo="presente:..."` | — | Pistas y pantalla pública de Distrito Conecta. |
+| `presente_votar` | `opcion` | Tres pistas reunidas y cercanía a la pantalla pública. |
+| `presente_clasificar` | `categoria` | Hay decisión en Distrito Conecta. |
+
+Campos nuevos del estado: `jugadores[].dimension`, `jugadores[].viaje`,
+`mundo.portales`, `mundo.destinos`, `caso.tipos_pocion`,
+`caso.clasificacion_opciones`, `caso.puente`, `caso.dimension_completa`,
+`caso.presente`, `caso.resultado.tipo_pocion`, `caso.resultado.evento_id`,
+`privado.clasificacion` y `privado.presente`. Por red solo viajan ids, tipos y
+estados: sprites y sonidos se cargan en cada cliente una sola vez.
+
+Datos compartidos en un solo lugar: tipos de poción y polaridad de indicadores
+en `multijugador/presentacion.py`; categorías en `multijugador/clasificacion.py`
+(sobre `Arboles.construir_arbol_categorias_multijugador`); dimensiones en
+`multijugador/dimensiones_red.py`. El Dockerfile copia también `Arboles.py` y
+`Hitboxes/Mapas/Presente/`.

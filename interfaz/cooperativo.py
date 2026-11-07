@@ -4,6 +4,7 @@ import time
 
 import pygame
 from interfaz.boton import Boton
+from multijugador.reparacion import CONFIGURACION as CONFIG_REPARACION
 
 ORO = (237, 185, 87)
 CREMA = (255, 243, 210)
@@ -31,6 +32,45 @@ class PanelCooperativo:
         self.estrellas_vistas = None
         self.tutorial_visto = None
         self.celebrar_hasta = 0
+        # Efectos ya reproducidos (event_id del servidor): nunca se repiten.
+        self.eventos_vistos = None
+        self.resultado_presente_visto = None
+        self.botones_clasificacion = {}
+        self.tiempo_aguja_ms = 0.0
+        self.estado_indicador = "normal"
+        self.indicador_hasta = 0.0
+        self.intento_ultimo = None
+        self.clasificacion_sonada = set()
+
+    @property
+    def dimension(self):
+        return self.vista.dimension
+
+    def contexto(self):
+        """Caso de la dimensión del jugador (La Copa o Distrito Conecta)."""
+        if self.dimension == "presente":
+            return dict(self.caso.get("presente") or {}, dimension="presente")
+        return dict(self.caso, dimension="la_copa")
+
+    def privado_voto(self, contexto):
+        if contexto.get("dimension") == "presente":
+            return (self.privado.get("presente") or {}).get("voto")
+        return self.privado.get("voto")
+
+    def clasificacion_propia(self):
+        if self.dimension == "presente":
+            return (self.privado.get("presente") or {}).get("clasificacion")
+        return self.privado.get("clasificacion")
+
+    def _eventos_actuales(self):
+        eventos = []
+        resultado = self.caso.get("resultado")
+        if resultado and resultado.get("evento_id"):
+            eventos.append(("la_copa", resultado, self.caso.get("noticia", "")))
+        presente = self.caso.get("presente") or {}
+        if presente.get("resultado") and presente["resultado"].get("evento_id"):
+            eventos.append(("presente", presente["resultado"], presente.get("noticia", "")))
+        return eventos
 
     @property
     def activo(self):
@@ -67,17 +107,49 @@ class PanelCooperativo:
                 if aviso.get("tipo") != "resultado":
                     self.notificar(aviso["texto"])
         resultado = self.caso.get("resultado")
-        if resultado:
+        if resultado and self.dimension == "la_copa":
             clave = (ronda, resultado["opcion"], self.caso.get("rectificacion"))
             if clave != self.resultado_visto:
                 self.resultado_visto = clave
                 self.abrir("resultado")
+        presente = (self.caso.get("presente") or {}).get("resultado")
+        if presente and self.dimension == "presente" and presente.get("evento_id") != self.resultado_presente_visto:
+            self.resultado_presente_visto = presente.get("evento_id")
+            self.abrir("resultado")
+        # Poción, caldero y sonido: una vez por evento_id y solo en su dimensión.
+        eventos = self._eventos_actuales()
+        if self.eventos_vistos is None:
+            self.eventos_vistos = {r["evento_id"] for _, r, _ in eventos}  # al unirse no se repite lo pasado
+        for dimension, resultado, noticia in eventos:
+            if resultado["evento_id"] in self.eventos_vistos:
+                continue
+            self.eventos_vistos.add(resultado["evento_id"])
+            if dimension == self.dimension:
+                self.vista.iniciar_pocion(resultado, noticia)
+        propia = self.clasificacion_propia()
+        if propia and (self.dimension, self.caso.get("ronda"), propia["opcion"]) not in self.clasificacion_sonada:
+            self.clasificacion_sonada.add((self.dimension, self.caso.get("ronda"), propia["opcion"]))
+            self.vista.sonido({"tipo": "clasificacion", "correcta": bool(propia["correcta"])})
 
     def notificar(self, texto):
         self.toast, self.toast_hasta = texto, time.monotonic() + 6
 
     def recibir(self, acuse):
         self.notificar(acuse.get("mensaje", "Acción confirmada."))
+        if acuse.get("ok") and acuse.get("resultado") in ("acierto", "error"):
+            self.estado_indicador = acuse["resultado"]
+            self.indicador_hasta = time.monotonic() + CONFIG_REPARACION["duracion_resultado_ms"] / 1000
+            return
+        if acuse.get("ok") and acuse.get("dimension"):
+            self.modo = None
+            return
+        if acuse.get("ok") and acuse.get("vista") == "reparar":
+            if self.modo != "reparar":
+                self.tiempo_aguja_ms = 0.0
+                self.estado_indicador = "normal"
+            self.modo = "reparar"
+            self._abierto = time.monotonic()
+            return
         if acuse.get("ok") and acuse.get("vista"):
             self.abrir("inventario" if acuse["vista"] == "compartir" else acuse["vista"])
             self.titulo = acuse.get("titulo", "Testimonio")
@@ -132,12 +204,108 @@ class PanelCooperativo:
             return "Acércate al caldero brillante para elegir."
         return ""
 
+    def actualizar_tiempo(self, segundos):
+        if self.modo == "reparar":
+            self.tiempo_aguja_ms += segundos * 1000
+            if self.indicador_hasta and time.monotonic() > self.indicador_hasta:
+                self.estado_indicador, self.indicador_hasta = "normal", 0
+            puente = self.caso.get("puente") or {}
+            if puente.get("estado") != "REPAIR_MINIGAME" or puente.get("reparador") != self.vista.identificador:
+                if puente.get("estado") in ("REPAIR_ANIMATION", "REPAIRED") or time.monotonic() - (getattr(self, "_abierto", 0) or time.monotonic()) > 1.5:
+                    self.modo = None
+
+    def _dibujar_pantalla_completa(self, superficie):
+        """Escenas del modo de un jugador; devuelve True si dibujó una."""
+        from interfaz import escenas_multijugador as escenas
+        import juego
+        contexto = self.contexto()
+        if self.modo == "caldero":
+            opciones = contexto.get("opciones", {})
+            if contexto["dimension"] == "presente":
+                pistas, total = contexto.get("pistas", 0), contexto.get("total_pistas", 3)
+                falta = ("Reúnan las tres pistas de Distrito Conecta." if pistas < total else
+                         "Acércate a la pantalla pública para elegir." if not self.vista.cerca_id("presente:pantalla") else "")
+                mensaje = falta or "Elijan juntos una poción. Lean las pistas con I."
+            else:
+                falta = self.falta_para_elegir()
+                mensaje = falta or ("Eligieron distinto. Hablen y prueben otra vez." if self.caso.get("empate") else "Lee tus pistas. ¿Qué poción usamos?")
+            votos = f"Tus pistas: {len(self.inventario())} · Ya eligieron {contexto.get('votos_emitidos', 0)} de {contexto.get('votantes', 0)}"
+            if self.privado_voto(contexto):
+                votos += " · Tu poción: " + escenas.nombre_pocion(contexto.get("tipos_pocion", {}).get(self.privado_voto(contexto), ""))
+            escenas.dibujar_decision(self, superficie, contexto, opciones, contexto.get("tipos_pocion", {}), falta, mensaje, votos)
+            if contexto["dimension"] == "la_copa" and len(self.inventario()) < 2:
+                self.boton(superficie, "pedir_pista", "Pedir pista", 880, 700, 150)
+            self.boton(superficie, "cerrar", "Volver", 82, 700, 150)
+            return True
+        if self.modo == "resultado":
+            resultado = contexto.get("resultado") or {}
+            rect = escenas.dibujar_consecuencia(self, superficie, resultado, contexto["dimension"])
+            propia = self.clasificacion_propia()
+            if not propia:
+                self.texto_lineas(superficie, "Antes de seguir: ¿qué tipo de información era?", rect.x + 40, rect.bottom - 70, rect.width - 80, self.pequena, ORO)
+                self.boton(superficie, "clasificar_abrir", "Clasificar el evento", 480, 595, 420)
+            elif contexto["dimension"] == "la_copa":
+                if not resultado.get("correcto") and not self.caso.get("rectificacion"):
+                    self.boton(superficie, "rectificar", "Leer las pistas e intentar otra vez", 480, 595, 570, self.en_caldero())
+                self.boton(superficie, "introduccion", "Ver nuestras estrellas" if self.caso.get("fase") == "final" else "Vamos a ayudar a la aldea", 480, 650, 540)
+            elif resultado.get("opcion") == "dejar_pendiente":
+                self.boton(superficie, "caldero", "Volver a decidir", 480, 595, 420, self.vista.cerca_id("presente:pantalla"))
+            self.boton(superficie, "cerrar", "Volver al mapa", 480, 700, 310)
+            return True
+        if self.modo == "clasificar":
+            opciones = tuple(contexto.get("clasificacion_opciones") or ())
+            r = self.vista.escenas.r
+            if opciones not in self.botones_clasificacion:
+                self.botones_clasificacion[opciones] = juego.construir_botones_clasificacion(list(opciones), r, r["fuente_boton"])
+            botones = self.botones_clasificacion[opciones]
+            juego.dibujar_pregunta_clasificacion(superficie, r, escenas.AdaptadorEstado(), botones, self.vista.mouse)
+            for boton in botones:
+                self.botones["clasificar:" + boton.texto] = boton
+            return True
+        if self.modo == "clasificacion_resultado":
+            propia = self.clasificacion_propia()
+            if not propia:
+                return False
+            resultado = contexto.get("resultado") or {}
+            adaptador = escenas.AdaptadorEstado(resultado=dict(
+                categoria=propia["categoria"], clasificacion_jugador=propia["opcion"],
+                clasificacion_correcta=propia["correcta"], efecto_clasificacion=propia["efectos"],
+                resultado=resultado.get("texto", "")))
+            juego.dibujar_resultado_evento(superficie, self.vista.escenas.r, adaptador)
+            return True
+        if self.modo == "reparar":
+            escenas.dibujar_minijuego(self, superficie, self.caso.get("puente") or {}, self.tiempo_aguja_ms, self.estado_indicador)
+            return True
+        if self.modo == "portal":
+            escenas.dibujar_portal(self, superficie, self.vista.destinos(), self.dimension)
+            self.boton(superficie, "cerrar", "Quedarme aquí", 480, 520, 300)
+            return True
+        return False
+
+    def inventario(self):
+        if self.dimension == "presente":
+            return (self.privado.get("presente") or {}).get("inventario", [])
+        return self.privado.get("inventario", [])
+
     def dibujar(self, superficie):
         self.botones = {}
+        if self.modo != "reparar":
+            self._abierto = 0
+        elif not getattr(self, "_abierto", 0):
+            self._abierto = time.monotonic()
+        if self.activo and self._dibujar_pantalla_completa(superficie):
+            if time.monotonic() < self.toast_hasta and self.modo not in ("clasificar", "clasificacion_resultado"):
+                pygame.draw.rect(superficie, (10, 30, 23), (20, 108, 920, 40), border_radius=7)
+                self.texto_lineas(superficie, self.toast, 32, 116, 895, self.pequena, VERDE)
+            return
         if not self.activo:
             if time.monotonic() < self.toast_hasta:
-                pygame.draw.rect(superficie, (10, 30, 23), (25, 572, 910, 72), border_radius=8)
-                self.texto_lineas(superficie, self.toast, 42, 582, 870, self.fuente, VERDE)
+                # Bajo los paneles superiores: no tapa el portal ni los spawns.
+                fondo = pygame.Surface((700, 50), pygame.SRCALPHA)
+                fondo.fill((10, 30, 23, 228))
+                superficie.blit(fondo, (240, 150))
+                pygame.draw.rect(superficie, (70, 120, 90), (240, 150, 700, 50), 1, border_radius=8)
+                self.texto_lineas(superficie, self.toast, 254, 156, 672, self.pequena, VERDE)
             return
         velo = pygame.Surface((960, 720), pygame.SRCALPHA)
         velo.fill((2, 12, 8, 150)); superficie.blit(velo, (0, 0))
@@ -151,7 +319,7 @@ class PanelCooperativo:
             t = self.fuente.render(titulos.get(self.modo, "AYUDEMOS A LA ALDEA"), True, ORO)
         superficie.blit(t, t.get_rect(midtop=(480, 85)))
         self.texto_lineas(superficie, self.caso.get("titulo", ""), 165, 127, 630, self.pequena, VERDE)
-        inventario = self.privado.get("inventario", [])
+        inventario = self.inventario()
         guia = self.privado.get("guia", {})
         tutorial = self.privado.get("tutorial", {})
         if self.modo == "introduccion":
@@ -302,6 +470,16 @@ class PanelCooperativo:
         return jugadores
 
     def manejar(self, evento, posicion, cliente):
+        if self.modo == "reparar" and evento.type == pygame.KEYDOWN:
+            if evento.key in (pygame.K_e, pygame.K_SPACE):
+                cliente.actuar("intento_reparacion", tiempo_aguja_ms=round(self.tiempo_aguja_ms, 1))
+            elif evento.key == pygame.K_ESCAPE:
+                cliente.actuar("cerrar_reparacion")
+                self.modo = None
+            return True
+        if self.modo == "clasificacion_resultado" and evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+            self.abrir("resultado")
+            return True
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_ESCAPE and self.activo:
                 self.modo = None
@@ -354,6 +532,17 @@ class PanelCooperativo:
                 cliente.actuar("eco", mensaje=int(clave.split(":")[1]))
             elif clave.startswith("votar:"):
                 cliente.actuar("votar", opcion=clave.split(":")[1])
+            elif clave.startswith("presente_votar:"):
+                cliente.actuar("presente_votar", opcion=clave.split(":")[1])
+            elif clave == "clasificar_abrir":
+                self.abrir("clasificar")
+            elif clave.startswith("clasificar:"):
+                cliente.actuar("presente_clasificar" if self.dimension == "presente" else "clasificar",
+                               categoria=clave.split(":", 1)[1])
+            elif clave == "caldero":
+                self.abrir("caldero")
+            elif clave.startswith("viajar:"):
+                self.vista.viajar(cliente, clave.split(":", 1)[1])
             elif clave == "rectificar":
                 cliente.actuar("rectificar")
             break

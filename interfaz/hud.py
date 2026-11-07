@@ -10,9 +10,15 @@ NEGATIVOS = {"susurros_falsos", "desinformación"}
 class HUDIndicadores:
     """Suaviza barras, anuncia variaciones y señala estados críticos."""
 
-    def __init__(self, fuente, iconos=None):
+    def __init__(self, fuente, iconos=None, negativos=None, colores_avisos=None, etiquetar_avisos=False):
+        """``negativos``, ``colores_avisos`` y ``etiquetar_avisos`` son
+        opcionales: el modo de un jugador los omite y se ve igual que antes;
+        el multijugador pasa su polaridad y sus colores verde/rojo."""
         self.fuente = fuente
         self.iconos = iconos or {}
+        self.negativos = set(negativos) if negativos is not None else NEGATIVOS
+        self.colores_avisos = colores_avisos or ((111, 220, 126), (242, 113, 90))
+        self.etiquetar_avisos = etiquetar_avisos
         self.etiquetas = {}
         self.valores = {}
         self.objetivos = {}
@@ -35,7 +41,7 @@ class HUDIndicadores:
                 self.avisos.append({
                     "nombre": nombre,
                     "cambio": valor - anterior,
-                    "beneficioso": (valor - anterior > 0) != (nombre in NEGATIVOS),
+                    "beneficioso": (valor - anterior > 0) != (nombre in self.negativos),
                     "vida": 2.8,
                     "desfase": len(self.avisos) * 0.18,
                 })
@@ -63,7 +69,7 @@ class HUDIndicadores:
         self._dibujar_avisos(superficie, panel.right + 10, y + 18)
 
     def _dibujar_barra(self, superficie, nombre, valor, objetivo, x, y):
-        es_negativo = nombre in NEGATIVOS
+        es_negativo = nombre in self.negativos
         critico = objetivo >= 75 if es_negativo else objetivo <= 25
         icono = self.iconos.get(nombre)
         etiqueta = self.etiquetas.get(nombre, nombre.replace("_", " ").capitalize())
@@ -109,7 +115,12 @@ class HUDIndicadores:
         for indice, aviso in enumerate(self.avisos[-4:]):
             progreso = aviso["vida"] / 2.8
             movimiento = int((1 - progreso) * 22) + indice * 22
-            color = (111, 220, 126) if aviso["beneficioso"] else (242, 113, 90)
-            texto = f"{'+' if aviso['cambio'] > 0 else ''}{aviso['cambio']} {aviso['nombre'].replace('_', ' ').capitalize()}"
+            color = self.colores_avisos[0] if aviso["beneficioso"] else self.colores_avisos[1]
+            nombre = (self.etiquetas.get(aviso["nombre"]) if self.etiquetar_avisos else None) or aviso["nombre"].replace("_", " ").capitalize()
+            texto = f"{'+' if aviso['cambio'] > 0 else ''}{aviso['cambio']} {nombre}"
             render = self.fuente.render(texto, True, color)
+            sombra = self.fuente.render(texto, True, (12, 20, 16))
+            render.set_alpha(min(255, round(255 * progreso * 2)))
+            sombra.set_alpha(render.get_alpha())
+            superficie.blit(sombra, (x + 1, y - movimiento + 1))
             superficie.blit(render, (x, y - movimiento))

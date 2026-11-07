@@ -5,4 +5,7 @@
 !Hitboxes/
 !Hitboxes/Mapas/
 !Hitboxes/Mapas/*.json
+!Hitboxes/Mapas/Presente/
+!Hitboxes/Mapas/Presente/*.json
+!Arboles.py
 !Dockerfile.multijugador

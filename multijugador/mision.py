@@ -4,6 +4,8 @@ import math
 import re
 import unicodedata
 
+from .presentacion import INDICADORES_INICIALES, aplicar_efectos, tipo_pocion
+
 ROLES = ("guardian", "mensajero", "habitante", "aspirante")
 OPCIONES = {
     "corregir": "Corregir y aclarar",
@@ -36,7 +38,9 @@ class MisionPuente:
         self.votos = {}
         self.resultado = None
         self.rectificacion = False
-        self.indicadores = {"confianza": 50, "armonia": 50, "desinformacion": 0}
+        # Mismos indicadores y valores iniciales que el modo de un jugador.
+        self.indicadores = dict(INDICADORES_INICIALES)
+        self.eventos = 0  # identificador único de cada efecto visual difundido
         self.estado_puente = "sin_verificar"
         self.historial = []
         self.notificaciones = {i: [] for i in jugadores}
@@ -66,8 +70,15 @@ class MisionPuente:
         central.update(rol="mensajero", nombre="Eco central · registro de ruta")
         self.objetivos.extend(ecos)
 
+    def siguiente_evento(self):
+        self.eventos += 1
+        return self.eventos
+
     def _cerca(self, identificador, objetivo, radio=68):
         jugador = self.jugadores[identificador]
+        # Quien está en otra dimensión no puede interactuar con este mapa.
+        if jugador.get("dimension", "la_copa") != objetivo.get("dimension", "la_copa"):
+            return False
         return math.hypot(jugador["x"] - objetivo["x"], jugador["y"] - objetivo["y"]) <= radio
 
     def _objetivo(self, identificador, clave):
@@ -201,24 +212,26 @@ class MisionPuente:
             return  # Empate: los participantes pueden cambiar su voto.
         correcto = opcion == self.correcta
         if correcto:
-            efectos = {"confianza": 8 if self.rectificacion else 12, "armonia": 8, "desinformacion": -10}
+            efectos = {"confianza": 8 if self.rectificacion else 12, "armonia": 8, "susurros_falsos": -5, "desinformacion": -10}
             texto = "El cierre total de hoy era un rumor. Publicaron una aclaración con fuentes: mañana habrá mantenimiento parcial."
             self.estado_puente = "revision_programada"
         elif opcion == "difundir":
-            efectos = {"confianza": -12, "armonia": -8, "desinformacion": 20}
+            efectos = {"confianza": -12, "armonia": -8, "susurros_falsos": 10, "desinformacion": 20}
             texto = "Se difundió un cierre que no ocurrió. La alarma confundió a la comunidad."
             texto += " La rectificación también fue incorrecta; el caso terminó." if self.rectificacion else " Todavía pueden rectificar una vez."
             self.estado_puente = "alarma_injustificada"
         else:
-            efectos = {"confianza": -6, "armonia": -4, "desinformacion": 8}
+            efectos = {"confianza": -6, "armonia": -4, "susurros_falsos": 4, "desinformacion": 8}
             texto = "Descartaron también el aviso útil de mantenimiento. La comunidad sigue sin saber qué ocurrirá mañana."
             if self.rectificacion:
                 texto += " La oportunidad de rectificación terminó."
             self.estado_puente = "aviso_pendiente"
-        for nombre, cambio in efectos.items():
-            self.indicadores[nombre] = max(0, min(100, self.indicadores[nombre] + cambio))
+        aplicar_efectos(self.indicadores, efectos)
         texto = self.texto_resultado(texto, correcto)
-        self.resultado = {"opcion": opcion, "correcto": correcto, "texto": texto, "efectos": efectos}
+        # tipo_pocion y evento_id son solo presentación: todos los clientes
+        # reproducen una vez la poción, el caldero y el sonido de ese tipo.
+        self.resultado = {"opcion": opcion, "correcto": correcto, "texto": texto, "efectos": efectos,
+                          "tipo_pocion": tipo_pocion(opcion), "evento_id": self.siguiente_evento()}
         self._registrar("Decisión del equipo: " + self.opciones[opcion])
         self._avisar(self.jugadores.keys(), texto, "resultado")
 

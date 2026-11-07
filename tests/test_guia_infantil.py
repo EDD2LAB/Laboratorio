@@ -69,6 +69,8 @@ class GuiaInfantilTests(unittest.TestCase):
             self.a(i, "recoger_suministro", objetivo=fuente["id"], material=material)
             self.p.jugadores[i].update(x=e.destino["x"], y=e.destino["y"])
             self.a(i, "depositar")
+        self.assertFalse(e.materiales_listos)  # Caso 1: falta la canasta de herramientas.
+        self.h.completar_materiales(self.p)
         self.assertTrue(e.materiales_listos)
         self.assertFalse(e.completo)
         self.assertFalse(self.a("1", "trabajar")["ok"])
@@ -86,6 +88,9 @@ class GuiaInfantilTests(unittest.TestCase):
         for _ in range(2):
             self.p.actualizar(self.p.ultima+1)
             self.assertTrue(self.a("1", "trabajar")["ok"])
+        self.assertTrue(e.materiales_colocados)
+        self.assertFalse(e.completo)  # El evento no se gana hasta reparar el Puente 1.
+        self.h.reparar_puente(self.p)
         self.assertTrue(e.completo)
         puntos = self.p.mision.puntos
         self.assertFalse(self.a("1", "trabajar")["ok"])

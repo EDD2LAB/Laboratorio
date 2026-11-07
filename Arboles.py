@@ -296,6 +296,26 @@ def buscar_categoria(raiz, *nombres):
 ARBOL_CATEGORIAS = construir_arbol_categorias()
 
 
+def construir_arbol_categorias_multijugador():
+    """Árbol del modo de un jugador más las categorías que piden los eventos
+    multijugador. El árbol del modo de un jugador no se modifica."""
+    raiz = construir_arbol_categorias()
+
+    # El caso del agua habla de un servicio comunitario (agua potable), no de
+    # política, clima ni de una persona: necesita su propia rama.
+    aviso = NodoCategoria("Aviso Comunitario")
+    aviso.agregar_subcategoria(NodoCategoria("Recursos y servicios"))
+
+    # Distrito Conecta: la publicación usa una imagen generada con IA.
+    contenido = NodoCategoria("Contenido Digital")
+    contenido.agregar_subcategoria(NodoCategoria("Generado con IA"))
+    contenido.agregar_subcategoria(NodoCategoria("Contenido autentico"))
+
+    raiz.agregar_subcategoria(aviso)
+    raiz.agregar_subcategoria(contenido)
+    return raiz
+
+
 # ---------------------------------------------------------------------------
 # DEMO EN CONSOLA
 # ---------------------------------------------------------------------------

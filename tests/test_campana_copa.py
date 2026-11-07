@@ -4,6 +4,13 @@ import uuid
 
 from multijugador.campana import CASOS
 from multijugador.movimiento import ColisionesMapa, PartidaMovimiento
+from multijugador.reparacion import angulo_aguja, dentro_de_zona
+
+
+def tiempo_acierto(puente):
+    """Primer instante de la aguja (posterior al último intento) en zona verde."""
+    inicio = int(max(0, puente.ultimo_tiempo_aguja)) + 1
+    return next(t for t in range(inicio, inicio + 1200) if dentro_de_zona(angulo_aguja(t), puente.progreso))
 
 
 class CampanaTests(unittest.TestCase):
@@ -38,6 +45,31 @@ class CampanaTests(unittest.TestCase):
         for _ in range(3):
             p.actualizar(p.ultima + 1)
             self.assertTrue(self.accion(p, ids[1], "trabajar")["ok"])
+        self.reparar_puente(p)
+
+    def completar_materiales(self, p):
+        """Caso 1: la canasta de herramientas es el tercer objeto obligatorio."""
+        e = p.mision.encargo
+        i = list(p.jugadores)[0]
+        while not e.materiales_listos:
+            o = e.objetivo(i, p.jugadores)
+            p.jugadores[i].update(x=o["x"], y=o["y"])
+            self.assertTrue(self.accion(p, i, "recoger_suministro", objetivo=o["id"])["ok"])
+            p.jugadores[i].update(x=e.destino["x"], y=e.destino["y"])
+            self.assertTrue(self.accion(p, i, "depositar")["ok"])
+
+    def reparar_puente(self, p, i=None):
+        if p.mision.puente.reparado or not p.mision.encargo.config.get("requiere_puente"):
+            return
+        i = i or list(p.jugadores)[0]
+        o = p.mision.objetivo_puente
+        p.jugadores[i].update(x=o["x"], y=o["y"])
+        self.assertTrue(self.accion(p, i, "interactuar", objetivo="puente_1")["ok"])
+        while p.mision.puente.estado == "REPAIR_MINIGAME":
+            p.actualizar(p.ultima + 1)
+            self.assertTrue(self.accion(p, i, "intento_reparacion", tiempo_aguja_ms=tiempo_acierto(p.mision.puente))["ok"])
+        p.actualizar(p.ultima + 1)
+        self.assertTrue(p.mision.puente.reparado)
 
     def avanzar(self, p):
         for i in list(p.jugadores)[:2]:
@@ -47,6 +79,7 @@ class CampanaTests(unittest.TestCase):
             d = p.mision.encargo.destino
             p.jugadores[i].update(x=d["x"], y=d["y"])
             self.assertTrue(self.accion(p, i, "depositar")["ok"])
+        self.completar_materiales(p)
         self.hacer_actividad(p)
         for j in p.jugadores.values():
             j.update(x=480, y=380)
@@ -155,6 +188,7 @@ class CampanaTests(unittest.TestCase):
             d = p.mision.encargo.destino
             p.jugadores[i].update(x=d["x"], y=d["y"])
             self.accion(p, i, "depositar")
+        self.completar_materiales(p)
         self.hacer_actividad(p)
         for i in ("0", "1"):
             p.jugadores[i].update(x=480, y=380)
@@ -218,12 +252,29 @@ class CampanaRedTests(unittest.IsolatedAsyncioTestCase):
                                 d = p.mision.encargo.destino
                                 p.jugadores[j["id"]].update(x=d["x"], y=d["y"])
                                 await actuar(i, "depositar")
+                            e = p.mision.encargo
+                            while not e.materiales_listos:  # caso 1: canasta de herramientas
+                                o = e.objetivo(sesiones[0]["id"], p.jugadores)
+                                p.jugadores[sesiones[0]["id"]].update(x=o["x"], y=o["y"])
+                                await actuar(0, "recoger_suministro", objetivo=o["id"])
+                                p.jugadores[sesiones[0]["id"]].update(x=d["x"], y=d["y"])
+                                await actuar(0, "depositar")
                             for j in p.jugadores.values():
                                 j.update(x=d["x"], y=d["y"])
                             await actuar(0, "sujetar")
                             for _ in range(3):
                                 await asyncio.sleep(.7)
                                 await actuar(1, "trabajar")
+                            if e.config.get("requiere_puente"):
+                                o = p.mision.objetivo_puente
+                                p.jugadores[sesiones[0]["id"]].update(x=o["x"], y=o["y"])
+                                await asyncio.sleep(.1)
+                                await actuar(0, "interactuar", objetivo="puente_1")
+                                while p.mision.puente.estado == "REPAIR_MINIGAME":
+                                    await asyncio.sleep(.3)
+                                    await actuar(0, "intento_reparacion", tiempo_aguja_ms=tiempo_acierto(p.mision.puente))
+                                await asyncio.sleep(1.0)
+                                self.assertTrue(p.mision.puente.reparado)
                             for j in p.jugadores.values():
                                 j.update(x=480, y=380)
                             for i in range(2):

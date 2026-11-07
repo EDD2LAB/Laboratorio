@@ -24,23 +24,27 @@ class SuministrosTests(unittest.TestCase):
         self.mover(i, self.p.mision.encargo.destino)
         return self.h.accion(self.p, i, "depositar")
 
-    def test_dos_cargas_iguales_no_completan_y_se_puede_cambiar_carga(self):
+    def test_objeto_unico_no_lo_recogen_dos_y_se_puede_cambiar_carga(self):
+        # Caso 1: cada material es un objeto único; el servidor decide quién lo lleva.
         self.assertTrue(self.recoger("0", "tablas")["ok"])
-        self.assertTrue(self.recoger("1", "tablas")["ok"])
-        self.assertTrue(self.entregar("0")["ok"])
-        self.assertFalse(self.entregar("1")["ok"])
-        self.assertFalse(self.p.mision.encargo.completo)
+        self.assertFalse(self.recoger("1", "tablas")["ok"])
         self.assertTrue(self.recoger("1", "cuerdas")["ok"])
+        self.assertTrue(self.entregar("0")["ok"])
+        self.assertTrue(self.entregar("1")["ok"])
+        self.assertFalse(self.p.mision.encargo.materiales_listos)
+        self.assertTrue(self.recoger("1", "herramientas")["ok"])
         self.assertTrue(self.entregar("1")["ok"])
         self.h.hacer_actividad(self.p)
         self.assertTrue(self.p.mision.encargo.completo)
 
-    def test_rechaza_material_inventado_distancia_y_segundo_aporte_de_la_misma_persona(self):
+    def test_rechaza_material_inventado_distancia_y_material_ya_entregado(self):
         self.assertFalse(self.h.accion(self.p, "0", "recoger_suministro", objetivo="archivo", material="oro")["ok"])
         self.assertTrue(self.recoger("0", "tablas")["ok"])
         self.assertFalse(self.h.accion(self.p, "0", "depositar")["ok"])
         self.assertTrue(self.entregar("0")["ok"])
-        self.assertFalse(self.recoger("0", "cuerdas")["ok"])
+        self.assertFalse(self.recoger("0", "tablas")["ok"])  # Ya está colocado.
+        # En el caso 1 una misma persona puede aportar otro objeto (de a uno).
+        self.assertTrue(self.recoger("0", "cuerdas")["ok"])
         self.assertFalse(self.p.mision.encargo.completo)
 
     def test_carga_sobrevive_corte_y_recompensa_no_se_duplica(self):
@@ -49,6 +53,8 @@ class SuministrosTests(unittest.TestCase):
         self.assertEqual(self.p.mision.privado("0")["carga"], "Tablas")
         self.p.conectados.add("0")
         self.entregar("0")
+        self.recoger("1", "herramientas")
+        self.entregar("1")
         self.recoger("1", "cuerdas")
         self.mover("1", self.p.mision.encargo.destino)
         solicitud = dict(accion="depositar", ronda=0, id_solicitud=uuid.uuid4().hex)
@@ -65,4 +71,4 @@ class SuministrosTests(unittest.TestCase):
             j.update(x=480, y=380)
         for i in self.p.jugadores:
             self.h.accion(self.p, i, "continuar")
-        self.assertEqual(self.p.mision.obras[0]["efecto"], "Pasarela preparada")
+        self.assertEqual(self.p.mision.obras[0]["efecto"], "Puente 1 reparado")
