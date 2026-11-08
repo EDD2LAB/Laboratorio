@@ -7,6 +7,7 @@ import threading
 
 import pygame
 
+from interfaz import arte
 from interfaz.boton import Boton
 from interfaz.menu_pausa import MenuPausa
 from interfaz.presentacion_pantalla import a_lienzo, presentar
@@ -19,6 +20,9 @@ BASE = os.path.dirname(os.path.dirname(__file__))
 ORO = (237, 185, 87)
 CREMA = (255, 243, 210)
 VERDE = (136, 219, 155)
+DESCRIPCIONES_ROL = (
+    "Busca pistas y revisa los mensajes.", "Lleva pistas a tus compañeros.",
+    "Habla con los vecinos y ayuda.", "Explica lo que pasó usando pistas.")
 
 
 class MenuInicio:
@@ -37,11 +41,11 @@ class MenuInicio:
         self.fondo = self.imagen("Fondos/Multijugador/FondoFernado.png", (1080, 725), recortar=False)
         self.iconos = [self.imagen("Iconos/Multijugador/" + nombre, (54, 54)) for nombre in (
             "IcRol-guardian.png", "IcRol-Mensajero.png", "IcRol-Habitante.png", "IcRol-Aspirante.png")]
-        self.retratos = [self.imagen("Retratos/" + nombre, (105, 105)) for nombre in (
-            "Retrato Guardián/RetratoGuardian_Num1.png",
-            "Retrato Mensajero/RetratoMensajero_Num1.png",
-            "Retrato Habitante Hombre/RetratoHabitanteH_Num1.png",
-            "Retrato Aspirante Hombre/RetratoAspiranteH_Num1.png")]
+        self.retratos = {rol: arte.cargar_retratos(rol, (105, 105)) for rol in ROLES}
+        self.emblema = arte.icono(arte.NUEVOS + "emblema_copa.png", (64, 64))
+        self.emblemas_ayuda = arte.cargar_emblemas((56, 56))
+        self.icono_sonido = arte.icono(arte.NUEVOS + "icono_sonido.png", (24, 24))
+        self.icono_silencio = arte.icono(arte.NUEVOS + "icono_silencio.png", (24, 24))
         self.corona = self.imagen("Iconos/Multijugador/IcAnfitrión.png", (26, 26))
         self.listo = self.imagen("Iconos/Multijugador/IcListo.png", (28, 28))
         tira = pygame.image.load(os.path.join(BASE, "Imagenes", "Iconos", "Multijugador", "IcEsperaAnimate.png")).convert_alpha()
@@ -342,6 +346,7 @@ class MenuInicio:
         self.lienzo.blit(velo, (0, 0))
         if self.vista == "principal":
             self.panel(pygame.Rect(240, 70, 480, 590))
+            arte.dibujar_icono(self.lienzo, self.emblema, (480, 110))
             self.texto("LA COPA", 480, 145, 44, ORO, True)
             self.texto("Consejo de los Ecos", 480, 207, 24, centro=True)
             self.boton("campana_local", "Campaña con bots", (480, 315))
@@ -349,38 +354,32 @@ class MenuInicio:
             self.boton("ajustes", "Ajustes", (480, 475))
             self.boton("salir", "Salir", (480, 555))
         elif self.vista == "campana_rol":
-            self.panel(pygame.Rect(150, 45, 660, 630))
-            self.texto("CAMPAÑA LOCAL CON BOTS", 480, 75, 32, ORO, True)
-            self.texto("Un jugador y tres compañeros controlados por IA", 480, 121, 16, centro=True)
-            self.texto("Tu nombre", 235, 159, 16)
-            rect_nombre = pygame.Rect(235, 184, 490, 42)
+            self.panel(pygame.Rect(16, 16, 928, 688))
+            self.texto("CAMPAÑA LOCAL CON BOTS", 480, 34, 32, ORO, True)
+            self.texto("Elige tu personaje. Los otros tres los controlará un bot.", 480, 80, 16, centro=True)
+            self.texto("Tu nombre", 250, 122, 18)
+            rect_nombre = pygame.Rect(355, 112, 360, 42)
             self.panel(rect_nombre, (9, 24, 20, 255), ORO)
             self.areas_campos["nombre"] = rect_nombre
-            self.texto(self.campos["nombre"] or "Jugador", 249, 194, 18)
-            for indice, (rol, nombre) in enumerate(zip(ROLES, NOMBRES_ROLES)):
-                columna, fila = indice % 2, indice // 2
-                x, y = 325 + columna * 300, 290 + fila * 80
-                self.boton(
-                    "rol_solo:" + rol,
-                    f"» {nombre} «" if rol == self.rol_solo else nombre,  # la fuente no tiene ✓
-                    (x, y),
-                    260,
-                )
-            self.texto("Dificultad de los bots", 480, 460, 18, ORO, True)
+            self.texto(self.campos["nombre"] or "Jugador", 369, 122, 18)
+            for indice, rol in enumerate(ROLES):
+                elegido = rol == self.rol_solo
+                self.tarjeta_rol(indice, 170, elegido, "rol_solo:" + rol, "Elegido" if elegido else "Elegir")
+            self.texto("Dificultad de los bots", 480, 448, 18, ORO, True)
             for indice, dificultad in enumerate(("facil", "normal", "dificil")):
                 etiqueta = dificultad.capitalize()
                 self.boton(
                     "dificultad_solo:" + dificultad,
                     f"» {etiqueta} «" if dificultad == self.dificultad_solo else etiqueta,
-                    (300 + indice * 180, 504),
+                    (300 + indice * 180, 498),
                     155,
                 )
-            self.boton("iniciar_campana_solo", "Iniciar campaña", (570, 580), 250)
-            self.boton("volver", "Volver", (340, 580), 190)
+            self.boton("iniciar_campana_solo", "Iniciar campaña", (570, 590), 250)
+            self.boton("volver", "Volver", (340, 590), 190)
             if self.mensaje:
                 self.parrafo(
                     self.mensaje,
-                    pygame.Rect(205, 620, 550, 38),
+                    pygame.Rect(205, 635, 550, 38),
                     14,
                     (255, 161, 145) if self.error else CREMA,
                 )
@@ -423,13 +422,27 @@ class MenuInicio:
         elif self.vista == "partida" and self.partida:
             titulo = "CAMPAÑA LOCAL" if self.campana_local else self.codigo_sala
             self.partida.dibujar(self.lienzo, titulo, self.mouse)
-            if not self.partida.panel.activo:
-                # Siempre visibles, aunque el HUD esté oculto, para poder recuperarlo.
+            if not self.partida.panel.activo and (self.partida.mostrar_detalles or not self.partida.mostrar_hud):
+                # Con los detalles abiertos o el HUD oculto (para poder recuperarlo).
                 texto_hud = "Ocultar HUD · H" if self.partida.mostrar_hud else "Mostrar HUD · H"
                 self.boton("alternar_hud", texto_hud, (757, 689), 150, alto=34, tamano_fuente=16)
                 self.boton("abrir_pausa", "Menú · Esc", (892, 689), 110, alto=34, tamano_fuente=16)
         if self.pausa.activo:
             self.pausa.dibujar()
+
+    def tarjeta_rol(self, indice, y, resaltada, clave, texto_boton, activo=True):
+        """Tarjeta de personaje con retrato; la usan la sala y la campaña con bots."""
+        x = 32 + indice * 228
+        self.panel(pygame.Rect(x, y, 212, 265), (34, 58, 39, 245), VERDE if resaltada else ORO)
+        self.texto(NOMBRES_ROLES[indice], x + 106, y + 15, 24, ORO, True)
+        frames = self.retratos[ROLES[indice]]
+        # El personaje elegido cambia de expresión; los demás quedan quietos.
+        retrato = arte.expresion(frames, pygame.time.get_ticks()) if resaltada else (frames[0] if frames else None)
+        if retrato is not None:
+            self.lienzo.blit(retrato, retrato.get_rect(midbottom=(x + 106, y + 150)))
+        self.lienzo.blit(self.iconos[indice], (x + 12, y + 75))
+        self.parrafo(DESCRIPCIONES_ROL[indice], pygame.Rect(x + 14, y + 159, 184, 55), 14)
+        self.boton(clave, texto_boton, (x + 106, y + 237), 176, activo)
 
     def dibujar_sala(self):
         self.panel(pygame.Rect(16, 16, 928, 688))
@@ -454,20 +467,11 @@ class MenuInicio:
             self.lienzo.blit(icono, (x + 170, 207))
             if jugador["anfitrion"]:
                 self.lienzo.blit(self.corona, (x + 173, 167))
-        descripciones = (
-            "Busca pistas y revisa los mensajes.", "Lleva pistas a tus compañeros.",
-            "Habla con los vecinos y ayuda.", "Explica lo que pasó usando pistas.")
         for i, rol in enumerate(ROLES):
-            x = 32 + i * 228
             dueno = next((j for j in jugadores if j["rol"] == rol), None)
-            mio = dueno and dueno["id"] == self.identificador
-            self.panel(pygame.Rect(x, 275, 212, 265), (34, 58, 39, 245), VERDE if mio else ORO)
-            self.texto(NOMBRES_ROLES[i], x + 106, 290, 24, ORO, True)
-            self.lienzo.blit(self.retratos[i], self.retratos[i].get_rect(midbottom=(x + 106, 425)))
-            self.lienzo.blit(self.iconos[i], (x + 12, 350))
-            self.parrafo(descripciones[i], pygame.Rect(x + 14, 434, 184, 55), 14)
-            self.boton("rol:" + rol, "Elegir otro" if mio else "Ocupado" if dueno else "Elegir", (x + 106, 512), 176,
-                       (not dueno or mio) and not self.estado["iniciada"])
+            mio = bool(dueno and dueno["id"] == self.identificador)
+            self.tarjeta_rol(i, 275, mio, "rol:" + rol, "Elegir otro" if mio else "Ocupado" if dueno else "Elegir",
+                             (not dueno or mio) and not self.estado["iniciada"])
         self.boton("volver", "Salir de sala", (157, 605), 220)
         self.boton("listo", "No estoy listo" if yo.get("listo") else "Estoy listo", (480, 605), 240,
                    bool(yo.get("rol")) and not self.estado["iniciada"])

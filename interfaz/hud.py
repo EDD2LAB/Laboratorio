@@ -111,6 +111,10 @@ class HUDIndicadores:
         numero = self.fuente.render(str(round(valor)), True, (255, 243, 210))
         superficie.blit(numero, numero.get_rect(midleft=(canal.right + 5, canal.centery)))
 
+    def dibujar_avisos(self, superficie, x, y):
+        """Solo los cambios de indicadores (cuando las barras están cerradas)."""
+        self._dibujar_avisos(superficie, x, y)
+
     def _dibujar_avisos(self, superficie, x, y):
         for indice, aviso in enumerate(self.avisos[-4:]):
             progreso = aviso["vida"] / 2.8

@@ -10,11 +10,14 @@ import pygame
 # id de material en red -> clave del recorte del spritesheet.
 CLAVES_SPRITE = {"tablas": "tablas", "cuerdas": "cuerda", "herramientas": "herramientas"}
 _sprites = {}
+_cestos = {}  # "vacio" / "lleno": el cesto del puesto de entrega
 
 
-def configurar_sprites(materiales):
+def configurar_sprites(materiales, cestos=None):
     """Escala una vez cada material a los dos tamaños que se dibujan."""
     _sprites.clear()
+    _cestos.clear()
+    _cestos.update(cestos or {})
     for material, clave in CLAVES_SPRITE.items():
         imagen = (materiales or {}).get(clave)
         if imagen is None:
@@ -68,6 +71,10 @@ def dibujar_encargos(superficie, caso, fuente):
         llevados = set(encargo.get("cargas", {}).values())
         colocados = [m for m in encargo["materiales"] if m["entregado"]]
         d = encargo["destino"]
+        cesto = _cestos.get("lleno" if encargo.get("materiales_listos") else "vacio")
+        if cesto is not None:
+            caja = cesto.get_rect(midbottom=(d["x"] + 60, d["y"] + 8))
+            superficie.blit(cesto, caja.clamp(superficie.get_rect()))
         for i, material in enumerate(colocados):
             # Los objetos entregados quedan colocados junto al puesto.
             dibujar_carga(superficie, material["id"], (d["x"] - (len(colocados) - 1) * 15 + i * 30, d["y"] - 4))

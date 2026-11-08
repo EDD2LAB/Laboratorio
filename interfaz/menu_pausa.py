@@ -33,6 +33,7 @@ CONTROLES = (
     ("I", "Pistas"),
     ("M", "Tu tarea"),
     ("Q", "Habilidad de tu rol"),
+    ("J", "Detalles: tarea, indicadores y teclas"),
     ("H", "Ocultar o mostrar todo el HUD"),
     ("L", "Ocultar o mostrar los nombres"),
     ("F11", "Alternar pantalla completa"),
@@ -231,6 +232,9 @@ class MenuPausa:
         for fila, (clave, nombre, _) in enumerate(CANALES_VOLUMEN):
             fila_y = y + 58 + fila * 46
             valor = self.preferencias[clave]
+            icono = menu.icono_sonido if valor > 0 else menu.icono_silencio
+            if icono is not None:
+                menu.lienzo.blit(icono, icono.get_rect(center=(193, fila_y)))
             menu.texto(nombre, 215, fila_y - 10, 18)
             # Barra de nivel
             barra = pygame.Rect(400, fila_y - 7, 180, 14)
@@ -251,6 +255,9 @@ class MenuPausa:
         menu = self.menu
         menu.panel(pygame.Rect(100, 30, 760, 660))
         menu.texto("CÓMO JUGAR", 480, 48, 32, ORO, True)
+        emblema = list(menu.emblemas_ayuda.values())[self.pagina_ayuda]  # mismo orden que las páginas
+        if emblema is not None:
+            menu.lienzo.blit(emblema, emblema.get_rect(center=(160, 70)))
         for indice, (nombre, _) in enumerate(PAGINAS_COMO_JUGAR):
             texto = f"» {nombre} «" if indice == self.pagina_ayuda else nombre
             self._boton(f"pagina:{indice}", texto, (290 + indice * 190, 112), 178, alto=38, tamano_fuente=16)

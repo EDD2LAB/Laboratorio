@@ -161,14 +161,23 @@ class AdornosMapa:
         self.portal = tira(RUTAS["portal"], 8, recortar=False)
         self._portal_escalado = {}
 
-    def anillo_jugador(self, superficie, rol, centro, color):
+    def _reducido(self, imagen, escala):
+        """El anillo a menor tamaño (personajes pequeños), escalado una sola vez."""
+        clave = ("reducido", id(imagen), escala)
+        if clave not in _cache:
+            _cache[clave] = pygame.transform.scale(
+                imagen, (max(1, round(imagen.get_width() * escala)), max(1, round(imagen.get_height() * escala))))
+        return _cache[clave]
+
+    def anillo_jugador(self, superficie, rol, centro, color, escala=1):
         anillo = self.anillos.get(rol)
         if anillo:
+            anillo = self._reducido(anillo, escala) if escala != 1 else anillo
             superficie.blit(anillo, anillo.get_rect(center=centro))
         else:
             pygame.draw.ellipse(superficie, color, (centro[0] - 14, centro[1] - 5, 28, 9), 2)
 
-    def anillo_objetivo(self, superficie, centro, rol, tiempo_ms):
+    def anillo_objetivo(self, superficie, centro, rol, tiempo_ms, escala_base=1):
         """Anillo que late sobre el suelo del objetivo actual."""
         base = self.anillos_objetivo.get(rol) or self.anillos_objetivo.get("mensajero")
         paso = round(4 * (1 + math.sin(tiempo_ms / 220)))  # 0..8: escalas en caché
@@ -178,7 +187,7 @@ class AdornosMapa:
             if clave not in _cache:
                 escala = .88 + paso * .03
                 _cache[clave] = pygame.transform.scale(base, (round(base.get_width() * escala), round(base.get_height() * escala)))
-            anillo = _cache[clave]
+            anillo = self._reducido(_cache[clave], escala_base) if escala_base != 1 else _cache[clave]
             superficie.blit(anillo, anillo.get_rect(center=centro))
         else:
             pygame.draw.ellipse(superficie, (237, 185, 87), (centro[0] - 20, centro[1] - 8, 40, 16), 2)

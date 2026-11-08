@@ -21,9 +21,16 @@ COLORES_CALDERO = {
     "critico": ((255, 95, 95), (190, 80, 230), (255, 150, 70)),
 }
 DIRECCIONES = ("abajo", "derecha", "arriba", "izquierda")
-# Distrito Conecta se ve con la cámara cerca del personaje: el mapa se
-# descubre al recorrerlo en lugar de mostrarse completo de una vez.
-ZOOM_PRESENTE = 1.8
+DIAGONALES = ("abajo_derecha", "arriba_derecha", "arriba_izquierda", "abajo_izquierda")
+ALTURA_PERSONAJE = 53
+ALTURA_DISTRITO = 30  # en Distrito Conecta el mapa está dibujado a menor escala
+ESCALA_ANILLOS_DISTRITO = .6
+# La cámara va siempre cerca del personaje: el mapa se descubre al recorrerlo
+# en lugar de mostrarse completo de una vez. En La Copa el zoom es entero para
+# que el pixel art quede nítido.
+ZOOM_PRESENTE = 3
+ZOOM_COPA = 2
+ZOOMS = {LA_COPA: ZOOM_COPA, PRESENTE: ZOOM_PRESENTE}
 
 
 def tecla_activa(teclas, *codigos):
@@ -66,7 +73,8 @@ def separar_frames(imagen, cantidad=8):
     return frames
 
 
-def cargar_personajes():
+def cargar_clips_personajes():
+    """Cuadros originales de cada rol, sin escalar."""
     from nucleo.recursos import cargar_imagen
     carpetas = ("Guardian", "mensajero", "Habitante hombre", "Aspirante hombre")
     caminar = (
@@ -85,7 +93,10 @@ def cargar_personajes():
     )
     reposo = ("Guardian_reposo_fila", "Mensajero_reposo_fila", "Habitante_hombre_reposo_fila",
               "Aspirante_a_cacique-reposo_fila")
-    personajes = {}
+    # Filas 6 a 9: caminar en diagonal (en el orden de DIAGONALES).
+    diagonales = ("Fila {}. Guardián.png", "Fila {} - Mensajero.png", "HabHombre Fila {}.png",
+                  "Fila {} - Aspirante_a_cacique.png")
+    por_rol = {}
     for indice, rol in enumerate(ROLES):
         clips = {}
         for estado in ("caminar", "reposo"):
@@ -93,8 +104,6 @@ def cargar_personajes():
                 archivo = caminar[indice][i] if estado == "caminar" else f"Reposo/{reposo[indice]}{i + 1}.png"
                 imagen = cargar_imagen(os.path.join("NPCS", carpetas[indice], archivo))
                 clips[(estado, direccion)] = separar_frames(imagen)
-        alto = max(f.get_height() for frames in clips.values() for f in frames)
-        escala = 53 / alto
         for i, direccion in enumerate(DIRECCIONES):
             frames = clips[("caminar", direccion)]
             if correr[indice]:
@@ -104,6 +113,22 @@ def cargar_personajes():
                 except (pygame.error, ValueError, FileNotFoundError) as error:
                     print("[Multijugador] Sin animación de correr para", rol, direccion, error)
             clips[("correr", direccion)] = frames
+        for fila, orientacion in enumerate(DIAGONALES, start=6):
+            imagen = cargar_imagen(os.path.join("NPCS", carpetas[indice], diagonales[indice].format(fila)))
+            frames = separar_frames(imagen)
+            clips[("caminar", orientacion)] = clips[("correr", orientacion)] = frames
+            clips[("reposo", orientacion)] = frames[:1]  # el primer cuadro es su pose quieta
+        por_rol[rol] = clips
+    return por_rol
+
+
+def escalar_personajes(por_rol, altura):
+    """Ajusta cada rol a ``altura`` (se escala una vez, con la de reposo como referencia)."""
+    personajes = {}
+    for rol, clips in por_rol.items():
+        # Referencia: las cuatro direcciones rectas, para que el tamaño no varíe.
+        escala = altura / max(f.get_height() for clave, frames in clips.items()
+                              if clave[1] in DIRECCIONES for f in frames)
         personajes[rol] = {
             clave: [pygame.transform.scale(f, (max(1, round(f.get_width() * escala)), max(1, round(f.get_height() * escala))))
                     for f in frames] for clave, frames in clips.items()
@@ -111,11 +136,16 @@ def cargar_personajes():
     return personajes
 
 
+def cargar_personajes():
+    return escalar_personajes(cargar_clips_personajes(), ALTURA_PERSONAJE)
+
+
 class VistaPartida:
     def __init__(self, identificador, estado, audio=None):
-        from mundo.mapas import cargar_mapa_principal
+        from mundo.mapas import cargar_fondo_unificado, cargar_mapa_principal, decoraciones_ampliadas, suavizar_cascada
         from mundo.personajes import cargar_frames_tronco_eco
         from nucleo.recursos import cargar_fuente, cargar_imagen
+        from interfaz.arte import ArtePartida
         from interfaz.efectos_visuales import AdornosMapa, FlechaGuia
         from interfaz.escenas_multijugador import RecursosEscenas
         from interfaz.hud import HUDIndicadores
@@ -130,10 +160,23 @@ class VistaPartida:
         self.destino_ruta = None
         self.ultima_ruta = 0
         self.boton_guia = pygame.Rect(25, 112, 330, 37)
-        self.personajes = cargar_personajes()
+        clips = cargar_clips_personajes()
+        self.personajes = escalar_personajes(clips, ALTURA_PERSONAJE)
+        self.personajes_zoom = escalar_personajes(clips, ALTURA_PERSONAJE * ZOOM_COPA)
         _, decoraciones, _, _, _, _ = cargar_mapa_principal()
         self.decoraciones = [o for o in decoraciones if not es_personaje_jugable(o["nombre"])]
-        self.fondo = cargar_imagen("Fondos/Mapas/Pr_MañanaLumi.png", (960, 720))
+        for objeto in self.decoraciones:
+            if objeto.get("fondo_animado"):
+                suavizar_cascada(objeto)
+        self.decoraciones_zoom = decoraciones_ampliadas(self.decoraciones, ZOOM_COPA)
+        self.fondo_zoom = cargar_fondo_unificado(ZOOM_COPA)
+        self.escenas_zoom = {LA_COPA: {
+            "zoom": ZOOM_COPA, "origen": (0, 0), "fondo": self.fondo_zoom,
+            "capa": pygame.Surface(self.fondo_zoom.get_size()).convert(),
+            "decoraciones": self.decoraciones_zoom, "personajes": self.personajes_zoom,
+        }}
+        self.capa_efectos = pygame.Surface((960, 720), pygame.SRCALPHA)
+        self.fondo = pygame.transform.scale(self.fondo_zoom, (960, 720))
         self.fuente = cargar_fuente(16)
         self.titulo = cargar_fuente(20)
         self.jugadores = {}
@@ -145,7 +188,8 @@ class VistaPartida:
         self.dimension = LA_COPA
         self.mapas = {LA_COPA: {"fondo": self.fondo, "decoraciones": self.decoraciones, "colisiones": self.colisiones}}
         self.escenas = RecursosEscenas(self.fondo, self.decoraciones)
-        configurar_sprites(self.escenas.materiales)
+        self.arte = ArtePartida()
+        configurar_sprites(self.escenas.materiales, self.arte.cestos)
         self.flecha = FlechaGuia()
         self.adornos = AdornosMapa()
         self.hud = HUDIndicadores(cargar_fuente(11), self.escenas.iconos_hud,
@@ -155,6 +199,7 @@ class VistaPartida:
         self.hud.establecer_etiquetas(ETIQUETAS[LA_COPA])
         self.mostrar_hud = True  # H o el botón de la barra: oculta/muestra todo el HUD
         self.mostrar_nombres = True  # L: oculta/muestra las etiquetas de nombre
+        self.mostrar_detalles = False  # J: tarea completa, indicadores y teclas
         self.en_pausa = False  # lo fija el menú de pausa: sin movimiento mientras está abierto
         self.camara = None  # centro de la cámara del Presente (mundo); None = sin zoom
         self.capa_mundo = None
@@ -175,6 +220,15 @@ class VistaPartida:
         from mundo.reparacion_puentes import SistemaReparacionPuente
         self.frames_reparacion = [SistemaReparacionPuente._escalar_conservar_proporcion(f, self.puente_1["rect"].size)
                                   for f in self.escenas.efecto_reparacion] if self.puente_1 else []
+        self.puente_1_zoom = next((o for o in self.decoraciones_zoom if o["original"] is self.puente_1), None)
+        self.puente_roto_zoom = None
+        self.frames_reparacion_zoom = []
+        if self.puente_1_zoom is not None:
+            tamano = self.puente_1_zoom["rect"].size
+            if self.escenas.puente_roto is not None:
+                self.puente_roto_zoom = pygame.transform.scale(self.escenas.puente_roto, tamano)
+            self.frames_reparacion_zoom = [SistemaReparacionPuente._escalar_conservar_proporcion(f, tamano)
+                                           for f in self.escenas.efecto_reparacion]
         from interfaz.cooperativo import PanelCooperativo
         self.panel = PanelCooperativo(self)
         self.seleccion = None
@@ -220,9 +274,32 @@ class VistaPartida:
             recursos = cargar_mapa_presente(DIMENSIONES[dimension])
             if recursos is None:
                 raise ValueError("No se pudo cargar " + dimension)
+            colisiones = ColisionesMapa(cargar_datos(dimension))
             self.mapas[dimension] = {"fondo": recursos["mapa"], "decoraciones": recursos["decoraciones"],
-                                     "colisiones": ColisionesMapa(cargar_datos(dimension))}
+                                     "colisiones": colisiones}
+            self.escenas_zoom[dimension] = self._escena_presente(DIMENSIONES[dimension], recursos, colisiones)
         return self.mapas[dimension]
+
+    @staticmethod
+    def _escena_presente(configuracion, recursos, colisiones):
+        """Todo escalado una sola vez a su tamaño final: en cada cuadro solo se recorta."""
+        from mundo.mapas import cargar_fondo_presente, npcs_presente_ampliados
+        from mundo.personajes import cargar_personajes_distrito
+        rect = tuple(colisiones.datos["rect_mapa"])
+        fondo = cargar_fondo_presente(configuracion, rect, ZOOM_PRESENTE)
+        return {
+            "zoom": ZOOM_PRESENTE, "origen": rect[:2], "fondo": fondo,
+            "capa": pygame.Surface(fondo.get_size()).convert(),
+            "decoraciones": npcs_presente_ampliados(recursos["decoraciones"], ZOOM_PRESENTE, rect[:2]),
+            "personajes": cargar_personajes_distrito(ALTURA_DISTRITO * ZOOM_PRESENTE),
+        }
+
+    def _npcs_gemelos(self):
+        """Quien juega ya es ese personaje: su NPC no se dibuja para que no haya dos."""
+        from mundo.personajes import PERSONAJES_DISTRITO
+        if self.dimension != PRESENTE:
+            return ()
+        return {PERSONAJES_DISTRITO[j["datos"]["rol"]][0] for j in self.jugadores.values()}
 
     def cambiar_dimension(self, dimension):
         from interfaz.escenas_multijugador import Transicion
@@ -245,7 +322,7 @@ class VistaPartida:
         # Lo que estaba ocurriendo en el mapa anterior termina al viajar.
         self.animacion_pocion = None
         self.inicio_reparacion = None
-        self.transicion = Transicion(DIMENSIONES_RED[dimension]["nombre"])
+        self.transicion = Transicion(DIMENSIONES_RED[dimension]["nombre"], self.arte.emblemas_viaje.get(dimension))
         self.sonido_musica()
 
     def yo(self):
@@ -420,12 +497,16 @@ class VistaPartida:
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_h and not self.panel.activo:
             self.mostrar_hud = not self.mostrar_hud
             return True
+        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_j and not self.panel.activo:
+            self.mostrar_detalles = not self.mostrar_detalles
+            return True
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_l and not self.panel.activo:
             self.mostrar_nombres = not self.mostrar_nombres
             return True
         if self.panel.manejar(evento, posicion, cliente):
             return True
-        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1 and self.mostrar_hud                 and self.dimension == LA_COPA and self.boton_guia.collidepoint(posicion):
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1 and self.mostrar_hud and self.mostrar_detalles \
+                and self.dimension == LA_COPA and self.boton_guia.collidepoint(posicion):
             self.accion_guiada(cliente)
             return True
         if evento.type == pygame.KEYDOWN and evento.key in (pygame.K_e, pygame.K_TAB):
@@ -503,7 +584,7 @@ class VistaPartida:
         return pygame.Rect(rect) if rect else pygame.Rect(0, 0, 960, 720)
 
     def _seguir_camara(self, segundos):
-        if self.dimension != PRESENTE:
+        if self.dimension not in ZOOMS:
             self.camara = None
             return
         mio = self.jugadores.get(self.identificador)
@@ -517,13 +598,17 @@ class VistaPartida:
 
     def vista_camara(self):
         """Rect del mundo visible, siempre dentro del mapa (sin mostrar fuera de sus bordes)."""
-        if self.dimension != PRESENTE or self.camara is None:
+        if self.dimension not in ZOOMS:
+            return None
+        mio = self.jugadores.get(self.identificador)
+        centro = self.camara if self.camara is not None else (mio["posicion"] if mio else None)
+        if centro is None:
             return None
         mapa = self._rect_mapa()
-        ancho = min(mapa.width, round(960 / ZOOM_PRESENTE))
-        alto = min(mapa.height, round(720 / ZOOM_PRESENTE))
+        ancho = min(mapa.width, round(960 / ZOOMS[self.dimension]))
+        alto = min(mapa.height, round(720 / ZOOMS[self.dimension]))
         vista = pygame.Rect(0, 0, ancho, alto)
-        vista.center = (round(self.camara.x), round(self.camara.y))
+        vista.center = (round(centro.x), round(centro.y))
         vista.clamp_ip(mapa)
         return vista
 
@@ -545,15 +630,31 @@ class VistaPartida:
             return min(pendientes, key=lambda o: math.hypot(o["x"] - yo["x"], o["y"] - yo["y"]))
         return next((o for o in presente.get("objetivos", []) if o["id"] == "presente:pantalla"), None)
 
-    def _dibujar_mapa(self, superficie, ahora_ms):
+    def _dibujar_mapa(self, superficie, ahora_ms, escena=None, area=None):
+        """Mapa y decoraciones. ``escena`` y ``area``: recursos ampliados y zona
+        visible en su capa; sin ellas, escala normal."""
         from nucleo.recursos import es_hoja_portales
         from un_jugador.dibujo_mapa import dibujar_mariposa, dibujar_puente_balanceandose
-        superficie.blit(self.fondo, (0, 0))
+        zoom, origen_x, origen_y = (escena["zoom"], *escena["origen"]) if escena else (1, 0, 0)
+        if escena is not None:
+            superficie.set_clip(area)
+            superficie.blit(escena["fondo"], area, area)
+            decoraciones, puente_1, puente_roto, frames_reparacion = (
+                escena["decoraciones"], self.puente_1_zoom, self.puente_roto_zoom, self.frames_reparacion_zoom)
+        else:
+            superficie.blit(self.fondo, (0, 0))
+            decoraciones, puente_1, puente_roto, frames_reparacion = (
+                self.decoraciones, self.puente_1, self.puente_roto, self.frames_reparacion)
         puente = self.estado.get("mundo", {}).get("caso", {}).get("puente") or {}
-        for objeto in self.decoraciones:
-            if self.dimension == LA_COPA and objeto is self.puente_1 and puente.get("estado", "REPAIRED") != "REPAIRED":
+        gemelos = self._npcs_gemelos()
+        for objeto in decoraciones:
+            if objeto.get("personaje") in gemelos:
+                continue
+            if area is not None and not objeto.get("mariposa") and not objeto["rect"].inflate(40, 40).colliderect(area):
+                continue  # fuera de cámara: no se escala ni se rota
+            if self.dimension == LA_COPA and objeto is puente_1 and puente.get("estado", "REPAIRED") != "REPAIRED":
                 # Puente 1 roto (imagen real Puente1Roto.png) hasta repararlo.
-                superficie.blit(self.puente_roto or objeto["imagen"], objeto["rect"])
+                superficie.blit(puente_roto or objeto["imagen"], objeto["rect"])
                 continue
             if es_hoja_portales(objeto.get("nombre", "")) and self.adornos.portal:
                 continue  # se dibuja el portal animado
@@ -571,44 +672,47 @@ class VistaPartida:
                 superficie.blit(objeto["imagen"], objeto["rect"])
         rect = self.rect_portal()
         if rect:
-            self.adornos.dibujar_portal(superficie, rect, ahora_ms, True)
-        if self.dimension == LA_COPA and self.inicio_reparacion and self.frames_reparacion and self.puente_1:
+            self.adornos.dibujar_portal(
+                superficie, pygame.Rect((rect.x - origen_x) * zoom, (rect.y - origen_y) * zoom, rect.w * zoom, rect.h * zoom),
+                ahora_ms, True)
+        if self.dimension == LA_COPA and self.inicio_reparacion and frames_reparacion and puente_1:
             # Efecto de reparación de 8 cuadros sobre el puente.
             transcurrido = (time.monotonic() - self.inicio_reparacion) * 1000
             if transcurrido < CONFIG_REPARACION_MS:
-                indice = min(len(self.frames_reparacion) - 1, int(transcurrido / CONFIG_REPARACION_MS * len(self.frames_reparacion)))
-                frame = self.frames_reparacion[indice]
-                superficie.blit(frame, frame.get_rect(center=self.puente_1["rect"].center))
+                indice = min(len(frames_reparacion) - 1, int(transcurrido / CONFIG_REPARACION_MS * len(frames_reparacion)))
+                frame = frames_reparacion[indice]
+                superficie.blit(frame, frame.get_rect(center=puente_1["rect"].center))
             else:
                 self.inicio_reparacion = None
+        if area is not None:
+            superficie.set_clip(None)
 
-    def dibujar(self, superficie, codigo, mouse=(-1, -1)):
-        self.mouse = mouse
-        ahora_ms = pygame.time.get_ticks()
-        vista = self.vista_camara()
-        pantalla = superficie
-        if vista is not None:
-            if self.capa_mundo is None:
-                self.capa_mundo = pygame.Surface((960, 720)).convert()
-            superficie = self.capa_mundo  # el mundo se dibuja aquí y luego se amplía
-        self._dibujar_mapa(superficie, ahora_ms)
+    def _dibujar_suelo(self, superficie, ahora_ms):
+        """Ruta guía, encargos y anillos de objetivo (coordenadas del mundo)."""
+        from interfaz.suministros import dibujar_encargos
         self.adornos.ruta(superficie, self.ruta_guia, ahora_ms)
-        etiquetas = []
-        anclas = []
-        from interfaz.suministros import dibujar_carga, dibujar_encargos
-        caso_actual = self.estado.get("mundo", {}).get("caso", {})
-        if self.dimension == LA_COPA:
-            dibujar_encargos(superficie, caso_actual, self.fuente)
-        caso = caso_actual
-        privado = self.estado.get("mundo", {}).get("privado", {})
+        mundo = self.estado.get("mundo", {})
+        caso = mundo.get("caso", {})
+        privado = mundo.get("privado", {})
         guia = privado.get("guia", {})
+        if self.dimension == LA_COPA:
+            # Con la cámara cerca el texto se amplía: se parte de una fuente menor.
+            dibujar_encargos(superficie, caso, self.hud.fuente)
         objetivo = (guia.get("objetivo") or privado.get("objetivo") or {}) if self.dimension == LA_COPA else (self._objetivo_presente() or {})
         for o in self.contexto().get("objetivos", []):
             mismo_rol = objetivo.get("rol") and o.get("rol") == objetivo["rol"]
             if o["id"] == objetivo.get("id") or mismo_rol or o["id"] in ("caldero", "presente:pantalla"):
                 if o["id"] == "puente_1" and (caso.get("puente") or {}).get("estado") == "REPAIRED":
                     continue
-                self.adornos.anillo_objetivo(superficie, (o["x"], o["y"] + 5), o.get("rol") or "mensajero", ahora_ms)
+                self.adornos.anillo_objetivo(superficie, (o["x"], o["y"] + 5), o.get("rol") or "mensajero", ahora_ms,
+                                             ESCALA_ANILLOS_DISTRITO if self.dimension == PRESENTE else 1)
+
+    def _dibujar_jugadores(self, suelo, vista=None, figuras=None, escena=None):
+        """Sombras, anillos y cargas en ``suelo``. Con ``figuras`` (lista), los
+        personajes en alta resolución se devuelven ahí, en coordenadas de pantalla."""
+        from interfaz.suministros import dibujar_carga
+        caso = self.estado.get("mundo", {}).get("caso", {})
+        anclas = []
         for jugador in sorted(self.jugadores.values(), key=lambda j: j["posicion"].y):
             datos = jugador["datos"]
             rol = datos["rol"]
@@ -617,33 +721,95 @@ class VistaPartida:
             estado = datos["animacion"] if time.monotonic() - self.ultimo_paquete < .5 else "reposo"
             if estado == "caminar" and datos.get("corriendo"):
                 estado = "correr"
-            frames = self.personajes[rol][(estado, datos["direccion"])]
+            hojas = (escena["personajes"] if figuras is not None else self.personajes)[rol]
+            frames = hojas.get((estado, datos.get("orientacion"))) or hojas[(estado, datos["direccion"])]
             velocidad_cuadros = {"caminar": 9, "correr": 14}.get(estado, 4)
             frame = frames[int(jugador["reloj"] * velocidad_cuadros) % len(frames)]
-            pygame.draw.ellipse(superficie, (17, 28, 22), (x - 13, y - 5, 26, 8))
-            self.adornos.anillo_jugador(superficie, rol, (x, y - 1), color)
-            rect = frame.get_rect(midbottom=(x, y))
-            superficie.blit(frame, rect)
-            carga = (caso_actual.get("encargo") or {}).get("cargas", {}).get(datos["id"])
+            if self.dimension == PRESENTE:
+                pygame.draw.ellipse(suelo, (17, 28, 22), (x - 8, y - 3, 16, 5))
+                self.adornos.anillo_jugador(suelo, rol, (x, y - 1), color, ESCALA_ANILLOS_DISTRITO)
+            else:
+                pygame.draw.ellipse(suelo, (17, 28, 22), (x - 13, y - 5, 26, 8))
+                self.adornos.anillo_jugador(suelo, rol, (x, y - 1), color)
+            if figuras is not None:
+                zoom = escena["zoom"]
+                rect = frame.get_rect(midbottom=((x - vista.x) * zoom, (y - vista.y) * zoom))
+                figuras.append((frame, rect))
+                tope = y - frame.get_height() // zoom
+            else:
+                rect = frame.get_rect(midbottom=(x, y))
+                suelo.blit(frame, rect)
+                tope = rect.top
+            carga = (caso.get("encargo") or {}).get("cargas", {}).get(datos["id"])
             if carga:
-                dibujar_carga(superficie, carga, (x + 22, y - 24))
-            if datos["id"] in caso_actual.get("tutorial_cargas", []):
-                dibujar_carga(superficie, "farol", (x + 22, y - 24))
-            anclas.append((datos, color, (x, rect.top)))
-        self.particulas.dibujar(superficie)
-        yo = self.yo()
-        rect_portal = self.rect_portal()
-        if self.dimension_completa() and yo and rect_portal and not self.panel.activo:
-            # Igual que el modo de un jugador: al completar la dimensión, la
-            # flecha guía hasta el portal.
-            mio = self.jugadores.get(self.identificador)
-            origen = mio["posicion"] if mio else (yo["x"], yo["y"])
-            self.flecha.dibujar(superficie, (origen[0], origen[1] - 20), rect_portal.center, ahora_ms,
-                                limites=(30, 180, 930, 640))
+                dibujar_carga(suelo, carga, (x + 22, y - 24))
+            if datos["id"] in caso.get("tutorial_cargas", []):
+                dibujar_carga(suelo, "farol", (x + 22, y - 24))
+            anclas.append((datos, color, (x, tope)))
+        return anclas
+
+    def _mundo_ampliado(self, pantalla, vista, ahora_ms, escena):
+        """Cámara cercana: mapa, decoraciones y personajes ya están escalados a
+        su tamaño final; en cada cuadro solo se recorta lo visible."""
+        zoom, (origen_x, origen_y) = escena["zoom"], escena["origen"]
+        area = pygame.Rect((vista.x - origen_x) * zoom, (vista.y - origen_y) * zoom, 960, 720)
+        self._dibujar_mapa(escena["capa"], ahora_ms, escena, area)
+        pantalla.blit(escena["capa"], (0, 0), area)
+        efectos = self.capa_efectos
+        efectos.fill((0, 0, 0, 0))
+        self._dibujar_suelo(efectos, ahora_ms)
+        figuras = []
+        anclas = self._dibujar_jugadores(efectos, vista, figuras, escena)
+        pantalla.blit(pygame.transform.scale(efectos.subsurface(vista), pantalla.get_size()), (0, 0))
+        for frame, rect in figuras:
+            pantalla.blit(frame, rect)
+        self.particulas.dibujar(pantalla, camara=(vista.x, vista.y, zoom))
+        return anclas
+
+    def _mundo_escalado(self, pantalla, vista, ahora_ms):
+        """Distrito Conecta: el mundo se dibuja en una capa y se amplía la zona visible."""
+        superficie = pantalla
         if vista is not None:
-            # Cámara: solo la zona cercana al personaje, ampliada (pixel art: scale).
+            if self.capa_mundo is None:
+                self.capa_mundo = pygame.Surface((960, 720)).convert()
+            superficie = self.capa_mundo
+        self._dibujar_mapa(superficie, ahora_ms)
+        self._dibujar_suelo(superficie, ahora_ms)
+        anclas = self._dibujar_jugadores(superficie)
+        self.particulas.dibujar(superficie)
+        if vista is not None:
+            # Pixel art: scale.
             pygame.transform.scale(superficie.subsurface(vista), pantalla.get_size(), pantalla)
-            superficie = pantalla
+        return anclas
+
+    def _destino_flecha(self, vista):
+        """A dónde señala la flecha: el portal al terminar, o un objetivo fuera de cámara."""
+        rect = self.rect_portal()
+        if self.dimension_completa() and rect:
+            return rect.center
+        mundo = self.estado.get("mundo", {})
+        objetivo = (mundo.get("privado", {}).get("guia", {}).get("objetivo") if self.dimension == LA_COPA
+                    else self._objetivo_presente())
+        if objetivo and vista is not None and not vista.inflate(-60, -60).collidepoint(objetivo["x"], objetivo["y"]):
+            return objetivo["x"], objetivo["y"]
+        return None
+
+    def dibujar(self, superficie, codigo, mouse=(-1, -1)):
+        self.mouse = mouse
+        ahora_ms = pygame.time.get_ticks()
+        vista = self.vista_camara()
+        escena = self.escenas_zoom.get(self.dimension) if vista is not None else None
+        if escena is not None:
+            anclas = self._mundo_ampliado(superficie, vista, ahora_ms, escena)
+        else:
+            anclas = self._mundo_escalado(superficie, vista, ahora_ms)
+        mio = self.jugadores.get(self.identificador)
+        destino = self._destino_flecha(vista)
+        if destino and mio and not self.panel.activo:
+            origen = self.a_pantalla(mio["posicion"].x, mio["posicion"].y - 20, vista)
+            self.flecha.dibujar(superficie, origen, self.a_pantalla(*destino, vista), ahora_ms,
+                                limites=(40, 60, 920, 640))
+        etiquetas = []
         for datos, color, (x, tope) in anclas:
             x, tope = self.a_pantalla(x, tope, vista)
             x, tope = round(x), round(tope)
@@ -652,7 +818,10 @@ class VistaPartida:
                     self.adornos.marcador_local(superficie, (x, tope - 6), color, ahora_ms)
                 continue
             nombre = datos["nombre"] + (" (tú)" if datos["id"] == self.identificador else "")
-            if datos.get("controlador") == "bot":
+            if datos.get("controlador") == "bot" and self.dimension == PRESENTE:
+                from mundo.personajes import PERSONAJES_DISTRITO
+                nombre = "Bot · " + PERSONAJES_DISTRITO[datos["rol"]][0]
+            elif datos.get("controlador") == "bot":
                 nombre = "Bot · " + nombre
             etiqueta = self.fuente.render(nombre, True, color)
             caja = etiqueta.get_rect(midbottom=(x, tope - 7))
@@ -662,49 +831,101 @@ class VistaPartida:
             etiquetas.append((etiqueta, caja, color, datos["id"] == self.identificador))
         for etiqueta, caja, color, local in etiquetas:
             fondo = pygame.Surface(caja.inflate(10, 6).size, pygame.SRCALPHA)
-            fondo.fill((13, 29, 23, 215))
+            fondo.fill((13, 29, 23, 150))
             superficie.blit(fondo, caja.inflate(10, 6))
             superficie.blit(etiqueta, caja)
             if local:
                 self.adornos.marcador_local(superficie, (caja.centerx, caja.top - 4), color, ahora_ms)
         if self.mostrar_hud:
-            self._dibujar_hud(superficie, codigo, caso, privado, guia)
+            mundo = self.estado.get("mundo", {})
+            privado = mundo.get("privado", {})
+            self._dibujar_hud(superficie, codigo, mundo.get("caso", {}), privado, privado.get("guia", {}))
         self._dibujar_capas_superiores(superficie)
 
+    @staticmethod
+    def _pastilla(superficie, rect, alfa=115):
+        """Fondo discreto y translúcido para el HUD."""
+        capa = pygame.Surface(rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(capa, (8, 24, 18, alfa), capa.get_rect(), border_radius=8)
+        superficie.blit(capa, rect)
+
+    def _texto_pastilla(self, superficie, texto, fuente, color=(255, 243, 210), **ancla):
+        render = fuente.render(texto, True, color)
+        caja = render.get_rect(**ancla)
+        self._pastilla(superficie, caja.inflate(20, 10))
+        superficie.blit(render, caja)
+        return caja
+
+    def _textos_objetivo(self, caso, privado, guia):
+        """(título corto siempre visible, detalle que se abre con J)."""
+        if self.dimension != PRESENTE:
+            return guia.get("titulo", caso["titulo"]), guia.get("detalle", privado.get("instruccion", ""))
+        presente = caso.get("presente") or {}
+        pistas, total = presente.get("pistas", 0), presente.get("total_pistas", 3)
+        if presente.get("completada"):
+            return "¡Misión completada! Ve al portal", "Sigue la flecha hasta el portal para elegir otra época."
+        if pistas < total:
+            return f"Pistas {pistas}/{total}", "Habla con las personas marcadas (E). Luego decidan en la pantalla pública."
+        return "Vayan a la pantalla pública", "¡Tienen las tres pistas! Vayan a la pantalla pública y elijan una poción."
+
     def _dibujar_hud(self, superficie, codigo, caso, privado, guia):
+        """Solo lo importante a la vista; lo demás se abre con J."""
+        from interfaz.guia import estrella
         from multijugador.dimensiones_red import DIMENSIONES_RED
-        panel = pygame.Surface((960, 62), pygame.SRCALPHA)
-        panel.fill((9, 25, 20, 235))
-        superficie.blit(panel, (0, 658))
-        nombre_dimension = DIMENSIONES_RED[self.dimension]["nombre"].upper()
-        etiqueta = self.titulo.render(f"{nombre_dimension} · Sala {codigo} · {len(self.jugadores)} aquí", True, (237, 185, 87))
-        superficie.blit(etiqueta, (22, 667))
         opciones = self.candidatos()
         claves = [o["id"] for o in opciones]
         if self.seleccion not in claves:
             self.seleccion = claves[0] if claves else None
         seleccion = next((o for o in opciones if o["id"] == self.seleccion), None)
-        instruccion = ("[E] " + seleccion["nombre"] + (" | Tab: cambiar" if len(opciones) > 1 else "")) if seleccion else "Shift: correr | E: ayudar | I: pistas | M: tarea | H: HUD | L: nombres"
-        ayuda = self.fuente.render(instruccion, True, (255, 243, 210))
-        superficie.blit(ayuda, (22, 695))
-        if caso:
-            hud = pygame.Surface((590, 150), pygame.SRCALPHA)
-            hud.fill((8, 28, 20, 240)); superficie.blit(hud, (12, 12))
-            if self.dimension == PRESENTE:
-                presente = caso.get("presente") or {}
-                titulo = "Distrito Conecta · " + presente.get("titulo", "")
-                if presente.get("completada"):
-                    detalle = "¡Misión completada! Sigue la flecha hasta el portal para elegir otra época."
-                elif presente.get("pistas", 0) < presente.get("total_pistas", 3):
-                    detalle = f"Pistas {presente.get('pistas', 0)}/{presente.get('total_pistas', 3)}: habla con las personas marcadas (E). Luego decidan en la pantalla pública."
-                else:
-                    detalle = "¡Tienen las tres pistas! Vayan a la pantalla pública y elijan una poción."
-                self.panel.texto_lineas(superficie, titulo, 25, 23, 560, self.titulo, (237, 185, 87))
-                self.panel.texto_lineas(superficie, detalle, 25, 58, 560, self.fuente)
-            else:
-                self.panel.texto_lineas(superficie, guia.get("titulo", caso["titulo"]), 25, 23, 560, self.titulo, (237, 185, 87))
-                self.panel.texto_lineas(superficie, guia.get("detalle", privado.get("instruccion", "")), 25, 58, 560, self.fuente)
-            if not self.panel.activo and self.dimension == LA_COPA:
+        if seleccion and not self.panel.activo:
+            texto = "[E] " + seleccion["nombre"] + (" · Tab: cambiar" if len(opciones) > 1 else "")
+            self._texto_pastilla(superficie, texto, self.fuente, midbottom=(480, 704))
+        if not caso:
+            return
+        titulo, detalle = self._textos_objetivo(caso, privado, guia)
+        self._texto_pastilla(superficie, titulo, self.fuente, (237, 185, 87), topleft=(22, 16))
+        # Arriba a la derecha: estrellas, reloj y poder.
+        self._pastilla(superficie, pygame.Rect(762, 10, 186, 38))
+        estrella(superficie, (782, 29), 9, (255, 215, 90))
+        estrellas = self.fuente.render(f"{caso.get('estrellas', 0)}/{caso.get('estrellas_total', 11)}", True, (255, 243, 210))
+        superficie.blit(estrellas, estrellas.get_rect(midleft=(796, 29)))
+        if self.dimension != PRESENTE and not caso.get("sin_prisa"):
+            arte_tiempo = self.arte.tiempo
+            if arte_tiempo is not None:
+                superficie.blit(arte_tiempo, arte_tiempo.get_rect(center=(852, 29)))
+            segundos = self.fuente.render(f"{caso.get('proxima_oleada', 60)}s", True, (237, 185, 87))
+            superficie.blit(segundos, segundos.get_rect(midleft=(864, 29)))
+        rol = (self.yo() or {}).get("rol")
+        if self.dimension == LA_COPA and rol:
+            iconos = self.arte.poder_usado if privado.get("habilidad_usada") else self.arte.poder_listo
+            if iconos.get(rol) is not None:
+                superficie.blit(iconos[rol], iconos[rol].get_rect(center=(928, 29)))
+        if not self.mostrar_detalles:
+            if not self.panel.activo:
+                self.hud.dibujar_avisos(superficie, 22, 70)
+                pista = self.hud.fuente.render("J: detalles · Esc: menú", True, (205, 214, 190))
+                caja = pista.get_rect(bottomright=(946, 710))
+                self._pastilla(superficie, caja.inflate(12, 6), 90)
+                superficie.blit(pista, caja)
+            return
+        # Detalles (J): tarea completa, indicadores y teclas.
+        nombre = DIMENSIONES_RED[self.dimension]["nombre"]
+        self._pastilla(superficie, pygame.Rect(12, 48, 590, 112), 165)
+        self.panel.texto_lineas(superficie, detalle, 25, 56, 560, self.fuente)
+        derecha = [f"{nombre} · Sala {codigo} · {len(self.jugadores)} aquí"]
+        if self.dimension != PRESENTE:
+            derecha.append("Primera aventura: sin reloj" if caso.get("sin_prisa") else f"El rumor crece en {caso.get('proxima_oleada', 60)} s")
+            estados_puente = {
+                "DAMAGED": "Puente 1: roto", "MATERIALS_PENDING": "Puente 1: faltan materiales",
+                "READY_TO_REPAIR": "Puente 1: ¡listo para reparar!", "REPAIR_MINIGAME": "Puente 1: en reparación",
+                "REPAIR_ANIMATION": "Puente 1: reparándose…", "REPAIRED": "Puente 1: reparado",
+            }
+            if (caso.get("puente") or {}).get("estado") in estados_puente:
+                derecha.append(estados_puente[caso["puente"]["estado"]])
+        for indice, linea in enumerate(derecha[:3]):
+            superficie.blit(self.hud.fuente.render(linea, True, (237, 185, 87)), (368, 112 + indice * 15))
+        if not self.panel.activo:
+            if self.dimension == LA_COPA:
                 pygame.draw.rect(superficie, (126, 81, 45), self.boton_guia, border_radius=7)
                 pygame.draw.rect(superficie, (237, 185, 87), self.boton_guia, 2, border_radius=7)
                 objetivo_guia = guia.get("objetivo") or {}
@@ -713,30 +934,9 @@ class VistaPartida:
                     texto_boton = "Ver mi tarea · M"
                 texto = self.panel.pequena.render(texto_boton, True, (255, 243, 210))
                 superficie.blit(texto, texto.get_rect(center=self.boton_guia.center))
-            badge = pygame.Surface((330, 128), pygame.SRCALPHA)
-            badge.fill((8, 28, 20, 240))
-            superficie.blit(badge, (618, 12))
-            from interfaz.guia import estrella
-            estrella(superficie, (646, 36), 15, (255, 215, 90))
-            estrellas = caso.get("estrellas", 0)
-            self.panel.texto_lineas(superficie, f"{estrellas} / {caso.get('estrellas_total', 11)} estrellas", 672, 25, 260, self.titulo)
-            oleada = "Primera aventura: sin reloj" if caso.get("sin_prisa") else f"El rumor crece en {caso.get('proxima_oleada', 60)} s"
-            if self.dimension == PRESENTE:
-                oleada = "La Copa sigue esperándote"
-            self.panel.texto_lineas(superficie, oleada, 632, 59, 300, self.fuente, (237, 185, 87))
-            self.panel.texto_lineas(superficie, "I: pistas · M: tarea · Esc: menú", 632, 83, 300, self.fuente)
-            estados_puente = {
-                "DAMAGED": "Puente 1: roto", "MATERIALS_PENDING": "Puente 1: faltan materiales",
-                "READY_TO_REPAIR": "Puente 1: ¡listo para reparar!", "REPAIR_MINIGAME": "Puente 1: en reparación",
-                "REPAIR_ANIMATION": "Puente 1: reparándose…", "REPAIRED": "Puente 1: reparado",
-            }
-            estado_puente = estados_puente.get((caso.get("puente") or {}).get("estado"))
-            if estado_puente and self.dimension == LA_COPA:
-                self.panel.texto_lineas(superficie, estado_puente, 632, 107, 300, self.fuente, (237, 185, 87))
-            for i in range(min(11, estrellas)):
-                estrella(superficie, (305 + i * 30, 630), 7, (255, 222, 112))
-            if not self.panel.activo:
-                self.hud.dibujar(superficie, 18, 176)
+            self.hud.dibujar(superficie, 18, 176)
+            self._texto_pastilla(superficie, "Shift: correr | E: ayudar | I: pistas | M: tarea | Q: poder | H: HUD | L: nombres",
+                                 self.hud.fuente, bottomleft=(22, 672))
 
     def _dibujar_capas_superiores(self, superficie):
         self._dibujar_aviso_viaje(superficie)

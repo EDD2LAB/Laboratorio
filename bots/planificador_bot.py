@@ -7,6 +7,7 @@ RADIO_CALDERO = 68  # el servidor exige esta distancia para elegir
 RADIO_EMISOR = 56  # junto a quien llamó, dentro del alcance de una entrega directa
 ESPERA_ORDEN = 12.0  # segundos que se queda donde lo llamaron si no hay más que hacer
 ESPERA_ALIADO = 25.0  # segundos que el Habitante espera compañero para su habilidad
+PASO_ACOMPANAR = 40  # solo recalcula la ruta cuando el humano cambia de casilla
 
 
 class PlanificadorBot:
@@ -82,7 +83,7 @@ class PlanificadorBot:
         if plan_orden:
             return plan_orden
         if caso["fase"] == "preparacion":
-            return self._preparacion(bot, caso, privado, caldero, memoria)
+            return self._preparacion(bot, caso, privado, caldero, memoria, jugadores)
 
         propia = "pista_" + bot.rol
         if propia not in {p["id"] for p in inventario}:
@@ -271,14 +272,15 @@ class PlanificadorBot:
         if not humanos:
             return {"estado": "ESPERANDO_EQUIPO"}
         humano = min(humanos, key=lambda j: (j["x"] - bot.posicion["x"]) ** 2 + (j["y"] - bot.posicion["y"]) ** 2)
-        return {"estado": "ACOMPANANDO", "destino": {"id": humano["id"], "x": humano["x"], "y": humano["y"]},
-                "esperar": True, "radio": 70}
+        destino = {"id": humano["id"], "x": round(humano["x"] / PASO_ACOMPANAR) * PASO_ACOMPANAR,
+                   "y": round(humano["y"] / PASO_ACOMPANAR) * PASO_ACOMPANAR}
+        return {"estado": "ACOMPANANDO", "destino": destino, "esperar": True, "radio": 70}
 
     # ------------------------------------------------------- preparación
     # Mismo flujo que la guía del jugador (campana.privado/encargo.objetivo):
     # recoger -> entregar en el puesto -> actividad en pareja -> (caso 1)
     # reparar el Puente 1 -> confirmar en el caldero.
-    def _preparacion(self, bot, caso, privado, caldero, memoria):
+    def _preparacion(self, bot, caso, privado, caldero, memoria, jugadores):
         encargo = caso.get("encargo") or {}
         yo = bot.identificador
         ronda = caso["ronda"]
@@ -288,6 +290,9 @@ class PlanificadorBot:
                 return self._tarea("CONFIRMANDO_CONTINUACION", caldero, "continuar")
             return {"estado": "ESPERANDO_EQUIPO"}
         if encargo.get("materiales_colocados"):
+            # Reparar el puente le toca a las personas; los bots solo si no queda ninguna.
+            if any(j.get("controlador") == "humano" for j in jugadores):
+                return {"estado": "ESPERANDO_EQUIPO"}
             return self._reparar_puente(bot, caso.get("puente") or {}, privado.get("objetivo"), memoria)
         destino = encargo.get("destino") or caldero
         if encargo.get("materiales_listos"):

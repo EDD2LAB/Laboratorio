@@ -1,7 +1,7 @@
 import heapq
 import math
 
-from multijugador.movimiento import VELOCIDAD
+from multijugador.movimiento import VELOCIDAD, orientacion_de
 
 
 class NavegadorBot:
@@ -119,6 +119,7 @@ class NavegadorBot:
             self.error = "El trayecto se bloqueó; se volverá a calcular."
             return False
         jugador["x"], jugador["y"] = x, y
+        jugador["orientacion"] = orientacion_de(dx, dy)
         if abs(dx) >= abs(dy):
             jugador["direccion"] = "derecha" if dx > 0 else "izquierda"
         else:

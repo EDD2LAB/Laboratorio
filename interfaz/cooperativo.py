@@ -1,8 +1,10 @@
 """Paneles de investigación y cooperación sobre el mapa compartido."""
 import math
+import re
 import time
 
 import pygame
+from interfaz.arte import dibujar_icono, expresion
 from interfaz.boton import Boton
 from multijugador.mision import TODOS
 from multijugador.reparacion import CONFIGURACION as CONFIG_REPARACION
@@ -174,19 +176,52 @@ class PanelCooperativo:
         b.dibujar(superficie, self.vista.mouse)
         self.botones[clave] = b
 
-    def retrato(self, superficie, nombre, x=170, y=175):
-        imagen = None
+    def boton_flecha(self, superficie, clave, imagen, texto, x, y):
+        """Flecha con su arte (o el texto si falta la imagen)."""
+        b = Boton(texto, imagen, centro=(x, y), fuente=self.fuente, tamano=(70, 42))
+        b.dibujar(superficie, self.vista.mouse)
+        self.botones[clave] = b
+
+    def imagen_retrato(self, nombre):
+        """Retrato real de quien habla; si no tiene, su sprite o el del jugador."""
+        arte = self.vista.arte
         clave = nombre.lower().split(" · ")[0].split(":")[0]
-        for o in self.vista.decoraciones:
-            ruta = o.get("nombre", "").lower()
-            if ("naira" in clave and "naira" in ruta) or ("luma" in clave and "habitante mujer" in ruta) or ("mira" in clave and "aspirante mujer" in ruta):
-                imagen = o.get("imagen")
-                break
-        if imagen is None:
-            yo = next((j for j in self.vista.estado.get("mundo", {}).get("jugadores", []) if j["id"] == self.vista.identificador), {})
-            imagen = self.vista.personajes.get(yo.get("rol"), {}).get(("reposo", "abajo"), [None])[0]
-        pygame.draw.rect(superficie, (29, 58, 42), (x, y, 96, 104), border_radius=10)
-        pygame.draw.rect(superficie, ORO, (x, y, 96, 104), 2, border_radius=10)
+        # \b: "mirador" no es Mira.
+        for patron, frames in (("luma", arte.retratos["luma"]), ("mira", arte.retratos["mira"])):
+            if re.search(rf"\b{patron}\b", clave) and frames:
+                return expresion(frames, pygame.time.get_ticks())
+        if "darío" in clave and arte.retrato_agente is not None:
+            return arte.retrato_agente
+        if self.dimension == "presente":
+            return self._retrato_distrito(clave)
+        if "naira" in clave:
+            sprite = next((o.get("imagen") for o in self.vista.decoraciones if "naira" in o.get("nombre", "").lower()), None)
+            if sprite is not None:
+                return sprite
+        yo = next((j for j in self.vista.estado.get("mundo", {}).get("jugadores", []) if j["id"] == self.vista.identificador), {})
+        frames = arte.retratos.get(yo.get("rol"))
+        if frames:
+            return expresion(frames, pygame.time.get_ticks())
+        return self.vista.personajes.get(yo.get("rol"), {}).get(("reposo", "abajo"), [None])[0]
+
+    def _retrato_distrito(self, clave):
+        """En Distrito Conecta solo se ven sus propios personajes."""
+        from mundo.personajes import PERSONAJES_DISTRITO
+        escena = self.vista.escenas_zoom.get("presente") or {}
+        rol = next((r for r, datos in PERSONAJES_DISTRITO.items() if datos[0].lower() in clave), None)
+        if rol is None:
+            rol = next((j["rol"] for j in self.vista.estado.get("mundo", {}).get("jugadores", [])
+                        if j["id"] == self.vista.identificador), None)
+        return (escena.get("personajes", {}).get(rol, {}).get(("reposo", "abajo")) or [None])[0]
+
+    def retrato(self, superficie, nombre, x=170, y=175):
+        imagen = self.imagen_retrato(nombre)
+        marco = self.vista.arte.marco
+        if marco is not None:
+            superficie.blit(marco, marco.get_rect(center=(x + 48, y + 52)))
+        else:
+            pygame.draw.rect(superficie, (29, 58, 42), (x, y, 96, 104), border_radius=10)
+            pygame.draw.rect(superficie, ORO, (x, y, 96, 104), 2, border_radius=10)
         if imagen is not None:
             escala = min(78 / imagen.get_width(), 88 / imagen.get_height())
             img = pygame.transform.scale(imagen, (max(1, round(imagen.get_width()*escala)), max(1, round(imagen.get_height()*escala))))
@@ -248,6 +283,7 @@ class PanelCooperativo:
             propia = self.clasificacion_propia()
             if not propia:
                 self.texto_lineas(superficie, "Antes de seguir: ¿qué tipo de información era?", rect.x + 40, rect.bottom - 70, rect.width - 80, self.pequena, ORO)
+                dibujar_icono(superficie, self.vista.arte.arbol, (rect.right - 50, rect.bottom - 60))
                 self.boton(superficie, "clasificar_abrir", "Clasificar el evento", 480, 595, 420)
             elif contexto["dimension"] == "la_copa":
                 if not resultado.get("correcto") and not self.caso.get("rectificacion"):
@@ -339,6 +375,10 @@ class PanelCooperativo:
             elif self.caso.get("fase") == "final":
                 self.texto_lineas(superficie, "¡Gracias por ayudar a la aldea!", 165, 180, 630, color=ORO)
                 self.texto_lineas(superficie, f"Estrellas del equipo: {self.caso.get('estrellas', 0)} de {self.caso.get('estrellas_total', 11)}", 165, 237, 630)
+                dibujar_icono(superficie, self.vista.arte.sello, (760, 215))
+                dibujar_icono(superficie, self.vista.arte.insignia, (670, 215))
+                cifra = self.encabezado.render(str(self.caso.get("estrellas", 0)), True, (61, 37, 25))
+                superficie.blit(cifra, cifra.get_rect(center=(670, 201)))
                 for i, caso in enumerate(self.caso.get("balance", [])):
                     self.texto_lineas(superficie, ("Descubierto: " if caso["correcto"] else "Aprendimos de: ") + caso["caso"], 165, 310 + i*46, 630, self.fuente)
             else:
@@ -365,16 +405,20 @@ class PanelCooperativo:
                 pista = inventario[self.indice_pista]
                 self.texto_lineas(superficie, pista["titulo"], 165, 170, 630, color=ORO)
                 self.texto_lineas(superficie, pista["texto"], 165, 215, 630)
-                self.boton(superficie, "pista_anterior", "<", 205, 353, 70)
-                self.boton(superficie, "pista_siguiente", ">", 755, 353, 70)
+                dibujar_icono(superficie, self.vista.arte.iconos_pista.get(pista["id"]), (775, 186))
+                arte = self.vista.arte
+                self.boton_flecha(superficie, "pista_anterior", arte.flecha_izq, "<", 205, 353)
+                self.boton_flecha(superficie, "pista_siguiente", arte.flecha_der, ">", 755, 353)
                 self.texto_lineas(superficie, f"Pista {self.indice_pista+1} de {len(inventario)}", 390, 343, 250, self.pequena)
                 destinatarios = self.destinos_pista()
                 if destinatarios:
                     self.indice_destino %= len(destinatarios)
                     destino = destinatarios[self.indice_destino]
                     self.texto_lineas(superficie, "Para: " + destino["nombre"], 165, 400, 630)
-                    self.boton(superficie, "destino_anterior", "< Persona", 330, 450, 235)
-                    self.boton(superficie, "destino_siguiente", "Persona >", 630, 450, 235)
+                    self.boton_flecha(superficie, "destino_anterior", arte.flecha_izq, "<", 330, 450)
+                    self.boton_flecha(superficie, "destino_siguiente", arte.flecha_der, ">", 630, 450)
+                    persona = self.pequena.render("Cambiar persona", True, VERDE)
+                    superficie.blit(persona, persona.get_rect(center=(480, 450)))
                     cerca = self.cerca_eco() or self.vista.cerca(destino, 64)
                     self.boton(superficie, "entregar", "Enviar mi pista" if self.cerca_eco() else "Dar mi pista", 480, 506, 420, cerca)
                     if not cerca:
@@ -406,6 +450,8 @@ class PanelCooperativo:
             self.dibujar_actividad(superficie)
         elif self.modo == "poder":
             self.texto_lineas(superficie, self.privado.get("habilidad", "Mi poder"), 165, 185, 630, color=ORO)
+            rol = next((j["rol"] for j in self.vista.estado.get("mundo", {}).get("jugadores", []) if j["id"] == self.vista.identificador), None)
+            dibujar_icono(superficie, self.vista.arte.poder_grande.get(rol), (750, 205))
             self.texto_lineas(superficie, self.privado.get("descripcion_habilidad", ""), 165, 255, 630)
             self.texto_lineas(superficie, "Puedes usarlo una vez por misterio.", 165, 380, 630, color=VERDE)
             self.boton(superficie, "habilidad", "Usar mi poder", 480, 495, 430, not self.privado.get("habilidad_usada"))
@@ -429,8 +475,8 @@ class PanelCooperativo:
         self.indice_destino %= len(destinos)
         texto = self.fuente.render("Para: " + destinos[self.indice_destino]["nombre"], True, ORO)
         superficie.blit(texto, texto.get_rect(center=(480, y)))
-        self.boton(superficie, "destino_anterior", "<", 220, y, 70)
-        self.boton(superficie, "destino_siguiente", ">", 740, y, 70)
+        self.boton_flecha(superficie, "destino_anterior", self.vista.arte.flecha_izq, "<", 220, y)
+        self.boton_flecha(superficie, "destino_siguiente", self.vista.arte.flecha_der, ">", 740, y)
         ayuda = self.pequena.render("Flechas izquierda y derecha: cambiar destinatario", True, VERDE)
         superficie.blit(ayuda, ayuda.get_rect(center=(480, y + 30)))
 

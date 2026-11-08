@@ -23,7 +23,7 @@ class SistemaReparacionPuente:
     }
     DESPLAZAMIENTOS_SUELO = {
         "plataforma_noreste": (-24, 118),
-        "plataforma_suroeste": (53, 75),
+        "plataforma_suroeste": (47, 79),
         "plataforma_sureste": (-18, 85),
     }
     # Misma configuración que el minijuego multijugador (un solo origen).
