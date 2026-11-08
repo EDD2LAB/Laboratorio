@@ -317,6 +317,9 @@ def dibujar_portal(panel, superficie, destinos, origen):
                       desactivado=not destino["disponible"])
         boton.dibujar(superficie, panel.vista.mouse)
         panel.botones["viajar:" + destino["id"]] = boton
+        emblema = panel.vista.arte.emblemas_portal.get(destino["id"])
+        if emblema is not None:
+            superficie.blit(emblema, emblema.get_rect(center=(208, 290 + i * 78)))
     if viaje and panel.vista.identificador in viaje["aceptan"]:
         boton = Boton("Ya no quiero viajar", centro=(480, 515), fuente=r["fuente_boton"], tamano=(330, 48))
         boton.dibujar(superficie, panel.vista.mouse)
@@ -328,8 +331,9 @@ class Transicion:
 
     DURACION = 2.6
 
-    def __init__(self, nombre):
+    def __init__(self, nombre, emblema=None):
         self.nombre = nombre
+        self.emblema = emblema.copy() if emblema is not None else None
         self.t = 0.0
 
     @property
@@ -355,8 +359,12 @@ class Transicion:
                 pygame.draw.circle(superficie, (69, 220, 210), (480, 360), radio, 2)
         if t > .6:
             titulo = fuente.render(self.nombre.upper(), True, (231, 255, 247))
-            titulo.set_alpha(round(255 * min(1, (t - .6) / .4) * min(1, (self.DURACION - t) / .5)))
+            opacidad = round(255 * min(1, (t - .6) / .4) * min(1, (self.DURACION - t) / .5))
+            titulo.set_alpha(opacidad)
             superficie.blit(titulo, titulo.get_rect(center=(480, 108)))
+            if self.emblema is not None:
+                self.emblema.set_alpha(opacidad)
+                superficie.blit(self.emblema, self.emblema.get_rect(center=(480, 360)))
 
 
 def etiquetas_hud(dimension):

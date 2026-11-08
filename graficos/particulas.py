@@ -56,7 +56,7 @@ def _halo(radio, color):
 class SistemaParticulas:
     """Actualiza luciérnagas y partículas mágicas con delta_ms."""
 
-    MAX_LUCIERNAGAS = 12
+    MAX_LUCIERNAGAS = 5
     MAX_PARTICULAS = 60
     PALETA = ((111, 219, 150), (93, 218, 205), (238, 201, 92))
     RADIO_BRILLO = 9
@@ -75,6 +75,7 @@ class SistemaParticulas:
         self.particulas = []
         self._superficies_luciernaga = {}
         self._halos = {}
+        self._ampliados = {}
 
     @classmethod
     def _recursos(cls):
@@ -172,19 +173,31 @@ class SistemaParticulas:
             vivas.append(particula)
         self.particulas = vivas
 
-    def dibujar(self, superficie):
+    def _ampliado(self, cuadro, zoom):
+        """El cuadro a tamaño de cámara (se escala una sola vez)."""
+        if zoom == 1:
+            return cuadro
+        clave = (id(cuadro), zoom)
+        if clave not in self._ampliados:
+            self._ampliados[clave] = pygame.transform.scale(
+                cuadro, (cuadro.get_width() * zoom, cuadro.get_height() * zoom))
+        return self._ampliados[clave]
+
+    def dibujar(self, superficie, camara=None):
+        """``camara`` = (x, y, zoom entero): dibuja directo a pantalla con ese encuadre."""
         sprites = self._recursos()
+        cam_x, cam_y, zoom = camara or (0, 0, 1)
         if self.mostrar_luciernagas:
             for luciernaga in self.luciernagas:
-                x = int(luciernaga["x"] + math.sin(luciernaga["fase"]) * luciernaga["amplitud"])
-                y = int(luciernaga["y"] + math.sin(luciernaga["fase"] * 0.7) * 3)
+                x = int((luciernaga["x"] + math.sin(luciernaga["fase"]) * luciernaga["amplitud"] - cam_x) * zoom)
+                y = int((luciernaga["y"] + math.sin(luciernaga["fase"] * 0.7) * 3 - cam_y) * zoom)
                 brillo = (math.sin(self.tiempo * 1.6 + luciernaga["fase_brillo"]) + 1) / 2
                 nivel = 1 + round(brillo * 5)
-                halo = self._halo(self.RADIO_BRILLO + 3, tuple(round(c * nivel / 6 * .55) for c in (255, 207, 92)))
+                halo = self._halo((self.RADIO_BRILLO + 3) * zoom, tuple(round(c * nivel / 6 * .55) for c in (255, 207, 92)))
                 superficie.blit(halo, halo.get_rect(center=(x, y)), special_flags=pygame.BLEND_RGB_ADD)
                 cuadros = sprites["luciernaga" if luciernaga.get("vx", 1) >= 0 else "luciernaga_izquierda"]
                 if cuadros:
-                    cuadro = cuadros[int(self.tiempo * 10 + luciernaga["fase_brillo"] * 3) % len(cuadros)]
+                    cuadro = self._ampliado(cuadros[int(self.tiempo * 10 + luciernaga["fase_brillo"] * 3) % len(cuadros)], zoom)
                     superficie.blit(cuadro, cuadro.get_rect(center=(x, y)))
                 else:
                     tamano = luciernaga["tamano"]
@@ -193,15 +206,15 @@ class SistemaParticulas:
 
         for particula in self.particulas:
             vida = max(0, min(1, particula["vida"] / particula["vida_max"]))
-            x, y = int(particula["x"]), int(particula["y"])
+            x, y = int((particula["x"] - cam_x) * zoom), int((particula["y"] - cam_y) * zoom)
             nivel = max(1, round(vida * 4))
-            halo = self._halo(particula["tamano"] + 5, tuple(round(c * nivel / 4 * .5) for c in particula["color"]))
+            halo = self._halo((particula["tamano"] + 5) * zoom, tuple(round(c * nivel / 4 * .5) for c in particula["color"]))
             superficie.blit(halo, halo.get_rect(center=(x, y)), special_flags=pygame.BLEND_RGB_ADD)
             tamano = min((7, 10, 13, 16), key=lambda t: abs(t - particula["tamano"] * 2.6))
             cuadros = sprites["destellos"].get(tamano)
             if cuadros:
                 # La chispa recorre los 8 cuadros del destello durante su vida.
-                cuadro = cuadros[min(len(cuadros) - 1, int((1 - vida) * len(cuadros)))]
+                cuadro = self._ampliado(cuadros[min(len(cuadros) - 1, int((1 - vida) * len(cuadros)))], zoom)
                 superficie.blit(cuadro, cuadro.get_rect(center=(x, y)))
             else:
                 intensidad = int(110 + 145 * vida)

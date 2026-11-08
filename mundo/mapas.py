@@ -24,6 +24,65 @@ from nucleo.recursos import (
 )
 
 
+# Lugar de Mapaunificado.png en el mundo 960x720 (x, y, ancho, alto), hallado
+# comparándolo con Pr_MañanaLumi.png: así hitboxes y objetos no cambian de sitio.
+REGISTRO_MAPA_UNIFICADO = (38, 0, 881, 719)
+BORDE_FUSION_MAPA = 36
+
+
+def cargar_fondo_unificado(zoom):
+    """Fondo de La Copa a ``zoom`` veces el mundo. Mapaunificado no llega a las
+    franjas laterales: ahí sigue el mapa anterior, fundido con degradado."""
+    base = cargar_imagen(
+        os.path.join("Fondos", "Mapas", "Pr_MañanaLumi.png"),
+        (ANCHO * zoom, ALTO * zoom),
+    ).convert()
+    x, y, ancho, alto = (valor * zoom for valor in REGISTRO_MAPA_UNIFICADO)
+    unificado = cargar_imagen(os.path.join("Fondos", "Mapas", "Mapaunificado.png"), (ancho, alto))
+    borde = BORDE_FUSION_MAPA * zoom
+    for indice in range(borde):
+        alfa = round(255 * (indice + 1) / borde)
+        for columna in (indice, ancho - 1 - indice):
+            unificado.fill((255, 255, 255, alfa), (columna, 0, 1, alto), special_flags=pygame.BLEND_RGBA_MULT)
+    base.blit(unificado, (x, y))
+    return base
+
+
+def dejar_solo_agua(objeto):
+    """La cascada animada trae pintado el fondo del mapa anterior: se conserva
+    solo lo que se mueve entre cuadros, y encima del mapa nuevo no queda un
+    rectángulo. Modifica ``objeto`` (una vez, al cargar)."""
+    origenes = objeto["origenes"]
+    tamano = origenes[0].get_size()
+    quieto = pygame.mask.Mask(tamano, fill=True)
+    for cuadro in origenes[1:]:
+        quieto = quieto.overlap_mask(pygame.mask.from_threshold(origenes[0], (0, 0, 0), (10, 10, 10, 255), cuadro), (0, 0))
+    agua = quieto.copy()
+    agua.invert()
+    limpios = []
+    for cuadro in origenes:
+        limpio = pygame.Surface(tamano, pygame.SRCALPHA)
+        agua.to_surface(limpio, setsurface=cuadro, unsetcolor=(0, 0, 0, 0))
+        limpios.append(limpio)
+    objeto["origenes"] = limpios
+    objeto["frames"] = [pygame.transform.scale(limpio, objeto["rect"].size) for limpio in limpios]
+    objeto["imagen"] = objeto["frames"][0]
+
+
+def decoraciones_ampliadas(decoraciones, zoom):
+    """Copias de las decoraciones a ``zoom`` veces, escaladas desde su imagen original."""
+    ampliadas = []
+    for objeto in decoraciones:
+        r = objeto["rect"]
+        rect = pygame.Rect(r.x * zoom, r.y * zoom, r.width * zoom, r.height * zoom)
+        frames = [pygame.transform.scale(origen, rect.size) for origen in objeto["origenes"]]
+        ampliadas.append(dict(
+            objeto, original=objeto, rect=rect, hitbox=rect, imagen=frames[0],
+            frames=frames if objeto["frames"] else [],
+        ))
+    return ampliadas
+
+
 def cargar_mapa_principal():
     """Carga el mapa usando en todos los momentos las hitboxes del fondo de mañana."""
     ruta_hitboxes = os.path.join(
@@ -80,6 +139,7 @@ def cargar_mapa_principal():
             else max(1, int(objeto.get("frames", 1)))
         )
         imagenes_frames = []
+        origenes = []  # cuadros sin escalar, para ampliarlos sin perder detalle
         if cantidad_frames > 1 and not es_puente:
             ancho_frame = imagen_original.get_width() // cantidad_frames
             for indice_frame in range(cantidad_frames):
@@ -92,6 +152,7 @@ def cargar_mapa_principal():
                     ancho = max(1, min(frame.get_width() - x, round(recorte["w"] * frame.get_width())))
                     alto = max(1, min(frame.get_height() - y, round(recorte["h"] * frame.get_height())))
                     frame = frame.subsurface((x, y, ancho, alto)).copy()
+                origenes.append(frame)
                 imagenes_frames.append(pygame.transform.scale(frame, rect.size))
             imagen = imagenes_frames[0] if imagenes_frames else imagen_original
         else:
@@ -102,6 +163,7 @@ def cargar_mapa_principal():
                 ancho = max(1, min(imagen.get_width() - x, round(recorte["w"] * imagen.get_width())))
                 alto = max(1, min(imagen.get_height() - y, round(recorte["h"] * imagen.get_height())))
                 imagen = imagen.subsurface((x, y, ancho, alto)).copy()
+            origenes.append(imagen)
             imagen = pygame.transform.scale(imagen, rect.size)
 
         hitbox = rect.copy()
@@ -121,6 +183,7 @@ def cargar_mapa_principal():
             "escalera": es_escalera,
             "puente_animable": es_puente and not es_escalera,
             "frames": imagenes_frames,
+            "origenes": origenes,
             "tronco_eco": nombre_normalizado.startswith("tronco ecos/"),
             # La mariposa vuela alrededor del punto del editor (dibujar_mariposa).
             "mariposa": nombre_normalizado.endswith("animales/mariposa.png"),
