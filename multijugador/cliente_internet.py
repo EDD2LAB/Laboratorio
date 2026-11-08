@@ -46,12 +46,15 @@ class ClienteInternet:
         self._datos = {"nombre": nombre, "version": VERSION, "codigo": codigo}
         self._crear = crear
         self._movimiento = (0, 0)
+        self._correr = False
         self._secuencia = 0
         self._pendientes = {}
         self._lock_acciones = threading.Lock()
         self._ultimo_estado = 0
         self._ronda = 0
         self._http = urllib.request.build_opener(SinRedirecciones())
+        # Métricas de red (F3 y benchmark): mensajes y bytes recibidos.
+        self.metricas = {"mensajes": 0, "bytes": 0}
         threading.Thread(target=self._ejecutar, daemon=True).start()
 
     def _peticion(self, ruta, datos=None, timeout=8):
@@ -92,8 +95,9 @@ class ClienteInternet:
             except queue.Full:
                 self._evento({"tipo": "error", "mensaje": "Espera antes de enviar otra acción."})
 
-    def mover(self, dx, dy):
+    def mover(self, dx, dy, correr=False):
         self._movimiento = (dx, dy)
+        self._correr = bool(correr)
 
     def actuar(self, accion, **datos):
         solicitud = {"tipo": "accion", "accion": accion, "id_solicitud": uuid.uuid4().hex, "ronda": self._ronda, **datos}
@@ -151,7 +155,7 @@ class ClienteInternet:
                         dx, dy = self._movimiento
                         seq = self._secuencia
                         self._secuencia += 1
-                        await ws.send_json({"tipo": "mover", "dx": dx, "dy": dy, "seq": seq})
+                        await ws.send_json({"tipo": "mover", "dx": dx, "dy": dy, "seq": seq, "correr": self._correr})
                         with self._lock_acciones:
                             pendientes = list(self._pendientes.values())
                         enviadas = {clave: fecha for clave, fecha in enviadas.items() if any(p["id_solicitud"] == clave for p in pendientes)}
@@ -167,6 +171,8 @@ class ClienteInternet:
                     while not self._cerrado.is_set():
                         mensaje = await asyncio.wait_for(ws.receive(), timeout=12)
                         if mensaje.type == aiohttp.WSMsgType.TEXT:
+                            self.metricas["mensajes"] += 1
+                            self.metricas["bytes"] += len(mensaje.data)
                             estado = mensaje.json()
                             if isinstance(estado, dict):
                                 if estado.get("tipo") == "acuse":

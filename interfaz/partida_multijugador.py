@@ -13,7 +13,17 @@ from multijugador.reparacion import CONFIGURACION as _CONFIG_REPARACION
 CONFIG_REPARACION_MS = _CONFIG_REPARACION["duracion_animacion_ms"]
 
 COLORES = ((83, 222, 212), (241, 199, 86), (183, 137, 246), (247, 140, 120))
+# Boca del caldero en el lienzo 960x720 (el objetivo "caldero" está en su base, 480,380).
+BOCA_CALDERO = (480, 336)
+COLORES_CALDERO = {
+    "estable": ((93, 218, 205), (111, 219, 150), (190, 245, 255)),
+    "peligroso": ((238, 201, 92), (255, 150, 70), (200, 130, 255)),
+    "critico": ((255, 95, 95), (190, 80, 230), (255, 150, 70)),
+}
 DIRECCIONES = ("abajo", "derecha", "arriba", "izquierda")
+# Distrito Conecta se ve con la cámara cerca del personaje: el mapa se
+# descubre al recorrerlo en lugar de mostrarse completo de una vez.
+ZOOM_PRESENTE = 1.8
 
 
 def tecla_activa(teclas, *codigos):
@@ -57,12 +67,20 @@ def separar_frames(imagen, cantidad=8):
 
 
 def cargar_personajes():
-    import juego
+    from nucleo.recursos import cargar_imagen
     carpetas = ("Guardian", "mensajero", "Habitante hombre", "Aspirante hombre")
     caminar = (
         [f"Fila {i}. Guardián.png" for i in range(2, 6)],
         [f"fila {i} mensajero.png" for i in range(2, 6)],
         [f"HabHombre Fila {i}.png" for i in range(2, 6)],
+        # La Aspirante tiene caminata propia (antes caminaba con la hoja de correr).
+        [f"Fila {i}. Aspirante_a_cacique-Idle.png" for i in range(2, 6)],
+    )
+    # Hojas de correr (Shift). Guardián y Habitante no tienen: usan su caminata más rápida.
+    correr = (
+        None,
+        [f"Mensajero_corriendo_{i}.png" for i in range(1, 5)],
+        None,
         [f"Corriendo/Aspirante_a_cacique-corriendo_fila{i}.png" for i in range(1, 5)],
     )
     reposo = ("Guardian_reposo_fila", "Mensajero_reposo_fila", "Habitante_hombre_reposo_fila",
@@ -73,10 +91,19 @@ def cargar_personajes():
         for estado in ("caminar", "reposo"):
             for i, direccion in enumerate(DIRECCIONES):
                 archivo = caminar[indice][i] if estado == "caminar" else f"Reposo/{reposo[indice]}{i + 1}.png"
-                imagen = juego.cargar_imagen(os.path.join("NPCS", carpetas[indice], archivo))
+                imagen = cargar_imagen(os.path.join("NPCS", carpetas[indice], archivo))
                 clips[(estado, direccion)] = separar_frames(imagen)
         alto = max(f.get_height() for frames in clips.values() for f in frames)
         escala = 53 / alto
+        for i, direccion in enumerate(DIRECCIONES):
+            frames = clips[("caminar", direccion)]
+            if correr[indice]:
+                try:
+                    imagen = cargar_imagen(os.path.join("NPCS", carpetas[indice], correr[indice][i]))
+                    frames = separar_frames(imagen)
+                except (pygame.error, ValueError, FileNotFoundError) as error:
+                    print("[Multijugador] Sin animación de correr para", rol, direccion, error)
+            clips[("correr", direccion)] = frames
         personajes[rol] = {
             clave: [pygame.transform.scale(f, (max(1, round(f.get_width() * escala)), max(1, round(f.get_height() * escala))))
                     for f in frames] for clave, frames in clips.items()
@@ -85,14 +112,16 @@ def cargar_personajes():
 
 
 class VistaPartida:
-    def __init__(self, identificador, estado):
-        import juego
+    def __init__(self, identificador, estado, audio=None):
+        from mundo.mapas import cargar_mapa_principal
+        from mundo.personajes import cargar_frames_tronco_eco
+        from nucleo.recursos import cargar_fuente, cargar_imagen
         from interfaz.efectos_visuales import AdornosMapa, FlechaGuia
         from interfaz.escenas_multijugador import RecursosEscenas
         from interfaz.hud import HUDIndicadores
         from interfaz.suministros import configurar_sprites
         from multijugador.presentacion import COLOR_ROJO, COLOR_VERDE, ETIQUETAS, POLARIDAD
-        from particulas import SistemaParticulas
+        from graficos.particulas import SistemaParticulas
         self.identificador = identificador
         self.colisiones = ColisionesMapa()
         self.firma = self.colisiones.firma
@@ -102,16 +131,16 @@ class VistaPartida:
         self.ultima_ruta = 0
         self.boton_guia = pygame.Rect(25, 112, 330, 37)
         self.personajes = cargar_personajes()
-        _, decoraciones, _, _, _, _ = juego.cargar_mapa_principal()
+        _, decoraciones, _, _, _, _ = cargar_mapa_principal()
         self.decoraciones = [o for o in decoraciones if not es_personaje_jugable(o["nombre"])]
-        self.fondo = juego.cargar_imagen("Fondos/Mapas/Pr_MañanaLumi.png", (960, 720))
-        self.fuente = juego.cargar_fuente(16)
-        self.titulo = juego.cargar_fuente(20)
+        self.fondo = cargar_imagen("Fondos/Mapas/Pr_MañanaLumi.png", (960, 720))
+        self.fuente = cargar_fuente(16)
+        self.titulo = cargar_fuente(20)
         self.jugadores = {}
         self.ultimo_paquete = time.monotonic()
         self.aviso_red = ""
         self.estado = estado
-        self.frames_eco = juego.cargar_frames_tronco_eco()
+        self.frames_eco = cargar_frames_tronco_eco()
         # --- Features del modo de un jugador (cargadas una sola vez) ---
         self.dimension = LA_COPA
         self.mapas = {LA_COPA: {"fondo": self.fondo, "decoraciones": self.decoraciones, "colisiones": self.colisiones}}
@@ -119,17 +148,22 @@ class VistaPartida:
         configurar_sprites(self.escenas.materiales)
         self.flecha = FlechaGuia()
         self.adornos = AdornosMapa()
-        self.hud = HUDIndicadores(juego.cargar_fuente(11), self.escenas.iconos_hud,
+        self.hud = HUDIndicadores(cargar_fuente(11), self.escenas.iconos_hud,
                                   negativos={k for k, v in POLARIDAD.items() if v == "malo"},
                                   colores_avisos=(COLOR_VERDE, COLOR_ROJO), etiquetar_avisos=True)
         self.etiquetas = ETIQUETAS
         self.hud.establecer_etiquetas(ETIQUETAS[LA_COPA])
-        self.mostrar_hud = True
+        self.mostrar_hud = True  # H o el botón de la barra: oculta/muestra todo el HUD
+        self.mostrar_nombres = True  # L: oculta/muestra las etiquetas de nombre
+        self.en_pausa = False  # lo fija el menú de pausa: sin movimiento mientras está abierto
+        self.camara = None  # centro de la cámara del Presente (mundo); None = sin zoom
+        self.capa_mundo = None
         self.particulas = SistemaParticulas(960, 720)
         self.animacion_pocion = None
         self.transicion = None
-        self.audio = None
+        self.audio = audio  # gestor compartido del menú (None: se crea al sonar)
         self.estado_caldero = None
+        self.reloj_caldero = 0.0
         self.final_sonado = None
         self.inicio_reparacion = None
         self.evento_reparacion_visto = None
@@ -138,7 +172,7 @@ class VistaPartida:
         self.puente_roto = None
         if self.puente_1 is not None and self.escenas.puente_roto is not None:
             self.puente_roto = pygame.transform.scale(self.escenas.puente_roto, self.puente_1["rect"].size)
-        from reparacion_puentes import SistemaReparacionPuente
+        from mundo.reparacion_puentes import SistemaReparacionPuente
         self.frames_reparacion = [SistemaReparacionPuente._escalar_conservar_proporcion(f, self.puente_1["rect"].size)
                                   for f in self.escenas.efecto_reparacion] if self.puente_1 else []
         from interfaz.cooperativo import PanelCooperativo
@@ -155,9 +189,9 @@ class VistaPartida:
         """GestorAudio del modo de un jugador; si no hay audio, se ignora."""
         if self.audio is None:
             try:
-                import juego
-                from audio_manager import GestorAudio
-                self.audio = GestorAudio(os.path.dirname(os.path.abspath(juego.__file__)))
+                from audio.audio_manager import GestorAudio
+                from nucleo.rutas import RAIZ
+                self.audio = GestorAudio(str(RAIZ), categorias=True)
             except Exception as error:  # sin mezclador (pruebas, servidores)
                 print("[Multijugador] Audio desactivado:", error)
                 self.audio = False
@@ -172,17 +206,18 @@ class VistaPartida:
             self.sonido({"tipo": "caldero", "estado": "estable"})
         if self.audio:
             try:
-                self.audio.reproducir_musica("ambiente_presente" if self.dimension == PRESENTE else "ambiente")
+                # Única pista de ambiente del proyecto (no hay una propia del Presente).
+                self.audio.reproducir_musica("ambiente", en_bucle=True)
             except Exception as error:
                 print("[Multijugador] Sin música:", error)
 
     # ------------------------------------------------------------ dimensiones
     def _cargar_dimension(self, dimension):
         if dimension not in self.mapas:
-            import juego
-            from dimensiones import DIMENSIONES
+            from logica.dimensiones import DIMENSIONES
             from multijugador.dimensiones_red import cargar_datos
-            recursos = juego.cargar_mapa_presente(DIMENSIONES[dimension])
+            from mundo.mapas import cargar_mapa_presente
+            recursos = cargar_mapa_presente(DIMENSIONES[dimension])
             if recursos is None:
                 raise ValueError("No se pudo cargar " + dimension)
             self.mapas[dimension] = {"fondo": recursos["mapa"], "decoraciones": recursos["decoraciones"],
@@ -206,6 +241,10 @@ class VistaPartida:
         self.particulas.particulas.clear()
         self.hud.establecer_etiquetas(self.etiquetas.get(dimension, self.etiquetas[LA_COPA]))
         self.panel.modo = None
+        self.camara = None  # se recoloca sobre el jugador al llegar
+        # Lo que estaba ocurriendo en el mapa anterior termina al viajar.
+        self.animacion_pocion = None
+        self.inicio_reparacion = None
         self.transicion = Transicion(DIMENSIONES_RED[dimension]["nombre"])
         self.sonido_musica()
 
@@ -219,6 +258,27 @@ class VistaPartida:
     def rect_portal(self):
         rect = self.estado.get("mundo", {}).get("portales", {}).get(self.dimension)
         return pygame.Rect(rect) if rect else None
+
+    def viaje(self):
+        """Propuesta de viaje en grupo de mi dimensión (o None)."""
+        viaje = self.estado.get("mundo", {}).get("viaje")
+        return viaje if viaje and viaje.get("origen") == self.dimension else None
+
+    def _dibujar_aviso_viaje(self, superficie):
+        viaje = self.viaje()
+        if not viaje or self.panel.activo:
+            return
+        if self.identificador in viaje["aceptan"]:
+            texto = "Viaje a " + viaje["nombre"] + (": esperando a " + ", ".join(viaje["faltan"]) if viaje["faltan"] else "")
+        else:
+            texto = "¡Viaje a " + viaje["nombre"] + "! Ve al portal y pulsa E para aceptar"
+        render = self.titulo.render(texto, True, (255, 236, 170))
+        caja = render.get_rect(center=(480, 196)).inflate(28, 16)
+        fondo = pygame.Surface(caja.size, pygame.SRCALPHA)
+        fondo.fill((10, 30, 36, 235))
+        superficie.blit(fondo, caja)
+        pygame.draw.rect(superficie, (106, 218, 204), caja, 2, border_radius=8)
+        superficie.blit(render, render.get_rect(center=caja.center))
 
     def viajar(self, cliente, destino):
         cliente.actuar("usar_portal", destino=destino)
@@ -360,9 +420,12 @@ class VistaPartida:
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_h and not self.panel.activo:
             self.mostrar_hud = not self.mostrar_hud
             return True
+        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_l and not self.panel.activo:
+            self.mostrar_nombres = not self.mostrar_nombres
+            return True
         if self.panel.manejar(evento, posicion, cliente):
             return True
-        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1 and self.boton_guia.collidepoint(posicion):
+        if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1 and self.mostrar_hud                 and self.dimension == LA_COPA and self.boton_guia.collidepoint(posicion):
             self.accion_guiada(cliente)
             return True
         if evento.type == pygame.KEYDOWN and evento.key in (pygame.K_e, pygame.K_TAB):
@@ -386,9 +449,10 @@ class VistaPartida:
         teclas = pygame.key.get_pressed()
         dx = int(tecla_activa(teclas, pygame.K_d, pygame.K_RIGHT)) - int(tecla_activa(teclas, pygame.K_a, pygame.K_LEFT))
         dy = int(tecla_activa(teclas, pygame.K_s, pygame.K_DOWN)) - int(tecla_activa(teclas, pygame.K_w, pygame.K_UP))
-        if not pygame.key.get_focused() or self.panel.activo or self.animacion_pocion or self.transicion:
+        if not pygame.key.get_focused() or self.en_pausa or self.panel.activo or self.animacion_pocion or self.transicion:
             dx = dy = 0
-        cliente.mover(dx, dy)
+        correr = tecla_activa(teclas, pygame.K_LSHIFT, pygame.K_RSHIFT)
+        cliente.mover(dx, dy, correr)
         if self.animacion_pocion:
             self.animacion_pocion.actualizar(segundos)
             if self.animacion_pocion.terminada:
@@ -398,6 +462,11 @@ class VistaPartida:
             if self.transicion.terminada:
                 self.transicion = None
         self.panel.actualizar_tiempo(segundos)
+        if self.dimension == LA_COPA:
+            self.reloj_caldero += segundos
+            if self.reloj_caldero >= .2:
+                self.reloj_caldero %= .2
+                self.particulas.emitir_columna(*BOCA_CALDERO, 2, COLORES_CALDERO.get(self.estado_caldero))
         self.particulas.actualizar(segundos * 1000)
         caso = self.estado.get("mundo", {}).get("caso", {})
         from multijugador.presentacion import ORDEN_INDICADORES
@@ -426,6 +495,43 @@ class VistaPartida:
             factor = 1 - math.exp(-24 * min(segundos, .1))
             jugador["posicion"] = jugador["posicion"].lerp(jugador["destino"], factor)
             jugador["reloj"] += segundos
+        self._seguir_camara(segundos)
+
+    # ---------------------------------------------------------- cámara
+    def _rect_mapa(self):
+        rect = self.colisiones.datos.get("rect_mapa") if self.colisiones else None
+        return pygame.Rect(rect) if rect else pygame.Rect(0, 0, 960, 720)
+
+    def _seguir_camara(self, segundos):
+        if self.dimension != PRESENTE:
+            self.camara = None
+            return
+        mio = self.jugadores.get(self.identificador)
+        if not mio:
+            return
+        objetivo = pygame.Vector2(mio["posicion"])
+        if self.camara is None:
+            self.camara = objetivo
+        else:
+            self.camara = self.camara.lerp(objetivo, 1 - math.exp(-6 * min(segundos, .1)))
+
+    def vista_camara(self):
+        """Rect del mundo visible, siempre dentro del mapa (sin mostrar fuera de sus bordes)."""
+        if self.dimension != PRESENTE or self.camara is None:
+            return None
+        mapa = self._rect_mapa()
+        ancho = min(mapa.width, round(960 / ZOOM_PRESENTE))
+        alto = min(mapa.height, round(720 / ZOOM_PRESENTE))
+        vista = pygame.Rect(0, 0, ancho, alto)
+        vista.center = (round(self.camara.x), round(self.camara.y))
+        vista.clamp_ip(mapa)
+        return vista
+
+    def a_pantalla(self, x, y, vista=None):
+        vista = vista if vista is not None else self.vista_camara()
+        if vista is None:
+            return x, y
+        return (x - vista.x) * 960 / vista.width, (y - vista.y) * 720 / vista.height
 
     def _objetivo_presente(self):
         """Siguiente paso en Distrito Conecta: pista pendiente o pantalla."""
@@ -440,7 +546,8 @@ class VistaPartida:
         return next((o for o in presente.get("objetivos", []) if o["id"] == "presente:pantalla"), None)
 
     def _dibujar_mapa(self, superficie, ahora_ms):
-        import juego
+        from nucleo.recursos import es_hoja_portales
+        from un_jugador.dibujo_mapa import dibujar_mariposa, dibujar_puente_balanceandose
         superficie.blit(self.fondo, (0, 0))
         puente = self.estado.get("mundo", {}).get("caso", {}).get("puente") or {}
         for objeto in self.decoraciones:
@@ -448,13 +555,15 @@ class VistaPartida:
                 # Puente 1 roto (imagen real Puente1Roto.png) hasta repararlo.
                 superficie.blit(self.puente_roto or objeto["imagen"], objeto["rect"])
                 continue
-            if juego.es_hoja_portales(objeto.get("nombre", "")) and self.adornos.portal:
+            if es_hoja_portales(objeto.get("nombre", "")) and self.adornos.portal:
                 continue  # se dibuja el portal animado
             if objeto.get("tronco_eco") and self.frames_eco:
                 frame = self.frames_eco[(ahora_ms // 140) % len(self.frames_eco)]
                 superficie.blit(pygame.transform.scale(frame, objeto["rect"].size), objeto["rect"])
             elif objeto.get("puente_animable"):
-                juego.dibujar_puente_balanceandose(superficie, objeto, ahora_ms)
+                dibujar_puente_balanceandose(superficie, objeto, ahora_ms)
+            elif objeto.get("mariposa") and objeto.get("frames"):
+                dibujar_mariposa(superficie, objeto, ahora_ms)
             elif objeto.get("frames"):
                 frames = objeto["frames"]
                 superficie.blit(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
@@ -474,12 +583,18 @@ class VistaPartida:
                 self.inicio_reparacion = None
 
     def dibujar(self, superficie, codigo, mouse=(-1, -1)):
-        from multijugador.dimensiones_red import DIMENSIONES_RED
         self.mouse = mouse
         ahora_ms = pygame.time.get_ticks()
+        vista = self.vista_camara()
+        pantalla = superficie
+        if vista is not None:
+            if self.capa_mundo is None:
+                self.capa_mundo = pygame.Surface((960, 720)).convert()
+            superficie = self.capa_mundo  # el mundo se dibuja aquí y luego se amplía
         self._dibujar_mapa(superficie, ahora_ms)
         self.adornos.ruta(superficie, self.ruta_guia, ahora_ms)
         etiquetas = []
+        anclas = []
         from interfaz.suministros import dibujar_carga, dibujar_encargos
         caso_actual = self.estado.get("mundo", {}).get("caso", {})
         if self.dimension == LA_COPA:
@@ -500,8 +615,11 @@ class VistaPartida:
             color = COLORES[ROLES.index(rol)]
             x, y = round(jugador["posicion"].x), round(jugador["posicion"].y)
             estado = datos["animacion"] if time.monotonic() - self.ultimo_paquete < .5 else "reposo"
+            if estado == "caminar" and datos.get("corriendo"):
+                estado = "correr"
             frames = self.personajes[rol][(estado, datos["direccion"])]
-            frame = frames[int(jugador["reloj"] * (9 if estado == "caminar" else 4)) % len(frames)]
+            velocidad_cuadros = {"caminar": 9, "correr": 14}.get(estado, 4)
+            frame = frames[int(jugador["reloj"] * velocidad_cuadros) % len(frames)]
             pygame.draw.ellipse(superficie, (17, 28, 22), (x - 13, y - 5, 26, 8))
             self.adornos.anillo_jugador(superficie, rol, (x, y - 1), color)
             rect = frame.get_rect(midbottom=(x, y))
@@ -511,11 +629,33 @@ class VistaPartida:
                 dibujar_carga(superficie, carga, (x + 22, y - 24))
             if datos["id"] in caso_actual.get("tutorial_cargas", []):
                 dibujar_carga(superficie, "farol", (x + 22, y - 24))
+            anclas.append((datos, color, (x, rect.top)))
+        self.particulas.dibujar(superficie)
+        yo = self.yo()
+        rect_portal = self.rect_portal()
+        if self.dimension_completa() and yo and rect_portal and not self.panel.activo:
+            # Igual que el modo de un jugador: al completar la dimensión, la
+            # flecha guía hasta el portal.
+            mio = self.jugadores.get(self.identificador)
+            origen = mio["posicion"] if mio else (yo["x"], yo["y"])
+            self.flecha.dibujar(superficie, (origen[0], origen[1] - 20), rect_portal.center, ahora_ms,
+                                limites=(30, 180, 930, 640))
+        if vista is not None:
+            # Cámara: solo la zona cercana al personaje, ampliada (pixel art: scale).
+            pygame.transform.scale(superficie.subsurface(vista), pantalla.get_size(), pantalla)
+            superficie = pantalla
+        for datos, color, (x, tope) in anclas:
+            x, tope = self.a_pantalla(x, tope, vista)
+            x, tope = round(x), round(tope)
+            if not self.mostrar_nombres:
+                if datos["id"] == self.identificador:  # sin etiquetas, igual te ubicas
+                    self.adornos.marcador_local(superficie, (x, tope - 6), color, ahora_ms)
+                continue
             nombre = datos["nombre"] + (" (tú)" if datos["id"] == self.identificador else "")
             if datos.get("controlador") == "bot":
                 nombre = "Bot · " + nombre
             etiqueta = self.fuente.render(nombre, True, color)
-            caja = etiqueta.get_rect(midbottom=(x, rect.top - 7))
+            caja = etiqueta.get_rect(midbottom=(x, tope - 7))
             caja.clamp_ip(superficie.get_rect().inflate(-8, -8))
             while any(caja.inflate(12, 8).colliderect(anterior) for _, anterior, *_ in etiquetas) and caja.top > 24:
                 caja.y -= 20
@@ -527,16 +667,12 @@ class VistaPartida:
             superficie.blit(etiqueta, caja)
             if local:
                 self.adornos.marcador_local(superficie, (caja.centerx, caja.top - 4), color, ahora_ms)
-        self.particulas.dibujar(superficie)
-        yo = self.yo()
-        rect_portal = self.rect_portal()
-        if self.dimension_completa() and yo and rect_portal and not self.panel.activo:
-            # Igual que el modo de un jugador: al completar la dimensión, la
-            # flecha guía hasta el portal.
-            mio = self.jugadores.get(self.identificador)
-            origen = mio["posicion"] if mio else (yo["x"], yo["y"])
-            self.flecha.dibujar(superficie, (origen[0], origen[1] - 20), rect_portal.center, ahora_ms,
-                                limites=(30, 180, 930, 640))
+        if self.mostrar_hud:
+            self._dibujar_hud(superficie, codigo, caso, privado, guia)
+        self._dibujar_capas_superiores(superficie)
+
+    def _dibujar_hud(self, superficie, codigo, caso, privado, guia):
+        from multijugador.dimensiones_red import DIMENSIONES_RED
         panel = pygame.Surface((960, 62), pygame.SRCALPHA)
         panel.fill((9, 25, 20, 235))
         superficie.blit(panel, (0, 658))
@@ -548,7 +684,7 @@ class VistaPartida:
         if self.seleccion not in claves:
             self.seleccion = claves[0] if claves else None
         seleccion = next((o for o in opciones if o["id"] == self.seleccion), None)
-        instruccion = ("[E] " + seleccion["nombre"] + (" | Tab: cambiar" if len(opciones) > 1 else "")) if seleccion else "Flechas: caminar | E: ayudar | I: pistas | M: tarea | H: indicadores"
+        instruccion = ("[E] " + seleccion["nombre"] + (" | Tab: cambiar" if len(opciones) > 1 else "")) if seleccion else "Shift: correr | E: ayudar | I: pistas | M: tarea | H: HUD | L: nombres"
         ayuda = self.fuente.render(instruccion, True, (255, 243, 210))
         superficie.blit(ayuda, (22, 695))
         if caso:
@@ -588,7 +724,7 @@ class VistaPartida:
             if self.dimension == PRESENTE:
                 oleada = "La Copa sigue esperándote"
             self.panel.texto_lineas(superficie, oleada, 632, 59, 300, self.fuente, (237, 185, 87))
-            self.panel.texto_lineas(superficie, "I: pistas · M: tarea · H: indicadores", 632, 83, 300, self.fuente)
+            self.panel.texto_lineas(superficie, "I: pistas · M: tarea · Esc: menú", 632, 83, 300, self.fuente)
             estados_puente = {
                 "DAMAGED": "Puente 1: roto", "MATERIALS_PENDING": "Puente 1: faltan materiales",
                 "READY_TO_REPAIR": "Puente 1: ¡listo para reparar!", "REPAIR_MINIGAME": "Puente 1: en reparación",
@@ -599,8 +735,11 @@ class VistaPartida:
                 self.panel.texto_lineas(superficie, estado_puente, 632, 107, 300, self.fuente, (237, 185, 87))
             for i in range(min(11, estrellas)):
                 estrella(superficie, (305 + i * 30, 630), 7, (255, 222, 112))
-            if self.mostrar_hud and not self.panel.activo:
+            if not self.panel.activo:
                 self.hud.dibujar(superficie, 18, 176)
+
+    def _dibujar_capas_superiores(self, superficie):
+        self._dibujar_aviso_viaje(superficie)
         if self.depurar:
             bots = [
                 jugador["datos"] for jugador in self.jugadores.values()

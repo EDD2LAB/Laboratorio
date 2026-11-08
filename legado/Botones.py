@@ -9,13 +9,13 @@ import sys
 
 import pygame
 
-from logica_juego import EstadoJuego
+from logica.logica_juego import EstadoJuego
 
 
 ANCHO, ALTO = 960, 720
 FPS = 60
-RUTA_ASSETS = os.path.join(os.path.dirname(__file__), "Imagenes")
-RUTA_FUENTE = os.path.join(os.path.dirname(__file__), "Fuentes", "determination.ttf")
+RUTA_ASSETS = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Imagenes")
+RUTA_FUENTE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "Fuentes", "determination.ttf")
 
 CREMA = (255, 243, 210)
 TINTA = (61, 37, 25)

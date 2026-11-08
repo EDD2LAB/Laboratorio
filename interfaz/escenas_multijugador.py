@@ -1,6 +1,6 @@
 """Escenas del modo de un jugador portadas al multijugador.
 
-Todo lo que se puede se REUTILIZA directamente de ``juego`` (tablilla,
+Todo lo que se puede se REUTILIZA directamente de ``un_jugador`` (tablilla,
 animación de poción, efectos de la tablilla, trivia de clasificación,
 resultado de clasificación) pasando un adaptador con la misma interfaz que
 ``EstadoJuego``. Por red solo llegan ids, tipos y estados; los sprites y
@@ -59,9 +59,15 @@ class RecursosEscenas:
     """Carga única de los recursos visuales del modo de un jugador."""
 
     def __init__(self, fondo_mapa, decoraciones):
-        import juego
-        from reparacion_puentes import SistemaReparacionPuente
-        cargar = juego.cargar_imagen
+        from nucleo.recursos import (
+            cargar_efecto_tablilla,
+            cargar_fuente,
+            cargar_icono_hud,
+            cargar_imagen,
+            cargar_spritesheet_frames,
+        )
+        from mundo.reparacion_puentes import SistemaReparacionPuente
+        cargar = cargar_imagen
         fondo = fondo_mapa.copy()
         for objeto in decoraciones:
             fondo.blit(objeto["imagen"], objeto["rect"])
@@ -80,7 +86,7 @@ class RecursosEscenas:
                 "quemar": cargar("Pociones/pocion_roja.png", (42, 42)),
                 "ignorar": cargar("Pociones/pocion_morada.png", (42, 42)),
             },
-            "efectos_decision": {clave: juego.cargar_efecto_tablilla(clave.capitalize() + "_tablilla.png")
+            "efectos_decision": {clave: cargar_efecto_tablilla(clave.capitalize() + "_tablilla.png")
                                  for clave in ("colgar", "consultar", "quemar", "ignorar")},
             "fondo_clasificacion": cargar("FondoClasificacion.png", (860, 505)),
             "panel_clasificacion": cargar("Cartel_decision.png", (840, 315)),
@@ -91,10 +97,10 @@ class RecursosEscenas:
                 "suceso_natural": cargar("Suceso_natural.png", (180, 200)),
                 "acusacion_personal": cargar("Acusacion_personal.png", (180, 200)),
             },
-            "fuente_texto": juego.cargar_fuente(22), "fuente_categoria": juego.cargar_fuente(13),
-            "fuente_boton": juego.cargar_fuente(19), "fuente_mapa": juego.cargar_fuente(18),
-            "fuente_panel_titulo": juego.cargar_fuente(16), "fuente_panel": juego.cargar_fuente(13),
-            "fuente_resultado": juego.cargar_fuente(28),
+            "fuente_texto": cargar_fuente(22), "fuente_categoria": cargar_fuente(13),
+            "fuente_boton": cargar_fuente(19), "fuente_mapa": cargar_fuente(18),
+            "fuente_panel_titulo": cargar_fuente(16), "fuente_panel": cargar_fuente(13),
+            "fuente_resultado": cargar_fuente(28),
         }
         # Categorías sin PNG propio (sin arte en el repositorio): tarjeta con
         # el marco real de Suceso_natural.png e íconos existentes.
@@ -107,18 +113,18 @@ class RecursosEscenas:
                 print("[Multijugador] Falta el ícono esperado:", icono)
             self.r["botones_clasificacion"][clave] = tarjeta_categoria(marco, imagen_icono)
         self.iconos_hud = {
-            "sabiduria": juego.cargar_icono_hud("Barra_sabiduría.png"),
-            "confianza": juego.cargar_icono_hud("Barra_confianza.png"),
-            "armonia": juego.cargar_icono_hud("Barra_armonía.png"),
-            "susurros_falsos": juego.cargar_icono_hud("Barra_susurros_falsos.png"),
-            "desinformacion": juego.cargar_icono_hud("Barra_desinformación.png"),
+            "sabiduria": cargar_icono_hud("Barra_sabiduría.png"),
+            "confianza": cargar_icono_hud("Barra_confianza.png"),
+            "armonia": cargar_icono_hud("Barra_armonía.png"),
+            "susurros_falsos": cargar_icono_hud("Barra_susurros_falsos.png"),
+            "desinformacion": cargar_icono_hud("Barra_desinformación.png"),
         }
         indicador = {estado: cargar("Indicadores Puente/" + archivo, (220, 220), requerido=False)
                      for estado, archivo in (("normal", "Indicador.png"), ("acierto", "IndicadorAcierto.png"),
                                              ("error", "IndicadorError.png"))}
         self.indicadores_puente = indicador
         self.puente_roto = cargar("Puentes/Puente1Roto.png", requerido=False)
-        self.efecto_reparacion = juego.cargar_spritesheet_frames("Animaciones/Efectos/EfectoReparacion.png", 8)
+        self.efecto_reparacion = cargar_spritesheet_frames("Animaciones/Efectos/EfectoReparacion.png", 8)
         try:
             self.materiales = SistemaReparacionPuente.recortar_spritesheet_materiales(
                 cargar("Herramientas/HerramientasReparación.png", requerido=False))
@@ -145,8 +151,8 @@ class AnimacionPocion:
     """Lanzamiento, splash y efecto sobre la tablilla, como el modo de un jugador."""
 
     def __init__(self, tipo, texto, evento_id):
-        import juego
-        self.datos = juego.iniciar_animacion_decision(tipo)
+        from un_jugador.tablilla import iniciar_animacion_decision
+        self.datos = iniciar_animacion_decision(tipo)
         self.estado = AdaptadorEstado(texto)
         self.evento_id = evento_id
 
@@ -159,35 +165,40 @@ class AnimacionPocion:
         self.datos["restante"] = self.datos["duracion"] - self.datos["tiempo_transcurrido"]
 
     def dibujar(self, superficie, recursos):
-        import juego
+        from un_jugador.tablilla import (
+            dibujar_animacion_pocion,
+            dibujar_tablilla,
+            dibujar_tablilla_en_efecto,
+        )
         r = recursos.r
         superficie.blit(recursos.fondo_tablilla, (0, 0))
         if self.datos["tiempo_transcurrido"] >= self.datos["duracion_lanzamiento"] + self.datos["duracion_splash"]:
-            juego.dibujar_tablilla_en_efecto(superficie, r, self.estado, self.datos)
+            dibujar_tablilla_en_efecto(superficie, r, self.estado, self.datos)
         else:
-            juego.dibujar_tablilla(superficie, r["tablilla"], self.estado, r["fuente_texto"], r["fuente_categoria"])
-        juego.dibujar_animacion_pocion(superficie, r, self.datos)
+            dibujar_tablilla(superficie, r["tablilla"], self.estado, r["fuente_texto"], r["fuente_categoria"])
+        dibujar_animacion_pocion(superficie, r, self.datos)
 
 
 def estado_caldero(indicadores):
-    """Misma regla que juego.estado_caldero (desinformación + susurros)."""
+    """Misma regla que un_jugador.tablilla.estado_caldero (desinformación + susurros)."""
     total = indicadores.get("desinformacion", 0) + indicadores.get("susurros_falsos", 0)
     return "critico" if total >= 100 else "peligroso" if total >= 55 else "estable"
 
 
 def dibujar_decision(panel, superficie, contexto, opciones, tipos, falta, mensaje, votos):
     """Tablilla del evento y una poción por opción (botones del modo de un jugador)."""
-    import juego
+    from nucleo.recursos import envolver_texto
+    from un_jugador.tablilla import dibujar_pociones, dibujar_tablilla
     from interfaz.boton import Boton
     r = panel.vista.escenas.r
     superficie.blit(panel.vista.escenas.fondo_tablilla, (0, 0))
-    juego.dibujar_tablilla(superficie, r["tablilla"], AdaptadorEstado(contexto.get("noticia", "")),
+    dibujar_tablilla(superficie, r["tablilla"], AdaptadorEstado(contexto.get("noticia", "")),
                            r["fuente_texto"], r["fuente_categoria"])
     titulo = r["fuente_resultado"].render("¿QUÉ POCIÓN USAMOS?", True, ORO)
     superficie.blit(titulo, titulo.get_rect(center=(480, 34)))
     panel.texto_lineas(superficie, mensaje, 70, 60, 620, r["fuente_mapa"], ORO if falta else CREMA)
     panel.texto_lineas(superficie, votos, 70, 86, 620, r["fuente_panel"], VERDE)
-    juego.dibujar_pociones(superficie, r, {}, None, panel.vista.mouse)
+    dibujar_pociones(superficie, r, {}, None, panel.vista.mouse)
     claves = list(opciones)
     separacion = 28
     ancho_total = 190 * len(claves) + separacion * (len(claves) - 1)
@@ -199,7 +210,7 @@ def dibujar_decision(panel, superficie, contexto, opciones, tipos, falta, mensaj
         boton.dibujar(superficie, panel.vista.mouse)
         panel.botones[prefijo + clave] = boton
         # La frase completa de la opción, debajo del nombre de la poción.
-        lineas = juego.envolver_texto(opciones[clave], r["fuente_panel"], 186)
+        lineas = envolver_texto(opciones[clave], r["fuente_panel"], 186)
         alto = len(lineas) * 15 + 8
         caja = pygame.Rect(0, 0, 196, alto)
         caja.midbottom = (round(x), 574)
@@ -214,7 +225,7 @@ def dibujar_decision(panel, superficie, contexto, opciones, tipos, falta, mensaj
 
 
 def dibujar_consecuencia(panel, superficie, resultado, dimension):
-    """Mismo panel que juego.dibujar_consecuencia_evento, con colores por
+    """Mismo panel que un_jugador.tablilla.dibujar_consecuencia_evento, con colores por
     polaridad: verde si ayuda (bueno↑ o malo↓), rojo si perjudica."""
     r = panel.vista.escenas.r
     superficie.blit(panel.vista.escenas.fondo_tablilla, (0, 0))
@@ -288,14 +299,28 @@ def dibujar_portal(panel, superficie, destinos, origen):
     pygame.draw.rect(superficie, (106, 218, 204), rect, 3, border_radius=16)
     titulo = r["fuente_resultado"].render("¿A QUÉ ÉPOCA VIAJAMOS?", True, (231, 255, 247))
     superficie.blit(titulo, titulo.get_rect(center=(480, 168)))
-    panel.texto_lineas(superficie, "Los indicadores del equipo viajan contigo. Puedes volver cuando quieras.",
-                       210, 200, 540, r["fuente_panel"], VERDE)
+    viaje = panel.vista.viaje()
+    if viaje:
+        acepte = panel.vista.identificador in viaje["aceptan"]
+        estado = ("Aceptaste ir a " + viaje["nombre"] + "." if acepte else "Proponen ir a " + viaje["nombre"] + ".")
+        if viaje["faltan"]:
+            estado += " Faltan: " + ", ".join(viaje["faltan"]) + "."
+        panel.texto_lineas(superficie, estado, 210, 200, 540, r["fuente_panel"], (255, 222, 112))
+    else:
+        panel.texto_lineas(superficie, "El equipo viaja junto: todos deben venir al portal y aceptar. "
+                           "Los indicadores viajan con ustedes.", 210, 200, 540, r["fuente_panel"], VERDE)
     for i, destino in enumerate(destinos):
         texto = destino["epoca"] + " · " + destino["nombre"] + ("" if destino["disponible"] else " (en construcción)")
+        if viaje and viaje["destino"] == destino["id"] and panel.vista.identificador not in viaje["aceptan"]:
+            texto = "Aceptar: " + texto
         boton = Boton(texto, centro=(480, 290 + i * 78), fuente=r["fuente_boton"], tamano=(470, 58),
                       desactivado=not destino["disponible"])
         boton.dibujar(superficie, panel.vista.mouse)
         panel.botones["viajar:" + destino["id"]] = boton
+    if viaje and panel.vista.identificador in viaje["aceptan"]:
+        boton = Boton("Ya no quiero viajar", centro=(480, 515), fuente=r["fuente_boton"], tamano=(330, 48))
+        boton.dibujar(superficie, panel.vista.mouse)
+        panel.botones["cancelar_portal"] = boton
 
 
 class Transicion:

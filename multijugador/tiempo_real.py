@@ -12,6 +12,8 @@ from .servicio_internet import ServicioSalas
 SERVICIO = web.AppKey("servicio", ServicioSalas)
 CONEXIONES = web.AppKey("conexiones", dict)
 BUZONES = web.AppKey("buzones", dict)
+# Métricas para herramientas/benchmark.py (no afectan al juego).
+METRICAS = web.AppKey("metricas", dict)
 
 
 class Buzon:
@@ -74,10 +76,16 @@ async def websocket(request):
     request.app[BUZONES][token] = cola
     sala.partida.conectados.add(sesion["id"])
     async def escribir():
+        metricas = request.app[METRICAS]
+        def medir(datos):
+            texto = json.dumps(datos)
+            metricas["mensajes"] += 1
+            metricas["bytes"] += len(texto)
+            return texto
         try:
             while not ws.closed:
                 estado = await cola.siguiente()
-                await asyncio.wait_for(ws.send_json(estado), timeout=3)
+                await asyncio.wait_for(ws.send_json(estado, dumps=medir), timeout=3)
                 if estado.get("tipo") == "desconectado":
                     break
         except (OSError, TimeoutError, RuntimeError):
@@ -141,6 +149,7 @@ async def simulacion(app):
             for sala in list(servicio.salas.values()):
                 if sala.partida:
                     sala.partida.actualizar(ahora)
+                    sala.actualizar_bots(ahora)
                     sala._publicar()
             # No esperar a la red dentro del reloj de simulación. Cada cliente
             # tiene un escritor independiente y conserva solo el estado nuevo.
@@ -154,7 +163,9 @@ async def simulacion(app):
                     sala = servicio.salas[sesion["codigo"]]
                     estado = {**estado, "mundo": {**estado["mundo"], "privado": sala.partida.mision.privado(sesion["id"])}}
                 cola.publicar(estado)
-            await asyncio.sleep(max(.001, .05 - (asyncio.get_running_loop().time() - inicio)))
+            duracion = asyncio.get_running_loop().time() - inicio
+            app[METRICAS]["ticks"].append(duracion)
+            await asyncio.sleep(max(.001, .05 - duracion))
     tarea = asyncio.create_task(paso())
     yield
     tarea.cancel()
@@ -170,6 +181,8 @@ def crear_app(servicio=None):
     app[SERVICIO] = servicio or ServicioSalas()
     app[CONEXIONES] = {}
     app[BUZONES] = {}
+    from collections import deque
+    app[METRICAS] = {"ticks": deque(maxlen=20000), "mensajes": 0, "bytes": 0}
     app.router.add_get("/v1/juego", websocket)
     app.router.add_get("/health", http)
     app.router.add_get("/v1/estado", http)

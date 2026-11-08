@@ -8,6 +8,8 @@ import threading
 import pygame
 
 from interfaz.boton import Boton
+from interfaz.menu_pausa import MenuPausa
+from interfaz.presentacion_pantalla import a_lienzo, presentar
 from multijugador.cliente import ClienteSala
 from multijugador.cliente_internet import ClienteInternet, validar_url
 from multijugador.servidor import ServidorSala
@@ -21,7 +23,13 @@ VERDE = (136, 219, 155)
 
 class MenuInicio:
     def __init__(self):
-        self.pantalla = pygame.display.set_mode((1100, 825), pygame.RESIZABLE)
+        self.mouse = (-1, -1)
+        self.vista = "principal"
+        self.partida = None
+        self.pausa = MenuPausa(self)
+        self.audio = self._crear_audio()
+        self._musica_menu()
+        self.pantalla = self.pausa.crear_pantalla()  # maximizada por defecto
         pygame.display.set_caption("La Copa — Consejo de los Ecos")
         self.lienzo = pygame.Surface((960, 720))
         self.fuentes = {n: pygame.font.Font(os.path.join(BASE, "Fuentes", "determination.ttf"), n)
@@ -67,6 +75,22 @@ class MenuInicio:
         self._direcciones = queue.Queue()
         threading.Thread(target=self._buscar_ip, daemon=True).start()
 
+    def _crear_audio(self):
+        """Gestor de audio compartido por el menú y las partidas (volúmenes guardados)."""
+        try:
+            from audio.audio_manager import GestorAudio
+            from nucleo.rutas import RAIZ
+            audio = GestorAudio(str(RAIZ), categorias=True)
+        except Exception as error:  # sin mezclador (pruebas, equipos sin sonido)
+            print("[Audio] Desactivado:", error)
+            return False
+        self.pausa.aplicar_volumenes(audio)
+        return audio
+
+    def _musica_menu(self):
+        if self.audio:
+            self.audio.reproducir_musica("introduccion", en_bucle=True)
+
     def _buscar_ip(self):
         try:
             ips = socket.gethostbyname_ex(socket.gethostname())[2]
@@ -107,8 +131,8 @@ class MenuInicio:
         self.lienzo.blit(capa, rect)
         pygame.draw.rect(self.lienzo, borde, rect, 2, border_radius=14)
 
-    def boton(self, clave, texto, centro, ancho=270, activo=True):
-        boton = Boton(texto, centro=centro, fuente=self.fuentes[20], tamano=(ancho, 48), desactivado=not activo)
+    def boton(self, clave, texto, centro, ancho=270, activo=True, alto=48, tamano_fuente=20):
+        boton = Boton(texto, centro=centro, fuente=self.fuentes[tamano_fuente], tamano=(ancho, alto), desactivado=not activo)
         boton.dibujar(self.lienzo, self.mouse)
         self.botones[clave] = boton
 
@@ -121,9 +145,12 @@ class MenuInicio:
         self.identificador = None
         self.codigo_sala = ""
         self.estado = {"jugadores": [], "iniciada": False}
+        volvio_de_partida = self.partida is not None
         self.partida = None
         self.campana_local = False
         self.conectando = False
+        if volvio_de_partida:
+            self._musica_menu()
 
     def conectar(self):
         if self.conectando:
@@ -197,7 +224,7 @@ class MenuInicio:
                     try:
                         if self.partida is None:
                             from interfaz.partida_multijugador import VistaPartida
-                            self.partida = VistaPartida(self.identificador, evento)
+                            self.partida = VistaPartida(self.identificador, evento, self.audio)
                         else:
                             self.partida.recibir(evento)
                         self.vista = "partida"
@@ -229,8 +256,17 @@ class MenuInicio:
 
     def accionar(self, clave):
         self.mensaje, self.error = "", False
-        if clave == "individual":
-            return "individual"
+        if clave.startswith("pausa:"):
+            return self.pausa.accionar(clave.split(":", 1)[1])
+        if clave == "abrir_pausa":
+            self.pausa.abrir()
+            return
+        if clave == "ajustes":
+            self.pausa.abrir("ajustes")
+            return
+        if clave == "alternar_hud" and self.partida:
+            self.partida.mostrar_hud = not self.partida.mostrar_hud
+            return
         if clave == "campana_local":
             self.campos["nombre"] = self.campos["nombre"] or "Jugador"
             self.vista = "campana_rol"
@@ -257,7 +293,7 @@ class MenuInicio:
                 self.identificador = self.cliente.identificador
                 self.codigo_sala = "LOCAL"
                 self.estado = self.cliente.eventos.get_nowait()
-                self.partida = VistaPartida(self.identificador, self.estado)
+                self.partida = VistaPartida(self.identificador, self.estado, self.audio)
                 self.vista = "partida"
                 pygame.key.stop_text_input()
             except (OSError, ValueError, RuntimeError) as error:
@@ -308,10 +344,10 @@ class MenuInicio:
             self.panel(pygame.Rect(240, 70, 480, 590))
             self.texto("LA COPA", 480, 145, 44, ORO, True)
             self.texto("Consejo de los Ecos", 480, 207, 24, centro=True)
-            self.boton("individual", "Historia · un jugador", (480, 300))
-            self.boton("campana_local", "Campaña con bots", (480, 380))
-            self.boton("multi", "Multijugador", (480, 460))
-            self.boton("salir", "Salir", (480, 540))
+            self.boton("campana_local", "Campaña con bots", (480, 315))
+            self.boton("multi", "Multijugador", (480, 395))
+            self.boton("ajustes", "Ajustes", (480, 475))
+            self.boton("salir", "Salir", (480, 555))
         elif self.vista == "campana_rol":
             self.panel(pygame.Rect(150, 45, 660, 630))
             self.texto("CAMPAÑA LOCAL CON BOTS", 480, 75, 32, ORO, True)
@@ -326,7 +362,7 @@ class MenuInicio:
                 x, y = 325 + columna * 300, 290 + fila * 80
                 self.boton(
                     "rol_solo:" + rol,
-                    ("✓ " if rol == self.rol_solo else "") + nombre,
+                    f"» {nombre} «" if rol == self.rol_solo else nombre,  # la fuente no tiene ✓
                     (x, y),
                     260,
                 )
@@ -335,7 +371,7 @@ class MenuInicio:
                 etiqueta = dificultad.capitalize()
                 self.boton(
                     "dificultad_solo:" + dificultad,
-                    ("✓ " if dificultad == self.dificultad_solo else "") + etiqueta,
+                    f"» {etiqueta} «" if dificultad == self.dificultad_solo else etiqueta,
                     (300 + indice * 180, 504),
                     155,
                 )
@@ -388,7 +424,12 @@ class MenuInicio:
             titulo = "CAMPAÑA LOCAL" if self.campana_local else self.codigo_sala
             self.partida.dibujar(self.lienzo, titulo, self.mouse)
             if not self.partida.panel.activo:
-                self.boton("volver", "Salir", (869, 689), 125)
+                # Siempre visibles, aunque el HUD esté oculto, para poder recuperarlo.
+                texto_hud = "Ocultar HUD · H" if self.partida.mostrar_hud else "Mostrar HUD · H"
+                self.boton("alternar_hud", texto_hud, (757, 689), 150, alto=34, tamano_fuente=16)
+                self.boton("abrir_pausa", "Menú · Esc", (892, 689), 110, alto=34, tamano_fuente=16)
+        if self.pausa.activo:
+            self.pausa.dibujar()
 
     def dibujar_sala(self):
         self.panel(pygame.Rect(16, 16, 928, 688))
@@ -397,7 +438,7 @@ class MenuInicio:
         cabecera = (f"Código de sala: {self.codigo_sala} · Comparte este código" if self.internet else
                     f"IP: {direccion}   Puerto: {self.campos['puerto']}")
         self.parrafo(cabecera, pygame.Rect(44, 84, 866, 45), 16)
-        self.texto("Elijan personajes distintos y pulsen Estoy listo.", 44, 132, 14)
+        self.texto("Elijan personajes distintos y pulsen Estoy listo. Los roles libres los cubrirá un bot.", 44, 132, 14)
         jugadores = self.estado["jugadores"]
         yo = next((j for j in jugadores if j["id"] == self.identificador), {})
         for i in range(4):
@@ -445,29 +486,39 @@ class MenuInicio:
         try:
             while True:
                 segundos = reloj.tick(60) / 1000
-                ancho, alto = self.pantalla.get_size()
-                escala = min(ancho / 960, alto / 720)
-                destino = pygame.Rect(0, 0, round(960 * escala), round(720 * escala))
-                destino.center = (ancho // 2, alto // 2)
-                mx, my = pygame.mouse.get_pos()
-                self.mouse = ((mx - destino.x) / escala, (my - destino.y) / escala) if destino.collidepoint(mx, my) else (-1, -1)
+                # Pygame 2 redimensiona la superficie al maximizar o cambiar el tamaño.
+                self.pantalla = pygame.display.get_surface() or self.pantalla
+                tamano = self.pantalla.get_size()
+                self.mouse = a_lienzo(pygame.mouse.get_pos(), tamano)
                 self.recibir()
                 # Preparar las áreas clicables antes de procesar la entrada.
                 if self.vista == "partida" and self.partida and self.cliente:
+                    self.partida.en_pausa = self.pausa.activo
                     self.partida.actualizar(segundos, self.cliente)
-                    if self.campana_local:
+                    if self.campana_local and not self.pausa.activo:  # la campaña local se detiene
                         self.cliente.actualizar(segundos)
                         self.recibir()
                 self.dibujar()
                 for evento in pygame.event.get():
-                    if evento.type != pygame.QUIT and self.vista == "partida" and self.partida:
-                        posicion = ((evento.pos[0] - destino.x) / escala, (evento.pos[1] - destino.y) / escala) if hasattr(evento, "pos") else self.mouse
-                        if self.partida.manejar_evento(evento, posicion, self.cliente):
-                            continue
                     if evento.type == pygame.QUIT:
                         return "salir"
+                    if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F11:
+                        self.pausa.alternar_pantalla_completa()
+                        continue
+                    if self.pausa.activo and evento.type == pygame.KEYDOWN:
+                        resultado = self.pausa.tecla(evento.key)
+                        if resultado:
+                            return resultado
+                        continue
+                    if not self.pausa.activo and self.vista == "partida" and self.partida:
+                        posicion = a_lienzo(evento.pos, tamano) if hasattr(evento, "pos") else self.mouse
+                        if self.partida.manejar_evento(evento, posicion, self.cliente):
+                            continue
+                        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+                            self.pausa.abrir()  # Esc ya no saca de la partida: abre el menú
+                            continue
                     if evento.type == pygame.VIDEORESIZE:
-                        self.pantalla = pygame.display.set_mode((max(640, evento.w), max(480, evento.h)), pygame.RESIZABLE)
+                        pass  # la superficie se toma de pygame.display.get_surface()
                     elif evento.type == pygame.TEXTINPUT and self.vista in ("formulario", "campana_rol") and not self.conectando:
                         limites = {"nombre": 20, "ip": 45, "puerto": 5, "servidor": 180, "codigo": 6}
                         caracteres = evento.text
@@ -497,7 +548,7 @@ class MenuInicio:
                             elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                                 self.conectar()
                     elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                        pos = ((evento.pos[0] - destino.x) / escala, (evento.pos[1] - destino.y) / escala)
+                        pos = a_lienzo(evento.pos, tamano)
                         for clave, rect in self.areas_campos.items():
                             if rect.collidepoint(pos):
                                 self.foco = clave
@@ -513,8 +564,7 @@ class MenuInicio:
                     pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if activo else pygame.SYSTEM_CURSOR_ARROW)
                 except pygame.error:
                     pass
-                self.pantalla.fill((4, 12, 9))
-                self.pantalla.blit(pygame.transform.scale(self.lienzo, destino.size), destino)
+                presentar(self.pantalla, self.lienzo)  # el juego llega hasta los bordes
                 pygame.display.flip()
         finally:
             pygame.key.stop_text_input()

@@ -7,5 +7,9 @@
 !Hitboxes/Mapas/*.json
 !Hitboxes/Mapas/Presente/
 !Hitboxes/Mapas/Presente/*.json
-!Arboles.py
+!logica/
+!logica/__init__.py
+!logica/Arboles.py
+!bots/
+!bots/*.py
 !Dockerfile.multijugador

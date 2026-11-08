@@ -228,6 +228,7 @@ class PruebasClienteConAcuses(unittest.TestCase):
             for c, rol in ((a, "guardian"), (b, "habitante")):
                 c.enviar("rol", rol=rol); c.enviar("listo", listo=True)
             esperar(a, lambda e: e["tipo"] == "estado" and len(e["jugadores"]) == 2 and all(j["listo"] for j in e["jugadores"]))
+            servidor.app[SERVICIO].salas[codigo].rellenar_con_bots = False  # solo humanos
             a.enviar("iniciar")
             esperar(a, lambda e: e["tipo"] == "estado" and e.get("fase") == "partida")
             async def preparar_corte():

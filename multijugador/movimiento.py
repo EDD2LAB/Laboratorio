@@ -10,6 +10,8 @@ from .dimensiones_red import (DIMENSIONES_RED, LA_COPA, PRESENTE, cargar_datos, 
 
 ANCHO, ALTO = 960, 720
 VELOCIDAD = 155.0
+# Shift: correr (mismo multiplicador que el modo de un jugador, mundo/jugador.py).
+MULTIPLICADOR_CORRER = 1.65
 MAPA = Path(__file__).resolve().parent.parent / "Hitboxes" / "Mapas" / "Pr_MañanaLumi_hitboxes.json"
 
 
@@ -99,9 +101,9 @@ class ColisionesMapa:
                 return True
         return any(self.solapa(rect, npc) for npc in self.npcs)
 
-    def mover(self, x, y, dx, dy, segundos):
+    def mover(self, x, y, dx, dy, segundos, factor=1.0):
         norma = max(1, math.hypot(dx, dy))
-        distancia = VELOCIDAD * max(0, min(segundos, .15))
+        distancia = VELOCIDAD * factor * max(0, min(segundos, .15))
         pasos = max(1, math.ceil(distancia / 3))
         paso_x, paso_y = dx / norma * distancia / pasos, dy / norma * distancia / pasos
         for _ in range(pasos):
@@ -144,6 +146,8 @@ class PartidaMovimiento:
         self.viajes = 0
         self.mision = CampanaCopa(self.jugadores, self.colisiones.datos)
         self.mision.viajar = self.viajar
+        self.mision.cancelar_viaje = self.cancelar_viaje
+        self.viaje = None  # propuesta de viaje en grupo (ver viajar)
         self._sincronizar_bloqueos()
         try:
             self.colisiones_de(PRESENTE)  # el portal funciona desde el primer momento
@@ -166,33 +170,104 @@ class PartidaMovimiento:
     def presentes_en(self, dimension):
         return {i for i in self.conectados if self.jugadores.get(i, {}).get("dimension", LA_COPA) == dimension}
 
+    # ------------------------------------------------------------- portal
+    # El equipo viaja junto: el portal registra una propuesta de destino y
+    # cada humano debe ir al portal y aceptarla. Cuando todos los humanos de
+    # la dimensión aceptaron (y siguen junto al portal), viaja todo el equipo,
+    # incluidos los bots, y se cierra lo que estaba en curso en el mapa.
+    RADIO_PORTAL = 48
+
+    def _humano(self, identificador):
+        return self.jugadores[identificador].get("controlador") != "bot"
+
+    def _junto_al_portal(self, identificador, origen):
+        jugador = self.jugadores[identificador]
+        return (jugador.get("dimension", LA_COPA) == origen and
+                cerca_de_rect(jugador["x"], jugador["y"], rect_portal(origen, self.colisiones_de(origen).datos),
+                              self.RADIO_PORTAL))
+
+    def faltan_viaje(self):
+        """Humanos conectados de la dimensión de origen que aún no aceptaron."""
+        if not self.viaje:
+            return []
+        origen, aceptan = self.viaje["origen"], self.viaje["aceptan"]
+        return [i for i in sorted(self.presentes_en(origen)) if self._humano(i) and i not in aceptan]
+
     def viajar(self, identificador, destino):
-        """Portal: el cliente pide, el servidor valida distancia y destino."""
+        """Acepta (o propone) viajar a ``destino``; viajan todos cuando aceptan todos."""
         jugador = self.jugadores[identificador]
         origen = jugador.get("dimension", LA_COPA)
         if destino not in DIMENSIONES_RED or destino == origen:
             raise ValueError("Elige otra dimensión en el portal.")
         if not DIMENSIONES_RED[destino]["disponible"]:
             raise ValueError(DIMENSIONES_RED[destino]["nombre"] + " todavía está en construcción.")
-        if not cerca_de_rect(jugador["x"], jugador["y"], rect_portal(origen, self.colisiones_de(origen).datos), 48):
+        if not self._junto_al_portal(identificador, origen):
             raise ValueError("Acércate al portal y pulsa E.")
+        nombre = DIMENSIONES_RED[destino]["nombre"]
+        if not self.viaje or self.viaje["destino"] != destino or self.viaje["origen"] != origen:
+            self.viaje = {"origen": origen, "destino": destino, "aceptan": set(), "propone": identificador}
+            otros = [i for i in self.presentes_en(origen) if i != identificador and self._humano(i)]
+            if otros:
+                self.mision._avisar(otros, jugador["nombre"] + " quiere viajar a " + nombre +
+                                    ". Vayan al portal y pulsen E para aceptar.", "logro")
+        self.viaje["aceptan"].add(identificador)
+        faltan = self.faltan_viaje()
+        if faltan:
+            nombres = ", ".join(self.jugadores[i]["nombre"] for i in faltan)
+            return {"mensaje": "Aceptaste viajar a " + nombre + ". Esperando a: " + nombres + "."}
+        self._viajar_equipo(origen, destino)
+        return {"mensaje": "¡El equipo viaja junto a " + nombre + "!", "dimension": destino}
+
+    def cancelar_viaje(self, identificador):
+        if self.viaje:
+            self.viaje["aceptan"].discard(identificador)
+            if not self.viaje["aceptan"]:
+                self.viaje = None
+        return {"mensaje": "Ya no aceptas el viaje."}
+
+    def _revisar_viaje(self):
+        """Quien se aleja del portal o se desconecta deja de aceptar."""
+        if not self.viaje:
+            return
+        origen = self.viaje["origen"]
+        self.viaje["aceptan"] = {i for i in self.viaje["aceptan"]
+                                 if i in self.conectados and self._junto_al_portal(i, origen)}
+        if not self.viaje["aceptan"]:
+            self.viaje = None
+
+    def _viajar_equipo(self, origen, destino):
         mapa = self.colisiones_de(destino)
         if destino == LA_COPA:
             px, py, pw, ph = rect_portal(LA_COPA, mapa.datos)
             inicio = (px - 20, py + ph)
         else:
             inicio = spawn_presente(mapa.datos)
-        ocupadas = [(j["x"], j["y"]) for j in self.jugadores.values()
-                    if j is not jugador and j.get("dimension", LA_COPA) == destino]
-        x, y = mapa.inicio_libre(*inicio, ocupadas)
-        self.controles.pop(identificador, None)
-        if self.mision.puente.reparador == identificador:
+        viajeros = [i for i, j in self.jugadores.items() if j.get("dimension", LA_COPA) == origen]
+        # Termina todo lo que estaba en curso en el mapa que se deja.
+        if self.mision.puente.reparador in viajeros:
             self.mision.puente.liberar()
+        encargo = getattr(self.mision, "encargo", None)
+        if encargo is not None and encargo.ayudante in viajeros:
+            encargo.ayudante = None
+        ocupadas = [(j["x"], j["y"]) for j in self.jugadores.values() if j.get("dimension", LA_COPA) == destino]
         self.viajes += 1
-        jugador.update(dimension=destino, x=x, y=y, direccion="abajo", animacion="reposo", viaje=self.viajes)
+        for identificador in viajeros:
+            x, y = mapa.inicio_libre(*inicio, ocupadas)
+            ocupadas.append((x, y))
+            self.controles.pop(identificador, None)
+            self.jugadores[identificador].update(dimension=destino, x=x, y=y, direccion="abajo",
+                                                 animacion="reposo", corriendo=False, viaje=self.viajes)
+        self.viaje = None
         nombre = DIMENSIONES_RED[destino]["nombre"]
-        self.mision._avisar([identificador], "Llegaste a " + nombre + ". Los indicadores del equipo viajan contigo.", "logro")
-        return {"mensaje": "Viajaste a " + nombre + ".", "dimension": destino}
+        self.mision._avisar(viajeros, "El equipo llegó a " + nombre + ". Los indicadores viajan con ustedes.", "logro")
+
+    def publico_viaje(self):
+        if not self.viaje:
+            return None
+        destino = self.viaje["destino"]
+        return {"origen": self.viaje["origen"], "destino": destino, "nombre": DIMENSIONES_RED[destino]["nombre"],
+                "aceptan": sorted(self.viaje["aceptan"]),
+                "faltan": [self.jugadores[i]["nombre"] for i in self.faltan_viaje()]}
 
     def actuar(self, identificador, datos, ahora):
         self.actualizar(ahora)
@@ -202,33 +277,38 @@ class PartidaMovimiento:
         if identificador not in self.jugadores:
             raise ValueError("Jugador fuera de la partida.")
         dx, dy, seq = datos.get("dx"), datos.get("dy"), datos.get("seq")
+        correr = datos.get("correr", False)  # opcional: clientes antiguos no lo envían
         if (type(dx) is not int or type(dy) is not int or dx not in (-1, 0, 1) or dy not in (-1, 0, 1)
-                or type(seq) is not int or not 0 <= seq <= 2 ** 53):
+                or type(seq) is not int or not 0 <= seq <= 2 ** 53 or type(correr) is not bool):
             raise ValueError("Controles de movimiento inválidos.")
         if seq <= self.jugadores[identificador]["seq"]:
             return
         self.actualizar(ahora)
-        self.controles[identificador] = (dx, dy, ahora)
+        self.controles[identificador] = (dx, dy, ahora, correr)
         self.jugadores[identificador]["seq"] = seq
 
     def actualizar(self, ahora):
         desde = self.ultima
         self.ultima = max(desde, ahora)
         for identificador, jugador in self.jugadores.items():
-            dx, dy, recibido = self.controles.get(identificador, (0, 0, 0))
+            dx, dy, recibido, correr = self.controles.get(identificador, (0, 0, 0, False))
             # Un cliente detenido o desconectado deja de mover al personaje.
             segundos = max(0, min(ahora, recibido + .35) - desde)
             x, y = jugador["x"], jugador["y"]
-            nx, ny = self.colisiones_de(jugador.get("dimension", LA_COPA)).mover(x, y, dx, dy, segundos)
+            factor = MULTIPLICADOR_CORRER if correr else 1.0
+            nx, ny = self.colisiones_de(jugador.get("dimension", LA_COPA)).mover(x, y, dx, dy, segundos, factor)
             jugador["x"], jugador["y"] = nx, ny
             jugador["animacion"] = "caminar" if math.hypot(nx - x, ny - y) > .01 else "reposo"
+            jugador["corriendo"] = correr and jugador["animacion"] == "caminar"
             if dx:
                 jugador["direccion"] = "derecha" if dx > 0 else "izquierda"
             elif dy:
                 jugador["direccion"] = "abajo" if dy > 0 else "arriba"
+        self._revisar_viaje()
         # Cada misión solo cuenta a quienes están en su dimensión.
         copa = self.presentes_en(LA_COPA)
-        self.mision.presentes_presente = self.presentes_en(PRESENTE)
+        # En el Presente los bots solo acompañan: votan y deciden los humanos.
+        self.mision.presentes_presente = {i for i in self.presentes_en(PRESENTE) if self._humano(i)}
         self.mision.resolver(copa)
         self.mision.actualizar(ahora - desde, copa)
         self._sincronizar_bloqueos()
@@ -242,6 +322,7 @@ class PartidaMovimiento:
         return {"mapa": "la_copa", "firma_mapa": self.colisiones.firma,
                 "portales": {d: list(rect_portal(d, m.datos)) for d, m in self.mapas.items()},
                 "destinos": {d: destinos(d) for d in self.mapas},
+                "viaje": self.publico_viaje(),
                 "jugadores": [dict(j, conectado=clave in self.conectados) for clave, j in self.jugadores.items()],
                 "caso": self.mision.publico(self.conectados),
                 "privado": self.mision.privado(identificador) if identificador else {}}

@@ -5,14 +5,17 @@ from .planificador_bot import PlanificadorBot
 
 class GestorBots:
     def __init__(self, partida, identificador_humano, dificultad="normal"):
+        """``identificador_humano``: un id (campaña local) o varios (sala en línea)."""
         if dificultad not in ("facil", "normal", "dificil"):
             raise ValueError("Dificultad de bots no válida.")
+        humanos = ({identificador_humano} if isinstance(identificador_humano, str)
+                   else set(identificador_humano))
         jugadores = list(partida.jugadores.values())
         roles = [jugador["rol"] for jugador in jugadores]
         if len(roles) != len(set(roles)):
             raise ValueError("No puede haber dos controladores para el mismo rol.")
         for jugador in jugadores:
-            jugador["controlador"] = "humano" if jugador["id"] == identificador_humano else "bot"
+            jugador["controlador"] = "humano" if jugador["id"] in humanos else "bot"
         self.memoria = MemoriaEquipo(jugadores)
         self.planificador = PlanificadorBot()
         self.bots = {
@@ -25,13 +28,19 @@ class GestorBots:
                 dificultad,
             )
             for jugador in jugadores
-            if jugador["id"] != identificador_humano
+            if jugador["id"] not in humanos
         }
         self.partida = partida
         self.identificador_humano = identificador_humano
         self.dificultad = dificultad
+        self._clave_caso = None
 
     def actualizar(self, ahora, segundos):
+        caso = self.partida.mision.publico(self.partida.conectados)
+        clave_caso = (caso["ronda"], caso.get("rectificacion"))
+        if clave_caso != self._clave_caso:
+            self._clave_caso = clave_caso
+            self.memoria.nueva_ronda()  # los votos propuestos valen para un solo intento
         for bot in self.bots.values():
             if (
                 bot.asistencia_para
@@ -40,7 +49,7 @@ class GestorBots:
                 bot.asistencia_a = None
                 bot.asistencia_para = None
                 self.memoria.liberar_tarea(bot.identificador)
-        estado_publico = self.partida.mision.publico(self.partida.conectados)
+        estado_publico = caso
         jugadores = [
             dict(jugador, conectado=identificador in self.partida.conectados)
             for identificador, jugador in self.partida.jugadores.items()

@@ -14,7 +14,9 @@ import time
 
 from .servidor import ServidorSala
 from .movimiento import PartidaMovimiento
-from .protocolo import VERSION
+from .protocolo import ROLES, VERSION
+from .partida_local import ClienteCampanaLocal
+from bots.gestor_bots import GestorBots
 
 
 class SalaInternet(ServidorSala):
@@ -22,13 +24,23 @@ class SalaInternet(ServidorSala):
         super().__init__()
         self.reloj = reloj
         self.partida = None
+        self.bots = None
+        self._reloj_bots = None
+        self.rellenar_con_bots = True  # roles libres -> bots al iniciar
 
     def _accion(self, identificador, mensaje):
         super()._accion(identificador, mensaje)
         if mensaje.get("tipo") == "iniciar":
             try:
-                self.partida = PartidaMovimiento(
-                    [s["jugador"] for s in self._sesiones.values()], self.reloj())
+                humanos = [s["jugador"] for s in self._sesiones.values()]
+                # Los roles que nadie eligió los cubren bots con el mismo
+                # comportamiento que la campaña local con bots.
+                ocupados = {j["rol"] for j in humanos}
+                bots = [{"id": "bot_" + rol, "nombre": ClienteCampanaLocal._nombre_bot(rol), "rol": rol}
+                        for rol in ROLES if rol not in ocupados] if self.rellenar_con_bots else []
+                self.partida = PartidaMovimiento(humanos + bots, self.reloj())
+                self.bots = GestorBots(self.partida, {j["id"] for j in humanos}) if bots else None
+                self._reloj_bots = self.reloj()
             except (OSError, ValueError):
                 self._iniciada = False
                 self._publicar()
@@ -45,6 +57,14 @@ class SalaInternet(ServidorSala):
     def _publicar(self):
         # Los clientes consultan el estado; no acumular copias en colas TCP.
         self._revision += 1
+
+    def actualizar_bots(self, ahora):
+        """Un paso de los bots de relleno (lo llama la simulación del servidor)."""
+        if not self.bots or not self.partida:
+            return
+        segundos = max(0.0, min(ahora - (self._reloj_bots or ahora), .15))
+        self._reloj_bots = ahora
+        self.bots.actualizar(ahora, segundos)
 
 
 class ServicioSalas:

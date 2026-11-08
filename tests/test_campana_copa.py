@@ -219,6 +219,7 @@ class CampanaRedTests(unittest.IsolatedAsyncioTestCase):
                 for j, rol in zip(sesiones, ("guardian", "habitante")):
                     await post("/v1/accion", {"tipo": "rol", "rol": rol}, j["token"])
                     await post("/v1/accion", {"tipo": "listo", "listo": True}, j["token"])
+                servidor.app[SERVICIO].salas[a["codigo"]].rellenar_con_bots = False  # solo humanos
                 await post("/v1/accion", {"tipo": "iniciar"}, a["token"])
                 p = servidor.app[SERVICIO].salas[a["codigo"]].partida
                 sockets = [await cliente.ws_connect(servidor.make_url("/v1/juego"), headers={"Authorization": "Bearer " + j["token"]}) for j in sesiones]

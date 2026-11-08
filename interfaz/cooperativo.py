@@ -4,6 +4,7 @@ import time
 
 import pygame
 from interfaz.boton import Boton
+from multijugador.mision import TODOS
 from multijugador.reparacion import CONFIGURACION as CONFIG_REPARACION
 
 ORO = (237, 185, 87)
@@ -13,7 +14,7 @@ VERDE = (130, 222, 158)
 
 class PanelCooperativo:
     def __init__(self, vista):
-        import juego
+        from nucleo.recursos import cargar_fuente
         self.vista = vista
         self.modo = "introduccion"
         self.titulo = ""
@@ -21,9 +22,9 @@ class PanelCooperativo:
         self.indice_pista = self.indice_destino = 0
         self.destino_fijo = None
         self.botones = {}
-        self.fuente = juego.cargar_fuente(18)
-        self.pequena = juego.cargar_fuente(14)
-        self.encabezado = juego.cargar_fuente(24)
+        self.fuente = cargar_fuente(18)
+        self.pequena = cargar_fuente(14)
+        self.encabezado = cargar_fuente(24)
         self.toast = ""
         self.toast_hasta = 0
         self.aviso_id = 0
@@ -161,9 +162,9 @@ class PanelCooperativo:
         return any(o["tipo"] == "eco" and self.vista.cerca(o) for o in self.caso.get("objetivos", []))
 
     def texto_lineas(self, superficie, texto, x, y, ancho=535, fuente=None, color=CREMA):
-        import juego
+        from nucleo.recursos import envolver_texto
         fuente = fuente or self.fuente
-        for linea in juego.envolver_texto(texto, fuente, ancho):
+        for linea in envolver_texto(texto, fuente, ancho):
             superficie.blit(fuente.render(linea, True, color), (x, y))
             y += fuente.get_linesize() + 4
         return y
@@ -217,7 +218,11 @@ class PanelCooperativo:
     def _dibujar_pantalla_completa(self, superficie):
         """Escenas del modo de un jugador; devuelve True si dibujó una."""
         from interfaz import escenas_multijugador as escenas
-        import juego
+        from un_jugador.tablilla import (
+            construir_botones_clasificacion,
+            dibujar_pregunta_clasificacion,
+            dibujar_resultado_evento,
+        )
         contexto = self.contexto()
         if self.modo == "caldero":
             opciones = contexto.get("opciones", {})
@@ -256,9 +261,9 @@ class PanelCooperativo:
             opciones = tuple(contexto.get("clasificacion_opciones") or ())
             r = self.vista.escenas.r
             if opciones not in self.botones_clasificacion:
-                self.botones_clasificacion[opciones] = juego.construir_botones_clasificacion(list(opciones), r, r["fuente_boton"])
+                self.botones_clasificacion[opciones] = construir_botones_clasificacion(list(opciones), r, r["fuente_boton"])
             botones = self.botones_clasificacion[opciones]
-            juego.dibujar_pregunta_clasificacion(superficie, r, escenas.AdaptadorEstado(), botones, self.vista.mouse)
+            dibujar_pregunta_clasificacion(superficie, r, escenas.AdaptadorEstado(), botones, self.vista.mouse)
             for boton in botones:
                 self.botones["clasificar:" + boton.texto] = boton
             return True
@@ -271,7 +276,7 @@ class PanelCooperativo:
                 categoria=propia["categoria"], clasificacion_jugador=propia["opcion"],
                 clasificacion_correcta=propia["correcta"], efecto_clasificacion=propia["efectos"],
                 resultado=resultado.get("texto", "")))
-            juego.dibujar_resultado_evento(superficie, self.vista.escenas.r, adaptador)
+            dibujar_resultado_evento(superficie, self.vista.escenas.r, adaptador)
             return True
         if self.modo == "reparar":
             escenas.dibujar_minijuego(self, superficie, self.caso.get("puente") or {}, self.tiempo_aguja_ms, self.estado_indicador)
@@ -363,7 +368,7 @@ class PanelCooperativo:
                 self.boton(superficie, "pista_anterior", "<", 205, 353, 70)
                 self.boton(superficie, "pista_siguiente", ">", 755, 353, 70)
                 self.texto_lineas(superficie, f"Pista {self.indice_pista+1} de {len(inventario)}", 390, 343, 250, self.pequena)
-                destinatarios = self.destinatarios()
+                destinatarios = self.destinos_pista()
                 if destinatarios:
                     self.indice_destino %= len(destinatarios)
                     destino = destinatarios[self.indice_destino]
@@ -390,11 +395,13 @@ class PanelCooperativo:
                 self.boton(superficie, "votar:"+clave, texto, 480, 435+i*62, 580, not falta)
         elif self.modo == "eco":
             self.texto_lineas(superficie, "Este tronco puede llevar tus pistas y mensajes a todo el mapa.", 165, 180, 630)
+            self.dibujar_selector_destino(superficie, 275)
             self.boton(superficie, "inventario", "Enviar una pista", 480, 355, 440)
             self.boton(superficie, "eco_mensajes", "Enviar un mensaje", 480, 420, 440)
         elif self.modo == "eco_mensajes":
             for i, mensaje in enumerate(self.caso.get("mensajes_eco", [])):
                 self.boton(superficie, "eco:"+str(i), mensaje, 480, 225+i*75, 620)
+            self.dibujar_selector_destino(superficie, 540)
         elif self.modo == "actividad":
             self.dibujar_actividad(superficie)
         elif self.modo == "poder":
@@ -416,6 +423,16 @@ class PanelCooperativo:
         if time.monotonic() < self.toast_hasta:
             pygame.draw.rect(superficie, (10, 30, 23), (20, 3, 920, 49), border_radius=7)
             self.texto_lineas(superficie, self.toast, 32, 8, 895, self.pequena, VERDE)
+
+    def dibujar_selector_destino(self, superficie, y):
+        destinos = self.destinos_eco()
+        self.indice_destino %= len(destinos)
+        texto = self.fuente.render("Para: " + destinos[self.indice_destino]["nombre"], True, ORO)
+        superficie.blit(texto, texto.get_rect(center=(480, y)))
+        self.boton(superficie, "destino_anterior", "<", 220, y, 70)
+        self.boton(superficie, "destino_siguiente", ">", 740, y, 70)
+        ayuda = self.pequena.render("Flechas izquierda y derecha: cambiar destinatario", True, VERDE)
+        superficie.blit(ayuda, ayuda.get_rect(center=(480, y + 30)))
 
     def dibujar_encargo(self, superficie):
         from interfaz.suministros import dibujar_carga
@@ -469,6 +486,13 @@ class PanelCooperativo:
             jugadores.sort(key=lambda j: j["id"] != self.destino_fijo)
         return jugadores
 
+    def destinos_eco(self):
+        return [{"id": TODOS, "nombre": "Todos"}] + self.destinatarios()
+
+    def destinos_pista(self):
+        """Junto a un tronco una pista también puede ir a todo el equipo."""
+        return self.destinos_eco() if self.cerca_eco() and not self.destino_fijo else self.destinatarios()
+
     def manejar(self, evento, posicion, cliente):
         if self.modo == "reparar" and evento.type == pygame.KEYDOWN:
             if evento.key in (pygame.K_e, pygame.K_SPACE):
@@ -483,6 +507,9 @@ class PanelCooperativo:
         if evento.type == pygame.KEYDOWN:
             if evento.key == pygame.K_ESCAPE and self.activo:
                 self.modo = None
+                return True
+            if evento.key in (pygame.K_LEFT, pygame.K_RIGHT) and self.modo in ("eco", "eco_mensajes", "inventario"):
+                self.indice_destino += 1 if evento.key == pygame.K_RIGHT else -1
                 return True
             if evento.key == pygame.K_i:
                 self.modo = None if self.modo == "inventario" else "inventario"
@@ -523,13 +550,15 @@ class PanelCooperativo:
             elif clave == "destino_siguiente":
                 self.indice_destino += 1
             elif clave == "entregar":
-                pistas, destinos = self.privado.get("inventario", []), self.destinatarios()
+                pistas, destinos = self.privado.get("inventario", []), self.destinos_pista()
                 if pistas and destinos:
                     cliente.actuar("entregar", pista=pistas[self.indice_pista % len(pistas)]["id"],
                                    destinatario=destinos[self.indice_destino % len(destinos)]["id"],
                                    medio="eco" if self.cerca_eco() else "directo")
             elif clave.startswith("eco:"):
-                cliente.actuar("eco", mensaje=int(clave.split(":")[1]))
+                destinos = self.destinos_eco()
+                cliente.actuar("eco", mensaje=int(clave.split(":")[1]),
+                               destinatario=destinos[self.indice_destino % len(destinos)]["id"])
             elif clave.startswith("votar:"):
                 cliente.actuar("votar", opcion=clave.split(":")[1])
             elif clave.startswith("presente_votar:"):
@@ -543,6 +572,9 @@ class PanelCooperativo:
                 self.abrir("caldero")
             elif clave.startswith("viajar:"):
                 self.vista.viajar(cliente, clave.split(":", 1)[1])
+            elif clave == "cancelar_portal":
+                cliente.actuar("cancelar_portal")
+                self.modo = None
             elif clave == "rectificar":
                 cliente.actuar("rectificar")
             break

@@ -5,7 +5,7 @@ import unittest
 
 import pygame
 
-from hitbox_editor import load_hitboxes, save_hitboxes
+from editores.hitbox_editor import load_hitboxes, save_hitboxes
 
 
 class HitboxEditorTests(unittest.TestCase):

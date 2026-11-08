@@ -709,7 +709,7 @@ def run_editor(screen, clock, sprite_path, project_root):
 
 def main():
     pygame.init()
-    project_root = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     screen = pygame.display.set_mode((1400, 860))
     pygame.display.set_caption("Editor de personajes — La Copa")
