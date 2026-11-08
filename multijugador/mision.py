@@ -69,8 +69,14 @@ class MisionPuente:
                 ecos.append({"id": f"eco_{len(ecos)}", "nombre": "Tronco de los Ecos", "tipo": "eco", "x": x, "y": y})
         if not ecos:
             ecos = [{"id": "eco_0", "nombre": "Tronco de los Ecos", "tipo": "eco", "x": 474, "y": 466}]
-        central = min(ecos, key=lambda o: math.hypot(o["x"] - 480, o["y"] - 420))
-        central.update(rol="mensajero", nombre="Eco central · registro de ruta")
+        # El tronco de la plataforma central es el cesto de los encargos de la
+        # aldea; la fuente del Mensajero pasa al tronco más cercano a él.
+        cercania = lambda o: math.hypot(o["x"] - 480, o["y"] - 420)
+        central = min(ecos, key=cercania)
+        self.objetivos.append({"id": "cesto", "nombre": "Cesto de la aldea", "tipo": "cesto", "x": central["x"], "y": central["y"]})
+        if len(ecos) > 1:
+            ecos.remove(central)
+        min(ecos, key=cercania).update(rol="mensajero", nombre="Eco central · registro de ruta")
         self.objetivos.extend(ecos)
 
     def siguiente_evento(self):
@@ -146,6 +152,9 @@ class MisionPuente:
                 return {"mensaje": "Lean sus pistas y elijan juntos qué contar a la aldea.", "vista": "resultado" if self.resultado else "caldero"}
             if objetivo["tipo"] == "eco":
                 return {"mensaje": "Envía mensajes breves o copias de tus pruebas al equipo.", "vista": "eco"}
+            if objetivo["tipo"] == "cesto":
+                return {"mensaje": "Aquí se reúne lo que necesita la aldea. Cuando haya un encargo, trae cada objeto y pulsa E.",
+                        "vista": "fuente", "titulo": objetivo["nombre"]}
             return {"mensaje": "Este personaje ayuda a otro compañero. Tu personaje está marcado con una luz.", "vista": "fuente", "titulo": objetivo["nombre"]}
         if accion == "entregar":
             receptor, pista = solicitud.get("destinatario"), solicitud.get("pista")

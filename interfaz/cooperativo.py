@@ -23,6 +23,7 @@ class PanelCooperativo:
         self.texto = ""
         self.indice_pista = self.indice_destino = 0
         self.destino_fijo = None
+        self._velo = None
         self.botones = {}
         self.fuente = cargar_fuente(18)
         self.pequena = cargar_fuente(14)
@@ -172,7 +173,9 @@ class PanelCooperativo:
         return y
 
     def boton(self, superficie, clave, texto, x, y, ancho=280, activo=True):
-        b = Boton(texto, centro=(x, y), fuente=self.fuente, tamano=(ancho, 42), desactivado=not activo)
+        from interfaz.escenas_multijugador import PALETA_PRESENTE
+        paleta = PALETA_PRESENTE if self.dimension == "presente" and self.modo in ("caldero", "resultado") else None
+        b = Boton(texto, centro=(x, y), fuente=self.fuente, tamano=(ancho, 42), desactivado=not activo, paleta=paleta)
         b.dibujar(superficie, self.vista.mouse)
         self.botones[clave] = b
 
@@ -265,13 +268,16 @@ class PanelCooperativo:
                 pistas, total = contexto.get("pistas", 0), contexto.get("total_pistas", 3)
                 falta = ("Reúnan las tres pistas de Distrito Conecta." if pistas < total else
                          "Acércate a la pantalla pública para elegir." if not self.vista.cerca_id("presente:pantalla") else "")
-                mensaje = falta or "Elijan juntos una poción. Lean las pistas con I."
+                mensaje = falta or "Elijan juntos qué hacer. Lean las pistas con I."
             else:
                 falta = self.falta_para_elegir()
                 mensaje = falta or ("Eligieron distinto. Hablen y prueben otra vez." if self.caso.get("empate") else "Lee tus pistas. ¿Qué poción usamos?")
             votos = f"Tus pistas: {len(self.inventario())} · Ya eligieron {contexto.get('votos_emitidos', 0)} de {contexto.get('votantes', 0)}"
-            if self.privado_voto(contexto):
-                votos += " · Tu poción: " + escenas.nombre_pocion(contexto.get("tipos_pocion", {}).get(self.privado_voto(contexto), ""))
+            voto = self.privado_voto(contexto)
+            if voto and contexto["dimension"] == "presente":
+                votos += " · Tu elección: " + escenas.nombre_opcion_presente(voto)
+            elif voto:
+                votos += " · Tu poción: " + escenas.nombre_pocion(contexto.get("tipos_pocion", {}).get(voto, ""))
             escenas.dibujar_decision(self, superficie, contexto, opciones, contexto.get("tipos_pocion", {}), falta, mensaje, votos)
             if contexto["dimension"] == "la_copa" and len(self.inventario()) < 2:
                 self.boton(superficie, "pedir_pista", "Pedir pista", 880, 700, 150)
@@ -293,13 +299,17 @@ class PanelCooperativo:
                 self.boton(superficie, "caldero", "Volver a decidir", 480, 595, 420, self.vista.cerca_id("presente:pantalla"))
             self.boton(superficie, "cerrar", "Volver al mapa", 480, 700, 310)
             return True
+        presente = contexto["dimension"] == "presente"
+        recursos_escena = self.vista.escenas.r_presente if presente else self.vista.escenas.r
+        dia_escena = escenas.DIA_PRESENTE if presente else 0
         if self.modo == "clasificar":
             opciones = tuple(contexto.get("clasificacion_opciones") or ())
-            r = self.vista.escenas.r
+            r = recursos_escena
             if opciones not in self.botones_clasificacion:
                 self.botones_clasificacion[opciones] = construir_botones_clasificacion(list(opciones), r, r["fuente_boton"])
             botones = self.botones_clasificacion[opciones]
-            dibujar_pregunta_clasificacion(superficie, r, escenas.AdaptadorEstado(), botones, self.vista.mouse)
+            encabezado = {"encabezado": "¿CÓMO CLASIFICARÍAS ESTA PUBLICACIÓN?"} if presente else {}
+            dibujar_pregunta_clasificacion(superficie, r, escenas.AdaptadorEstado(dia=dia_escena), botones, self.vista.mouse, **encabezado)
             for boton in botones:
                 self.botones["clasificar:" + boton.texto] = boton
             return True
@@ -308,11 +318,11 @@ class PanelCooperativo:
             if not propia:
                 return False
             resultado = contexto.get("resultado") or {}
-            adaptador = escenas.AdaptadorEstado(resultado=dict(
+            adaptador = escenas.AdaptadorEstado(dia=dia_escena, resultado=dict(
                 categoria=propia["categoria"], clasificacion_jugador=propia["opcion"],
                 clasificacion_correcta=propia["correcta"], efecto_clasificacion=propia["efectos"],
                 resultado=resultado.get("texto", "")))
-            dibujar_resultado_evento(superficie, self.vista.escenas.r, adaptador)
+            dibujar_resultado_evento(superficie, recursos_escena, adaptador)
             return True
         if self.modo == "reparar":
             escenas.dibujar_minijuego(self, superficie, self.caso.get("puente") or {}, self.tiempo_aguja_ms, self.estado_indicador)
@@ -348,8 +358,10 @@ class PanelCooperativo:
                 pygame.draw.rect(superficie, (70, 120, 90), (240, 150, 700, 50), 1, border_radius=8)
                 self.texto_lineas(superficie, self.toast, 254, 156, 672, self.pequena, VERDE)
             return
-        velo = pygame.Surface((960, 720), pygame.SRCALPHA)
-        velo.fill((2, 12, 8, 150)); superficie.blit(velo, (0, 0))
+        if self._velo is None:
+            self._velo = pygame.Surface((960, 720), pygame.SRCALPHA)
+            self._velo.fill((2, 12, 8, 150))
+        superficie.blit(self._velo, (0, 0))
         rect = pygame.Rect(130, 58, 700, 610)
         pygame.draw.rect(superficie, (17, 39, 29), rect, border_radius=16)
         pygame.draw.rect(superficie, ORO, rect, 3, border_radius=16)
@@ -376,9 +388,19 @@ class PanelCooperativo:
                 self.texto_lineas(superficie, "¡Gracias por ayudar a la aldea!", 165, 180, 630, color=ORO)
                 self.texto_lineas(superficie, f"Estrellas del equipo: {self.caso.get('estrellas', 0)} de {self.caso.get('estrellas_total', 11)}", 165, 237, 630)
                 dibujar_icono(superficie, self.vista.arte.sello, (760, 215))
-                dibujar_icono(superficie, self.vista.arte.insignia, (670, 215))
-                cifra = self.encabezado.render(str(self.caso.get("estrellas", 0)), True, (61, 37, 25))
-                superficie.blit(cifra, cifra.get_rect(center=(670, 201)))
+                insignia = self.vista.arte.insignia
+                dibujar_icono(superficie, insignia, (670, 215))
+                if insignia is not None:
+                    # Centro del disco (es redondo: tan alto como ancho); las cintas cuelgan debajo.
+                    limites = insignia.get_bounding_rect()
+                    disco_x = 670 - insignia.get_width() // 2 + limites.centerx
+                    disco_y = 215 - insignia.get_height() // 2 + limites.y + limites.width // 2
+                    cantidad = str(self.caso.get("estrellas", 0))
+                    fuente = next((f for f in (self.encabezado, self.fuente) if f.size(cantidad)[0] <= 28), self.pequena)
+                    cifra = fuente.render(cantidad, True, (61, 37, 25))
+                    # Se centra la tinta, no la caja de la línea, que deja aire arriba.
+                    tinta = cifra.get_bounding_rect()
+                    superficie.blit(cifra, (disco_x - tinta.centerx, disco_y - tinta.centery))
                 for i, caso in enumerate(self.caso.get("balance", [])):
                     self.texto_lineas(superficie, ("Descubierto: " if caso["correcto"] else "Aprendimos de: ") + caso["caso"], 165, 310 + i*46, 630, self.fuente)
             else:
@@ -518,7 +540,7 @@ class PanelCooperativo:
         else:
             self.boton(superficie, "sujetar", "Yo ayudo: me quedo aquí", 480, 463, 530, cerca and (not ayudante or ayudante["id"]==self.vista.identificador))
             self.boton(superficie, "trabajar", a.get("verbo", "Hacer la tarea"), 480, 525, 530, cerca and ayudante is not None and ayudante["id"] != self.vista.identificador)
-            self.texto_lineas(superficie, "Quédate junto al puesto." if cerca else "Acércate al círculo verde del puesto.", 165, 570, 630, self.pequena, ORO)
+            self.texto_lineas(superficie, "Quédate junto al cesto." if cerca else "Acércate al círculo verde del cesto.", 165, 570, 630, self.pequena, ORO)
 
     def en_caldero(self):
         return any(o["id"] == "caldero" and self.vista.cerca(o) for o in self.caso.get("objetivos", []))

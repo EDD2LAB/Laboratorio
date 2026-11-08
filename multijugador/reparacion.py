@@ -91,7 +91,7 @@ class PuenteRed:
         if self.estado == "REPAIRED":
             raise ValueError("El puente ya está reparado.")
         if self.estado in ("DAMAGED", "MATERIALS_PENDING"):
-            raise ValueError("Primero coloquen tablas, cuerda y canasta de herramientas en el puesto.")
+            raise ValueError("Primero coloquen tablas, cuerda y canasta de herramientas en el cesto.")
         if self.estado == "REPAIR_ANIMATION":
             raise ValueError("¡El puente se está reparando!")
         if self.reparador not in (None, identificador):

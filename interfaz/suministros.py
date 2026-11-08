@@ -10,14 +10,16 @@ import pygame
 # id de material en red -> clave del recorte del spritesheet.
 CLAVES_SPRITE = {"tablas": "tablas", "cuerdas": "cuerda", "herramientas": "herramientas"}
 _sprites = {}
-_cestos = {}  # "vacio" / "lleno": el cesto del puesto de entrega
 
 
-def configurar_sprites(materiales, cestos=None):
+def clave_cesto(encargo):
+    """Se llena al meter todo y vuelve a vaciarse cuando los objetos ya se usaron."""
+    return "lleno" if encargo and encargo.get("materiales_listos") and not encargo.get("materiales_colocados") else "vacio"
+
+
+def configurar_sprites(materiales):
     """Escala una vez cada material a los dos tamaños que se dibujan."""
     _sprites.clear()
-    _cestos.clear()
-    _cestos.update(cestos or {})
     for material, clave in CLAVES_SPRITE.items():
         imagen = (materiales or {}).get(clave)
         if imagen is None:
@@ -71,13 +73,10 @@ def dibujar_encargos(superficie, caso, fuente):
         llevados = set(encargo.get("cargas", {}).values())
         colocados = [m for m in encargo["materiales"] if m["entregado"]]
         d = encargo["destino"]
-        cesto = _cestos.get("lleno" if encargo.get("materiales_listos") else "vacio")
-        if cesto is not None:
-            caja = cesto.get_rect(midbottom=(d["x"] + 60, d["y"] + 8))
-            superficie.blit(cesto, caja.clamp(superficie.get_rect()))
-        for i, material in enumerate(colocados):
-            # Los objetos entregados quedan colocados junto al puesto.
-            dibujar_carga(superficie, material["id"], (d["x"] - (len(colocados) - 1) * 15 + i * 30, d["y"] - 4))
+        if not encargo.get("materiales_listos"):
+            for i, material in enumerate(colocados):
+                # Lo que ya entró asoma sobre el cesto hasta que se llena.
+                dibujar_carga(superficie, material["id"], (d["x"] - (len(colocados) - 1) * 14 + i * 28, d["y"] - 46))
         for material in encargo["materiales"]:
             if material["entregado"] or material["id"] in llevados:
                 continue  # El objeto ya no está en su punto de recogida.
@@ -94,13 +93,15 @@ def dibujar_encargos(superficie, caso, fuente):
         progreso = encargo.get("actividad", {}).get("progreso", 0)
         if encargo.get("materiales_listos"):
             for i in range(3):
-                x, y = d["x"]-27+i*19, d["y"]-25
+                x, y = d["x"]-27+i*19, d["y"]-56
                 color = (246, 202, 105) if i < progreso else (48, 74, 51)
                 pygame.draw.rect(superficie, color, (x, y, 15, 8), border_radius=2)
         etiqueta = fuente.render("¡GRACIAS, EQUIPO!" if encargo["completo"] else "AHORA: REPARAR EL PUENTE 1" if encargo.get("materiales_colocados")
-                                 else "AYUDAR JUNTOS · E" if encargo.get("materiales_listos") else "ENTREGAR · E", True, (128, 238, 180))
+                                 else "AYUDAR JUNTOS · E" if encargo.get("materiales_listos")
+                                 else f"METER EN EL CESTO · E  {len(colocados)}/{len(encargo['materiales'])}", True, (128, 238, 180))
         superficie.blit(etiqueta, etiqueta.get_rect(midtop=(d["x"], d["y"]+28)))
-    for obra in caso.get("obras", []) + ([encargo] if encargo and encargo["completo"] else []):
+    # Todas las obras comparten el cesto: solo se rotula la última.
+    for obra in (caso.get("obras", []) + ([encargo] if encargo and encargo["completo"] else []))[-1:]:
         d = obra["destino"]
         x, y = d["x"]-22, d["y"]-36
         pygame.draw.line(superficie, (225, 189, 105), (x, y), (x, y+28), 3)

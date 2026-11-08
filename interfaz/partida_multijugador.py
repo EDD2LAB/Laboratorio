@@ -168,6 +168,7 @@ class VistaPartida:
         for objeto in self.decoraciones:
             if objeto.get("fondo_animado"):
                 suavizar_cascada(objeto)
+        self._marcar_cesto(estado)
         self.decoraciones_zoom = decoraciones_ampliadas(self.decoraciones, ZOOM_COPA)
         self.fondo_zoom = cargar_fondo_unificado(ZOOM_COPA)
         self.escenas_zoom = {LA_COPA: {
@@ -184,12 +185,14 @@ class VistaPartida:
         self.aviso_red = ""
         self.estado = estado
         self.frames_eco = cargar_frames_tronco_eco()
+        self._frames_tronco_escalados = {}
         # --- Features del modo de un jugador (cargadas una sola vez) ---
         self.dimension = LA_COPA
         self.mapas = {LA_COPA: {"fondo": self.fondo, "decoraciones": self.decoraciones, "colisiones": self.colisiones}}
         self.escenas = RecursosEscenas(self.fondo, self.decoraciones)
         self.arte = ArtePartida()
-        configurar_sprites(self.escenas.materiales, self.arte.cestos)
+        configurar_sprites(self.escenas.materiales)
+        self.cesto_zoom = self.arte.cargar_cestos(ZOOM_COPA)
         self.flecha = FlechaGuia()
         self.adornos = AdornosMapa()
         self.hud = HUDIndicadores(cargar_fuente(11), self.escenas.iconos_hud,
@@ -265,6 +268,14 @@ class VistaPartida:
             except Exception as error:
                 print("[Multijugador] Sin música:", error)
 
+    def _marcar_cesto(self, estado):
+        """El servidor decide qué tronco es el cesto de los encargos."""
+        objetivos = estado.get("mundo", {}).get("caso", {}).get("objetivos", [])
+        cesto = next((o for o in objetivos if o["id"] == "cesto"), None)
+        troncos = [o for o in self.decoraciones if o.get("tronco_eco")]
+        if cesto and troncos:
+            min(troncos, key=lambda o: math.hypot(o["rect"].centerx - cesto["x"], o["rect"].bottom - cesto["y"]))["cesto"] = True
+
     # ------------------------------------------------------------ dimensiones
     def _cargar_dimension(self, dimension):
         if dimension not in self.mapas:
@@ -278,6 +289,7 @@ class VistaPartida:
             self.mapas[dimension] = {"fondo": recursos["mapa"], "decoraciones": recursos["decoraciones"],
                                      "colisiones": colisiones}
             self.escenas_zoom[dimension] = self._escena_presente(DIMENSIONES[dimension], recursos, colisiones)
+            self.escenas.preparar_presente(self.escenas_zoom[dimension]["fondo"])
         return self.mapas[dimension]
 
     @staticmethod
@@ -364,6 +376,9 @@ class VistaPartida:
     def iniciar_pocion(self, resultado, noticia):
         from interfaz.escenas_multijugador import AnimacionPocion
         tipo = resultado.get("tipo_pocion")
+        if self.dimension == PRESENTE:  # en Distrito Conecta no hay pociones
+            self.sonido({"tipo": "clasificacion", "correcta": bool(resultado.get("correcto"))})
+            return
         if not tipo:
             return
         self.animacion_pocion = AnimacionPocion(tipo, noticia, resultado.get("evento_id"))
@@ -630,9 +645,16 @@ class VistaPartida:
             return min(pendientes, key=lambda o: math.hypot(o["x"] - yo["x"], o["y"] - yo["y"]))
         return next((o for o in presente.get("objetivos", []) if o["id"] == "presente:pantalla"), None)
 
+    def _frames_tronco(self, tamano):
+        """Cuadros del Tronco de los Ecos, escalados una sola vez por tamaño."""
+        if tamano not in self._frames_tronco_escalados:
+            self._frames_tronco_escalados[tamano] = [pygame.transform.scale(f, tamano) for f in self.frames_eco]
+        return self._frames_tronco_escalados[tamano]
+
     def _dibujar_mapa(self, superficie, ahora_ms, escena=None, area=None):
         """Mapa y decoraciones. ``escena`` y ``area``: recursos ampliados y zona
         visible en su capa; sin ellas, escala normal."""
+        from interfaz.suministros import clave_cesto
         from nucleo.recursos import es_hoja_portales
         from un_jugador.dibujo_mapa import dibujar_mariposa, dibujar_puente_balanceandose
         zoom, origen_x, origen_y = (escena["zoom"], *escena["origen"]) if escena else (1, 0, 0)
@@ -645,7 +667,10 @@ class VistaPartida:
             superficie.blit(self.fondo, (0, 0))
             decoraciones, puente_1, puente_roto, frames_reparacion = (
                 self.decoraciones, self.puente_1, self.puente_roto, self.frames_reparacion)
-        puente = self.estado.get("mundo", {}).get("caso", {}).get("puente") or {}
+        caso = self.estado.get("mundo", {}).get("caso", {})
+        puente = caso.get("puente") or {}
+        encargo = caso.get("encargo")
+        cestos = self.cesto_zoom if escena is not None else self.arte.cestos
         gemelos = self._npcs_gemelos()
         for objeto in decoraciones:
             if objeto.get("personaje") in gemelos:
@@ -658,9 +683,12 @@ class VistaPartida:
                 continue
             if es_hoja_portales(objeto.get("nombre", "")) and self.adornos.portal:
                 continue  # se dibuja el portal animado
-            if objeto.get("tronco_eco") and self.frames_eco:
-                frame = self.frames_eco[(ahora_ms // 140) % len(self.frames_eco)]
-                superficie.blit(pygame.transform.scale(frame, objeto["rect"].size), objeto["rect"])
+            if objeto.get("cesto") and cestos.get(clave_cesto(encargo)) is not None:
+                imagen = cestos[clave_cesto(encargo)]
+                superficie.blit(imagen, imagen.get_rect(midbottom=objeto["rect"].midbottom))
+            elif objeto.get("tronco_eco") and self.frames_eco:
+                frames = self._frames_tronco(objeto["rect"].size)
+                superficie.blit(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
             elif objeto.get("puente_animable"):
                 dibujar_puente_balanceandose(superficie, objeto, ahora_ms)
             elif objeto.get("mariposa") and objeto.get("frames"):

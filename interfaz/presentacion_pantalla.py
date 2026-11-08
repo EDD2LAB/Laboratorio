@@ -16,4 +16,11 @@ def a_lienzo(posicion, tamano):
 
 def presentar(pantalla, lienzo):
     tamano = pantalla.get_size()
-    pantalla.blit(lienzo if tamano == lienzo.get_size() else pygame.transform.scale(lienzo, tamano), (0, 0))
+    if tamano == lienzo.get_size():
+        pantalla.blit(lienzo, (0, 0))
+        return
+    try:
+        # Directo sobre la ventana: sin crear una superficie enorme en cada cuadro.
+        pygame.transform.scale(lienzo, tamano, pantalla)
+    except ValueError:  # formatos de píxel distintos
+        pantalla.blit(pygame.transform.scale(lienzo, tamano), (0, 0))

@@ -75,6 +75,9 @@ def dibujar_icono(superficie, imagen, centro):
         superficie.blit(imagen, imagen.get_rect(center=centro))
 
 
+LADO_CESTO = 44
+
+
 class ArtePartida:
     """Imágenes que usan la vista de la partida y su panel cooperativo."""
 
@@ -94,5 +97,10 @@ class ArtePartida:
         self.arbol = icono(NUEVOS + "icono_arbol.png", (36, 36))
         self.sello = icono(NUEVOS + "sello_consejo.png", (70, 70))
         self.insignia = icono(NUEVOS + "insignia_base.png", (70, 70))
-        self.cestos = {"vacio": icono(NUEVOS + "cesto_vacio.png", (46, 46)),
-                       "lleno": icono(NUEVOS + "cesto_lleno.png", (46, 46))}
+        self.cestos = self.cargar_cestos(1)
+
+    @staticmethod
+    def cargar_cestos(zoom):
+        """El cesto de los encargos, escalado una vez al tamaño con que se dibuja."""
+        lado = LADO_CESTO * zoom
+        return {clave: icono(NUEVOS + "cesto_" + clave + ".png", (lado, lado)) for clave in ("vacio", "lleno")}

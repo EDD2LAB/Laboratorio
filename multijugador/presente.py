@@ -2,7 +2,8 @@
 
 Porta "a grandes rasgos" la misión ``contenido_sospechoso`` del modo de un
 jugador: reunir las tres pistas (Darío Veraz, Tomás Red, Ronaldo Vélez),
-decidir en la pantalla pública con pociones y clasificar la publicación.
+decidir en la pantalla pública y clasificar la publicación. Las pociones son
+de La Copa; ``tipo_pocion`` se sigue publicando por compatibilidad de protocolo.
 """
 from collections import Counter
 
@@ -96,7 +97,7 @@ class MisionPresente:
             faltan = len(PISTAS) - len(self.halladas)
             return {"mensaje": f"Investiguen antes de decidir: faltan {faltan} pistas.", "vista": "fuente",
                     "titulo": "Pantalla pública"}
-        return {"mensaje": "Elijan una poción para decidir qué hacer con la publicación.",
+        return {"mensaje": "Elijan juntos qué hacer con la publicación.",
                 "vista": "resultado" if self.completada else "caldero"}
 
     def votar(self, identificador, jugador, opcion, presentes, cerca):

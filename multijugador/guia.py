@@ -30,7 +30,7 @@ class GuiaCooperativa:
         if t["paso"] == 1 and clave == "caldero":
             mision._objetivo(i, clave)
             t["paso"] = 2
-            return {"mensaje": "¡Hola! Lleva este farol al Tronco de los Ecos que brilla cerca de aquí. Allí pulsa E.",
+            return {"mensaje": "¡Hola! Lleva este farol al Tronco de los Ecos que brilla: sigue la luz y allí pulsa E.",
                     "titulo": "Guía del caldero", "vista": "fuente"}
         eco = next(o for o in mision.objetivos if o.get("rol") == "mensajero")
         if t["paso"] == 2 and clave == eco["id"]:
@@ -86,7 +86,7 @@ class GuiaCooperativa:
             guia.update(paso="encargo", titulo="4. Ayuda a la aldea", detalle=estado["instruccion"],
                         objetivo=estado["objetivo"], boton="Ayudar · E")
             if e.materiales_listos and not e.materiales_colocados:
-                guia.update(titulo="¡Hagan la tarea juntos!", detalle="Uno ayuda y el otro trabaja. Acérquense al puesto.",
+                guia.update(titulo="¡Hagan la tarea juntos!", detalle="Uno ayuda y el otro trabaja. Acérquense al cesto.",
                             objetivo=dict(e.destino, nombre=e.config["lugar"]), boton="Abrir actividad · E")
             elif e.materiales_colocados and not e.completo:
                 guia.update(paso="puente", titulo="¡Reparen el Puente 1!", detalle=estado["instruccion"],
