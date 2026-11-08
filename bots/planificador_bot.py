@@ -1,10 +1,31 @@
+from collections import Counter
 import math
 
 from multijugador.reparacion import CONFIGURACION as CONFIG_PUENTE, angulo_objetivo
 
+RADIO_CALDERO = 68  # el servidor exige esta distancia para elegir
+RADIO_EMISOR = 56  # junto a quien llamó, dentro del alcance de una entrega directa
+ESPERA_ORDEN = 12.0  # segundos que se queda donde lo llamaron si no hay más que hacer
+ESPERA_ALIADO = 25.0  # segundos que el Habitante espera compañero para su habilidad
+
 
 class PlanificadorBot:
     UMBRALES = {"facil": 0.55, "normal": 0.7, "dificil": 0.8}
+
+    @classmethod
+    def mejor_opcion(cls, inventario, excluidas=()):
+        """Mejor lectura de las pistas aunque no sean concluyentes (nunca mira la solución)."""
+        propuesta = cls.proponer_decision(inventario)["accion_propuesta"]
+        if propuesta and propuesta not in excluidas:
+            return propuesta
+        metadatos = [p.get("metadatos", {}) for p in inventario]
+        senales = {
+            "corregir": sum(bool(m.get("problema_parcial")) for m in metadatos),
+            "difundir": sum(bool(m.get("confirma_riesgo_actual")) for m in metadatos),
+            "descartar": sum(bool(m.get("indica_descontextualizacion") or m.get("confirma_ausencia_de_riesgo")
+                                  or m.get("fuente_actual_alternativa")) for m in metadatos),
+        }
+        return max((o for o in senales if o not in excluidas), key=senales.get)
 
     @staticmethod
     def proponer_decision(inventario):
@@ -41,6 +62,7 @@ class PlanificadorBot:
 
     def planificar(self, bot, estado, jugadores, memoria, dificultad):
         if bot.posicion.get("dimension", "la_copa") != "la_copa":
+            bot.orden = None
             return self._acompanar(bot, jugadores)
         caso = estado["caso"]
         privado = estado["privado"]
@@ -54,7 +76,11 @@ class PlanificadorBot:
         caldero = next(o for o in caso["objetivos"] if o["id"] == "caldero")
 
         if caso["fase"] == "final":
+            bot.orden = None
             return {"estado": "ESPERANDO_EQUIPO"}
+        plan_orden = self._cumplir_orden(bot, caso, privado, jugadores, caldero, memoria)
+        if plan_orden:
+            return plan_orden
         if caso["fase"] == "preparacion":
             return self._preparacion(bot, caso, privado, caldero, memoria)
 
@@ -69,7 +95,7 @@ class PlanificadorBot:
             return self._tarea("USANDO_HABILIDAD", objetivo_rol, "habilidad")
         if not habilidad_usada and bot.rol == "aspirante" and len(inventario) >= 2:
             return self._tarea("USANDO_HABILIDAD", caldero, "habilidad")
-        if not habilidad_usada and bot.rol == "habitante":
+        if not habilidad_usada and bot.rol == "habitante" and not bot.sin_ayuda:
             aliado_cerca = any(
                 jugador["id"] != bot.identificador
                 and (jugador["x"] - bot.posicion["x"]) ** 2
@@ -78,16 +104,18 @@ class PlanificadorBot:
             )
             if aliado_cerca:
                 return self._tarea("USANDO_HABILIDAD", objetivo_rol, "habilidad")
-            memoria.solicitar_ayuda(bot.identificador, objetivo_rol)
-            if (
-                (objetivo_rol["x"] - bot.posicion["x"]) ** 2
-                + (objetivo_rol["y"] - bot.posicion["y"]) ** 2 > 48 ** 2
-            ):
+            if bot.espera_ayuda_desde is None:
+                bot.espera_ayuda_desde = bot.ahora
+            if bot.ahora - bot.espera_ayuda_desde <= ESPERA_ALIADO:
+                memoria.solicitar_ayuda(bot.identificador, objetivo_rol)
                 return {
                     "estado": "BUSCANDO_ALIADO",
                     "destino": dict(objetivo_rol),
                     "esperar": True,
                 }
+            # Nadie llegó: sigue con el caso sin su habilidad en vez de quedarse allí.
+            bot.sin_ayuda = True
+            memoria.completar_ayuda(bot.identificador)
 
         if bot.asistencia_a:
             destino = bot.asistencia_a
@@ -127,6 +155,7 @@ class PlanificadorBot:
             and propuesta["accion_propuesta"]
             and propuesta["confianza"] >= threshold
             and not privado.get("voto")
+            and not (bot.sin_difundir and propuesta["accion_propuesta"] == "difundir")
         ):
             memoria.votos_propuestos[bot.identificador] = propuesta
             return self._tarea(
@@ -137,9 +166,101 @@ class PlanificadorBot:
                 marca_voto=propuesta["accion_propuesta"],
             )
 
+        # El caso espera la elección de todos: si alguien ya eligió, o lo
+        # llamaron al caldero, elige con lo que sabe en lugar de bloquear al equipo.
+        if (
+            len(inventario) >= 2
+            and self._debe_elegir(bot, privado)
+            and (caso.get("votos_emitidos") or bot.convocado)
+        ):
+            return self._votar(bot, inventario, caldero, memoria)
+
         if caso.get("resultado") and not caso["resultado"].get("correcto") and not caso.get("rectificacion"):
             return self._tarea("RECTIFICANDO", caldero, "rectificar")
         return {"estado": "ANALIZANDO_PRUEBAS"}
+
+    # ------------------------------------------------- órdenes de los ecos
+    @staticmethod
+    def _debe_elegir(bot, privado):
+        voto = privado.get("voto")
+        return not voto or (bot.sin_difundir and voto == "difundir")
+
+    def _votar(self, bot, inventario, caldero, memoria):
+        """Elige coordinado con los demás bots: dividirse dejaría el caso empatado."""
+        excluidas = ("difundir",) if bot.sin_difundir else ()
+        opcion = None
+        if not self.proponer_decision(inventario)["accion_propuesta"]:
+            equipo = Counter(p["accion_propuesta"] for p in memoria.votos_propuestos.values()
+                             if p["accion_propuesta"] not in excluidas)
+            opcion = equipo.most_common(1)[0][0] if equipo else None
+        opcion = opcion or self.mejor_opcion(inventario, excluidas)
+        memoria.votos_propuestos[bot.identificador] = {"accion_propuesta": opcion}
+        return self._tarea("VOTANDO", caldero, "votar", opcion=opcion, marca_voto=opcion)
+
+    def _cumplir_orden(self, bot, caso, privado, jugadores, caldero, memoria):
+        """Un mensaje recibido pasa por delante de cualquier otra tarea."""
+        orden = bot.orden
+        if not orden:
+            return None
+        puente = caso.get("puente") or {}
+        if puente.get("estado") == "REPAIR_MINIGAME" and puente.get("reparador") == bot.identificador:
+            return None  # termina los pocos segundos del minijuego y va
+        if orden["tipo"] == "caldero":
+            return self._acudir_al_caldero(bot, caso, privado, caldero, memoria)
+        return self._acudir_al_emisor(bot, caso, jugadores)
+
+    def _acudir_al_caldero(self, bot, caso, privado, caldero, memoria):
+        if self._distancia(bot, caldero) > RADIO_CALDERO:
+            return {"estado": "YENDO_AL_CALDERO", "destino": dict(caldero), "esperar": True}
+        if caso["fase"] != "investigacion":
+            if self._espera_cumplida(bot):
+                return None
+            return {"estado": "ESPERANDO_EQUIPO", "destino": dict(caldero), "esperar": True}
+        inventario = privado.get("inventario", [])
+        if not self._debe_elegir(bot, privado):
+            bot.orden = None
+            return None
+        if len(inventario) < 2:
+            # Sin dos pistas no puede comparar: las consigue y vuelve a elegir.
+            bot.orden = None
+            bot.convocado = True
+            return None
+        return self._votar(bot, inventario, caldero, memoria)
+
+    def _acudir_al_emisor(self, bot, caso, jugadores):
+        orden = bot.orden
+        emisor = next((j for j in jugadores if j["id"] == orden["emisor"]
+                       and j.get("dimension", "la_copa") == "la_copa"), None)
+        if emisor is None:
+            bot.orden = None
+            return None
+        destino = {"id": emisor["id"], "nombre": emisor["nombre"], "x": emisor["x"], "y": emisor["y"]}
+        if self._distancia(bot, emisor) <= RADIO_EMISOR:
+            if self._espera_cumplida(bot):
+                return None
+            propia = "pista_" + bot.rol
+            compartidos = bot.compartidas.get(caso["ronda"], set())
+            if (orden["tipo"] == "ayudar" and caso["fase"] == "investigacion"
+                    and bot.prueba_propia and emisor["id"] not in compartidos):
+                return self._tarea("COMPARTIENDO_PRUEBA", destino, "entregar", destinatario=emisor["id"],
+                                   pista=propia, medio="directo", marca_compartida=emisor["id"],
+                                   radio=RADIO_EMISOR)
+        return {"estado": "ACOMPANANDO", "destino": destino, "esperar": True, "radio": RADIO_EMISOR}
+
+    @staticmethod
+    def _espera_cumplida(bot):
+        """Cuenta desde que llegó; al terminar el plazo libera la orden."""
+        orden = bot.orden
+        if orden["llegada"] is None:
+            orden["llegada"] = bot.ahora
+        if bot.ahora - orden["llegada"] < ESPERA_ORDEN:
+            return False
+        bot.orden = None
+        return True
+
+    @staticmethod
+    def _distancia(bot, punto):
+        return math.hypot(punto["x"] - bot.posicion["x"], punto["y"] - bot.posicion["y"])
 
     @staticmethod
     def _acompanar(bot, jugadores):

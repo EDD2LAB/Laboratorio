@@ -19,15 +19,15 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 
 ## Mapa de módulos
 
-`juego.py` es el único `.py` en la raíz: solo abre el menú y arranca el modo
-elegido. Detalle en `docs/arquitectura.md`.
+`juego.py` es el único `.py` en la raíz: solo abre el menú. Detalle en
+`docs/arquitectura.md`.
 
 | Paquete | Responsabilidad |
 | --- | --- |
 | `nucleo/` | Constantes (`config`), rutas (`rutas`), carga de recursos y utilidades de texto (`recursos`), preferencias del jugador (`preferencias`, modo de pantalla) |
 | `logica/` | Árboles de decisión/clasificación, estado del juego, dimensiones, grafo físico, propagación, habilidades, conversaciones |
 | `mundo/` | Personajes, mapas, colisiones, cámara, NPC, jugador, grafo de la aldea, creación del mundo, reparación de puentes |
-| `un_jugador/` | Escenas y bucle del modo un jugador (HUD, mapa, códice, tablilla, escenas, ventana, `partida.main`) |
+| `un_jugador/` | Escenas que reutiliza el multijugador (tablilla, dibujo del mapa, ventana). El modo un jugador ya no se ofrece en el menú; `partida.main` queda sin entrada |
 | `interfaz/` | Componentes de UI y vista del multijugador (menú inicial, menú de pausa con Esc, presentación sin bandas negras, panel cooperativo, HUD de indicadores, efectos) |
 | `multijugador/` | Servidor autoritativo, protocolo, salas, misiones cooperativas, clientes |
 | `bots/` | Bots cooperativos (campaña local y relleno de roles libres en salas en línea) |

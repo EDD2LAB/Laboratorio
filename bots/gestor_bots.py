@@ -33,8 +33,14 @@ class GestorBots:
         self.partida = partida
         self.identificador_humano = identificador_humano
         self.dificultad = dificultad
+        self._clave_caso = None
 
     def actualizar(self, ahora, segundos):
+        caso = self.partida.mision.publico(self.partida.conectados)
+        clave_caso = (caso["ronda"], caso.get("rectificacion"))
+        if clave_caso != self._clave_caso:
+            self._clave_caso = clave_caso
+            self.memoria.nueva_ronda()  # los votos propuestos valen para un solo intento
         for bot in self.bots.values():
             if (
                 bot.asistencia_para
@@ -43,7 +49,7 @@ class GestorBots:
                 bot.asistencia_a = None
                 bot.asistencia_para = None
                 self.memoria.liberar_tarea(bot.identificador)
-        estado_publico = self.partida.mision.publico(self.partida.conectados)
+        estado_publico = caso
         jugadores = [
             dict(jugador, conectado=identificador in self.partida.conectados)
             for identificador, jugador in self.partida.jugadores.items()

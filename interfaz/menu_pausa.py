@@ -9,6 +9,7 @@ import warnings
 import pygame
 
 from nucleo import preferencias
+from nucleo.recursos import envolver_texto
 from un_jugador.ventana import tamano_ventana_inicial
 
 ORO = (237, 185, 87)
@@ -39,6 +40,41 @@ CONTROLES = (
     ("F3", "Depuración de bots"),
 )
 
+# Una pestaña por dimensión en la Ayuda de Ajustes: (nombre, párrafos).
+PAGINAS_COMO_JUGAR = (
+    ("La Copa", (
+        "Cada caso empieza con un rumor. Entre todos descubren si es verdad.",
+        "1. Sigue la luz hasta tu personaje y pulsa E para conseguir tu pista.",
+        "2. Necesitas dos pistas. Pulsa I para leerlas y darlas a un compañero cercano, "
+        "o envíalas desde un Tronco de los Ecos.",
+        "3. En un tronco eliges con las flechas a quién escribir: a una persona o a todos. "
+        "Los bots hacen lo que les pidas, por ejemplo venir al caldero.",
+        "4. Vayan al caldero y elijan una poción: Quemar corrige lo falso, Colgar lo difunde "
+        "e Ignorar no lo comparte. Con bots decide tu elección; entre personas, la mayoría.",
+        "5. Clasifica qué tipo de información era.",
+        "6. Después ayuden a la aldea: lleven los materiales al lugar marcado, hagan la actividad "
+        "en pareja y confirmen en el caldero. En el primer caso también reparan el Puente 1: "
+        "pulsa E tres veces en la zona verde.",
+        "Son cuatro casos. Al terminar, la flecha dorada te lleva al portal.",
+    )),
+    ("Distrito Conecta", (
+        "Una imagen viral acusa a Ronaldo Vélez. ¿Es real? Aquí la cámara va cerca de tu "
+        "personaje: recorre el mapa para descubrirlo.",
+        "1. Para viajar, ve al portal de La Copa y pulsa E. Cada persona del equipo debe "
+        "aceptar junto al portal; los bots viajan con ustedes.",
+        "2. Habla con las personas marcadas (E) hasta reunir las tres pistas: Darío Veraz, "
+        "Tomás Red y Ronaldo Vélez.",
+        "3. Vayan a la pantalla pública y elijan una poción: Consultar verifica, Quemar reporta, "
+        "Ignorar la deja pendiente y Colgar la comparte. Aquí los bots solo acompañan: deciden las personas.",
+        "4. Clasifica la publicación. Si la dejaron pendiente, pueden volver a decidir.",
+        "Usa el portal para volver a La Copa. Los indicadores viajan contigo.",
+    )),
+    ("Ciudad Núcleo", (
+        "Ciudad Núcleo es la época del futuro.",
+        "Todavía está en construcción: aparece en el portal, pero aún no se puede viajar a ella.",
+    )),
+)
+
 
 def aplicar_modo_pantalla(modo):
     """Crea la ventana en el modo pedido y devuelve la superficie de pantalla."""
@@ -64,6 +100,7 @@ class MenuPausa:
     def __init__(self, menu):
         self.menu = menu
         self.vista = None
+        self.pagina_ayuda = 0
         self.preferencias = preferencias.cargar()
 
     @property
@@ -113,7 +150,9 @@ class MenuPausa:
     def tecla(self, tecla):
         """Teclado mientras el menú está abierto (se consume todo)."""
         if tecla == pygame.K_ESCAPE:
-            if self.vista == "principal" or not self.en_partida:
+            if self.vista == "como_jugar":
+                self.vista = "ajustes"
+            elif self.vista == "principal" or not self.en_partida:
                 self.cerrar()
             else:
                 self.vista = "principal"
@@ -125,8 +164,10 @@ class MenuPausa:
         """Devuelve "salir" para cerrar el juego; None en los demás casos."""
         if clave == "continuar":
             self.cerrar()
-        elif clave in ("ajustes", "ayuda", "confirmar_salida"):
+        elif clave in ("ajustes", "ayuda", "confirmar_salida", "como_jugar"):
             self.vista = clave
+        elif clave.startswith("pagina:"):
+            self.pagina_ayuda = int(clave.split(":", 1)[1])
         elif clave == "volver":
             if self.en_partida:
                 self.vista = "principal"
@@ -203,7 +244,24 @@ class MenuPausa:
             self._boton(f"volumen:{clave}:+", "+", (738, fila_y), 46, valor < 1, alto=36)
         if not self.menu.audio:
             menu.texto("(sin dispositivo de sonido)", 480, y + 58 + 4 * 46 - 14, 14, ROJO, True)
-        self._boton("volver", "Volver", (480, 630), 220)
+        self._boton("como_jugar", "Ayuda: cómo jugar", (480, 592), 300, alto=36, tamano_fuente=18)
+        self._boton("volver", "Volver", (480, 642), 220, alto=40)
+
+    def _dibujar_como_jugar(self):
+        menu = self.menu
+        menu.panel(pygame.Rect(100, 30, 760, 660))
+        menu.texto("CÓMO JUGAR", 480, 48, 32, ORO, True)
+        for indice, (nombre, _) in enumerate(PAGINAS_COMO_JUGAR):
+            texto = f"» {nombre} «" if indice == self.pagina_ayuda else nombre
+            self._boton(f"pagina:{indice}", texto, (290 + indice * 190, 112), 178, alto=38, tamano_fuente=16)
+        fuente = menu.fuentes[16]
+        y = 150
+        for parrafo in PAGINAS_COMO_JUGAR[self.pagina_ayuda][1]:
+            for linea in envolver_texto(parrafo, fuente, 680):
+                menu.texto(linea, 140, y, 16)
+                y += fuente.get_linesize() + 2
+            y += 8
+        self._boton("ajustes", "Volver", (480, 655), 220, alto=40)
 
     def _dibujar_ayuda(self):
         menu = self.menu

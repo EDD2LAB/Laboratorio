@@ -9,7 +9,7 @@ import pygame
 
 from interfaz.boton import Boton
 from interfaz.menu_pausa import MenuPausa
-from interfaz.presentacion_pantalla import PresentadorPantalla
+from interfaz.presentacion_pantalla import a_lienzo, presentar
 from multijugador.cliente import ClienteSala
 from multijugador.cliente_internet import ClienteInternet, validar_url
 from multijugador.servidor import ServidorSala
@@ -29,7 +29,6 @@ class MenuInicio:
         self.pausa = MenuPausa(self)
         self.audio = self._crear_audio()
         self._musica_menu()
-        self.presentador = PresentadorPantalla()
         self.pantalla = self.pausa.crear_pantalla()  # maximizada por defecto
         pygame.display.set_caption("La Copa — Consejo de los Ecos")
         self.lienzo = pygame.Surface((960, 720))
@@ -268,10 +267,6 @@ class MenuInicio:
         if clave == "alternar_hud" and self.partida:
             self.partida.mostrar_hud = not self.partida.mostrar_hud
             return
-        if clave == "individual":
-            if self.audio:
-                self.audio.detener_todo()  # el modo un jugador usa su propio audio
-            return "individual"
         if clave == "campana_local":
             self.campos["nombre"] = self.campos["nombre"] or "Jugador"
             self.vista = "campana_rol"
@@ -349,11 +344,10 @@ class MenuInicio:
             self.panel(pygame.Rect(240, 70, 480, 590))
             self.texto("LA COPA", 480, 145, 44, ORO, True)
             self.texto("Consejo de los Ecos", 480, 207, 24, centro=True)
-            self.boton("individual", "Historia · un jugador", (480, 290))
-            self.boton("campana_local", "Campaña con bots", (480, 365))
-            self.boton("multi", "Multijugador", (480, 440))
-            self.boton("ajustes", "Ajustes", (480, 515))
-            self.boton("salir", "Salir", (480, 590))
+            self.boton("campana_local", "Campaña con bots", (480, 315))
+            self.boton("multi", "Multijugador", (480, 395))
+            self.boton("ajustes", "Ajustes", (480, 475))
+            self.boton("salir", "Salir", (480, 555))
         elif self.vista == "campana_rol":
             self.panel(pygame.Rect(150, 45, 660, 630))
             self.texto("CAMPAÑA LOCAL CON BOTS", 480, 75, 32, ORO, True)
@@ -494,12 +488,8 @@ class MenuInicio:
                 segundos = reloj.tick(60) / 1000
                 # Pygame 2 redimensiona la superficie al maximizar o cambiar el tamaño.
                 self.pantalla = pygame.display.get_surface() or self.pantalla
-                ancho, alto = self.pantalla.get_size()
-                escala = min(ancho / 960, alto / 720)
-                destino = pygame.Rect(0, 0, round(960 * escala), round(720 * escala))
-                destino.center = (ancho // 2, alto // 2)
-                mx, my = pygame.mouse.get_pos()
-                self.mouse = ((mx - destino.x) / escala, (my - destino.y) / escala) if destino.collidepoint(mx, my) else (-1, -1)
+                tamano = self.pantalla.get_size()
+                self.mouse = a_lienzo(pygame.mouse.get_pos(), tamano)
                 self.recibir()
                 # Preparar las áreas clicables antes de procesar la entrada.
                 if self.vista == "partida" and self.partida and self.cliente:
@@ -521,7 +511,7 @@ class MenuInicio:
                             return resultado
                         continue
                     if not self.pausa.activo and self.vista == "partida" and self.partida:
-                        posicion = ((evento.pos[0] - destino.x) / escala, (evento.pos[1] - destino.y) / escala) if hasattr(evento, "pos") else self.mouse
+                        posicion = a_lienzo(evento.pos, tamano) if hasattr(evento, "pos") else self.mouse
                         if self.partida.manejar_evento(evento, posicion, self.cliente):
                             continue
                         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
@@ -558,7 +548,7 @@ class MenuInicio:
                             elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                                 self.conectar()
                     elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                        pos = ((evento.pos[0] - destino.x) / escala, (evento.pos[1] - destino.y) / escala)
+                        pos = a_lienzo(evento.pos, tamano)
                         for clave, rect in self.areas_campos.items():
                             if rect.collidepoint(pos):
                                 self.foco = clave
@@ -574,7 +564,7 @@ class MenuInicio:
                     pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if activo else pygame.SYSTEM_CURSOR_ARROW)
                 except pygame.error:
                     pass
-                self.presentador.presentar(self.pantalla, self.lienzo)  # sin bandas negras
+                presentar(self.pantalla, self.lienzo)  # el juego llega hasta los bordes
                 pygame.display.flip()
         finally:
             pygame.key.stop_text_input()

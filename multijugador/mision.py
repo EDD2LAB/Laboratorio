@@ -14,6 +14,9 @@ OPCIONES = {
 }
 MENSAJES = ("¿Me ayudas a buscar una pista?", "Ven al caldero para comparar pistas.",
             "Tengo una pista para compartir.", "No difundamos la noticia todavía.")
+# Lo que hace un bot al recibir cada mensaje de MENSAJES (mismo orden).
+ORDENES_ECO = ("ayudar", "caldero", "recibir", "no_difundir")
+TODOS = "todos"  # destinatario de un eco que llega a todo el equipo
 PRUEBAS = {
     "guardian": ("Acta del consejo", "El papel del consejo dice: mañana arreglarán unas tablas. Hoy el puente está abierto."),
     "mensajero": ("Registro de la ruta", "Hoy llevé mensajes por el puente. Mañana revisarán unas tablas."),
@@ -87,9 +90,9 @@ class MisionPuente:
             raise ValueError("Acércate a la luz y pulsa E.")
         return objetivo
 
-    def _avisar(self, receptores, texto, tipo="info"):
+    def _avisar(self, receptores, texto, tipo="info", **datos):
         self.secuencia += 1
-        aviso = {"id": self.secuencia, "texto": texto, "tipo": tipo}
+        aviso = {"id": self.secuencia, "texto": texto, "tipo": tipo, **datos}
         for receptor in receptores:
             lista = self.notificaciones.setdefault(receptor, [])
             lista.append(dict(aviso))
@@ -148,9 +151,11 @@ class MisionPuente:
             receptor, pista = solicitud.get("destinatario"), solicitud.get("pista")
             if not isinstance(pista, str) or pista not in self.conocidas[identificador]:
                 raise ValueError("Primero busca una pista para compartir.")
-            if not isinstance(receptor, str) or receptor == identificador or receptor not in self.jugadores or receptor not in presentes:
-                raise ValueError("El destinatario no está disponible.")
             medio = solicitud.get("medio")
+            a_todos = receptor == TODOS and medio == "eco"
+            if not a_todos and (not isinstance(receptor, str) or receptor == identificador
+                                or receptor not in self.jugadores or receptor not in presentes):
+                raise ValueError("El destinatario no está disponible.")
             if medio == "directo":
                 if not self._cerca(identificador, self.jugadores[receptor], 64):
                     raise ValueError("El otro jugador está demasiado lejos para una entrega directa.")
@@ -159,25 +164,36 @@ class MisionPuente:
                     raise ValueError("Debes estar cerca de un Tronco de los Ecos.")
             else:
                 raise ValueError("Medio de entrega inválido.")
-            if pista in self.conocidas[receptor]:
-                return {"mensaje": "Ese jugador ya tiene esta prueba."}
-            self.conocidas[receptor].add(pista)
-            self.entregas.append({"emisor": identificador, "receptor": receptor, "pista": pista, "medio": medio})
-            self._avisar([receptor], f"{jugador['nombre']} te mandó una pista. Léela con I.", "entrega")
-            self._avisar([identificador], f"{self.jugadores[receptor]['nombre']} recibió tu pista.", "entrega")
-            self._registrar(f"{jugador['nombre']} compartió una prueba con {self.jugadores[receptor]['nombre']}.")
-            return {"mensaje": "¡Tu compañero recibió la pista!"}
+            receptores = [i for i in presentes if i != identificador and i in self.jugadores] if a_todos else [receptor]
+            nuevos = [i for i in receptores if pista not in self.conocidas[i]]
+            if not nuevos:
+                return {"mensaje": "Todos ya tienen esta prueba." if a_todos else "Ese jugador ya tiene esta prueba."}
+            for nuevo in nuevos:
+                self.conocidas[nuevo].add(pista)
+                self.entregas.append({"emisor": identificador, "receptor": nuevo, "pista": pista, "medio": medio})
+                self._avisar([nuevo], f"{jugador['nombre']} te mandó una pista. Léela con I.", "entrega")
+                self._avisar([identificador], f"{self.jugadores[nuevo]['nombre']} recibió tu pista.", "entrega")
+                self._registrar(f"{jugador['nombre']} compartió una prueba con {self.jugadores[nuevo]['nombre']}.")
+            return {"mensaje": "¡El equipo recibió la pista!" if a_todos else "¡Tu compañero recibió la pista!"}
         if accion == "eco":
             if not any(o["tipo"] == "eco" and self._cerca(identificador, o) for o in self.objetivos):
                 raise ValueError("Acércate a un Tronco de los Ecos.")
             indice = solicitud.get("mensaje")
             if type(indice) is not int or not 0 <= indice < len(MENSAJES):
                 raise ValueError("Mensaje no permitido.")
+            destinatario = solicitud.get("destinatario", TODOS)
+            if destinatario != TODOS and (not isinstance(destinatario, str) or destinatario == identificador
+                                          or destinatario not in self.jugadores or destinatario not in presentes):
+                raise ValueError("El destinatario no está disponible.")
             if ahora - self.ultimo_eco.get(identificador, -10) < 2:
                 raise ValueError("Espera dos segundos antes de enviar otro eco.")
             self.ultimo_eco[identificador] = ahora
-            self._avisar(presentes, f"Eco de {jugador['nombre']}: {MENSAJES[indice]}", "eco")
-            return {"mensaje": "Eco recibido por los jugadores conectados."}
+            datos = {"orden": ORDENES_ECO[indice], "emisor": identificador}
+            if destinatario == TODOS:
+                self._avisar(presentes, f"Eco de {jugador['nombre']}: {MENSAJES[indice]}", "eco", **datos)
+                return {"mensaje": "Eco recibido por los jugadores conectados."}
+            self._avisar([destinatario], f"Eco de {jugador['nombre']} para ti: {MENSAJES[indice]}", "eco", **datos)
+            return {"mensaje": f"Eco enviado a {self.jugadores[destinatario]['nombre']}."}
         if accion in ("votar", "rectificar"):
             self._objetivo(identificador, "caldero")
             if accion == "rectificar":
@@ -206,9 +222,11 @@ class MisionPuente:
         presentes = set(presentes) & self.jugadores.keys()
         if self.resultado or len(presentes) < 2 or not presentes.issubset(self.votos):
             return
-        conteo = Counter(self.votos[i] for i in presentes)
+        # Con personas en la partida deciden ellas: los bots no las superan en votos.
+        decisores = {i for i in presentes if self.jugadores[i].get("controlador") != "bot"} or presentes
+        conteo = Counter(self.votos[i] for i in decisores)
         opcion, cantidad = conteo.most_common(1)[0]
-        if cantidad <= len(presentes) / 2:
+        if cantidad <= len(decisores) / 2:
             return  # Empate: los participantes pueden cambiar su voto.
         correcto = opcion == self.correcta
         if correcto:

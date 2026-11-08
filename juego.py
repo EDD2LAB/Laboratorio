@@ -6,14 +6,11 @@ El código del juego vive en los paquetes (ver CLAUDE.md).
 import pygame
 
 from interfaz.inicio import mostrar_menu_inicio
-from un_jugador.partida import main as jugar_un_jugador
 
 
 def main():
-    if mostrar_menu_inicio() == "individual":
-        jugar_un_jugador()
-    else:
-        pygame.quit()
+    mostrar_menu_inicio()
+    pygame.quit()
 
 
 if __name__ == "__main__":
