@@ -192,6 +192,8 @@ class PanelCooperativo:
                 return expresion(frames, pygame.time.get_ticks())
         if "darío" in clave and arte.retrato_agente is not None:
             return arte.retrato_agente
+        if self.dimension == "presente":
+            return self._retrato_distrito(clave)
         if "naira" in clave:
             sprite = next((o.get("imagen") for o in self.vista.decoraciones if "naira" in o.get("nombre", "").lower()), None)
             if sprite is not None:
@@ -201,6 +203,16 @@ class PanelCooperativo:
         if frames:
             return expresion(frames, pygame.time.get_ticks())
         return self.vista.personajes.get(yo.get("rol"), {}).get(("reposo", "abajo"), [None])[0]
+
+    def _retrato_distrito(self, clave):
+        """En Distrito Conecta solo se ven sus propios personajes."""
+        from mundo.personajes import PERSONAJES_DISTRITO
+        escena = self.vista.escenas_zoom.get("presente") or {}
+        rol = next((r for r, datos in PERSONAJES_DISTRITO.items() if datos[0].lower() in clave), None)
+        if rol is None:
+            rol = next((j["rol"] for j in self.vista.estado.get("mundo", {}).get("jugadores", [])
+                        if j["id"] == self.vista.identificador), None)
+        return (escena.get("personajes", {}).get(rol, {}).get(("reposo", "abajo")) or [None])[0]
 
     def retrato(self, superficie, nombre, x=170, y=175):
         imagen = self.imagen_retrato(nombre)

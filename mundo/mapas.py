@@ -48,21 +48,42 @@ def cargar_fondo_unificado(zoom):
     return base
 
 
-def dejar_solo_agua(objeto):
-    """La cascada animada trae pintado el fondo del mapa anterior: se conserva
-    solo lo que se mueve entre cuadros, y encima del mapa nuevo no queda un
-    rectángulo. Modifica ``objeto`` (una vez, al cargar)."""
-    origenes = objeto["origenes"]
-    tamano = origenes[0].get_size()
-    quieto = pygame.mask.Mask(tamano, fill=True)
-    for cuadro in origenes[1:]:
-        quieto = quieto.overlap_mask(pygame.mask.from_threshold(origenes[0], (0, 0, 0), (10, 10, 10, 255), cuadro), (0, 0))
-    agua = quieto.copy()
-    agua.invert()
+def cargar_fondo_presente(configuracion, rect_mapa, zoom):
+    """Mapa de Distrito Conecta a ``zoom`` veces, escalado una vez desde el original."""
+    imagen = pygame.image.load(buscar_asset(configuracion["mapa"])).convert()
+    return pygame.transform.scale(imagen, (rect_mapa[2] * zoom, rect_mapa[3] * zoom))
+
+
+def npcs_presente_ampliados(decoraciones, zoom, origen):
+    """NPC de Distrito Conecta a ``zoom`` veces, en coordenadas de la capa ampliada."""
+    from mundo.personajes import _cargar_sprite_direccional as cargar_idle
+    ampliados = []
+    for objeto in decoraciones:
+        r = objeto["rect"]
+        rect = pygame.Rect((r.x - origen[0]) * zoom, (r.y - origen[1]) * zoom, r.width * zoom, r.height * zoom)
+        idle = cargar_idle(objeto["nombre"], rect.size)
+        ampliados.append(dict(objeto, rect=rect, hitbox=rect,
+                              imagen=idle.get(objeto["direccion"]) or idle.get("abajo") or objeto["imagen"]))
+    return ampliados
+
+
+def suavizar_cascada(objeto, margen=36):
+    """La cascada se dibuja completa sobre el mapa para que se vea correr el
+    agua; solo se desvanece junto al borde del cuadro, para que no se vea un
+    corte recto. Modifica ``objeto`` (una vez, al cargar)."""
     limpios = []
-    for cuadro in origenes:
-        limpio = pygame.Surface(tamano, pygame.SRCALPHA)
-        agua.to_surface(limpio, setsurface=cuadro, unsetcolor=(0, 0, 0, 0))
+    for cuadro in objeto["origenes"]:
+        contorno = cuadro.copy()
+        contorno.fill((255, 255, 255, 0), special_flags=pygame.BLEND_RGBA_MAX)
+        # El agua llega hasta el borde del cuadro: ahí se desvanece poco a poco.
+        ancho, alto = contorno.get_size()
+        for indice in range(margen):
+            alfa = round(255 * (indice + 1) / (margen + 1))
+            for franja in ((0, indice, ancho, 1), (0, alto - 1 - indice, ancho, 1),
+                           (indice, 0, 1, alto), (ancho - 1 - indice, 0, 1, alto)):
+                contorno.fill((255, 255, 255, alfa), franja, special_flags=pygame.BLEND_RGBA_MULT)
+        limpio = cuadro.copy()
+        limpio.blit(contorno, (0, 0), special_flags=pygame.BLEND_RGBA_MIN)
         limpios.append(limpio)
     objeto["origenes"] = limpios
     objeto["frames"] = [pygame.transform.scale(limpio, objeto["rect"].size) for limpio in limpios]

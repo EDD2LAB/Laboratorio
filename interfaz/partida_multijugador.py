@@ -21,11 +21,14 @@ COLORES_CALDERO = {
     "critico": ((255, 95, 95), (190, 80, 230), (255, 150, 70)),
 }
 DIRECCIONES = ("abajo", "derecha", "arriba", "izquierda")
+DIAGONALES = ("abajo_derecha", "arriba_derecha", "arriba_izquierda", "abajo_izquierda")
 ALTURA_PERSONAJE = 53
+ALTURA_DISTRITO = 30  # en Distrito Conecta el mapa está dibujado a menor escala
+ESCALA_ANILLOS_DISTRITO = .6
 # La cámara va siempre cerca del personaje: el mapa se descubre al recorrerlo
 # en lugar de mostrarse completo de una vez. En La Copa el zoom es entero para
 # que el pixel art quede nítido.
-ZOOM_PRESENTE = 1.8
+ZOOM_PRESENTE = 3
 ZOOM_COPA = 2
 ZOOMS = {LA_COPA: ZOOM_COPA, PRESENTE: ZOOM_PRESENTE}
 
@@ -90,6 +93,9 @@ def cargar_clips_personajes():
     )
     reposo = ("Guardian_reposo_fila", "Mensajero_reposo_fila", "Habitante_hombre_reposo_fila",
               "Aspirante_a_cacique-reposo_fila")
+    # Filas 6 a 9: caminar en diagonal (en el orden de DIAGONALES).
+    diagonales = ("Fila {}. Guardián.png", "Fila {} - Mensajero.png", "HabHombre Fila {}.png",
+                  "Fila {} - Aspirante_a_cacique.png")
     por_rol = {}
     for indice, rol in enumerate(ROLES):
         clips = {}
@@ -107,6 +113,11 @@ def cargar_clips_personajes():
                 except (pygame.error, ValueError, FileNotFoundError) as error:
                     print("[Multijugador] Sin animación de correr para", rol, direccion, error)
             clips[("correr", direccion)] = frames
+        for fila, orientacion in enumerate(DIAGONALES, start=6):
+            imagen = cargar_imagen(os.path.join("NPCS", carpetas[indice], diagonales[indice].format(fila)))
+            frames = separar_frames(imagen)
+            clips[("caminar", orientacion)] = clips[("correr", orientacion)] = frames
+            clips[("reposo", orientacion)] = frames[:1]  # el primer cuadro es su pose quieta
         por_rol[rol] = clips
     return por_rol
 
@@ -115,7 +126,9 @@ def escalar_personajes(por_rol, altura):
     """Ajusta cada rol a ``altura`` (se escala una vez, con la de reposo como referencia)."""
     personajes = {}
     for rol, clips in por_rol.items():
-        escala = altura / max(f.get_height() for frames in clips.values() for f in frames)
+        # Referencia: las cuatro direcciones rectas, para que el tamaño no varíe.
+        escala = altura / max(f.get_height() for clave, frames in clips.items()
+                              if clave[1] in DIRECCIONES for f in frames)
         personajes[rol] = {
             clave: [pygame.transform.scale(f, (max(1, round(f.get_width() * escala)), max(1, round(f.get_height() * escala))))
                     for f in frames] for clave, frames in clips.items()
@@ -129,7 +142,7 @@ def cargar_personajes():
 
 class VistaPartida:
     def __init__(self, identificador, estado, audio=None):
-        from mundo.mapas import cargar_fondo_unificado, cargar_mapa_principal, decoraciones_ampliadas, dejar_solo_agua
+        from mundo.mapas import cargar_fondo_unificado, cargar_mapa_principal, decoraciones_ampliadas, suavizar_cascada
         from mundo.personajes import cargar_frames_tronco_eco
         from nucleo.recursos import cargar_fuente, cargar_imagen
         from interfaz.arte import ArtePartida
@@ -154,10 +167,14 @@ class VistaPartida:
         self.decoraciones = [o for o in decoraciones if not es_personaje_jugable(o["nombre"])]
         for objeto in self.decoraciones:
             if objeto.get("fondo_animado"):
-                dejar_solo_agua(objeto)
+                suavizar_cascada(objeto)
         self.decoraciones_zoom = decoraciones_ampliadas(self.decoraciones, ZOOM_COPA)
         self.fondo_zoom = cargar_fondo_unificado(ZOOM_COPA)
-        self.capa_copa = pygame.Surface(self.fondo_zoom.get_size()).convert()
+        self.escenas_zoom = {LA_COPA: {
+            "zoom": ZOOM_COPA, "origen": (0, 0), "fondo": self.fondo_zoom,
+            "capa": pygame.Surface(self.fondo_zoom.get_size()).convert(),
+            "decoraciones": self.decoraciones_zoom, "personajes": self.personajes_zoom,
+        }}
         self.capa_efectos = pygame.Surface((960, 720), pygame.SRCALPHA)
         self.fondo = pygame.transform.scale(self.fondo_zoom, (960, 720))
         self.fuente = cargar_fuente(16)
@@ -257,9 +274,32 @@ class VistaPartida:
             recursos = cargar_mapa_presente(DIMENSIONES[dimension])
             if recursos is None:
                 raise ValueError("No se pudo cargar " + dimension)
+            colisiones = ColisionesMapa(cargar_datos(dimension))
             self.mapas[dimension] = {"fondo": recursos["mapa"], "decoraciones": recursos["decoraciones"],
-                                     "colisiones": ColisionesMapa(cargar_datos(dimension))}
+                                     "colisiones": colisiones}
+            self.escenas_zoom[dimension] = self._escena_presente(DIMENSIONES[dimension], recursos, colisiones)
         return self.mapas[dimension]
+
+    @staticmethod
+    def _escena_presente(configuracion, recursos, colisiones):
+        """Todo escalado una sola vez a su tamaño final: en cada cuadro solo se recorta."""
+        from mundo.mapas import cargar_fondo_presente, npcs_presente_ampliados
+        from mundo.personajes import cargar_personajes_distrito
+        rect = tuple(colisiones.datos["rect_mapa"])
+        fondo = cargar_fondo_presente(configuracion, rect, ZOOM_PRESENTE)
+        return {
+            "zoom": ZOOM_PRESENTE, "origen": rect[:2], "fondo": fondo,
+            "capa": pygame.Surface(fondo.get_size()).convert(),
+            "decoraciones": npcs_presente_ampliados(recursos["decoraciones"], ZOOM_PRESENTE, rect[:2]),
+            "personajes": cargar_personajes_distrito(ALTURA_DISTRITO * ZOOM_PRESENTE),
+        }
+
+    def _npcs_gemelos(self):
+        """Quien juega ya es ese personaje: su NPC no se dibuja para que no haya dos."""
+        from mundo.personajes import PERSONAJES_DISTRITO
+        if self.dimension != PRESENTE:
+            return ()
+        return {PERSONAJES_DISTRITO[j["datos"]["rol"]][0] for j in self.jugadores.values()}
 
     def cambiar_dimension(self, dimension):
         from interfaz.escenas_multijugador import Transicion
@@ -590,23 +630,26 @@ class VistaPartida:
             return min(pendientes, key=lambda o: math.hypot(o["x"] - yo["x"], o["y"] - yo["y"]))
         return next((o for o in presente.get("objetivos", []) if o["id"] == "presente:pantalla"), None)
 
-    def _dibujar_mapa(self, superficie, ahora_ms, area=None):
-        """Mapa y decoraciones. ``area``: zona visible de la capa ampliada de La
-        Copa (coordenadas del mundo x ZOOM_COPA); sin ella, escala normal."""
+    def _dibujar_mapa(self, superficie, ahora_ms, escena=None, area=None):
+        """Mapa y decoraciones. ``escena`` y ``area``: recursos ampliados y zona
+        visible en su capa; sin ellas, escala normal."""
         from nucleo.recursos import es_hoja_portales
         from un_jugador.dibujo_mapa import dibujar_mariposa, dibujar_puente_balanceandose
-        zoom = ZOOM_COPA if area is not None else 1
-        if area is not None:
+        zoom, origen_x, origen_y = (escena["zoom"], *escena["origen"]) if escena else (1, 0, 0)
+        if escena is not None:
             superficie.set_clip(area)
-            superficie.blit(self.fondo_zoom, area, area)
+            superficie.blit(escena["fondo"], area, area)
             decoraciones, puente_1, puente_roto, frames_reparacion = (
-                self.decoraciones_zoom, self.puente_1_zoom, self.puente_roto_zoom, self.frames_reparacion_zoom)
+                escena["decoraciones"], self.puente_1_zoom, self.puente_roto_zoom, self.frames_reparacion_zoom)
         else:
             superficie.blit(self.fondo, (0, 0))
             decoraciones, puente_1, puente_roto, frames_reparacion = (
                 self.decoraciones, self.puente_1, self.puente_roto, self.frames_reparacion)
         puente = self.estado.get("mundo", {}).get("caso", {}).get("puente") or {}
+        gemelos = self._npcs_gemelos()
         for objeto in decoraciones:
+            if objeto.get("personaje") in gemelos:
+                continue
             if area is not None and not objeto.get("mariposa") and not objeto["rect"].inflate(40, 40).colliderect(area):
                 continue  # fuera de cámara: no se escala ni se rota
             if self.dimension == LA_COPA and objeto is puente_1 and puente.get("estado", "REPAIRED") != "REPAIRED":
@@ -629,8 +672,9 @@ class VistaPartida:
                 superficie.blit(objeto["imagen"], objeto["rect"])
         rect = self.rect_portal()
         if rect:
-            self.adornos.dibujar_portal(superficie, pygame.Rect(rect.x * zoom, rect.y * zoom, rect.w * zoom, rect.h * zoom),
-                                        ahora_ms, True)
+            self.adornos.dibujar_portal(
+                superficie, pygame.Rect((rect.x - origen_x) * zoom, (rect.y - origen_y) * zoom, rect.w * zoom, rect.h * zoom),
+                ahora_ms, True)
         if self.dimension == LA_COPA and self.inicio_reparacion and frames_reparacion and puente_1:
             # Efecto de reparación de 8 cuadros sobre el puente.
             transcurrido = (time.monotonic() - self.inicio_reparacion) * 1000
@@ -660,9 +704,10 @@ class VistaPartida:
             if o["id"] == objetivo.get("id") or mismo_rol or o["id"] in ("caldero", "presente:pantalla"):
                 if o["id"] == "puente_1" and (caso.get("puente") or {}).get("estado") == "REPAIRED":
                     continue
-                self.adornos.anillo_objetivo(superficie, (o["x"], o["y"] + 5), o.get("rol") or "mensajero", ahora_ms)
+                self.adornos.anillo_objetivo(superficie, (o["x"], o["y"] + 5), o.get("rol") or "mensajero", ahora_ms,
+                                             ESCALA_ANILLOS_DISTRITO if self.dimension == PRESENTE else 1)
 
-    def _dibujar_jugadores(self, suelo, vista=None, figuras=None):
+    def _dibujar_jugadores(self, suelo, vista=None, figuras=None, escena=None):
         """Sombras, anillos y cargas en ``suelo``. Con ``figuras`` (lista), los
         personajes en alta resolución se devuelven ahí, en coordenadas de pantalla."""
         from interfaz.suministros import dibujar_carga
@@ -676,16 +721,21 @@ class VistaPartida:
             estado = datos["animacion"] if time.monotonic() - self.ultimo_paquete < .5 else "reposo"
             if estado == "caminar" and datos.get("corriendo"):
                 estado = "correr"
-            hojas = self.personajes_zoom if figuras is not None else self.personajes
-            frames = hojas[rol][(estado, datos["direccion"])]
+            hojas = (escena["personajes"] if figuras is not None else self.personajes)[rol]
+            frames = hojas.get((estado, datos.get("orientacion"))) or hojas[(estado, datos["direccion"])]
             velocidad_cuadros = {"caminar": 9, "correr": 14}.get(estado, 4)
             frame = frames[int(jugador["reloj"] * velocidad_cuadros) % len(frames)]
-            pygame.draw.ellipse(suelo, (17, 28, 22), (x - 13, y - 5, 26, 8))
-            self.adornos.anillo_jugador(suelo, rol, (x, y - 1), color)
+            if self.dimension == PRESENTE:
+                pygame.draw.ellipse(suelo, (17, 28, 22), (x - 8, y - 3, 16, 5))
+                self.adornos.anillo_jugador(suelo, rol, (x, y - 1), color, ESCALA_ANILLOS_DISTRITO)
+            else:
+                pygame.draw.ellipse(suelo, (17, 28, 22), (x - 13, y - 5, 26, 8))
+                self.adornos.anillo_jugador(suelo, rol, (x, y - 1), color)
             if figuras is not None:
-                rect = frame.get_rect(midbottom=((x - vista.x) * ZOOM_COPA, (y - vista.y) * ZOOM_COPA))
+                zoom = escena["zoom"]
+                rect = frame.get_rect(midbottom=((x - vista.x) * zoom, (y - vista.y) * zoom))
                 figuras.append((frame, rect))
-                tope = y - frame.get_height() // ZOOM_COPA
+                tope = y - frame.get_height() // zoom
             else:
                 rect = frame.get_rect(midbottom=(x, y))
                 suelo.blit(frame, rect)
@@ -698,21 +748,22 @@ class VistaPartida:
             anclas.append((datos, color, (x, tope)))
         return anclas
 
-    def _mundo_copa(self, pantalla, vista, ahora_ms):
-        """La Copa con la cámara cerca: mapa, decoraciones y personajes se
-        escalan una vez a su tamaño final y aquí solo se recorta lo visible."""
-        area = pygame.Rect(vista.x * ZOOM_COPA, vista.y * ZOOM_COPA, 960, 720)
-        self._dibujar_mapa(self.capa_copa, ahora_ms, area)
-        pantalla.blit(self.capa_copa, (0, 0), area)
+    def _mundo_ampliado(self, pantalla, vista, ahora_ms, escena):
+        """Cámara cercana: mapa, decoraciones y personajes ya están escalados a
+        su tamaño final; en cada cuadro solo se recorta lo visible."""
+        zoom, (origen_x, origen_y) = escena["zoom"], escena["origen"]
+        area = pygame.Rect((vista.x - origen_x) * zoom, (vista.y - origen_y) * zoom, 960, 720)
+        self._dibujar_mapa(escena["capa"], ahora_ms, escena, area)
+        pantalla.blit(escena["capa"], (0, 0), area)
         efectos = self.capa_efectos
         efectos.fill((0, 0, 0, 0))
         self._dibujar_suelo(efectos, ahora_ms)
         figuras = []
-        anclas = self._dibujar_jugadores(efectos, vista, figuras)
+        anclas = self._dibujar_jugadores(efectos, vista, figuras, escena)
         pantalla.blit(pygame.transform.scale(efectos.subsurface(vista), pantalla.get_size()), (0, 0))
         for frame, rect in figuras:
             pantalla.blit(frame, rect)
-        self.particulas.dibujar(pantalla, camara=(vista.x, vista.y, ZOOM_COPA))
+        self.particulas.dibujar(pantalla, camara=(vista.x, vista.y, zoom))
         return anclas
 
     def _mundo_escalado(self, pantalla, vista, ahora_ms):
@@ -747,8 +798,9 @@ class VistaPartida:
         self.mouse = mouse
         ahora_ms = pygame.time.get_ticks()
         vista = self.vista_camara()
-        if vista is not None and self.dimension == LA_COPA:
-            anclas = self._mundo_copa(superficie, vista, ahora_ms)
+        escena = self.escenas_zoom.get(self.dimension) if vista is not None else None
+        if escena is not None:
+            anclas = self._mundo_ampliado(superficie, vista, ahora_ms, escena)
         else:
             anclas = self._mundo_escalado(superficie, vista, ahora_ms)
         mio = self.jugadores.get(self.identificador)
@@ -766,7 +818,10 @@ class VistaPartida:
                     self.adornos.marcador_local(superficie, (x, tope - 6), color, ahora_ms)
                 continue
             nombre = datos["nombre"] + (" (tú)" if datos["id"] == self.identificador else "")
-            if datos.get("controlador") == "bot":
+            if datos.get("controlador") == "bot" and self.dimension == PRESENTE:
+                from mundo.personajes import PERSONAJES_DISTRITO
+                nombre = "Bot · " + PERSONAJES_DISTRITO[datos["rol"]][0]
+            elif datos.get("controlador") == "bot":
                 nombre = "Bot · " + nombre
             etiqueta = self.fuente.render(nombre, True, color)
             caja = etiqueta.get_rect(midbottom=(x, tope - 7))

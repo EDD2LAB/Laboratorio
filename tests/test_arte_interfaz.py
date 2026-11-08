@@ -166,6 +166,153 @@ class ZoomYHudDeLaCopa(unittest.TestCase):
         self.assertLessEqual(len(self.vista.particulas.luciernagas), 5)
 
 
+class CaminarEnCampanaLocal(unittest.TestCase):
+    def test_al_caminar_se_usan_los_ocho_cuadros(self):
+        from interfaz.partida_multijugador import VistaPartida
+        cliente = ClienteCampanaLocal("Prueba", "guardian")
+        vista = VistaPartida("local", cliente.eventos.get_nowait())
+        vista.panel.modo = None
+        yo = cliente._partida.jugadores["local"]
+        yo.update(zip(("x", "y"), cliente._partida.colisiones.inicio_libre(480, 440)))
+        cuadros, estados = set(), set()
+        for paso in range(180):
+            cliente.mover(1 if paso % 30 < 15 else -1, 0)
+            cliente.actualizar(1 / 60)
+            while not cliente.eventos.empty():
+                evento = cliente.eventos.get_nowait()
+                if evento.get("tipo") == "estado":
+                    vista.recibir(evento)
+            local = vista.jugadores["local"]
+            local["reloj"] += 1 / 60
+            estados.add(local["datos"]["animacion"])
+            if local["datos"]["animacion"] == "caminar":
+                cuadros.add(int(local["reloj"] * 9) % 8)
+        self.assertIn("caminar", estados)
+        self.assertEqual(cuadros, set(range(8)))
+        self.assertEqual(len(vista.personajes_zoom["guardian"][("caminar", "abajo")]), 8)
+
+    def test_sin_tiempo_transcurrido_no_se_pierde_la_caminata(self):
+        cliente = ClienteCampanaLocal("Prueba", "guardian")
+        partida = cliente._partida
+        partida.jugadores["local"]["animacion"] = "caminar"
+        partida.actualizar(partida.ultima)
+        self.assertEqual(partida.jugadores["local"]["animacion"], "caminar")
+
+
+class ColisionesIndexadas(unittest.TestCase):
+    def test_el_indice_da_lo_mismo_que_revisar_todas_las_paredes(self):
+        from multijugador.dimensiones_red import PRESENTE, cargar_datos
+        from multijugador.movimiento import ColisionesMapa
+        for datos in (None, cargar_datos(PRESENTE)):
+            rapido = ColisionesMapa(datos)
+            todas = ColisionesMapa(datos)
+            todas._paredes_cercanas = lambda *_: todas.paredes
+            for x in range(0, 960, 7):
+                for y in range(0, 720, 7):
+                    self.assertEqual(rapido.bloqueado(x, y), todas.bloqueado(x, y), (x, y))
+
+    def test_los_bloqueos_de_la_partida_no_quedan_en_la_memoria(self):
+        from multijugador.movimiento import ColisionesMapa
+        colisiones = ColisionesMapa()
+        x, y = colisiones.inicio_libre(480, 430)
+        self.assertFalse(colisiones.bloqueado(x, y))
+        colisiones.bloqueos = [(int(x) - 20, int(y) - 20, 40, 40)]
+        self.assertTrue(colisiones.bloqueado(x, y))
+        colisiones.bloqueos = []
+        self.assertFalse(colisiones.bloqueado(x, y))
+
+    def test_orientaciones_de_ocho_direcciones(self):
+        from multijugador.movimiento import orientacion_de
+        casos = {(1, 0): "derecha", (1, 1): "abajo_derecha", (0, 1): "abajo", (-1, 1): "abajo_izquierda",
+                 (-1, 0): "izquierda", (-1, -1): "arriba_izquierda", (0, -1): "arriba", (1, -1): "arriba_derecha"}
+        for movimiento, esperada in casos.items():
+            self.assertEqual(orientacion_de(*movimiento), esperada)
+
+
+class OchoDireccionesEnLaCopa(unittest.TestCase):
+    def setUp(self):
+        from interfaz.partida_multijugador import cargar_clips_personajes, escalar_personajes
+        self.personajes = escalar_personajes(cargar_clips_personajes(), 106)
+
+    def test_cada_rol_camina_en_las_ocho_direcciones(self):
+        from mundo.personajes import ORIENTACIONES_SPRITE
+        for rol in ROLES:
+            for orientacion in ORIENTACIONES_SPRITE:
+                self.assertEqual(len(self.personajes[rol][("caminar", orientacion)]), 8, (rol, orientacion))
+                self.assertIn(("correr", orientacion), self.personajes[rol])
+
+    def test_las_diagonales_no_cambian_la_altura_del_personaje(self):
+        for rol in ROLES:
+            rectas = [f.get_height() for d in ("abajo", "derecha", "arriba", "izquierda")
+                      for estado in ("caminar", "correr", "reposo") for f in self.personajes[rol][(estado, d)]]
+            self.assertEqual(max(rectas), 106, rol)
+
+
+class BotsNoReparan(unittest.TestCase):
+    def test_con_una_persona_los_bots_dejan_el_puente(self):
+        from bots.planificador_bot import PlanificadorBot
+        planificador = PlanificadorBot()
+        caso = {"encargo": {"materiales_colocados": True, "completo": False}, "ronda": 0,
+                "puente": {"estado": "READY_TO_REPAIR", "reparador": None}}
+        privado = {"objetivo": {"id": "puente_1", "x": 300, "y": 300}}
+        bot, caldero, memoria = mock.Mock(identificador="bot"), {"id": "caldero", "x": 480, "y": 380}, mock.Mock()
+        con_persona = [{"id": "h", "controlador": "humano"}, {"id": "bot", "controlador": "bot"}]
+        plan = planificador._preparacion(bot, caso, privado, caldero, memoria, con_persona)
+        self.assertEqual(plan["estado"], "ESPERANDO_EQUIPO")
+        memoria.reservar_preparacion.assert_not_called()
+        plan = planificador._preparacion(bot, caso, privado, caldero, memoria, [{"id": "bot", "controlador": "bot"}])
+        self.assertEqual(plan["estado"], "REPARANDO_PUENTE")
+
+
+class DistritoConecta(unittest.TestCase):
+    def setUp(self):
+        from interfaz.partida_multijugador import VistaPartida
+        self.cliente = ClienteCampanaLocal("Prueba", "guardian")
+        partida = self.cliente._partida
+        ocupadas = []
+        for indice, jugador in enumerate(partida.jugadores.values()):
+            x, y = partida.colisiones_de("presente").inicio_libre(466 + indice * 26, 590, ocupadas)
+            ocupadas.append((x, y))
+            jugador.update(dimension="presente", x=x, y=y)
+        self.cliente._publicar_estado()
+        ultimo = None
+        while not self.cliente.eventos.empty():
+            ultimo = self.cliente.eventos.get_nowait()
+        self.vista = VistaPartida("local", ultimo)
+        self.vista.transicion = None
+        self.vista.panel.modo = None
+        self.lienzo = pygame.Surface((960, 720))
+
+    def test_zoom_mucho_mayor_y_personajes_propios(self):
+        from interfaz.partida_multijugador import ZOOM_PRESENTE
+        self.assertEqual(self.vista.dimension, "presente")
+        self.assertEqual(self.vista.vista_camara().size, (960 // ZOOM_PRESENTE, 720 // ZOOM_PRESENTE))
+        escena = self.vista.escenas_zoom["presente"]
+        la_copa = self.vista.personajes_zoom["mensajero"][("caminar", "abajo")][0]
+        self.assertFalse(any(frame is la_copa for frame in escena["personajes"]["mensajero"][("caminar", "abajo")]))
+        self.vista.dibujar(self.lienzo, "LOCAL")
+
+    def test_cada_rol_tiene_ocho_direcciones_de_ocho_cuadros(self):
+        from mundo.personajes import ORIENTACIONES_SPRITE
+        personajes = self.vista.escenas_zoom["presente"]["personajes"]
+        for rol in ROLES:
+            for orientacion in ORIENTACIONES_SPRITE:
+                self.assertEqual(len(personajes[rol][("caminar", orientacion)]), 8, (rol, orientacion))
+                self.assertEqual(len(personajes[rol][("reposo", orientacion)]), 1, (rol, orientacion))
+        # Las diagonales usan sus propias filas donde el arte las tiene.
+        mensajero = personajes["mensajero"]
+        self.assertIsNot(mensajero[("caminar", "abajo_derecha")], mensajero[("caminar", "derecha")])
+
+    def test_no_se_dibuja_el_npc_de_quien_ya_juega_ese_personaje(self):
+        gemelos = self.vista._npcs_gemelos()
+        self.assertIn("Ronaldo Vélez", gemelos)
+        self.assertNotIn("Darío Veraz", gemelos)
+
+    def test_el_portal_queda_centrado_con_las_escaleras(self):
+        rect = self.vista.rect_portal()
+        self.assertEqual(rect.centerx, 466)
+
+
 class PuentesAmpliados(unittest.TestCase):
     def test_todos_los_objetivos_siguen_alcanzables(self):
         from multijugador.movimiento import ColisionesMapa, PartidaMovimiento

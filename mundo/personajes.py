@@ -308,6 +308,59 @@ PERSONAJES_PRESENTES = (
 )
 
 
+# Equivalencias de CONTINUIDAD_PERSONAJES: rol -> (nombre, hoja, última fila).
+# Filas: 1 reposo en 8 orientaciones; 2-5 caminar recto; 6-9 caminar en diagonal.
+PERSONAJES_DISTRITO = {
+    "guardian": ("Elías Vega", "NPCS/NPC Mundo2/NPC2-mundo2-Fila{fila}.png", 5),
+    "mensajero": ("Mateo Ríos", "NPCS/Mensajero urbano/Mensajero_urbano-Fila{fila}.png", 9),
+    "habitante": ("Tomás Red", "NPCS/Habitante Conectada/Habitante_conectada-Fila{fila}.png", 9),
+    "aspirante": ("Ronaldo Vélez", "NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila{fila}.png", 9),
+}
+FILAS_CAMINAR = {
+    "abajo": 2, "derecha": 3, "arriba": 4, "izquierda": 5,
+    "abajo_derecha": 6, "arriba_derecha": 7, "arriba_izquierda": 8, "abajo_izquierda": 9,
+}
+RECTA_EQUIVALENTE = {
+    "abajo_derecha": "derecha", "arriba_derecha": "derecha",
+    "arriba_izquierda": "izquierda", "abajo_izquierda": "izquierda",
+}
+
+
+def _recortar_juntos(frames):
+    """Recorta todos los cuadros por igual: el personaje no tiembla al animarse."""
+    limites = frames[0].get_bounding_rect()
+    for frame in frames[1:]:
+        limites.union_ip(frame.get_bounding_rect())
+    return [frame.subsurface(limites).copy() for frame in frames]
+
+
+def cargar_personajes_distrito(altura):
+    """Clips de los equivalentes de Distrito Conecta, a ``altura`` píxeles (una sola vez)."""
+    personajes = {}
+    for rol, (_, plantilla, ultima_fila) in PERSONAJES_DISTRITO.items():
+        reposo = cargar_spritesheet_frames(plantilla.format(fila=1), len(ORIENTACIONES_SPRITE))
+        clips = {("reposo", orientacion): _recortar_juntos([frame])
+                 for orientacion, frame in zip(ORIENTACIONES_SPRITE, reposo)}
+        for orientacion, fila in FILAS_CAMINAR.items():
+            if fila <= ultima_fila:
+                clips[("caminar", orientacion)] = _recortar_juntos(
+                    cargar_spritesheet_frames(plantilla.format(fila=fila), 8))
+        for orientacion, recta in RECTA_EQUIVALENTE.items():
+            clips.setdefault(("caminar", orientacion), clips[("caminar", recta)])
+        for orientacion in ORIENTACIONES_SPRITE:
+            clips[("correr", orientacion)] = clips[("caminar", orientacion)]
+        escala = altura / max(f.get_height() for frames in clips.values() for f in frames)
+        escalados = {}  # las orientaciones que comparten hoja comparten sus cuadros
+        for clave, frames in clips.items():
+            if id(frames) not in escalados:
+                escalados[id(frames)] = [
+                    pygame.transform.scale(f, (max(1, round(f.get_width() * escala)), max(1, round(f.get_height() * escala))))
+                    for f in frames
+                ]
+        personajes[rol] = {clave: escalados[id(frames)] for clave, frames in clips.items()}
+    return personajes
+
+
 def _cargar_ruta_npc(datos_ruta, rect_mapa, nombre):
     if not isinstance(datos_ruta, dict):
         return None

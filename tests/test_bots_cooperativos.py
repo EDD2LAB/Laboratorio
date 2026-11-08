@@ -4,6 +4,7 @@ from unittest.mock import patch
 from bots.planificador_bot import PlanificadorBot
 from multijugador.partida_local import ClienteCampanaLocal
 from multijugador.movimiento import ColisionesMapa, PartidaMovimiento
+from test_campana_copa import tiempo_acierto
 
 
 class PlanificadorBotTests(unittest.TestCase):
@@ -80,6 +81,22 @@ class CampanaLocalBotsTests(unittest.TestCase):
                 medio="directo",
             )
 
+    def reparar_puente_a_mano(self, cliente, partida):
+        self.avanzar_hasta(cliente, lambda: partida.mision.encargo.materiales_colocados,
+                           "colocar los materiales del puente", limite=1500)
+        for _ in range(120):  # con una persona en la partida, ningún bot lo toca
+            cliente.actualizar(.1)
+        puente = partida.mision.puente
+        self.assertEqual(puente.estado, "READY_TO_REPAIR")
+        self.assertIsNone(puente.reparador)
+        objetivo = partida.mision.objetivo_puente
+        partida.jugadores["local"].update(x=objetivo["x"], y=objetivo["y"])
+        cliente.actuar("interactuar", objetivo="puente_1")
+        while puente.estado == "REPAIR_MINIGAME":
+            cliente.actualizar(.1)
+            cliente.actuar("intento_reparacion", tiempo_aguja_ms=tiempo_acierto(puente))
+        self.avanzar_hasta(cliente, lambda: puente.reparado, "terminar la reparación")
+
     def test_campana_completa_con_inferencia_votos_y_suministros(self):
         cliente = ClienteCampanaLocal("Prueba", "guardian")
         partida = cliente._partida
@@ -113,14 +130,17 @@ class CampanaLocalBotsTests(unittest.TestCase):
             if ronda == len(partida.mision.casos) - 1:
                 continue
 
+            if ronda == 0:
+                self.reparar_puente_a_mano(cliente, partida)
+
             self.avanzar_hasta(
                 cliente,
                 lambda: bots.issubset(partida.mision.preparados),
                 f"preparar suministros para el caso {ronda + 2}",
                 limite=1500,
             )
-            # Los bots solos recogen, entregan en el puesto, hacen la actividad
-            # en pareja y (caso 1) reparan el Puente 1 con el minijuego.
+            # Los bots solos recogen, entregan en el puesto y hacen la actividad
+            # en pareja; el Puente 1 (caso 1) lo repara la persona.
             self.assertTrue(partida.mision.encargo.completo)
             self.assertFalse(partida.mision.encargo.cargas)
             if ronda == 0:

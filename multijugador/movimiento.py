@@ -13,6 +13,15 @@ VELOCIDAD = 155.0
 # Shift: correr (mismo multiplicador que el modo de un jugador, mundo/jugador.py).
 MULTIPLICADOR_CORRER = 1.65
 MAPA = Path(__file__).resolve().parent.parent / "Hitboxes" / "Mapas" / "Pr_MañanaLumi_hitboxes.json"
+LADO_CELDA = 32  # tamaño de las celdas del índice de paredes
+MAX_MEMORIA_COLISIONES = 300_000
+ORIENTACIONES = ("derecha", "abajo_derecha", "abajo", "abajo_izquierda",
+                 "izquierda", "arriba_izquierda", "arriba", "arriba_derecha")
+
+
+def orientacion_de(dx, dy):
+    """Una de las ocho orientaciones de los sprites para un movimiento (y crece hacia abajo)."""
+    return ORIENTACIONES[round(math.atan2(dy, dx) / (math.pi / 4)) % 8]
 
 
 def normalizar(texto):
@@ -44,6 +53,38 @@ class ColisionesMapa:
             if ruta.startswith("npcs/") and not es_personaje_jugable(ruta):
                 self.npcs.append((round(objeto["x"] * ANCHO), round(objeto["y"] * ALTO),
                                   max(1, round(objeto["w"] * ANCHO)), max(1, round(objeto["h"] * ALTO))))
+        self._celdas = self._indexar_paredes()
+        # El mapa no cambia: cada posición entera se calcula una sola vez.
+        self._memoria = {}
+
+    def _caja_pared(self, pared):
+        """Rectángulo (x1, y1, x2, y2) fuera del cual la pared no puede tocar a nadie."""
+        tipo = pared.get("type", "rect")
+        if tipo == "rect":
+            x, y, w, h = self.rectangulo(pared)
+            return x, y, x + w, y + h
+        if tipo == "circle":
+            cx, cy = pared.get("cx", 0) * ANCHO, pared.get("cy", 0) * ALTO
+            radio = max(4, pared.get("r", 0) * ANCHO)
+            return cx - radio, cy - radio, cx + radio, cy + radio
+        if tipo == "line":
+            x1, y1 = pared.get("x1", 0) * ANCHO, pared.get("y1", 0) * ALTO
+            x2, y2 = pared.get("x2", 0) * ANCHO, pared.get("y2", 0) * ALTO
+            margen = math.hypot(12, 8) / 2 + max(2, pared.get("thickness", .008) * ANCHO) / 2
+            return min(x1, x2) - margen, min(y1, y2) - margen, max(x1, x2) + margen, max(y1, y2) + margen
+        return None
+
+    def _indexar_paredes(self):
+        celdas = {}
+        for pared in self.paredes:
+            caja = self._caja_pared(pared)
+            if caja is None:
+                continue
+            x1, y1, x2, y2 = (math.floor(valor / LADO_CELDA) for valor in caja)
+            for cx in range(x1, x2 + 1):
+                for cy in range(y1, y2 + 1):
+                    celdas.setdefault((cx, cy), []).append(pared)
+        return celdas
 
     @staticmethod
     def rectangulo(h):
@@ -58,7 +99,29 @@ class ColisionesMapa:
 
     def bloqueado(self, x, y):
         # La posición pública representa el centro inferior de la hitbox de pies.
-        rect = (round(x) - 6, round(y) - 8, 12, 8)
+        clave = (round(x), round(y))
+        rect = (clave[0] - 6, clave[1] - 8, 12, 8)
+        # Lo único que cambia durante la partida (p. ej., el Puente 1 roto).
+        if self.bloqueos and any(self.solapa(rect, bloqueo) for bloqueo in self.bloqueos):
+            return True
+        resultado = self._memoria.get(clave)
+        if resultado is None:
+            if len(self._memoria) >= MAX_MEMORIA_COLISIONES:
+                self._memoria.clear()
+            resultado = self._memoria[clave] = self._bloqueado_fijo(rect)
+        return resultado
+
+    def _paredes_cercanas(self, izquierda, arriba, derecha, abajo):
+        vistas, resultado = set(), []
+        for cx in range(izquierda // LADO_CELDA, derecha // LADO_CELDA + 1):
+            for cy in range(arriba // LADO_CELDA, abajo // LADO_CELDA + 1):
+                for pared in self._celdas.get((cx, cy), ()):
+                    if id(pared) not in vistas:
+                        vistas.add(id(pared))
+                        resultado.append(pared)
+        return resultado
+
+    def _bloqueado_fijo(self, rect):
         izquierda, arriba, w, h = rect
         derecha, abajo = izquierda + w, arriba + h
         if izquierda < 0 or arriba < 0 or derecha > ANCHO or abajo > ALTO:
@@ -67,9 +130,7 @@ class ColisionesMapa:
             lx, ly, lw, lh = self.limites
             if izquierda < lx or arriba < ly or derecha > lx + lw or abajo > ly + lh:
                 return True
-        if any(self.solapa(rect, bloqueo) for bloqueo in self.bloqueos):
-            return True
-        for pared in self.paredes:
+        for pared in self._paredes_cercanas(izquierda, arriba, derecha, abajo):
             tipo = pared.get("type", "rect")
             if tipo == "rect" and self.solapa(rect, self.rectangulo(pared)):
                 return True
@@ -298,8 +359,11 @@ class PartidaMovimiento:
             factor = MULTIPLICADOR_CORRER if correr else 1.0
             nx, ny = self.colisiones_de(jugador.get("dimension", LA_COPA)).mover(x, y, dx, dy, segundos, factor)
             jugador["x"], jugador["y"] = nx, ny
-            jugador["animacion"] = "caminar" if math.hypot(nx - x, ny - y) > .01 else "reposo"
-            jugador["corriendo"] = correr and jugador["animacion"] == "caminar"
+            if ahora > desde:  # sin tiempo transcurrido nadie se mueve: se conserva su estado
+                jugador["animacion"] = "caminar" if math.hypot(nx - x, ny - y) > .01 else "reposo"
+                jugador["corriendo"] = correr and jugador["animacion"] == "caminar"
+            if dx or dy:
+                jugador["orientacion"] = orientacion_de(dx, dy)
             if dx:
                 jugador["direccion"] = "derecha" if dx > 0 else "izquierda"
             elif dy:
