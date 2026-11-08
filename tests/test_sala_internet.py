@@ -108,6 +108,9 @@ class PruebasHTTP(unittest.TestCase):
             host.enviar("listo", listo=True)
             otro.enviar("listo", listo=True)
             esperar(host, lambda e: e["tipo"] == "estado" and all(j["listo"] for j in e["jugadores"]))
+            from multijugador.tiempo_real import SERVICIO
+            # Compara posiciones entre dos clientes: sin bots que se muevan entre lecturas.
+            servidor.app[SERVICIO].salas[codigo].rellenar_con_bots = False
             host.enviar("iniciar")
             a = esperar(host, lambda e: e["tipo"] == "estado" and e["iniciada"])
             b = esperar(otro, lambda e: e["tipo"] == "estado" and e["iniciada"])

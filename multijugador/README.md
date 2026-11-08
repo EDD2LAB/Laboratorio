@@ -261,7 +261,8 @@ Acciones nuevas (`{"tipo": "accion", "accion": ...}`):
 | `interactuar` con `objetivo="puente_1"` | — | Caso 1 en preparación, materiales colocados, cercanía, nadie más reparando. |
 | `intento_reparacion` | `tiempo_aguja_ms` | Es quien repara, cadencia ≥0,25 s, tiempo creciente y ≤ reloj del servidor + 1,5 s. El acierto se recalcula con `multijugador/reparacion.py`. |
 | `cerrar_reparacion` | — | Libera el minijuego para otro jugador. |
-| `usar_portal` | `destino` (`la_copa`, `presente`, `futuro`) | Cercanía al portal de su dimensión y destino disponible. Funciona siempre. |
+| `usar_portal` | `destino` (`la_copa`, `presente`, `futuro`) | Cercanía al portal y destino disponible. Propone o acepta el viaje; el equipo viaja junto cuando todos los humanos de la dimensión aceptaron (protocolo 7). |
+| `cancelar_portal` | — | Retira la aceptación del viaje propuesto. |
 | `interactuar` con `objetivo="presente:..."` | — | Pistas y pantalla pública de Distrito Conecta. |
 | `presente_votar` | `opcion` | Tres pistas reunidas y cercanía a la pantalla pública. |
 | `presente_clasificar` | `categoria` | Hay decisión en Distrito Conecta. |
@@ -278,3 +279,19 @@ en `multijugador/presentacion.py`; categorías en `multijugador/clasificacion.py
 (sobre `Arboles.construir_arbol_categorias_multijugador`); dimensiones en
 `multijugador/dimensiones_red.py`. El Dockerfile copia también `Arboles.py` y
 `Hitboxes/Mapas/Presente/`.
+
+## Protocolo 7
+
+- **Viaje en grupo**: `usar_portal` registra una propuesta (`mundo.viaje`:
+  `origen`, `destino`, `nombre`, `aceptan`, `faltan`). Viaja todo el equipo,
+  bots incluidos, cuando aceptan todos los humanos de la dimensión. Quien se
+  aleja del portal o se desconecta deja de aceptar. Al viajar se libera el
+  minijuego del puente y la actividad en pareja del mapa que se deja.
+- **Correr**: el mensaje `mover` acepta `correr` (booleano, opcional; los
+  clientes antiguos caminan). Velocidad ×1,65 (`MULTIPLICADOR_CORRER`, la
+  misma del modo de un jugador); el estado incluye `jugadores[].corriendo`.
+- **Bots de relleno**: al iniciar una sala, los roles libres los ocupan bots
+  (`bot_<rol>`, `controlador: "bot"`) que el servidor actualiza en su ciclo con
+  el mismo `GestorBots` de la campaña local (`SalaInternet.rellenar_con_bots`).
+  En Distrito Conecta los bots acompañan a los humanos; votan solo humanos.
+  El Dockerfile copia también `bots/`.

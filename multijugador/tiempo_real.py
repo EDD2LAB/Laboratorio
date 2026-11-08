@@ -149,6 +149,7 @@ async def simulacion(app):
             for sala in list(servicio.salas.values()):
                 if sala.partida:
                     sala.partida.actualizar(ahora)
+                    sala.actualizar_bots(ahora)
                     sala._publicar()
             # No esperar a la red dentro del reloj de simulación. Cada cliente
             # tiene un escritor independiente y conserva solo el estado nuevo.

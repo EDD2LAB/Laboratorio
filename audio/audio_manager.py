@@ -16,7 +16,13 @@ class GestorAudio:
     CANALES_MUSICA = (4, 5)
     TIEMPO_COOLDOWN_POCION_AGOTADA = 650
 
-    def __init__(self, ruta_base):
+    def __init__(self, ruta_base, categorias=False):
+        """``categorias=True`` (multijugador/bots): volúmenes separados de
+        música, ambiente (Ambiente.mp3 y caldero) y efectos, más uno general.
+        Sin él (modo un jugador) se conserva el comportamiento original."""
+        self.categorias = categorias
+        self.volumen_general = 1.0
+        self.volumen_ambiente = 0.70
         carpeta_audios = os.path.join(ruta_base, "Audios")
         self.rutas_musica = {
             "ambiente": os.path.join(carpeta_audios, "Ambiente.mp3"),
@@ -113,6 +119,23 @@ class GestorAudio:
     def establecer_volumen_efectos(self, valor):
         self.volumen_efectos = self._limitar_volumen(valor)
         self._actualizar_volumen_efectos()
+
+    def establecer_volumen_ambiente(self, valor):
+        self.volumen_ambiente = self._limitar_volumen(valor)
+        self._actualizar_volumen_musicas()
+        self._actualizar_volumen_efectos()
+
+    def establecer_volumen_general(self, valor):
+        self.volumen_general = self._limitar_volumen(valor)
+        self._actualizar_volumen_musicas()
+        self._actualizar_volumen_efectos()
+
+    def _volumen_canal_efectos(self, canal):
+        if self.silenciado:
+            return 0.0
+        if self.categorias and canal == self.CANAL_CALDERO:
+            return self.volumen_general * self.volumen_ambiente
+        return self.volumen_general * self.volumen_efectos
 
     @staticmethod
     def _limitar_volumen(valor):
@@ -231,7 +254,7 @@ class GestorAudio:
         canal_audio = self._canales_efectos.get(canal)
         if sonido is None or canal_audio is None or self.silenciado:
             return False
-        canal_audio.set_volume(self.volumen_efectos)
+        canal_audio.set_volume(self._volumen_canal_efectos(canal))
         canal_audio.play(sonido)
         return True
 
@@ -244,7 +267,7 @@ class GestorAudio:
         canal_audio = self._canales_efectos.get(canal)
         if not sonidos or canal_audio is None or self.silenciado:
             return False
-        canal_audio.set_volume(self.volumen_efectos)
+        canal_audio.set_volume(self._volumen_canal_efectos(canal))
         canal_audio.play(sonidos[0])
         for sonido in sonidos[1:]:
             canal_audio.queue(sonido)
@@ -325,6 +348,10 @@ class GestorAudio:
     def _volumen_efectivo_musica(self, identificador):
         if self.silenciado:
             return 0.0
+        if self.categorias:
+            if identificador == "ambiente":
+                return self.volumen_general * self.volumen_ambiente
+            return self.volumen_general * self.volumen_musica
         multiplicador = 0.72 if identificador == "ambiente" else 1.0
         return self.volumen_musica * multiplicador
 
@@ -335,6 +362,5 @@ class GestorAudio:
             canal.set_volume(volumen)
 
     def _actualizar_volumen_efectos(self):
-        volumen = 0.0 if self.silenciado else self.volumen_efectos
-        for canal in self._canales_efectos.values():
-            canal.set_volume(volumen)
+        for indice, canal in self._canales_efectos.items():
+            canal.set_volume(self._volumen_canal_efectos(indice))

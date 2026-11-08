@@ -117,13 +117,14 @@ class CampanaLocalBotsTests(unittest.TestCase):
                 cliente,
                 lambda: bots.issubset(partida.mision.preparados),
                 f"preparar suministros para el caso {ronda + 2}",
+                limite=1500,
             )
-            self.assertTrue(bots.issubset(partida.mision.depositos))
-
-            objetivo = partida.mision.privado("local")["objetivo"]
-            partida.jugadores["local"].update(x=objetivo["x"], y=objetivo["y"])
-            cliente.actuar("interactuar", objetivo=objetivo["id"])
-            self.assertIn("local", partida.mision.materiales)
+            # Los bots solos recogen, entregan en el puesto, hacen la actividad
+            # en pareja y (caso 1) reparan el Puente 1 con el minijuego.
+            self.assertTrue(partida.mision.encargo.completo)
+            self.assertFalse(partida.mision.encargo.cargas)
+            if ronda == 0:
+                self.assertTrue(partida.mision.puente.reparado)
 
             partida.jugadores["local"].update(x=480, y=380)
             cliente.actuar("interactuar", objetivo="caldero")

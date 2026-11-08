@@ -113,6 +113,10 @@ class EncargoSuministros:
             raise ValueError("Ese material ya fue entregado. Cambia tu carga en el otro punto de recogida.")
         self.entregados[material] = jugador
         self.cargas.pop(jugador)
+        # Quien llevaba el mismo material ya no lo necesita: lo suelta para no
+        # quedarse cargando un objeto que nadie puede entregar.
+        for otro in [i for i, m in self.cargas.items() if m == material]:
+            self.cargas.pop(otro)
         return "Entrega confirmada: " + self.nombre(material) + "."
 
     def objetivo(self, jugador, jugadores):

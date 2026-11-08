@@ -238,8 +238,54 @@ class PortalTests(unittest.TestCase):
         p.jugadores[i].update(x=destino[0], y=destino[1])
 
     def viajar(self, p, i, destino):
-        self.ir_al_portal(p, i)
-        return p.actuar(i, dict(accion="usar_portal", destino=destino, ronda=p.mision.ronda, id_solicitud=uuid.uuid4().hex), p.ultima)
+        """Viaje en grupo: ``i`` propone y luego aceptan los demás humanos de su dimensión."""
+        origen = p.jugadores[i]["dimension"]
+        orden = [i] + [j for j in p.jugadores if j != i and p.jugadores[j]["dimension"] == origen]
+        acuse = None
+        for j in orden:
+            self.ir_al_portal(p, j)
+            acuse = p.actuar(j, dict(accion="usar_portal", destino=destino, ronda=p.mision.ronda,
+                                     id_solicitud=uuid.uuid4().hex), p.ultima)
+            if not acuse["ok"]:
+                return acuse
+        return acuse
+
+    def test_el_equipo_viaja_junto_solo_si_todos_aceptan(self):
+        p = crear(2, mapa_real=True)
+        self.ir_al_portal(p, "0")
+        primero = p.actuar("0", dict(accion="usar_portal", destino=PRESENTE, ronda=0, id_solicitud=uuid.uuid4().hex), 0)
+        self.assertTrue(primero["ok"])
+        self.assertEqual(p.jugadores["0"]["dimension"], LA_COPA)  # espera al compañero
+        self.assertEqual(p.estado("1")["viaje"]["faltan"], ["B"] if p.jugadores["1"]["nombre"] == "B" else [p.jugadores["1"]["nombre"]])
+        # Cancelar retira la aceptación.
+        p.actuar("0", dict(accion="cancelar_portal", ronda=0, id_solicitud=uuid.uuid4().hex), 0)
+        self.assertIsNone(p.estado("0")["viaje"])
+        self.assertTrue(self.viajar(p, "0", PRESENTE)["ok"])
+        self.assertEqual({j["dimension"] for j in p.jugadores.values()}, {PRESENTE})
+
+    def test_alejarse_del_portal_retira_la_aceptacion(self):
+        p = crear(2, mapa_real=True)
+        self.ir_al_portal(p, "0")
+        p.actuar("0", dict(accion="usar_portal", destino=PRESENTE, ronda=0, id_solicitud=uuid.uuid4().hex), 0)
+        p.jugadores["0"].update(x=480, y=420)
+        p.actualizar(p.ultima + .1)
+        self.assertIsNone(p.viaje)
+
+    def test_bots_viajan_con_el_humano_y_lo_acompanan(self):
+        from multijugador.partida_local import ClienteCampanaLocal
+        cliente = ClienteCampanaLocal("Prueba", "guardian")
+        p = cliente._partida
+        self.ir_al_portal(p, "local")
+        cliente.actuar("usar_portal", destino=PRESENTE)
+        self.assertEqual({j["dimension"] for j in p.jugadores.values()}, {PRESENTE})
+        for _ in range(40):
+            cliente.actualizar(.15)
+        humano = p.jugadores["local"]
+        for identificador, bot in cliente._bots.bots.items():
+            self.assertEqual(bot.estado, "ACOMPANANDO")
+            j = p.jugadores[identificador]
+            self.assertLessEqual(((j["x"] - humano["x"]) ** 2 + (j["y"] - humano["y"]) ** 2) ** .5, 110)
+        cliente.cerrar()
 
     def test_portal_funciona_antes_y_despues_y_conserva_indicadores(self):
         h, p = Ayuda(), crear(2, mapa_real=True)
@@ -282,7 +328,10 @@ class PortalTests(unittest.TestCase):
 
     def test_quien_cambia_de_dimension_no_se_ve_ni_interactua_en_la_anterior(self):
         p = crear(2, mapa_real=True)
-        self.assertTrue(self.viajar(p, "0", PRESENTE)["ok"])
+        # El portal mueve al equipo completo; aquí se simula un jugador que
+        # quedó en otra dimensión (p. ej., al reconectarse) para la visibilidad.
+        x, y = p.colisiones_de(PRESENTE).inicio_libre(480, 620)
+        p.jugadores["0"].update(dimension=PRESENTE, x=x, y=y)
         jugadores = p.estado("1")["jugadores"]
         self.assertEqual([j["id"] for j in jugadores_visibles(jugadores, LA_COPA)], ["1"])
         self.assertEqual([j["id"] for j in jugadores_visibles(jugadores, PRESENTE)], ["0"])
@@ -307,6 +356,11 @@ class PortalTests(unittest.TestCase):
         p.jugadores["0"].update(x=pantalla["x"], y=pantalla["y"])
         antes = dict(p.mision.indicadores)
         self.assertTrue(accion(accion="presente_votar", opcion="verificar")["ok"])
+        # El equipo viajó junto: la pantalla pública espera el voto del compañero.
+        self.assertFalse(m.completada)
+        p.jugadores["1"].update(x=pantalla["x"], y=pantalla["y"])
+        self.assertTrue(p.actuar("1", dict(accion="presente_votar", opcion="verificar", ronda=p.mision.ronda,
+                                           id_solicitud=uuid.uuid4().hex), p.ultima)["ok"])
         self.assertTrue(m.completada)
         self.assertEqual(m.resultado["tipo_pocion"], "consultar")
         self.assertEqual(p.mision.indicadores["desinformacion"], max(0, antes["desinformacion"] - 5))
@@ -362,8 +416,14 @@ class VistaClienteTests(unittest.TestCase):
         PortalTests.ir_al_portal(None, p, "0")
         p.actuar("0", dict(accion="usar_portal", destino=PRESENTE, ronda=0, id_solicitud=uuid.uuid4().hex), 0)
         v.recibir({"mundo": p.estado("0")})
+        self.assertEqual(v.dimension, LA_COPA)  # falta que acepte el compañero
+        lienzo = self.pygame.Surface((960, 720))
+        v.dibujar(lienzo, "T")  # aviso del viaje propuesto
+        PortalTests.ir_al_portal(None, p, "1")
+        p.actuar("1", dict(accion="usar_portal", destino=PRESENTE, ronda=0, id_solicitud=uuid.uuid4().hex), 0)
+        v.recibir({"mundo": p.estado("0")})
         self.assertEqual(v.dimension, PRESENTE)
-        self.assertEqual(set(v.jugadores), {"0"})
+        self.assertEqual(set(v.jugadores), {"0", "1"})  # el equipo viajó junto
         yo = p.jugadores["0"]
         self.assertEqual(tuple(v.jugadores["0"]["posicion"]), (yo["x"], yo["y"]))  # sin recorrer el mapa
         self.assertIsNotNone(v.transicion)

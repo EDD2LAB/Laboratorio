@@ -547,6 +547,9 @@ class PanelCooperativo:
                 self.abrir("caldero")
             elif clave.startswith("viajar:"):
                 self.vista.viajar(cliente, clave.split(":", 1)[1])
+            elif clave == "cancelar_portal":
+                cliente.actuar("cancelar_portal")
+                self.modo = None
             elif clave == "rectificar":
                 cliente.actuar("rectificar")
             break

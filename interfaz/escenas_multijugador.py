@@ -299,14 +299,28 @@ def dibujar_portal(panel, superficie, destinos, origen):
     pygame.draw.rect(superficie, (106, 218, 204), rect, 3, border_radius=16)
     titulo = r["fuente_resultado"].render("¿A QUÉ ÉPOCA VIAJAMOS?", True, (231, 255, 247))
     superficie.blit(titulo, titulo.get_rect(center=(480, 168)))
-    panel.texto_lineas(superficie, "Los indicadores del equipo viajan contigo. Puedes volver cuando quieras.",
-                       210, 200, 540, r["fuente_panel"], VERDE)
+    viaje = panel.vista.viaje()
+    if viaje:
+        acepte = panel.vista.identificador in viaje["aceptan"]
+        estado = ("Aceptaste ir a " + viaje["nombre"] + "." if acepte else "Proponen ir a " + viaje["nombre"] + ".")
+        if viaje["faltan"]:
+            estado += " Faltan: " + ", ".join(viaje["faltan"]) + "."
+        panel.texto_lineas(superficie, estado, 210, 200, 540, r["fuente_panel"], (255, 222, 112))
+    else:
+        panel.texto_lineas(superficie, "El equipo viaja junto: todos deben venir al portal y aceptar. "
+                           "Los indicadores viajan con ustedes.", 210, 200, 540, r["fuente_panel"], VERDE)
     for i, destino in enumerate(destinos):
         texto = destino["epoca"] + " · " + destino["nombre"] + ("" if destino["disponible"] else " (en construcción)")
+        if viaje and viaje["destino"] == destino["id"] and panel.vista.identificador not in viaje["aceptan"]:
+            texto = "Aceptar: " + texto
         boton = Boton(texto, centro=(480, 290 + i * 78), fuente=r["fuente_boton"], tamano=(470, 58),
                       desactivado=not destino["disponible"])
         boton.dibujar(superficie, panel.vista.mouse)
         panel.botones["viajar:" + destino["id"]] = boton
+    if viaje and panel.vista.identificador in viaje["aceptan"]:
+        boton = Boton("Ya no quiero viajar", centro=(480, 515), fuente=r["fuente_boton"], tamano=(330, 48))
+        boton.dibujar(superficie, panel.vista.mouse)
+        panel.botones["cancelar_portal"] = boton
 
 
 class Transicion:

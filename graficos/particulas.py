@@ -132,6 +132,22 @@ class SistemaParticulas:
                 "color": self.rng.choice(self.paleta),
             })
 
+    def emitir_columna(self, x, y, cantidad=2, colores=None, ancho=13):
+        """Chispas que suben desde un punto (vapor mágico del caldero)."""
+        disponibles = self.MAX_PARTICULAS - len(self.particulas)
+        for _ in range(min(max(0, cantidad), disponibles)):
+            vida = self.rng.uniform(1.0, 1.7)
+            self.particulas.append({
+                "x": float(x) + self.rng.uniform(-ancho, ancho),
+                "y": float(y) + self.rng.uniform(-3, 3),
+                "vx": self.rng.uniform(-7, 7),
+                "vy": -self.rng.uniform(20, 36),
+                "vida": vida,
+                "vida_max": vida,
+                "tamano": self.rng.choice((3, 4, 4, 5, 6)),
+                "color": self.rng.choice(colores or self.paleta),
+            })
+
     def actualizar(self, delta_ms):
         delta = max(0, delta_ms) / 1000
         self.tiempo += delta

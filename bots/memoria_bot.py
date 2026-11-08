@@ -13,6 +13,13 @@ class MemoriaEquipo:
         self.votos_propuestos = {}
         self.solicitudes_ayuda = {}
         self.suministros_pendientes = set()
+        # Tareas de preparación que solo debe hacer un bot (sujetar, trabajar,
+        # reparar el puente). Clave con la ronda: no hace falta limpiarlas.
+        self.reservas_preparacion = {}
+
+    def reservar_preparacion(self, bot_id, tarea):
+        propietario = self.reservas_preparacion.setdefault(tarea, bot_id)
+        return propietario == bot_id
 
     def reservar_tarea(self, bot_id, tarea):
         propietario = self.tareas_en_progreso.get(tarea)

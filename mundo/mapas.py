@@ -122,6 +122,8 @@ def cargar_mapa_principal():
             "puente_animable": es_puente and not es_escalera,
             "frames": imagenes_frames,
             "tronco_eco": nombre_normalizado.startswith("tronco ecos/"),
+            # La mariposa vuela alrededor del punto del editor (dibujar_mariposa).
+            "mariposa": nombre_normalizado.endswith("animales/mariposa.png"),
         })
 
     decoraciones.sort(

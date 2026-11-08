@@ -113,6 +113,7 @@ class CampanaCopa(MisionPuente):
         self.clasificaciones = {}
         # Ganchos que instala PartidaMovimiento (portal y Distrito Conecta).
         self.viajar = None
+        self.cancelar_viaje = None
         self.presente = None
         self.presentes_presente = set()
 
@@ -199,6 +200,10 @@ class CampanaCopa(MisionPuente):
             if self.viajar is None:
                 raise ValueError("El portal no está disponible.")
             return self.viajar(identificador, solicitud.get("destino"))
+        if accion == "cancelar_portal":
+            if self.cancelar_viaje is None:
+                raise ValueError("El portal no está disponible.")
+            return self.cancelar_viaje(identificador)
         objetivo_pedido = solicitud.get("objetivo")
         if accion in ("presente_votar", "presente_clasificar") or (
                 accion == "interactuar" and isinstance(objetivo_pedido, str) and objetivo_pedido.startswith("presente:")):

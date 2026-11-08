@@ -24,6 +24,7 @@ class ClienteCampanaLocal:
         self._partida = PartidaMovimiento(jugadores, 0)
         self._bots = GestorBots(self._partida, self.identificador, dificultad)
         self._movimiento = (0, 0)
+        self._correr = False
         self._secuencia = 0
         self._ahora = 0.0
         self._revision = 0
@@ -39,10 +40,11 @@ class ClienteCampanaLocal:
             "aspirante": "Kael · Aspirante",
         }[rol]
 
-    def mover(self, dx, dy):
+    def mover(self, dx, dy, correr=False):
         if dx not in (-1, 0, 1) or dy not in (-1, 0, 1):
             raise ValueError("Dirección de movimiento inválida.")
         self._movimiento = (dx, dy)
+        self._correr = bool(correr)
 
     def actuar(self, accion, **datos):
         if self._cerrado:
@@ -64,7 +66,7 @@ class ClienteCampanaLocal:
         dx, dy = self._movimiento
         self._partida.recibir(
             self.identificador,
-            {"dx": dx, "dy": dy, "seq": self._secuencia},
+            {"dx": dx, "dy": dy, "seq": self._secuencia, "correr": self._correr},
             self._ahora,
         )
         self._secuencia += 1

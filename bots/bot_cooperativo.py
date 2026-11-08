@@ -21,6 +21,11 @@ ESTADOS_BOT = (
     "TRANSPORTANDO_SUMINISTRO",
     "DEPOSITANDO_SUMINISTRO",
     "CONFIRMANDO_CONTINUACION",
+    "ENTREGANDO_SUMINISTRO",
+    "SUJETANDO",
+    "TRABAJANDO",
+    "REPARANDO_PUENTE",
+    "ACOMPANANDO",
     "ESPERANDO_EQUIPO",
     "PAUSADO_POR_EVENTO",
     "REEMPLAZADO_POR_HUMANO",
@@ -32,6 +37,8 @@ DEMORAS_MS = {
     "habilidad": (600, 900),
     "votar": (900, 1400),
     "continuar": (400, 650),
+    "sujetar": (300, 500),
+    "trabajar": (700, 950),  # el servidor exige 0,6 s entre pasos
     "rectificar": (700, 1000),
 }
 
@@ -51,6 +58,9 @@ class BotCooperativo:
         self.habilidad_usada = False
         self.suministro_recogido = False
         self.suministro_depositado = False
+        self.ahora = 0.0
+        self.inicio_reparacion = None  # reloj local al abrir el minijuego del puente
+        self.ultimo_tiempo_aguja = -1.0
         self.voto_propuesto = None
         self.confianza_decision = 0.0
         self.tiempo_espera = 0.0
@@ -76,6 +86,21 @@ class BotCooperativo:
             self.estado = "REEMPLAZADO_POR_HUMANO"
             self.posicion["animacion"] = "reposo"
             return
+        self.ahora = ahora
+        dimension = self.posicion.get("dimension", "la_copa")
+        if dimension != self.dimension:
+            # Viajó con el equipo: lo que hacía en el mapa anterior terminó.
+            self.dimension = dimension
+            self._accion = None
+            self._datos_accion = {}
+            self._tiempo_accion = 0
+            self.inicio_reparacion = None
+            self._navegador.destino = None
+            self._navegador.ruta = []
+            try:
+                self._navegador.colisiones = self._adaptador.partida.colisiones_de(dimension)
+            except (AttributeError, OSError, ValueError) as error:
+                self.ultimo_error = str(error)
         caso = estado_partida["caso"]
         if caso["ronda"] != self._ronda:
             self._ronda = caso["ronda"]
@@ -102,6 +127,7 @@ class BotCooperativo:
                 self.posicion,
                 (destino["x"], destino["y"]),
                 segundos,
+                plan.get("radio"),
             )
             self.ruta = list(self._navegador.ruta)
             if not llegado:

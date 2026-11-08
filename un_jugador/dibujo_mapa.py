@@ -246,6 +246,41 @@ def dibujar_debug_grafo(superficie, grafo, decoraciones):
         superficie.blit(etiqueta, etiqueta_rect)
 
 
+def posicion_mariposa(objeto, tiempo):
+    """Vuelo suave en ocho alrededor del punto colocado en el editor."""
+    cx, cy = objeto["rect"].center
+    fase = (cx * 0.013 + cy * 0.007) % math.tau
+    t = tiempo / 1000 + fase
+    x = cx + 70 * math.sin(t * .31) + 22 * math.sin(t * .83 + 1.3)
+    y = cy + 28 * math.sin(t * .47 + .6) + 10 * math.sin(t * 1.21)
+    return x, y
+
+
+def dibujar_mariposa(superficie, objeto, tiempo, animar=True):
+    """Mariposa con los 8 cuadros de Animales/Mariposa.png: aletea mientras
+    recorre una trayectoria, mira hacia donde vuela y proyecta una sombra."""
+    frames = objeto["frames"]
+    if not animar:
+        superficie.blit(frames[0], objeto["rect"])
+        return
+    if "frames_izquierda" not in objeto:
+        objeto["frames_izquierda"] = [pygame.transform.flip(f, True, False) for f in frames]
+    x, y = posicion_mariposa(objeto, tiempo)
+    siguiente_x, _ = posicion_mariposa(objeto, tiempo + 60)
+    hacia_izquierda = siguiente_x < x
+    # Aleteo rápido y un pequeño rebote vertical sincronizado con las alas.
+    indice = int(tiempo / 70) % len(frames)
+    y += 3 * math.sin(tiempo / 70 * math.tau / len(frames))
+    cuadro = (objeto["frames_izquierda"] if hacia_izquierda else frames)[indice]
+    sombra = objeto.get("sombra")
+    if sombra is None:
+        sombra = pygame.Surface((max(6, cuadro.get_width() // 2), 6), pygame.SRCALPHA)
+        pygame.draw.ellipse(sombra, (10, 20, 12, 70), sombra.get_rect())
+        objeto["sombra"] = sombra
+    superficie.blit(sombra, sombra.get_rect(center=(round(x), round(y) + 26)))
+    superficie.blit(cuadro, cuadro.get_rect(center=(round(x), round(y))))
+
+
 def dibujar_puente_balanceandose(superficie, objeto, tiempo):
     """Da vida a los puentes sin mover sus hitboxes ni alterar el grafo."""
     rect_base = objeto["rect"]
@@ -312,6 +347,8 @@ def dibujar_decoraciones_editor(superficie, recursos, animar=True):
             dibujar_puente_balanceandose(superficie, objeto, tiempo)
         elif objeto.get("puente"):
             superficie.blit(objeto["imagen"], objeto["rect"])
+        elif objeto.get("mariposa") and objeto.get("frames"):
+            dibujar_mariposa(superficie, objeto, tiempo, animar)
         elif objeto.get("frames") and not objeto.get("tronco_eco"):
             frames = objeto["frames"]
             frame = frames[(tiempo // 140) % len(frames)] if animar else frames[0]

@@ -10,8 +10,7 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 - Juego: `.venv\Scripts\python.exe juego.py`
 - Pruebas: `.venv\Scripts\python.exe -m unittest discover -s tests`
   (sin pantalla: `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy`; no hay pytest instalado).
-  La prueba `test_bots_cooperativos` ya fallaba antes del refactor.
-- Red de seguridad de arranque: `-m unittest discover -s tests -p "test_arranque.py"`
+  - Red de seguridad de arranque: `-m unittest discover -s tests -p "test_arranque.py"`
 - Servidor multijugador local: `.venv\Scripts\python.exe -m multijugador.servicio_internet`
   y en otra consola `$env:COPA_SERVIDOR_INTERNET="http://127.0.0.1:10000"`.
 - Benchmark: `.venv\Scripts\python.exe herramientas/benchmark.py --segundos 60`
@@ -25,13 +24,13 @@ elegido. Detalle en `docs/arquitectura.md`.
 
 | Paquete | Responsabilidad |
 | --- | --- |
-| `nucleo/` | Constantes (`config`), rutas (`rutas`), carga de recursos y utilidades de texto (`recursos`) |
+| `nucleo/` | Constantes (`config`), rutas (`rutas`), carga de recursos y utilidades de texto (`recursos`), preferencias del jugador (`preferencias`, modo de pantalla) |
 | `logica/` | Árboles de decisión/clasificación, estado del juego, dimensiones, grafo físico, propagación, habilidades, conversaciones |
 | `mundo/` | Personajes, mapas, colisiones, cámara, NPC, jugador, grafo de la aldea, creación del mundo, reparación de puentes |
 | `un_jugador/` | Escenas y bucle del modo un jugador (HUD, mapa, códice, tablilla, escenas, ventana, `partida.main`) |
-| `interfaz/` | Componentes de UI y vista del multijugador (menú inicial, panel cooperativo, HUD de indicadores, efectos) |
+| `interfaz/` | Componentes de UI y vista del multijugador (menú inicial, menú de pausa con Esc, presentación sin bandas negras, panel cooperativo, HUD de indicadores, efectos) |
 | `multijugador/` | Servidor autoritativo, protocolo, salas, misiones cooperativas, clientes |
-| `bots/` | Bots cooperativos |
+| `bots/` | Bots cooperativos (campaña local y relleno de roles libres en salas en línea) |
 | `graficos/`, `audio/` | Partículas/animaciones y gestor de audio |
 | `editores/` | Editores de hitboxes, alineación y personajes |
 | `herramientas/` | Benchmark |
