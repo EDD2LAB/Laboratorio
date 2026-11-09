@@ -154,6 +154,33 @@ class EventosDelPresente(ConPantalla):
                 self.assertIn("introduccion", botones)
         self.assertIn("clasificar:Generado con IA", self.dibujar("clasificar"))
 
+    def test_publicar_lanza_sus_efectos_una_sola_vez(self):
+        efectos = self.vista.celular.efectos
+        falso = {"opcion": "compartir", "correcto": False, "evento_id": 7}
+        efectos.por_resultado(falso)
+        self.assertEqual([e[0] for e in efectos.activos], ["publicar_avion", "likes", "alcance_ondas", "fuego_viral"])
+        efectos.por_resultado(falso)  # el mismo evento vuelve a llegar
+        self.assertEqual(len(efectos.activos), 4)
+
+    def test_verificar_no_lanza_efectos_de_publicar(self):
+        efectos = self.vista.celular.efectos
+        efectos.por_resultado({"opcion": "verificar", "correcto": True, "evento_id": 8})
+        self.assertEqual(efectos.activos, [])
+
+    def test_los_efectos_tienen_tope(self):
+        from interfaz.celular import MAX_EFECTOS
+        efectos = self.vista.celular.efectos
+        for i in range(20):
+            efectos.lanzar(i, ("likes", (0, 0), 0))
+        self.assertEqual(len(efectos.activos), MAX_EFECTOS)
+
+    def test_analizar_abre_el_panel_y_el_comparador(self):
+        botones = self.dibujar("analizar")
+        self.assertIn("comparar", botones)
+        self.assertIsNotNone(self.vista.celular.analisis)
+        self.assertIsNotNone(self.vista.celular.comparador)
+        self.assertEqual(len(self.vista.celular.avatares), 4)
+
     def test_las_pistas_nombran_a_los_personajes_del_distrito(self):
         from interfaz.celular import equipo_distrito
         self.assertEqual(equipo_distrito(self.vista.panel, incluir_yo=True), ["Elías Vega", "Mateo Ríos"])

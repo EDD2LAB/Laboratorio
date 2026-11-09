@@ -25,6 +25,7 @@ class PanelCooperativo:
         self.indice_pista = self.indice_destino = 0
         self.destino_fijo = None
         self._velo = None
+        self.comparando = False  # celular: panel de análisis o comparador de video
         self.botones = {}
         self.fuente = cargar_fuente(18)
         self.pequena = cargar_fuente(14)
@@ -640,6 +641,10 @@ class PanelCooperativo:
                                categoria=clave.split(":", 1)[1])
             elif clave == "caldero":
                 self.abrir("caldero")
+            elif clave == "analizar":
+                self.abrir("analizar")
+            elif clave == "comparar":
+                self.comparando = not self.comparando
             elif clave.startswith("viajar:"):
                 self.vista.viajar(cliente, clave.split(":", 1)[1])
             elif clave == "cancelar_portal":

@@ -380,6 +380,8 @@ class VistaPartida:
         tipo = resultado.get("tipo_pocion")
         if self.dimension == PRESENTE:  # en Distrito Conecta no hay pociones
             self.sonido({"tipo": "clasificacion", "correcta": bool(resultado.get("correcto"))})
+            if self.celular is not None:
+                self.celular.efectos.por_resultado(resultado)
             return
         if not tipo:
             return
