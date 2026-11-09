@@ -7,6 +7,7 @@ import pygame
 from interfaz import celular
 from interfaz.arte import dibujar_icono, expresion
 from interfaz.boton import Boton
+from interfaz.suministros import dibujar_carga
 from multijugador.mision import TODOS
 from multijugador.reparacion import CONFIGURACION as CONFIG_REPARACION
 
@@ -389,6 +390,7 @@ class PanelCooperativo:
                 self.texto_lineas(superficie, "¡Hola, detectives! La aldea necesita su ayuda.", 290, 180, 495)
                 self.texto_lineas(superficie, "Aprendamos a caminar, hablar y llevar un farol. Será una misión corta, sin reloj.", 290, 265, 495)
                 self.boton(superficie, "iniciar_tutorial", "Aprender jugando", 480, 420, 430)
+                dibujar_carga(superficie, "farol", (735, 420), 34)
                 self.boton(superficie, "saltar_tutorial", "Ya sé jugar", 480, 480, 330)
             elif self.caso.get("fase") == "preparacion":
                 self.dibujar_encargo(superficie)
@@ -425,6 +427,7 @@ class PanelCooperativo:
             self.texto_lineas(superficie, "Siguiente paso: " + guia.get("detalle", "Sigue la luz del mapa."), 165, 405, 630, self.fuente, VERDE)
             if guia.get("paso") == "tutorial":
                 self.boton(superficie, "seguir", "Llevar el farol", 480, 535, 470)
+                dibujar_carga(superficie, "farol", (750, 535), 34)
             else:
                 self.boton(superficie, "inventario", "Ver y compartir mis pistas", 480, 535, 470)
         elif self.modo == "inventario":

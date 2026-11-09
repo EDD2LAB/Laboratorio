@@ -15,6 +15,7 @@ CONFIG_REPARACION_MS = _CONFIG_REPARACION["duracion_animacion_ms"]
 COLORES = ((83, 222, 212), (241, 199, 86), (183, 137, 246), (247, 140, 120))
 # Boca del caldero en el lienzo 960x720 (el objetivo "caldero" está en su base, 480,380).
 BOCA_CALDERO = (480, 336)
+DESVIO_FAROL = (44, 6)  # respecto al objetivo del caldero
 COLORES_CALDERO = {
     "estable": ((93, 218, 205), (111, 219, 150), (190, 245, 255)),
     "peligroso": ((238, 201, 92), (255, 150, 70), (200, 130, 255)),
@@ -721,7 +722,7 @@ class VistaPartida:
 
     def _dibujar_suelo(self, superficie, ahora_ms):
         """Ruta guía, encargos y anillos de objetivo (coordenadas del mundo)."""
-        from interfaz.suministros import dibujar_encargos
+        from interfaz.suministros import dibujar_encargos, dibujar_farol_en_suelo
         self.adornos.ruta(superficie, self.ruta_guia, ahora_ms)
         mundo = self.estado.get("mundo", {})
         caso = mundo.get("caso", {})
@@ -730,6 +731,9 @@ class VistaPartida:
         if self.dimension == LA_COPA:
             # Con la cámara cerca el texto se amplía: se parte de una fuente menor.
             dibujar_encargos(superficie, caso, self.hud.fuente)
+            caldero = next((o for o in caso.get("objetivos", []) if o["id"] == "caldero"), None)
+            if caldero and self._farol_en_el_suelo(privado.get("tutorial", {})):
+                dibujar_farol_en_suelo(superficie, (caldero["x"] + DESVIO_FAROL[0], caldero["y"] + DESVIO_FAROL[1]), ahora_ms)
         objetivo = (guia.get("objetivo") or privado.get("objetivo") or {}) if self.dimension == LA_COPA else (self._objetivo_presente() or {})
         for o in self.contexto().get("objetivos", []):
             mismo_rol = objetivo.get("rol") and o.get("rol") == objetivo["rol"]
@@ -738,6 +742,11 @@ class VistaPartida:
                     continue
                 self.adornos.anillo_objetivo(superficie, (o["x"], o["y"] + 5), o.get("rol") or "mensajero", ahora_ms,
                                              ESCALA_ANILLOS_DISTRITO if self.dimension == PRESENTE else 1)
+
+    @staticmethod
+    def _farol_en_el_suelo(tutorial):
+        """Hasta que el guía del caldero lo entrega (paso 2), el farol espera junto a él."""
+        return tutorial.get("estado") in ("pendiente", "activo") and tutorial.get("paso", 0) < 2
 
     def _dibujar_jugadores(self, suelo, vista=None, figuras=None, escena=None):
         """Sombras, anillos y cargas en ``suelo``. Con ``figuras`` (lista), los

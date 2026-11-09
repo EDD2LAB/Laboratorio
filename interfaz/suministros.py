@@ -2,14 +2,21 @@
 
 Tablas, cuerda y canasta de herramientas usan el arte real
 (Herramientas/HerramientasReparación.png, recortado una vez por
-SistemaReparacionPuente.recortar_spritesheet_materiales). Los materiales sin
-arte en el repositorio conservan su icono de píxeles.
+SistemaReparacionPuente.recortar_spritesheet_materiales); el farol, Assets
+eventos/farol.png. Los materiales sin arte conservan su icono de píxeles, que
+también sirve de respaldo si una imagen no carga.
 """
+import math
+
 import pygame
+
+from nucleo.recursos import cargar_imagen
 
 # id de material en red -> clave del recorte del spritesheet.
 CLAVES_SPRITE = {"tablas": "tablas", "cuerdas": "cuerda", "herramientas": "herramientas"}
+RUTA_FAROL = "Assets eventos/farol.png"
 _sprites = {}
+_brillos = {}  # radio -> círculo translúcido ya dibujado
 
 
 def clave_cesto(encargo):
@@ -20,14 +27,37 @@ def clave_cesto(encargo):
 def configurar_sprites(materiales):
     """Escala una vez cada material a los dos tamaños que se dibujan."""
     _sprites.clear()
-    for material, clave in CLAVES_SPRITE.items():
-        imagen = (materiales or {}).get(clave)
+    imagenes = {material: (materiales or {}).get(clave) for material, clave in CLAVES_SPRITE.items()}
+    farol = cargar_imagen(RUTA_FAROL, requerido=False)
+    if farol is None:
+        print("[Arte] Falta la imagen:", RUTA_FAROL)
+    else:
+        # Con umbral de alfa: los píxeles casi invisibles del borde lo harían ver más pequeño.
+        imagenes["farol"] = farol.subsurface(farol.get_bounding_rect(min_alpha=32))
+    for material, imagen in imagenes.items():
         if imagen is None:
             continue
         for tamano in (26, 34):
             escala = min(tamano / imagen.get_width(), tamano / imagen.get_height())
             _sprites[(material, tamano)] = pygame.transform.scale(
                 imagen, (max(1, round(imagen.get_width() * escala)), max(1, round(imagen.get_height() * escala))))
+
+
+def _brillo(radio):
+    """Halo cálido, degradado hacia fuera; cada radio se dibuja una sola vez."""
+    if radio not in _brillos:
+        halo = pygame.Surface((radio * 2, radio * 2), pygame.SRCALPHA)
+        for r in range(radio, 0, -2):
+            pygame.draw.circle(halo, (255, 205, 110, round(95 * (1 - r / radio) ** 1.3)), (radio, radio), r)
+        _brillos[radio] = halo
+    return _brillos[radio]
+
+
+def dibujar_farol_en_suelo(superficie, centro, ahora_ms):
+    """El farol esperando a que lo recojan, con un brillo que pulsa detrás."""
+    halo = _brillo(26 + round(6 * math.sin(ahora_ms / 320)))
+    superficie.blit(halo, halo.get_rect(center=centro))
+    dibujar_carga(superficie, "farol", centro, 34)
 
 
 def dibujar_carga(superficie, material, centro, tamano=26):
