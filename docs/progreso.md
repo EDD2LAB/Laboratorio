@@ -77,3 +77,15 @@ Barra de recarga: llena si se puede usar, media si falta la prueba propia, vací
   (18 de finales, 22 de diálogos, 12 de AVL/sorteo y 8 de claridad), aprobadas.
   Se actualizó la expectativa antigua que dibujaba a Mira como NPC fijo.
   Revisada visualmente la vista integrada del mapa.
+
+---
+
+# Progreso — rama `terminar-cambios` (Fase 3)
+
+Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
+
+- Bloque A: Kael y Tarek por defecto; quien no se elige queda como NPC y el
+  elegido no se duplica; textos del puente norte; regla en CLAUDE.md. La flecha
+  `IndicadorDirrKael.png` ya señalaba el objetivo del equipo, no a Kael.
+- Bloque B: icono de ventana y logo animado en el menú. No hay ffmpeg en esta
+  máquina, así que `Video_icono.mp4` no se convirtió.

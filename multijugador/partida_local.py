@@ -37,7 +37,7 @@ class ClienteCampanaLocal:
             "guardian": "Guardián",
             "mensajero": "Mateo · Mensajero",
             "habitante": "Tarek · Habitante",
-            "aspirante": "Mira · Aspirante",
+            "aspirante": "Kael · Aspirante",
         }[rol]
 
     def mover(self, dx, dy, correr=False):

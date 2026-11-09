@@ -12,7 +12,7 @@ from .presentacion import tipo_pocion
 
 # Fragmento de la ruta del sprite colocado en el mapa -> personaje.
 PATRONES_COPA = (("/naira/", "Naira"), ("/odran/", "Sabio de las Raices"), ("/darek/", "Darek"),
-                 ("habitante mujer", "Luma"), ("aspirante mujer", "Mira"), ("aspirante hombre", "Kael"))
+                 ("habitante mujer", "Luma"), ("habitante hombre", "Tarek"), ("aspirante mujer", "Mira"), ("aspirante hombre", "Kael"))
 NOMBRES_CON_TILDE = {"Sabio de las Raices": "Sabio de las Raíces"}
 # Quien juega un rol ya es ese personaje en Distrito Conecta.
 PERSONAJE_DE_ROL = {"guardian": "Elías Vega", "mensajero": "Mateo Ríos", "habitante": "Tomás Red", "aspirante": "Ronaldo Vélez"}
@@ -22,6 +22,18 @@ CAMINOS = {"colgar": "Colgarla", "quemar": "Quemarla", "consultar": "Consultar",
 def _normalizar(texto):
     return "".join(c for c in unicodedata.normalize("NFD", str(texto).replace("\\", "/").lower())
                    if unicodedata.category(c) != "Mn")
+
+
+def personajes_elegidos(jugadores):
+    """Personajes de La Copa que ya están en manos de alguien (sin apariencia: Kael y Tarek)."""
+    elegidos = set()
+    for jugador in jugadores:
+        mujer = jugador.get("apariencia") == "mujer"
+        if jugador.get("rol") == "aspirante":
+            elegidos.add("Mira" if mujer else "Kael")
+        elif jugador.get("rol") == "habitante":
+            elegidos.add("Luma" if mujer else "Tarek")
+    return elegidos
 
 
 def identificador_npc(nombre):
@@ -73,7 +85,8 @@ class DialogosNPC:
 
     def _visibles(self):
         presente = self.campana.presente
-        npcs = list(self.npcs_copa)
+        elegidos = personajes_elegidos(self.campana.jugadores.values())
+        npcs = [n for n in self.npcs_copa if n["nombre"] not in elegidos]
         if presente is not None:
             # Si alguien juega a quien tiene la pista, se le habla a ese jugador, esté donde esté.
             gemelos = {PERSONAJE_DE_ROL[j["rol"]]: j for j in self.campana.jugadores.values()}

@@ -96,7 +96,7 @@ class CampanaTests(unittest.TestCase):
                     for i in p.jugadores:
                         self.assertTrue(self.accion(p, i, "votar", opcion=caso[3])["ok"])
                     self.assertTrue(p.mision.resultado["correcto"])
-                    self.assertIn(caso[5] if ronda else "rumor", p.mision.resultado["texto"])
+                    self.assertIn(caso[5] if ronda else "no por Kael", p.mision.resultado["texto"])
                     if ronda < len(CASOS) - 1:
                         self.avanzar(p)
                         self.assertFalse(p.mision.conocidas["0"])

@@ -241,7 +241,7 @@ class MisionPuente:
         correcto = opcion == self.correcta
         if correcto:
             efectos = {"confianza": 8 if self.rectificacion else 12, "armonia": 8, "susurros_falsos": -5, "desinformacion": -10}
-            texto = "El cierre total de hoy era un rumor. Publicaron una aclaración con fuentes: mañana habrá mantenimiento parcial."
+            texto = "El puente se dañó por el desgaste y la lluvia, no por Kael. Sigue abierto hoy; mañana habrá mantenimiento parcial."
             self.estado_puente = "revision_programada"
         elif opcion == "difundir":
             efectos = {"confianza": -12, "armonia": -8, "susurros_falsos": 10, "desinformacion": 20}
@@ -270,8 +270,8 @@ class MisionPuente:
         participantes = set(presentes) & self.jugadores.keys()
         empate = bool(participantes) and participantes.issubset(self.votos) and self.resultado is None
         return {
-            "id": "puente_norte", "titulo": "¿Cerraron el puente norte?",
-            "noticia": "Circula que Kael cerró hoy todo el puente norte por decisión propia.",
+            "id": "puente_norte", "titulo": "¿Quién rompió el puente norte?",
+            "noticia": "Alguien dice que Kael rompió el puente por descuido y por eso lo cerraron. ¿Será verdad?",
             "objetivos": [dict(o) for o in self.objetivos], "pruebas_halladas": len(self.halladas),
             "investigadores": len(set(self.halladas.values())), "entregas": len(self.entregas),
             "votos_emitidos": sum(i in self.votos for i in participantes), "votantes": len(participantes),

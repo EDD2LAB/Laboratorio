@@ -8,7 +8,7 @@ import pygame
 from interfaz.boton import Boton
 from interfaz.etiquetas_jugadores import colocar_etiquetas
 
-from multijugador.movimiento import ColisionesMapa, es_personaje_jugable
+from multijugador.movimiento import ColisionesMapa
 from multijugador.dimensiones_red import FUTURO, LA_COPA, PRESENTE
 from multijugador.protocolo import ROLES, NOMBRES_ROLES
 from multijugador.reparacion import CONFIGURACION as _CONFIG_REPARACION
@@ -204,7 +204,8 @@ class VistaPartida:
         self.personajes = escalar_personajes(clips, ALTURA_PERSONAJE)
         self.personajes_zoom = escalar_personajes(clips, ALTURA_PERSONAJE * ZOOM_COPA)
         _, decoraciones, _, _, _, _ = cargar_mapa_principal()
-        self.decoraciones = [o for o in decoraciones if not es_personaje_jugable(o["nombre"])]
+        # Guardián y Mensajero siempre los juega alguien; Kael, Mira, Tarek y Luma dependen de la elección.
+        self.decoraciones = [o for o in decoraciones if o.get("personaje") not in ("Guardián", "Mensajero")]
         for objeto in self.decoraciones:
             if objeto.get("fondo_animado"):
                 suavizar_cascada(objeto)
@@ -381,7 +382,10 @@ class VistaPartida:
     def _npcs_gemelos(self):
         """En la calle no se dibuja a quien está jugando alguien ni a quien espera dentro de un edificio."""
         from mundo.personajes import PERSONAJES_DISTRITO
+        from multijugador.dialogos import personajes_elegidos
         from multijugador.presente import EVENTOS
+        if self.dimension == LA_COPA:
+            return personajes_elegidos(self.estado.get("mundo", {}).get("jugadores", []))
         if self.dimension != PRESENTE:
             return ()
         return {PERSONAJES_DISTRITO[j["datos"]["rol"]][0] for j in self.jugadores.values()} | {
@@ -584,7 +588,7 @@ class VistaPartida:
         objetivos = [dict(o) for o in self.contexto().get("objetivos", []) if self.cerca(o)
                      and not (o["id"] == "puente_1" and puente.get("estado") not in ("READY_TO_REPAIR", "REPAIR_MINIGAME"))
                      and not (o.get("tipo") == "fuente" and (o["x"], o["y"]) in junto_a_npc and o.get("rol") != yo["rol"])]
-        objetivos.extend({"id": "npc:" + n["id"], "nombre": "Consultar el archivo de Mira" if n["nombre"] == "Mira" else "Hablar con " + n["nombre"], "x": n["x"], "y": n["y"]} for n in npcs)
+        objetivos.extend({"id": "npc:" + n["id"], "nombre": "Hablar con " + n["nombre"], "x": n["x"], "y": n["y"]} for n in npcs)
         encargo = caso.get("encargo") if self.dimension == LA_COPA else None
         if encargo:
             for o in objetivos:
@@ -634,10 +638,7 @@ class VistaPartida:
     def _clave_figura(self, datos):
         """Rol o variante elegida; se carga la primera vez que alguien la usa."""
         rol = datos["rol"]
-        apariencia = datos.get("apariencia")
-        if rol == "aspirante" and apariencia is None:
-            apariencia = "mujer"  # Mira es la Aspirante predeterminada, también para bots.
-        if apariencia != "mujer" or rol not in VARIANTES_MUJER or self.dimension != LA_COPA:
+        if datos.get("apariencia") != "mujer" or rol not in VARIANTES_MUJER or self.dimension != LA_COPA:
             return rol
         clave = rol + "_mujer"
         if clave not in self.personajes:
@@ -1359,7 +1360,7 @@ class VistaPartida:
             if npc["dimension"] != self.dimension or not self.cerca(npc) or npc.get("jugador") == self.identificador:
                 continue
             if npc["nombre"] not in self._etiquetas_npc:
-                texto_npc = "Archivo de Mira · E: consultar" if npc["nombre"] == "Mira" else npc["nombre"] + " · E: hablar"
+                texto_npc = npc["nombre"] + " · E: hablar"
                 self._etiquetas_npc[npc["nombre"]] = self.fuente.render(texto_npc, True, (255, 243, 210))
             texto = self._etiquetas_npc[npc["nombre"]]
             x, y = self.a_pantalla(npc["x"], npc["y"] - (ALTURA_INTERIOR + 6 if self.interior else 62), vista)

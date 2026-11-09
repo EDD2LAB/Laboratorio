@@ -12,9 +12,9 @@ from copy import deepcopy
 
 
 CASOS = (
-    ("puente_norte", "¿Cerraron el puente norte?",
-     "Alguien dice que Kael cerró hoy el puente. ¿Será verdad?", "corregir", None,
-     "El puente sigue abierto hoy; mañana habrá mantenimiento parcial."),
+    ("puente_norte", "¿Quién rompió el puente norte?",
+     "Alguien dice que Kael rompió el puente por descuido y por eso lo cerraron. ¿Será verdad?", "corregir", None,
+     "El puente se dañó por el desgaste y la lluvia, no por Kael. Sigue abierto hoy; mañana habrá mantenimiento parcial."),
     ("agua", "Agua bajo sospecha",
      "Un mensaje viejo dice que el agua de hoy está sucia. ¿Habla del mismo lugar?", "descartar", {
          "guardian": ("Fecha del informe", "El documento citado corresponde a un depósito clausurado hace diez años."),

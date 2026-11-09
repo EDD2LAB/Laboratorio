@@ -2,8 +2,8 @@
 
 TESTIMONIOS = {
     "Rumor Politico": {
-        "Kael": ("Estuve hablando del puente norte con el consejo. ¿Quién te contó que quiero cerrarlo?", "Una propuesta, una discusión y una decisión no son lo mismo. Pide que te expliquen cuál ocurrió."),
-        "Mira": ("Escuché que Kael quiere cerrar el puente, pero no estuve en la reunión.", "Mi información viene de otra persona. No deberías presentarla como si yo hubiera visto la reunión."),
+        "Kael": ("Revisé con el consejo las tablas del puente norte. ¿Quién te contó que yo lo rompí?", "Una propuesta, una discusión y una decisión no son lo mismo. Pide que te expliquen cuál ocurrió."),
+        "Mira": ("Escuché que Kael rompió el puente, pero yo no estaba allí.", "Mi información viene de otra persona. No deberías presentarla como si yo hubiera visto la reunión."),
         "Tarek": ("Vi gente reunida cerca del puente. No pude escuchar lo que discutían.", "Que hubiera una reunión no demuestra que hayan decidido cerrar el paso."),
         "Luma": ("El mensaje llegó por los Ecos sin decir quién escuchó a Kael.", "Cada vez que lo repiten suena más seguro, aunque sigue faltando la fuente original."),
         "Mensajero": ("Crucé el puente esta mañana. Estaba abierto cuando pasé.", "Puedo confirmar cómo estaba esta mañana, pero eso no prueba qué planea el consejo para después."),

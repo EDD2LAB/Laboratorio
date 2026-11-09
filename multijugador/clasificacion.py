@@ -5,7 +5,7 @@ ARBOL = construir_arbol_categorias_multijugador()
 
 # Ruta real (sin la raíz "Tablilla") de cada evento.
 CATEGORIA_EVENTO = {
-    # "Kael cerró hoy el puente por decisión propia": rumor sobre un aspirante.
+    # "Kael rompió el puente por descuido": rumor sobre un aspirante.
     "puente_norte": ("Rumor Politico", "Sobre un Aspirante"),
     # Agua del depósito (aviso viejo o vigente): servicio comunitario.
     "agua": ("Aviso Comunitario", "Recursos y servicios"),

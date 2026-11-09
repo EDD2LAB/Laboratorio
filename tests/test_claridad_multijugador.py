@@ -130,15 +130,16 @@ class ClaridadInterfazTests(unittest.TestCase):
         v.manejar_evento(clic, centro, self.cliente)
         self.assertIsNone(v.panel.modo)
 
-    def test_aspirante_es_mira_y_ayuda_cabe_en_la_pantalla(self):
+    def test_aspirante_es_kael_por_defecto_y_ayuda_cabe_en_la_pantalla(self):
         from interfaz.menu_pausa import CONTROLES, PAGINAS_COMO_JUGAR
         from nucleo.recursos import cargar_fuente, envolver_texto
-        self.assertEqual(ClienteCampanaLocal._nombre_bot("aspirante"), "Mira · Aspirante")
+        self.assertEqual(ClienteCampanaLocal._nombre_bot("aspirante"), "Kael · Aspirante")
         from multijugador.movimiento import es_personaje_jugable
-        self.assertEqual(self.vista._clave_figura(dict(rol="aspirante", apariencia=None)), "aspirante_mujer")
+        self.assertEqual(self.vista._clave_figura(dict(rol="aspirante", apariencia=None)), "aspirante")
+        self.assertEqual(self.vista._clave_figura(dict(rol="aspirante", apariencia="mujer")), "aspirante_mujer")
         self.assertEqual(self.vista._clave_figura(dict(rol="aspirante", apariencia="hombre")), "aspirante")
         self.assertTrue(es_personaje_jugable("NPCS/Aspirante mujer/MujerAspirante Fila 2.png"))
-        self.assertFalse(es_personaje_jugable("NPCS/Aspirante hombre/Fila 2. Aspirante_a_cacique-Idle.png"))
+        self.assertTrue(es_personaje_jugable("NPCS/Aspirante hombre/Fila 2. Aspirante_a_cacique-Idle.png"))
         self.assertIn("T", [tecla for tecla, _ in CONTROLES])
         fuente = cargar_fuente(16)
         for _, parrafos in PAGINAS_COMO_JUGAR:
