@@ -12,6 +12,9 @@ PREDETERMINADAS = {"modo_pantalla": "maximizada"}
 # Volúmenes (0..1) del multijugador y la campaña con bots.
 VOLUMENES = {"volumen_general": 1.0, "volumen_musica": 0.45, "volumen_ambiente": 0.45, "volumen_efectos": 0.70}
 PREDETERMINADAS.update(VOLUMENES)
+# Interruptores de ambiente y accesibilidad.
+INTERRUPTORES = {"niebla": True}
+PREDETERMINADAS.update(INTERRUPTORES)
 
 
 def cargar():
@@ -28,6 +31,9 @@ def cargar():
         valor = datos.get(clave)
         if isinstance(valor, (int, float)) and not isinstance(valor, bool) and 0 <= valor <= 1:
             preferencias[clave] = float(valor)
+    for clave in INTERRUPTORES:
+        if isinstance(datos.get(clave), bool):
+            preferencias[clave] = datos[clave]
     return preferencias
 
 

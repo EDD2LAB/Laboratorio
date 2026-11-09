@@ -271,6 +271,7 @@ class MenuInicio:
                         if self.partida is None:
                             from interfaz.partida_multijugador import VistaPartida
                             self.partida = VistaPartida(self.identificador, evento, self.audio)
+                            self.partida.niebla_activa = self.pausa.preferencias["niebla"]
                         else:
                             self.partida.recibir(evento)
                         self.vista = "partida"
@@ -344,6 +345,7 @@ class MenuInicio:
                 self.codigo_sala = "LOCAL"
                 self.estado = self.cliente.eventos.get_nowait()
                 self.partida = VistaPartida(self.identificador, self.estado, self.audio)
+                self.partida.niebla_activa = self.pausa.preferencias["niebla"]
                 self.vista = "partida"
                 pygame.key.stop_text_input()
             except (OSError, ValueError, RuntimeError) as error:

@@ -1143,7 +1143,7 @@ def main(forzar_selector=False):
     trunks_dir = os.path.join(images_root, "Tronco ecos")
     animals_dir = os.path.join(images_root, "Animales")
     vegetation_dir = os.path.join(images_root, "Vegetación")
-    ambient_animation_dir = os.path.join(images_root, "Animaciones Ambiente")
+    ambient_animation_dir = os.path.join(images_root, "Animaciones")
     valid_obj_ext = npc_image_ext
     available_objects = []
 
