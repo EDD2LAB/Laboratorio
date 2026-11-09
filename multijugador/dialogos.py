@@ -72,8 +72,17 @@ class DialogosNPC:
         presente = self.campana.presente
         npcs = list(self.npcs_copa)
         if presente is not None:
-            gemelos = {PERSONAJE_DE_ROL[j["rol"]] for j in self.campana.jugadores.values()}
-            npcs += [n for n in presente.npcs if n.get("pista") or n["nombre"] not in gemelos]
+            # Si alguien juega a quien tiene la pista, se le habla a ese jugador, esté donde esté.
+            gemelos = {PERSONAJE_DE_ROL[j["rol"]]: j for j in self.campana.jugadores.values()}
+            for npc in presente.npcs:
+                jugador = gemelos.get(npc["nombre"])
+                if jugador is None:
+                    npcs.append(npc)
+                elif npc.get("pista"):
+                    npcs.append(dict(npc, x=round(jugador["x"]), y=round(jugador["y"]), jugador=jugador["id"],
+                                     dimension=jugador.get("dimension", "la_copa"), interior=jugador.get("interior")))
+        if self.campana.futuro is not None:
+            npcs += self.campana.futuro.npcs
         return npcs
 
     def publico(self):
@@ -102,6 +111,8 @@ class DialogosNPC:
             raise ValueError("Acércate a " + npc["nombre"] + " para hablar.")
         vistas = self.vistas.setdefault(identificador, set())
         dialogo, clave = construir_conversacion(npc["nombre"], EstadoConversacion(self.campana), vistas)
+        if npc["dimension"] == "presente" and npc.get("pista"):  # el personaje cuenta la pista de este caso
+            dialogo = dict(dialogo, texto=self.campana.presente.texto_pista(npc["pista"]))
         self.abiertos[identificador] = {"npc": npc_id, "clave": clave, "respuestas": list(dialogo["respuestas"])}
         self._registrar_pista(identificador, npc)
         return {"mensaje": "", "vista": "dialogo_npc", "silencioso": True,
@@ -110,9 +121,9 @@ class DialogosNPC:
     def _registrar_pista(self, identificador, npc):
         """Si el testimonio es una pista del caso, queda una sola vez para el grupo."""
         campana = self.campana
-        if npc["dimension"] == "presente":
+        if npc["dimension"] != "la_copa":
             if npc.get("pista"):
-                campana.presente.halladas.setdefault(npc["pista"], identificador)
+                getattr(campana, npc["dimension"]).halladas.setdefault(npc["pista"], identificador)
             return
         jugador = campana.jugadores[identificador]
         propia = any(o.get("rol") == jugador["rol"] and (o["x"], o["y"]) == (npc["x"], npc["y"]) for o in campana.objetivos)

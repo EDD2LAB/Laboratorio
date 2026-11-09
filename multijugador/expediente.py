@@ -20,9 +20,10 @@ class ExpedientePartida:
         if self.eventos.get(evento) == resultado.get("evento_id") and evento in self.eventos:
             return
         self.eventos[evento] = resultado.get("evento_id")
+        ficha = CATALOGO[evento]
         datos = {"resultado": deepcopy(resultado), "pruebas": deepcopy(pruebas),
-                 "tipo": CATALOGO[evento]["tipo"], "ley": None, "sancion": None,
-                 "estado_normativo": "pendiente_profesor"}
+                 "tipo": ficha["tipo"], "ley": ficha["ley"], "sancion": ficha["sancion"],
+                 "estado_normativo": ficha["estado_normativo"]}
         if evento in self.arbol.casos:
             self.arbol.casos[evento].datos = datos
             return

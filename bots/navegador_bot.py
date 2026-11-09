@@ -114,7 +114,7 @@ class NavegadorBot:
 
         siguiente = self.ruta[0]
         dx, dy = siguiente[0] - actual[0], siguiente[1] - actual[1]
-        tiempo_hasta_siguiente = self._distancia(actual, siguiente) / VELOCIDAD
+        tiempo_hasta_siguiente = self._distancia(actual, siguiente) / (VELOCIDAD * self.colisiones.factor_velocidad)
         x, y = self.colisiones.mover(
             *actual, dx, dy, min(max(0.0, segundos), tiempo_hasta_siguiente)
         )

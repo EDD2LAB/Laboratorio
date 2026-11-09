@@ -42,13 +42,14 @@ def dibujar(panel, superficie):
     pendiente = estado.get("pendiente")
     detalle = seleccionado or pendiente or (nodos[0][0]["caso"] if nodos else None)
     panel.texto_lineas(superficie, "Pulsa un círculo para leer el caso.", 50, 440, 400, panel.pequena)
-    panel.texto_lineas(superficie, "El número grande indica la gravedad (1 a 5). El pequeño indica cuándo lo resolvieron.", 50, 475, 400, panel.pequena)
+    panel.texto_lineas(superficie, "El número grande indica la gravedad (1 a 9). El pequeño indica cuándo lo resolvieron.", 50, 475, 400, panel.pequena)
     if detalle:
         y = panel.texto_lineas(superficie, detalle["titulo"], 495, 130, 390)
         datos = detalle["datos"]
         y = panel.texto_lineas(superficie, datos["tipo"] + " · Gravedad " + str(detalle["gravedad"]), 495, y + 6, 390, panel.pequena)
         resultado = datos["resultado"]
-        y = panel.texto_lineas(superficie, "Decisión: " + panel.caso.get("opciones", {}).get(resultado["opcion"], resultado["opcion"]), 495, y + 8, 390, panel.pequena)
+        opciones = {**(panel.caso.get("presente") or {}).get("opciones", {}), **panel.caso.get("opciones", {})}
+        y = panel.texto_lineas(superficie, "Decisión: " + opciones.get(resultado["opcion"], resultado["opcion"]), 495, y + 8, 390, panel.pequena)
         pruebas = datos.get("pruebas", [])
         indice = getattr(panel, "prueba_expediente", 0) % max(1, len(pruebas))
         if pruebas:

@@ -6,13 +6,16 @@ from collections import deque
 from pathlib import Path
 import unicodedata
 
-from .dimensiones_red import (DIMENSIONES_RED, LA_COPA, PRESENTE, cargar_datos, cerca_de_rect, destinos,
-                              rect_portal, spawn_presente)
+from .dimensiones_red import (DIMENSIONES_RED, FUTURO, INTERIORES, LA_COPA, PRESENTE, RADIO_PUERTA, RADIO_SALIDA, cargar_datos,
+                              cargar_interior, cerca_de_rect, destinos, edificios_de, rect_portal, rect_salida, spawn_interior,
+                              spawn_presente)
 
 ANCHO, ALTO = 960, 720
 VELOCIDAD = 155.0
 # Shift: correr (mismo multiplicador que el modo de un jugador, mundo/jugador.py).
 MULTIPLICADOR_CORRER = 1.65
+# Distrito Conecta se ve con zoom 3 y La Copa con zoom 2: así avanzan igual en pantalla.
+FACTOR_VELOCIDAD_PRESENTE = 2 / 3
 MAPA = Path(__file__).resolve().parent.parent / "Hitboxes" / "Mapas" / "Pr_MañanaLumi_hitboxes.json"
 LADO_CELDA = 32  # tamaño de las celdas del índice de paredes
 MAX_MEMORIA_COLISIONES = 300_000
@@ -41,6 +44,7 @@ class ColisionesMapa:
         if datos is None:
             datos = json.loads(MAPA.read_text(encoding="utf-8"))
         self.datos = datos
+        self.factor_velocidad = 1.0
         self.firma = hashlib.sha256(json.dumps(datos, sort_keys=True).encode()).hexdigest()[:16]
         self.paredes = [h for h in datos.get("hitboxes", []) if h.get("role", "wall") == "wall"]
         self.zonas = [h for h in datos.get("hitboxes", []) if h.get("role") == "walkable"]
@@ -165,7 +169,7 @@ class ColisionesMapa:
 
     def mover(self, x, y, dx, dy, segundos, factor=1.0):
         norma = max(1, math.hypot(dx, dy))
-        distancia = VELOCIDAD * factor * max(0, min(segundos, .15))
+        distancia = VELOCIDAD * self.factor_velocidad * factor * max(0, min(segundos, .15))
         pasos = max(1, math.ceil(distancia / 3))
         paso_x, paso_y = dx / norma * distancia / pasos, dy / norma * distancia / pasos
         for _ in range(pasos):
@@ -224,10 +228,14 @@ class PartidaMovimiento:
         self.mision = CampanaCopa(self.jugadores, self.colisiones.datos, semilla=semilla)
         self.mision.viajar = self.viajar
         self.mision.cancelar_viaje = self.cancelar_viaje
+        self.mision.entrar_edificio = self.entrar_edificio
+        self.mision.salir_edificio = self.salir_edificio
+        self.interiores = {}
         self.viaje = None  # propuesta de viaje en grupo (ver viajar)
         self._sincronizar_bloqueos()
         try:
             self.colisiones_de(PRESENTE)  # el portal funciona desde el primer momento
+            self.colisiones_de(FUTURO)
         except (OSError, ValueError) as error:
             print("[Multijugador] Distrito Conecta no disponible:", error)
 
@@ -238,11 +246,52 @@ class PartidaMovimiento:
         if dimension not in self.mapas:
             datos = cargar_datos(dimension)
             self.mapas[dimension] = ColisionesMapa(datos)
+            if dimension in (PRESENTE, FUTURO):
+                self.mapas[dimension].factor_velocidad = FACTOR_VELOCIDAD_PRESENTE
+            if dimension == FUTURO and self.mision.futuro is None:
+                from .nucleo import MisionNucleo
+                self.mision.futuro = MisionNucleo(self.mapas[dimension], datos, self.mision.indicadores,
+                                                  self.mision.siguiente_evento, self.mision.expediente)
             if dimension == PRESENTE and self.mision.presente is None:
                 from .presente import MisionPresente
+                self.interiores = {e: ColisionesMapa(cargar_interior(e)) for e in INTERIORES}
                 self.mision.presente = MisionPresente(self.mapas[dimension], datos, self.mision.indicadores,
-                                                      self.mision.siguiente_evento)
+                                                      self.mision.siguiente_evento, self.mision.expediente,
+                                                      self.interiores, edificios_de(datos))
         return self.mapas[dimension]
+
+    def colisiones_de_jugador(self, jugador):
+        """Las paredes de donde está: su edificio o el mapa de su dimensión."""
+        return self.interiores[jugador["interior"]] if jugador.get("interior") else self.colisiones_de(jugador.get("dimension", LA_COPA))
+
+    def _colocar(self, identificador, x, y, interior):
+        self.viajes += 1  # el cliente lo coloca sin recorrer el mapa
+        self.controles.pop(identificador, None)
+        self.jugadores[identificador].update(x=x, y=y, interior=interior, animacion="reposo", corriendo=False, viaje=self.viajes)
+
+    def entrar_edificio(self, identificador, edificio):
+        jugador = self.jugadores[identificador]
+        presente = self.mision.presente
+        puerta = presente.edificios.get(edificio) if presente else None
+        if jugador.get("dimension") != PRESENTE or jugador.get("interior") or puerta is None:
+            raise ValueError("Aquí no hay una puerta.")
+        if not cerca_de_rect(jugador["x"], jugador["y"], puerta["rect"], RADIO_PUERTA):
+            raise ValueError("Acércate a la puerta y pulsa E.")
+        mapa = self.interiores[edificio]
+        ocupadas = [(j["x"], j["y"]) for j in self.jugadores.values() if j.get("interior") == edificio]
+        self._colocar(identificador, *mapa.inicio_libre(*spawn_interior(mapa.datos), ocupadas), edificio)
+        return {"mensaje": "Entraste a " + puerta["nombre"] + ".", "silencioso": True}
+
+    def salir_edificio(self, identificador):
+        jugador = self.jugadores[identificador]
+        edificio = jugador.get("interior")
+        if not edificio:
+            raise ValueError("Ya estás en la calle.")
+        if not cerca_de_rect(jugador["x"], jugador["y"], rect_salida(self.interiores[edificio].datos), RADIO_SALIDA):
+            raise ValueError("Acércate a la salida y pulsa E.")
+        puerta = self.mision.presente.edificios[edificio]
+        self._colocar(identificador, float(puerta["x"]), float(puerta["y"]), None)
+        return {"mensaje": "Volviste a la calle.", "silencioso": True}
 
     def presentes_en(self, dimension):
         return {i for i in self.conectados if self.jugadores.get(i, {}).get("dimension", LA_COPA) == dimension}
@@ -253,15 +302,20 @@ class PartidaMovimiento:
     # la dimensión aceptaron (y siguen junto al portal), viaja todo el equipo,
     # incluidos los bots, y se cierra lo que estaba en curso en el mapa.
     RADIO_PORTAL = 48
+    RADIO_PANTALLA = 68
 
     def _humano(self, identificador):
         return self.jugadores[identificador].get("controlador") != "bot"
 
     def _junto_al_portal(self, identificador, origen):
         jugador = self.jugadores[identificador]
-        return (jugador.get("dimension", LA_COPA) == origen and
-                cerca_de_rect(jugador["x"], jugador["y"], rect_portal(origen, self.colisiones_de(origen).datos),
-                              self.RADIO_PORTAL))
+        if jugador.get("dimension", LA_COPA) != origen or jugador.get("interior"):
+            return False
+        if cerca_de_rect(jugador["x"], jugador["y"], rect_portal(origen, self.colisiones_de(origen).datos), self.RADIO_PORTAL):
+            return True
+        # La pantalla pública también lleva a Ciudad Núcleo y de vuelta (sin portal propio en el mapa).
+        mision = {PRESENTE: self.mision.presente, FUTURO: self.mision.futuro}.get(origen)
+        return mision is not None and math.hypot(jugador["x"] - mision.pantalla["x"], jugador["y"] - mision.pantalla["y"]) <= self.RADIO_PANTALLA
 
     def faltan_viaje(self):
         """Humanos conectados de la dimensión de origen que aún no aceptaron."""
@@ -335,7 +389,7 @@ class PartidaMovimiento:
             ocupadas.append((x, y))
             self.controles.pop(identificador, None)
             self.jugadores[identificador].update(dimension=destino, x=x, y=y, direccion="abajo",
-                                                 animacion="reposo", corriendo=False, viaje=self.viajes)
+                                                 animacion="reposo", corriendo=False, viaje=self.viajes, interior=None)
         self.viaje = None
         nombre = DIMENSIONES_RED[destino]["nombre"]
         self.mision._avisar(viajeros, "El equipo llegó a " + nombre + ". Los indicadores viajan con ustedes.", "logro")
@@ -376,7 +430,7 @@ class PartidaMovimiento:
             segundos = max(0, min(ahora, recibido + .35) - desde)
             x, y = jugador["x"], jugador["y"]
             factor = MULTIPLICADOR_CORRER if correr else 1.0
-            nx, ny = self.colisiones_de(jugador.get("dimension", LA_COPA)).mover(x, y, dx, dy, segundos, factor)
+            nx, ny = self.colisiones_de_jugador(jugador).mover(x, y, dx, dy, segundos, factor)
             jugador["x"], jugador["y"] = nx, ny
             if ahora > desde:  # sin tiempo transcurrido nadie se mueve: se conserva su estado
                 jugador["animacion"] = "caminar" if math.hypot(nx - x, ny - y) > .01 else "reposo"
@@ -392,6 +446,7 @@ class PartidaMovimiento:
         copa = self.presentes_en(LA_COPA)
         # En el Presente los bots solo acompañan: votan y deciden los humanos.
         self.mision.presentes_presente = {i for i in self.presentes_en(PRESENTE) if self._humano(i)}
+        self.mision.presentes_futuro = {i for i in self.presentes_en(FUTURO) if self._humano(i)}
         self.mision.resolver(copa)
         self.mision.actualizar(ahora - desde, copa)
         self._sincronizar_bloqueos()

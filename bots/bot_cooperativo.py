@@ -40,6 +40,9 @@ DEMORAS_MS = {
     "sujetar": (300, 500),
     "trabajar": (700, 950),  # el servidor exige 0,6 s entre pasos
     "rectificar": (700, 1000),
+    "presente_analizar": (900, 1400),
+    "presente_marcar": (2500, 4000),  # tiempo de mirar el material antes de señalar
+    "futuro_resolver": (2500, 4000),
 }
 
 
@@ -49,6 +52,7 @@ class BotCooperativo:
         self.rol = jugador["rol"]
         self.nombre = jugador["nombre"]
         self.dimension = "la_copa"
+        self.interior = None
         self.estado = "ESPERANDO"
         self.objetivo_actual = None
         self.posicion = partida.jugadores[self.identificador]
@@ -59,6 +63,7 @@ class BotCooperativo:
         self.suministro_recogido = False
         self.suministro_depositado = False
         self.ahora = 0.0
+        self.marca_planeada = None  # lo que va a señalar en un análisis del Presente
         self.inicio_reparacion = None  # reloj local al abrir el minijuego del puente
         self.ultimo_tiempo_aguja = -1.0
         self.voto_propuesto = None
@@ -94,10 +99,10 @@ class BotCooperativo:
             self.posicion["animacion"] = "reposo"
             return
         self.ahora = ahora
-        dimension = self.posicion.get("dimension", "la_copa")
-        if dimension != self.dimension:
-            # Viajó con el equipo: lo que hacía en el mapa anterior terminó.
-            self.dimension = dimension
+        lugar = (self.posicion.get("dimension", "la_copa"), self.posicion.get("interior"))
+        if lugar != (self.dimension, self.interior):
+            # Cambió de mapa o de edificio: lo que hacía en el anterior terminó.
+            self.dimension, self.interior = lugar
             self._accion = None
             self._datos_accion = {}
             self._tiempo_accion = 0
@@ -105,7 +110,7 @@ class BotCooperativo:
             self._navegador.destino = None
             self._navegador.ruta = []
             try:
-                self._navegador.colisiones = self._adaptador.partida.colisiones_de(dimension)
+                self._navegador.colisiones = self._adaptador.partida.colisiones_de_jugador(self.posicion)
             except (AttributeError, OSError, ValueError) as error:
                 self.ultimo_error = str(error)
         caso = estado_partida["caso"]
@@ -177,6 +182,8 @@ class BotCooperativo:
 
         self.ultimo_error = ""
         self.reintentos = 0
+        if self._accion in ("presente_marcar", "futuro_resolver"):
+            self.marca_planeada = None
         if self._accion == "hablar_npc" and acuse.get("dialogo"):
             # Los bots no tienen ventana: escuchan y dan la primera respuesta útil.
             self._adaptador.solicitar("responder_npc", ahora, npc=acuse["dialogo"]["npc"],

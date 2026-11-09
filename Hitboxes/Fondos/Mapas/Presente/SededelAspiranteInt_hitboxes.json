@@ -1,6 +1,9 @@
 {
   "image": "Imagenes/Fondos/Mapas/Presente/SededelAspiranteInt.png",
-  "image_size": [344, 192],
+  "image_size": [
+    344,
+    192
+  ],
   "hitboxes": [
     {
       "id": "muro_sede_ventanales",
@@ -47,6 +50,26 @@
       "distancia": 58,
       "tecla": "E",
       "nombre_edificio": "Volver a la calle"
+    },
+    {
+      "id": "suelo_1",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.22,
+      "ry": 0.3,
+      "rw": 0.68,
+      "rh": 0.4,
+      "zona": "Suelo caminable"
+    },
+    {
+      "id": "suelo_2",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.2,
+      "ry": 0.62,
+      "rw": 0.5,
+      "rh": 0.26,
+      "zona": "Suelo caminable"
     }
   ],
   "spawn": {

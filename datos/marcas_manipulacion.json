@@ -1,0 +1,28 @@
+{
+  "foto_manipulada": {
+    "marcas": [
+      {"id": "fondo_cambiado", "rect": [0.01, 0.02, 0.30, 0.29], "texto": "El fondo no es el café de la foto original"},
+      {"id": "luz_incoherente", "rect": [0.70, 0.02, 0.30, 0.55], "texto": "La luz fría de la ventana no ilumina su cara"},
+      {"id": "borde_recorte", "rect": [0.31, 0.18, 0.38, 0.13], "texto": "Borde claro de recorte alrededor del pelo"},
+      {"id": "franja_glitch", "rect": [0.06, 0.69, 0.44, 0.04], "texto": "Franja de píxeles corridos en el hombro"},
+      {"id": "expresion_alterada", "rect": [0.43, 0.37, 0.18, 0.17], "texto": "La cara tiene otro sombreado que el resto"}
+    ]
+  },
+  "video_manipulado": {
+    "cuadros": 8,
+    "marcas": [
+      {"id": "orden_invertido", "frames": [0, 1, 2, 3, 4], "texto": "Las monedas salen de la caja; en el original entran"},
+      {"id": "franja_glitch", "frames": [5], "texto": "Franja de glitch atravesando la imagen"},
+      {"id": "salto_corte", "frames": [6], "texto": "La pose salta: falta un fragmento"},
+      {"id": "expresion_alterada", "frames": [7], "texto": "Gesto que no aparece en el video original"}
+    ]
+  },
+  "audio_suplantado": {
+    "duracion": 4.32,
+    "marcas": [
+      {"id": "pausa_antinatural", "rango": [2.10, 2.65], "texto": "Pausa larga en mitad de la frase"},
+      {"id": "saturacion", "toda_la_pista": true, "texto": "El audio llega al volumen máximo y se distorsiona; el original no"},
+      {"id": "cambio_de_voz", "rango": [2.65, 4.00], "texto": "La segunda frase suena distinta a la primera"}
+    ]
+  }
+}

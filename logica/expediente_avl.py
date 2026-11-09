@@ -62,7 +62,7 @@ class ExpedienteAVL:
         return ruta
 
     def insertar(self, caso):
-        if not isinstance(caso.id, str) or not caso.id or type(caso.gravedad) is not int or not 1 <= caso.gravedad <= 5:
+        if not isinstance(caso.id, str) or not caso.id or type(caso.gravedad) is not int or not 1 <= caso.gravedad <= 9:
             raise ValueError("Caso o gravedad inválidos.")
         if type(caso.orden) is not int or caso.orden < 0:
             raise ValueError("Orden inválido.")

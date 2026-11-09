@@ -6,6 +6,7 @@ decisiones del equipo. Las coordenadas son las de ese arte en el lienzo 960x720.
 """
 import pygame
 
+from interfaz import analisis_manipulado as analisis, terminal_nucleo
 from interfaz.arte import dibujar_icono, icono
 from interfaz.boton import Boton
 from multijugador.presentacion import ORDEN_INDICADORES, POLARIDAD, cambio_favorable, texto_cambio
@@ -122,7 +123,6 @@ class ArteCelular:
                     imagen, (round(imagen.get_width() * factor), round(imagen.get_height() * factor)))
         self.efectos = EfectosCelular({
             nombre: cargar_spritesheet_frames(f"Estados/fx_{nombre}_8f_1024x128.png", 8) for nombre in EFECTOS})
-        self.manipulado = icono("Estados/estado_contenido_manipulado.png", (104, 104))
         self.pistas_vistas = 0
         hoja = cargar_imagen("Iconos/Nuevos/avatares_cuentas.png", requerido=False)
         self.avatares = []
@@ -140,6 +140,9 @@ class ArteCelular:
         self.sello_manipulado = cargar_spritesheet_frames(verificaciones + "ContenidoManipulado_spritesheet.png", 4)
         self.sello_correcto = cargar_spritesheet_frames(verificaciones + "VerificaciónCorrecta_spritesheet.png", 4)
         self.retratos = {}  # (id de la imagen) -> retrato ya ajustado al recuadro
+        self.ui = analisis.ArteAnalisis(self.sello_manipulado)
+        self.etiquetas = {nombre: icono(f"Estados/estado_{nombre}.png", (44, 44))
+                          for nombre in ("sin_fuente", "contenido_manipulado", "contenido_ia")}
 
     def ajustar(self, imagen):
         """Ajusta un retrato al recuadro de la publicación una sola vez."""
@@ -153,9 +156,10 @@ class ArteCelular:
 
 def equipo_distrito(panel, incluir_yo=False):
     """Quienes juegan, con el nombre de su personaje de Distrito Conecta."""
-    from mundo.personajes import PERSONAJES_DISTRITO
-    return [PERSONAJES_DISTRITO[j["rol"]][0] for j in panel.vista.estado.get("mundo", {}).get("jugadores", [])
-            if j.get("rol") in PERSONAJES_DISTRITO and j.get("conectado", True)
+    from mundo.personajes import PERSONAJES_DISTRITO, PERSONAJES_FUTURO
+    tabla = PERSONAJES_FUTURO if panel.dimension == "futuro" else PERSONAJES_DISTRITO
+    return [tabla[j["rol"]][0] for j in panel.vista.estado.get("mundo", {}).get("jugadores", [])
+            if j.get("rol") in tabla and j.get("conectado", True)
             and (incluir_yo or j["id"] != panel.vista.identificador)]
 
 
@@ -179,6 +183,20 @@ def _imagen(superficie, imagen, arte):
         superficie.blit(imagen, imagen.get_rect(center=IMAGEN.center))
 
 
+def _publicacion(superficie, contexto, arte):
+    """El material real del caso, con la etiqueta que le puso el análisis."""
+    tipo = (contexto.get("evento") or {}).get("tipo")
+    ui = arte.ui
+    if tipo == "video":
+        imagen = ui.video_manipulado[pygame.time.get_ticks() * analisis.FPS_VIDEO // 1000 % analisis.CUADROS]
+    else:
+        imagen = {"audio": ui.icono_audio, "foto": ui.perfil, "nucleo": ui.nucleo}.get(tipo, arte.publicacion)
+    _imagen(superficie, imagen, arte)
+    etiqueta = arte.etiquetas.get(contexto.get("etiqueta"))
+    if etiqueta is not None:
+        superficie.blit(etiqueta, etiqueta.get_rect(center=IMAGEN.topleft))
+
+
 def _alcance(panel, superficie, texto):
     render = panel.pequena.render(texto, True, AZUL)
     superficie.blit(render, render.get_rect(midleft=ALCANCE))
@@ -200,13 +218,16 @@ def _boton(panel, superficie, clave, texto, centro, ancho=300, activo=True, alto
 
 def _menu(panel, superficie, contexto, inventario):
     """Tendencias es el menú del celular; las pistas se abren desde ahí."""
-    filas = [("introduccion", "Misión"), ("inventario", "Mis pistas"), ("caldero", "Decidir"), ("analizar", "Analizar")]
+    filas = [("introduccion", "Misión"), ("inventario", "Mis pistas"), ("caldero", "Decidir")]
+    if panel.dimension == "presente":
+        filas.append(("analizar", "Analizar"))
+    relleno = "CiudadNucleo" if panel.dimension == "futuro" else "DistritoConecta"
     filas += [("pista:" + str(i), pista["titulo"].split(" · ")[0]) for i, pista in enumerate(inventario)]
     transparente = pygame.Surface((FILA_ANCHO, FILA_ALTO), pygame.SRCALPHA)
     for i in range(FILAS):
         rect = pygame.Rect(FILA_X, round(FILA_Y + i * FILA_PASO), FILA_ANCHO, FILA_ALTO)
         if i >= len(filas):
-            texto = panel.pequena.render("DistritoConecta", True, (112, 130, 144))
+            texto = panel.pequena.render(relleno, True, (112, 130, 144))
             superficie.blit(texto, texto.get_rect(midleft=(729, rect.centery)))
             continue
         clave, nombre = filas[i]
@@ -223,11 +244,13 @@ def _menu(panel, superficie, contexto, inventario):
 
 # ------------------------------------------------------------------ pantallas
 def _mision(panel, superficie, contexto, arte):
-    _perfil(panel, superficie, "Distrito Conecta")
-    _imagen(superficie, arte.publicacion, arte)
+    _perfil(panel, superficie, "Ciudad Núcleo" if panel.dimension == "futuro" else "Distrito Conecta")
+    _publicacion(superficie, contexto, arte)
     y = _texto(panel, superficie, contexto.get("titulo", ""), TEXTO_X, TEXTO_Y, panel.fuente, TINTA)
     _texto(panel, superficie, contexto.get("noticia", ""), TEXTO_X, y + 6)
-    _alcance(panel, superficie, f"Pistas {contexto.get('pistas', 0)} de {contexto.get('total_pistas', 3)}")
+    evento = contexto.get("evento") or {}
+    caso = f"Caso {evento.get('indice', 0) + 1} de {evento.get('total', 1)} · " if evento else ""
+    _alcance(panel, superficie, f"{caso}Pistas {contexto.get('pistas', 0)} de {contexto.get('total_pistas', 3)}")
     _comentarios(panel, superficie, _siguiente_paso(panel))
     _boton(panel, superficie, "inventario", "Ver mis pistas", (338, ACCIONES_Y))
 
@@ -275,44 +298,13 @@ def _pistas(panel, superficie, contexto, arte):
 
 def falta_para_decidir(panel, contexto):
     if contexto.get("pistas", 0) < contexto.get("total_pistas", 3):
-        return "Reúnan las tres pistas de Distrito Conecta."
-    return "" if panel.vista.cerca_id("presente:pantalla") else "Acércate a la pantalla pública para elegir."
-
-
-def _sospecha_confirmada(panel):
-    return any(p["id"] == "fuente_ausente" for p in panel.inventario())
-
-
-def _sello(superficie, cuadros, centro):
-    if cuadros:
-        cuadro = cuadros[(pygame.time.get_ticks() // 160) % len(cuadros)]
-        superficie.blit(cuadro, cuadro.get_rect(center=centro))
-
-
-def _analizar(panel, superficie, contexto, arte):
-    """Panel de análisis y comparador de video, con lo que el equipo ya averiguó."""
-    fondo = arte.comparador if panel.comparando else arte.analisis
-    if fondo is not None:
-        superficie.blit(fondo, (0, 0))
-    sospecha = _sospecha_confirmada(panel)
-    resultado = contexto.get("resultado") or {}
-    if resultado.get("correcto"):
-        _sello(superficie, arte.sello_correcto, (326, 150))
-    elif sospecha:
-        _sello(superficie, arte.sello_manipulado, (326, 150))
-    # La franja tapa los botones de muestra del arte, que aquí no hacen nada.
-    franja = pygame.Rect(16, 612, 928, 100)
-    pygame.draw.rect(superficie, (19, 39, 49), franja, border_radius=8)
-    pygame.draw.rect(superficie, TURQUESA, franja, 2, border_radius=8)
-    texto = next((p["texto"] for p in panel.inventario() if p["id"] == "fuente_ausente"),
-                 "Habla con Darío Veraz para analizar el origen de la imagen.")
-    _texto(panel, superficie, texto, franja.x + 14, franja.y + 14, panel.pequena, (153, 222, 214), 440)
-    _boton(panel, superficie, "comparar", "Ver análisis" if panel.comparando else "Comparar videos", (590, 640), 190, alto=34)
+        return "Reúnan las pistas de este caso."
+    return "" if panel.vista.cerca_id(panel.dimension + ":pantalla") else "Acércate a la pantalla pública para elegir."
 
 
 def _decidir(panel, superficie, contexto, arte):
     _perfil(panel, superficie, "Publicación viral")
-    _imagen(superficie, arte.manipulado if _sospecha_confirmada(panel) else arte.publicacion, arte)
+    _publicacion(superficie, contexto, arte)
     for i, avatar in enumerate(arte.avatares):  # cuentas distintas que repiten lo mismo
         superficie.blit(avatar, (300 + i * 40, 414))
     y = _texto(panel, superficie, contexto.get("titulo", ""), TEXTO_X, TEXTO_Y, panel.fuente, TINTA)
@@ -358,27 +350,33 @@ def _resultado(panel, superficie, contexto, arte):
         superficie.blit(render, (TEXTO_X, y + 6 + columna * 20))
         columna += 1
     propia = panel.clasificacion_propia()
-    if not propia:
+    if contexto.get("sin_clasificacion"):
+        _comentarios(panel, superficie, "Sigue circulando sin aclaración. Pueden volver a decidir." if resultado.get("opcion") == "dejar_pendiente" else _siguiente_paso(panel))
+        if resultado.get("opcion") == "dejar_pendiente":
+            _boton(panel, superficie, "caldero", "Volver a decidir", (338, ACCIONES_Y), activo=panel.vista.cerca_id("futuro:pantalla"))
+    elif not propia:
         _comentarios(panel, superficie, "Antes de seguir: ¿qué tipo de información era?")
         _boton(panel, superficie, "clasificar_abrir", "Clasificar la publicación", (338, ACCIONES_Y), 360)
     elif resultado.get("opcion") == "dejar_pendiente":
         _comentarios(panel, superficie, "Sigue circulando sin aclaración. Pueden volver a decidir.")
         _boton(panel, superficie, "caldero", "Volver a decidir", (338, ACCIONES_Y), activo=panel.vista.cerca_id("presente:pantalla"))
-    else:
+    elif contexto.get("fin"):
         _comentarios(panel, superficie, _siguiente_paso(panel))
+    else:
+        listo = (panel.privado.get("presente") or {}).get("listo")
+        _comentarios(panel, superficie, "Esperando a tu equipo..." if listo else "Cuando estén listos, abran el siguiente caso.")
+        _boton(panel, superficie, "presente_siguiente", "Siguiente caso", (338, ACCIONES_Y), activo=not listo)
 
 
 def _clasificar(panel, superficie, contexto, arte):
     _perfil(panel, superficie, "Clasificar")
-    _imagen(superficie, arte.publicacion, arte)
+    _publicacion(superficie, contexto, arte)
     y = _texto(panel, superficie, "¿Cómo clasificarías esta publicación?", TEXTO_X, TEXTO_Y, panel.fuente, TINTA)
     _texto(panel, superficie, contexto.get("noticia", ""), TEXTO_X, y + 6)
     _comentarios(panel, superficie, "Elige la categoría que consideres correcta.")
     opciones = contexto.get("clasificacion_opciones") or []
-    ancho = min(270, 560 // max(1, len(opciones)) - 14)
-    for i, opcion in enumerate(opciones):
-        x = 338 + round((i - (len(opciones) - 1) / 2) * (ancho + 14))
-        _boton(panel, superficie, "clasificar:" + opcion, opcion, (x, ACCIONES_Y), ancho)
+    for i, opcion in enumerate(opciones):  # dos filas de dos: cada nombre cabe completo
+        _boton(panel, superficie, "clasificar:" + opcion, opcion, (192 + i % 2 * 292, 612 + i // 2 * 54), 280, alto=46)
 
 
 def _clasificado(panel, superficie, contexto, arte):
@@ -406,18 +404,20 @@ def dibujar(panel, superficie):
     arte = panel.vista.celular
     contexto = panel.contexto()
     superficie.blit(arte.feed if panel.modo == "caldero" else arte.feed_sin_botones, (0, 0))
-    if panel.modo == "analizar":
-        _analizar(panel, superficie, contexto, arte)
+    if panel.modo == "terminal":
+        terminal_nucleo.dibujar(panel, superficie, contexto, arte)
+    elif panel.modo == "analizar":
+        analisis.dibujar(panel, superficie, contexto, arte)
         pestanas = {"inventario": "Mis pistas", "caldero": "Decidir"}
         for i, (clave, nombre) in enumerate(pestanas.items()):
-            _boton(panel, superficie, clave, nombre, (590 + i * 200, 684), 190, alto=34)
+            _boton(panel, superficie, clave, nombre, (390 + i * 200, 690), 190, alto=34)
     else:
         for centro, avatar in zip(AVATARES_COMENTARIOS, arte.avatares):
             superficie.blit(avatar, avatar.get_rect(center=centro))
         _menu(panel, superficie, contexto, panel.inventario())
         PANTALLAS.get(panel.modo, _mision)(panel, superficie, contexto, arte)
     if panel.modo != "clasificacion_resultado":
-        centro, ancho = ((790, 640), 190) if panel.modo == "analizar" else ((795, 700), 232)
+        centro, ancho = ((790, 690), 190) if panel.modo in ("analizar", "terminal") else ((795, 700), 232)
         boton = Boton("Guardar el celular", centro=centro, fuente=panel.pequena, tamano=(ancho, 30), paleta=PALETA)
         boton.dibujar(superficie, panel.vista.mouse)
         panel.botones["cerrar"] = boton
@@ -428,3 +428,5 @@ def dibujar(panel, superficie):
         arte.pistas_vistas = pistas
         arte.efectos.lanzar(("pista", pistas), ("campana", (795, 175), 0))
     arte.efectos.dibujar(superficie)
+    arte.ui.lanzar_conclusion((contexto.get("analisis") or {}).get("conclusion_id"), (contexto.get("evento") or {}).get("sello"))
+    arte.ui.dibujar_conclusion(superficie)

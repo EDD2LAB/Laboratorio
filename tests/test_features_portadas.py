@@ -64,7 +64,7 @@ class PocionesTests(unittest.TestCase):
 
 class ClasificacionTests(unittest.TestCase):
     def test_cada_evento_tiene_categoria_valida_y_ruta_reconstruible(self):
-        for evento in [c[0] for c in CASOS] + ["publicacion_presente"]:
+        for evento in [c[0] for c in CASOS] + ["presente_video", "presente_voz", "presente_foto"]:
             nodo = clasificacion.nodo_evento(evento)
             self.assertTrue(nodo.es_hoja())
             ruta = clasificacion.ruta_evento(evento)
@@ -316,8 +316,8 @@ class PortalTests(unittest.TestCase):
         self.assertEqual(p.jugadores["0"]["dimension"], PRESENTE)
         self.assertFalse(p.mapas[PRESENTE].bloqueado(p.jugadores["0"]["x"], p.jugadores["0"]["y"]))
         self.assertEqual(p.mision.indicadores["confianza"], 77)
-        self.assertFalse(self.viajar(p, "0", "futuro")["ok"])  # en construcción
-        self.assertFalse(self.viajar(p, "0", PRESENTE)["ok"])  # ya está allí
+        self.assertTrue(self.viajar(p, "0", "futuro")["ok"])  # viaje libre
+        self.assertFalse(self.viajar(p, "0", "futuro")["ok"])  # ya está allí
         self.assertTrue(self.viajar(p, "0", LA_COPA)["ok"])
         self.assertEqual(p.jugadores["0"]["dimension"], LA_COPA)
         self.assertFalse(p.colisiones.bloqueado(p.jugadores["0"]["x"], p.jugadores["0"]["y"]))
@@ -369,10 +369,13 @@ class PortalTests(unittest.TestCase):
         pantalla = m.objetivos[-1]
         p.jugadores["0"].update(x=pantalla["x"], y=pantalla["y"])
         self.assertFalse(accion(accion="presente_votar", opcion="verificar")["ok"])  # faltan pistas
-        for o in m.objetivos[:3]:
-            p.jugadores["0"].update(x=o["x"], y=o["y"])
-            self.assertTrue(accion(accion="interactuar", objetivo=o["id"])["ok"])
-        p.jugadores["0"].update(x=pantalla["x"], y=pantalla["y"])
+        for n in [n for n in p.mision.dialogos.publico() if n["dimension"] == PRESENTE and n.get("pista")]:
+            p.jugadores["0"].update(x=n["x"], y=n["y"], interior=n.get("interior"))
+            self.assertTrue(accion(accion="hablar_npc", npc=n["id"])["ok"])
+        p.jugadores["0"].update(x=pantalla["x"], y=pantalla["y"], interior=None)
+        self.assertTrue(accion(accion="presente_analizar")["ok"])
+        for frame in (0, 5):
+            self.assertTrue(accion(accion="presente_marcar", frame=frame)["ok"])
         antes = dict(p.mision.indicadores)
         self.assertTrue(accion(accion="presente_votar", opcion="verificar")["ok"])
         # El equipo viajó junto: la pantalla pública espera el voto del compañero.
@@ -383,7 +386,7 @@ class PortalTests(unittest.TestCase):
         self.assertTrue(m.completada)
         self.assertEqual(m.resultado["tipo_pocion"], "consultar")
         self.assertEqual(p.mision.indicadores["desinformacion"], max(0, antes["desinformacion"] - 5))
-        self.assertTrue(accion(accion="presente_clasificar", categoria="Generado con IA")["ok"])
+        self.assertTrue(accion(accion="presente_clasificar", categoria="Contenido manipulado")["ok"])
         self.assertTrue(p.mision.privado("0")["presente"]["clasificacion"]["correcta"])
         self.assertTrue(p.mision.publico(p.presentes_en(LA_COPA))["presente"]["completada"])
 
@@ -459,7 +462,7 @@ class VistaClienteTests(unittest.TestCase):
         v.panel.abrir("portal")
         v.dibujar(lienzo, "T")
         self.assertIn("viajar:la_copa", v.panel.botones)
-        self.assertTrue(v.panel.botones["viajar:futuro"].desactivado)
+        self.assertFalse(v.panel.botones["viajar:futuro"].desactivado)
 
 
 if __name__ == "__main__":

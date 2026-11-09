@@ -175,8 +175,8 @@ class EventosDelPresente(ConPantalla):
         self.assertEqual(len(efectos.activos), MAX_EFECTOS)
 
     def test_analizar_abre_el_panel_y_el_comparador(self):
-        botones = self.dibujar("analizar")
-        self.assertIn("comparar", botones)
+        for tipo, clave in (("video", "analisis:marcar_video"), ("audio", "analisis:onda"), ("foto", "analisis:foto")):
+            self.assertIn(clave, self.dibujar("analizar", {"evento": {"tipo": tipo, "indice": 0, "total": 3}}))
         self.assertIsNotNone(self.vista.celular.analisis)
         self.assertIsNotNone(self.vista.celular.comparador)
         self.assertEqual(len(self.vista.celular.avatares), 4)

@@ -4,7 +4,7 @@ import re
 import time
 
 import pygame
-from interfaz import celular, dialogo_npc
+from interfaz import analisis_manipulado, celular, dialogo_npc, terminal_nucleo
 from interfaz.arte import dibujar_icono, expresion
 from interfaz.boton import Boton
 from interfaz.suministros import dibujar_carga
@@ -27,7 +27,8 @@ class PanelCooperativo:
         self.destino_fijo = None
         self._velo = None
         self.dialogo = None  # conversación abierta con un NPC
-        self.comparando = False  # celular: panel de análisis o comparador de video
+        self.caso_presente = None  # índice del caso de Distrito Conecta a la vista
+        self.terminal = None  # terminal abierta en Ciudad Núcleo
         self.botones = {}
         self.fuente = cargar_fuente(18)
         self.pequena = cargar_fuente(14)
@@ -59,18 +60,23 @@ class PanelCooperativo:
 
     def contexto(self):
         """Caso de la dimensión del jugador (La Copa o Distrito Conecta)."""
-        if self.dimension == "presente":
-            return dict(self.caso.get("presente") or {}, dimension="presente")
+        if self.digital:
+            return dict(self.caso.get(self.dimension) or {}, dimension=self.dimension)
         return dict(self.caso, dimension="la_copa")
 
+    @property
+    def digital(self):
+        """Distrito Conecta y Ciudad Núcleo se juegan desde el celular."""
+        return self.dimension != "la_copa"
+
     def privado_voto(self, contexto):
-        if contexto.get("dimension") == "presente":
-            return (self.privado.get("presente") or {}).get("voto")
+        if contexto.get("dimension") != "la_copa":
+            return (self.privado.get(contexto.get("dimension")) or {}).get("voto")
         return self.privado.get("voto")
 
     def clasificacion_propia(self):
-        if self.dimension == "presente":
-            return (self.privado.get("presente") or {}).get("clasificacion")
+        if self.digital:
+            return (self.privado.get(self.dimension) or {}).get("clasificacion")
         return self.privado.get("clasificacion")
 
     def _eventos_actuales(self):
@@ -78,9 +84,10 @@ class PanelCooperativo:
         resultado = self.caso.get("resultado")
         if resultado and resultado.get("evento_id"):
             eventos.append(("la_copa", resultado, self.caso.get("noticia", "")))
-        presente = self.caso.get("presente") or {}
-        if presente.get("resultado") and presente["resultado"].get("evento_id"):
-            eventos.append(("presente", presente["resultado"], presente.get("noticia", "")))
+        for dimension in ("presente", "futuro"):
+            mision = self.caso.get(dimension) or {}
+            if mision.get("resultado") and mision["resultado"].get("evento_id"):
+                eventos.append((dimension, mision["resultado"], mision.get("noticia", "")))
         return eventos
 
     @property
@@ -127,8 +134,15 @@ class PanelCooperativo:
             if clave != self.resultado_visto:
                 self.resultado_visto = clave
                 self.abrir("resultado")
-        presente = (self.caso.get("presente") or {}).get("resultado")
-        if presente and self.dimension == "presente" and presente.get("evento_id") != self.resultado_presente_visto:
+        distrito = self.caso.get("presente") or {}
+        indice = (distrito.get("evento") or {}).get("indice")
+        if indice != self.caso_presente:
+            if self.caso_presente is not None and self.dimension == "presente":
+                self.notificar("Nuevo caso: " + distrito.get("titulo", ""))
+                self.abrir("introduccion")
+            self.caso_presente = indice
+        presente = (self.caso.get(self.dimension) or {}).get("resultado") if self.digital else None
+        if presente and presente.get("evento_id") != self.resultado_presente_visto:
             self.resultado_presente_visto = presente.get("evento_id")
             self.abrir("resultado")
         # Poción, caldero y sonido: una vez por evento_id y solo en su dimensión.
@@ -171,7 +185,11 @@ class PanelCooperativo:
             self.modo = "reparar"
             self._abierto = time.monotonic()
             return
+        if acuse.get("ok") and acuse.get("vista") == "cerrar":
+            self.modo = None
+            return
         if acuse.get("ok") and acuse.get("vista"):
+            self.terminal = acuse.get("terminal", self.terminal)
             self.abrir("inventario" if acuse["vista"] == "compartir" else acuse["vista"])
             self.titulo = acuse.get("titulo", "Testimonio")
             self.texto = acuse.get("mensaje", "")
@@ -179,7 +197,7 @@ class PanelCooperativo:
             self.indice_destino = 0
 
     def cerca_eco(self):
-        if self.dimension == "presente":
+        if self.digital:
             return False  # los troncos son de La Copa
         return any(o["tipo"] == "eco" and self.vista.cerca(o) for o in self.caso.get("objetivos", []))
 
@@ -212,7 +230,7 @@ class PanelCooperativo:
                 return expresion(frames, pygame.time.get_ticks())
         if "darío" in clave and arte.retrato_agente is not None:
             return arte.retrato_agente
-        if self.dimension == "presente":
+        if self.digital:
             return self._retrato_distrito(clave)
         if "naira" in clave:
             sprite = next((o.get("imagen") for o in self.vista.decoraciones if "naira" in o.get("nombre", "").lower()), None)
@@ -227,9 +245,10 @@ class PanelCooperativo:
 
     def _retrato_distrito(self, clave):
         """En Distrito Conecta solo se ven sus propios personajes."""
-        from mundo.personajes import PERSONAJES_DISTRITO
-        escena = self.vista.escenas_zoom.get("presente") or {}
-        rol = next((r for r, datos in PERSONAJES_DISTRITO.items() if datos[0].lower() in clave), None)
+        from mundo.personajes import PERSONAJES_DISTRITO, PERSONAJES_FUTURO
+        escena = self.vista.escenas_zoom.get(self.dimension) or {}
+        tabla = PERSONAJES_FUTURO if self.dimension == "futuro" else PERSONAJES_DISTRITO
+        rol = next((r for r, datos in tabla.items() if datos[0].lower() in clave), None)
         if rol is None:
             rol = next((j["rol"] for j in self.vista.estado.get("mundo", {}).get("jugadores", [])
                         if j["id"] == self.vista.identificador), None)
@@ -338,8 +357,8 @@ class PanelCooperativo:
         return False
 
     def inventario(self):
-        if self.dimension == "presente":
-            return (self.privado.get("presente") or {}).get("inventario", [])
+        if self.digital:
+            return (self.privado.get(self.dimension) or {}).get("inventario", [])
         pistas = self.privado.get("inventario", [])
         avisos = [dict(id=p["id"], titulo="Aviso: " + p["titulo"], texto=p["temporal"]["texto"],
                        es_temporal=True, vigente=p["temporal"]["vigente"], segundos=p["temporal"]["segundos"])
@@ -363,7 +382,7 @@ class PanelCooperativo:
         if self.modo == "dialogo_npc" and self.dialogo:
             dialogo_npc.dibujar(self, superficie)
             return
-        if self.activo and self.dimension == "presente" and self.modo != "portal":
+        if self.activo and self.digital and self.modo != "portal":
             celular.dibujar(self, superficie)
             if time.monotonic() < self.toast_hasta:
                 pygame.draw.rect(superficie, (19, 39, 49), (20, 10, 920, 40), border_radius=7)
@@ -639,16 +658,18 @@ class PanelCooperativo:
             self.abrir("resultado")
             return True
         if evento.type == pygame.KEYDOWN:
+            if self.modo == "analizar" and self.dimension == "presente" and analisis_manipulado.tecla(self, evento.key, cliente):
+                return True
             if evento.key == pygame.K_t:
                 self.modo = None if self.modo == "expediente" else "expediente"
                 return True
             if evento.key == pygame.K_ESCAPE and self.activo:
                 self.modo = None
                 return True
-            if evento.key in (pygame.K_LEFT, pygame.K_RIGHT) and self.modo == "inventario" and self.dimension == "presente":
+            if evento.key in (pygame.K_LEFT, pygame.K_RIGHT) and self.modo == "inventario" and self.digital:
                 self.indice_pista += 1 if evento.key == pygame.K_RIGHT else -1
                 return True
-            if evento.key == pygame.K_c and self.dimension == "presente":
+            if evento.key == pygame.K_c and self.digital:
                 self.modo = None if self.activo else "introduccion"
                 return True
             if evento.key in (pygame.K_LEFT, pygame.K_RIGHT) and self.modo in ("eco", "eco_mensajes", "inventario"):
@@ -660,7 +681,7 @@ class PanelCooperativo:
             if evento.key == pygame.K_m:
                 self.abrir("introduccion")
                 return True
-            if evento.key == pygame.K_q and not self.activo and self.dimension != "presente":
+            if evento.key == pygame.K_q and not self.activo and not self.digital:
                 cliente.actuar("habilidad")
                 return True
             if self.activo:
@@ -728,14 +749,18 @@ class PanelCooperativo:
             elif clave == "clasificar_abrir":
                 self.abrir("clasificar")
             elif clave.startswith("clasificar:"):
-                cliente.actuar("presente_clasificar" if self.dimension == "presente" else "clasificar",
+                cliente.actuar("presente_clasificar" if self.digital else "clasificar",
                                categoria=clave.split(":", 1)[1])
             elif clave == "caldero":
                 self.abrir("caldero")
             elif clave == "analizar":
-                self.abrir("analizar")
-            elif clave == "comparar":
-                self.comparando = not self.comparando
+                cliente.actuar("presente_analizar")
+            elif clave.startswith("terminal:"):
+                terminal_nucleo.accion(self, clave, cliente)
+            elif clave.startswith("analisis:"):
+                analisis_manipulado.accion(self, clave, posicion, cliente)
+            elif clave == "presente_siguiente":
+                cliente.actuar("presente_siguiente")
             elif clave.startswith("viajar:"):
                 self.vista.viajar(cliente, clave.split(":", 1)[1])
             elif clave == "cancelar_portal":

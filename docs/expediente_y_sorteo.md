@@ -20,7 +20,7 @@ mantienen la deduplicación por `id_solicitud`. El expediente permanece en la
 partida del servidor durante una reconexión; no se guarda en disco y un
 reinicio del servidor lo pierde, como el resto de la sala.
 
-`datos/casos_expediente.json` define tipo y gravedad educativa (1–5), no
+`datos/casos_expediente.json` define tipo y gravedad educativa (1–9), no
 gravedad jurídica. Ley y sanción quedan vacías y pendientes del profesor.
 Esta etapa cubre La Copa. El evento de Distrito Conecta, la exportación del
 informe y las animaciones de rotación se integrarán después.
