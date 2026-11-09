@@ -1,7 +1,9 @@
 """Mensajes JSON delimitados por nueva línea; sin dependencias externas."""
 import json
 
-VERSION = 10  # 10: eventos manipulados, Ciudad Núcleo y edificios (presente_analizar, presente_marcar,
+VERSION = 11  # 11: estado por diferencias (mensaje "delta", control "pedir_snapshot") y acciones habilidad
+# en el futuro y pedir_informe. Ver multijugador/delta.py
+# 10: eventos manipulados, Ciudad Núcleo y edificios (presente_analizar, presente_marcar,
 # presente_siguiente, futuro_resolver, entrar_edificio, salir_edificio)
 # 9: separación autoritativa entre bots (Kael y Mira se eligen: ver apariencia)
 # 8: expediente AVL compartido y sorteo privado por partida

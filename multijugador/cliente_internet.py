@@ -10,6 +10,7 @@ import urllib.request
 import uuid
 
 from .protocolo import VERSION
+from .delta import DecodificadorEstado
 
 
 class CorteMovimiento(ConnectionError):
@@ -166,6 +167,7 @@ class ClienteInternet:
                                 enviadas[clave] = time.monotonic()
                         await asyncio.sleep(.05)
                     await ws.close()
+                decodificador = DecodificadorEstado()  # cada conexión empieza con un snapshot
                 envio = asyncio.create_task(controles())
                 try:
                     while not self._cerrado.is_set():
@@ -175,6 +177,11 @@ class ClienteInternet:
                             self.metricas["bytes"] += len(mensaje.data)
                             estado = mensaje.json()
                             if isinstance(estado, dict):
+                                estado = decodificador.recibir(estado)
+                                if estado is None:  # falta la base: se pide un snapshot y se sigue
+                                    if decodificador.tomar_peticion():
+                                        await ws.send_json({"tipo": "pedir_snapshot"})
+                                    continue
                                 if estado.get("tipo") == "acuse":
                                     with self._lock_acciones:
                                         self._pendientes.pop(estado.get("id_solicitud"), None)

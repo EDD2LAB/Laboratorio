@@ -5,6 +5,7 @@ import unittest
 import aiohttp
 from aiohttp.test_utils import TestServer
 
+from multijugador.delta import DecodificadorEstado
 from multijugador.movimiento import ColisionesMapa, PartidaMovimiento, VELOCIDAD
 from multijugador.protocolo import VERSION
 from multijugador.tiempo_real import crear_app
@@ -101,10 +102,12 @@ class PruebasWebSocket(unittest.IsolatedAsyncioTestCase):
                 inicial = await post("/v1/accion", {"tipo": "iniciar"}, jugadores[0]["token"])
                 sockets = [await cliente.ws_connect(servidor.make_url("/v1/juego"),
                            headers={"Authorization": "Bearer " + j["token"]}) for j in jugadores]
+                decodificadores = {}
                 async def estado(ws, condicion):
+                    decodificador = decodificadores.setdefault(id(ws), DecodificadorEstado())
                     for _ in range(50):
-                        mensaje = await asyncio.wait_for(ws.receive_json(), 2)
-                        if condicion(mensaje):
+                        mensaje = decodificador.recibir(await asyncio.wait_for(ws.receive_json(), 2))
+                        if mensaje is not None and condicion(mensaje):
                             return mensaje
                     self.fail("No llegó el estado esperado.")
                 try:

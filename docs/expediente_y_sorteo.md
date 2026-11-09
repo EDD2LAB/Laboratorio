@@ -50,7 +50,11 @@ son complementarios, para investigar con calma. Se usa el reloj del servidor.
 
 ## Despliegue
 
-Protocolo **10**: actualizar tanto los clientes como el servidor de Render.
+Protocolo **11**: actualizar tanto los clientes como el servidor de Render.
+El estado viaja por diferencias (`multijugador/delta.py`): un snapshot al conectar,
+reconectar o cambiar de dimensión o edificio y, luego, mensajes `delta` con lo que
+cambió; `pedir_snapshot` recupera una base perdida. Añade también `pedir_informe`.
+El protocolo 10:
 Añade las acciones `presente_analizar`, `presente_marcar`, `presente_siguiente`
 (casos manipulados del Presente), `futuro_resolver` (terminales de Ciudad Núcleo),
 `entrar_edificio` y `salir_edificio` (interiores). El protocolo 9 trajo las

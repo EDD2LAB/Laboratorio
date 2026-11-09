@@ -93,3 +93,6 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   línea de tiempo, reporte, sello, exportación y pestaña AVL en F1.
 - Bloque D: Ciudad Núcleo completa (Archivista, Representante, cuentas, barreras,
   pulsos, habilidades); un equipo solo de bots recorre las tres eras.
+- Bloque E: estado por diferencias (`multijugador/delta.py`), protocolo 11.
+  Antes 246,9 KB/s por cliente (12,4 KB por mensaje: `caso` 9,7 KB, `privado` 1 KB,
+  `jugadores` 0,8 KB); después 4,3 KB/s con 19,6 mensajes/s y 60,3 FPS.

@@ -8,6 +8,7 @@ from aiohttp import WSMsgType, web
 
 from .movimiento import ColisionesMapa
 from .servicio_internet import ServicioSalas
+from .delta import CodificadorEstado
 
 SERVICIO = web.AppKey("servicio", ServicioSalas)
 CONEXIONES = web.AppKey("conexiones", dict)
@@ -75,17 +76,18 @@ async def websocket(request):
     cola = Buzon()
     request.app[BUZONES][token] = cola
     sala.partida.conectados.add(sesion["id"])
+    codificador = CodificadorEstado(sesion["id"])  # nueva conexión: empieza con un snapshot
     async def escribir():
         metricas = request.app[METRICAS]
         def medir(datos):
-            texto = json.dumps(datos)
+            texto = json.dumps(datos, ensure_ascii=False, separators=(",", ":"))
             metricas["mensajes"] += 1
             metricas["bytes"] += len(texto)
             return texto
         try:
             while not ws.closed:
                 estado = await cola.siguiente()
-                await asyncio.wait_for(ws.send_json(estado, dumps=medir), timeout=3)
+                await asyncio.wait_for(ws.send_json(codificador.codificar(estado), dumps=medir), timeout=3)
                 if estado.get("tipo") == "desconectado":
                     break
         except (OSError, TimeoutError, RuntimeError):
@@ -108,8 +110,11 @@ async def websocket(request):
                 break
             try:
                 datos = json.loads(mensaje.data)
-                if not isinstance(datos, dict) or datos.get("tipo") not in ("mover", "accion"):
+                if not isinstance(datos, dict) or datos.get("tipo") not in ("mover", "accion", "pedir_snapshot"):
                     raise ValueError("Control inválido.")
+                if datos["tipo"] == "pedir_snapshot":
+                    codificador.forzar_snapshot = True
+                    continue
                 actual, sala = servicio._sesion(token)
                 if datos["tipo"] == "mover":
                     sala.partida.recibir(actual["id"], datos, ahora)

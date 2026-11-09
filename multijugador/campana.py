@@ -95,6 +95,8 @@ SEMANTICA_PRUEBAS = {
 }
 
 
+DECISION_CORTA = {"verificar": "Verificar", "reportar": "Reportar", "dejar_pendiente": "Ignorar", "compartir": "Publicar",
+                  "corregir": "Corregir", "difundir": "Difundir", "descartar": "Descartar"}
 ACCIONES_ANALISIS = ("presente_analizar", "presente_marcar", "presente_siguiente")
 
 
@@ -200,6 +202,7 @@ class CampanaCopa(MisionPuente):
             filas.append({"id": identificador, "titulo": titulo, "era": era, "tipo": ficha["tipo"], "gravedad": ficha["gravedad"],
                           "resuelto": caso is not None, "orden": caso.orden if caso else len(guardados) + len(filas),
                           "decision": opciones.get(resultado.get("opcion"), resultado.get("opcion")),
+                          "decision_corta": DECISION_CORTA.get(resultado.get("opcion")),
                           "correcto": bool(resultado.get("correcto")), "norma": datos.get("ley"), "pena": datos.get("sancion")})
         filas.sort(key=lambda f: (f["gravedad"], f["orden"]))
         arbol = self.expediente.arbol.publico()

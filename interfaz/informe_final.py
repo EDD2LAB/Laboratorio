@@ -18,7 +18,7 @@ GRIS = (120, 110, 96)
 AREA_ARBOL = pygame.Rect(30, 90, 400, 230)
 EJE_TIEMPO = pygame.Rect(90, 372, 330, 4)
 PERGAMINO = pygame.Rect(440, 56, 500, 610)
-TEXTO_REPORTE = pygame.Rect(492, 108, 396, 510)
+TEXTO_REPORTE = pygame.Rect(492, 126, 396, 450)
 SELLO = (96, 96)
 CARPETA = RAIZ / "informes"
 
@@ -32,9 +32,9 @@ class ArteInforme:
         self.sancion = icono(NUEVOS + "icono_sancion.png", (16, 16))
 
 
-def lineas_reporte(fila):
+def lineas_reporte(fila, corta=False):
     """Líneas de un caso; norma y pena solo aparecen si existen, sin dejar huecos."""
-    decision = fila["decision"] if fila["resuelto"] else "sin resolver"
+    decision = fila.get("decision_corta" if corta else "decision") if fila["resuelto"] else "sin resolver"
     lineas = [("titulo", f"{fila['titulo']} ({fila['era']})"),
               ("datos", f"{fila['tipo']} · Gravedad {fila['gravedad']} · {decision}")]
     if fila.get("norma"):
@@ -110,7 +110,7 @@ def _dibujar_reporte(panel, superficie, datos, arte):
     superficie.blit(arte.pergamino, PERGAMINO)
     y = TEXTO_REPORTE.y
     for fila in datos["casos"]:
-        for tipo, texto in lineas_reporte(fila):
+        for tipo, texto in lineas_reporte(fila, corta=True):
             x = TEXTO_REPORTE.x
             imagen = {"ley": arte.ley, "sancion": arte.sancion}.get(tipo)
             if imagen is not None:
@@ -119,7 +119,7 @@ def _dibujar_reporte(panel, superficie, datos, arte):
             color = GRIS if not fila["resuelto"] else TINTA
             fuente = panel.pequena
             y = panel.texto_lineas(superficie, texto, x, y, TEXTO_REPORTE.right - x, fuente, color)
-        y += 5
+        y += 2
 
 
 def dibujar(panel, superficie):
