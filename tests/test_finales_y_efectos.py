@@ -52,5 +52,50 @@ class FinalDelEquipo(ConPartida):
         self.assertIsNone(self.vista.pantalla_final)
 
 
+class EfectosDelMapa(ConPartida):
+    def estado(self, **caso):
+        self.caso().update(caso)
+        self.vista._lanzar_efectos(self.caso())
+
+    def test_el_poder_se_ve_una_sola_vez(self):
+        self.estado(habilidades_usadas=["local"])
+        self.assertEqual([e[0] for e in self.vista.efectos_mapa.activos], ["poder"])
+        self.estado(habilidades_usadas=["local"])
+        self.assertEqual(len(self.vista.efectos_mapa.activos), 1)
+
+    def test_rumor_y_correccion_cruzan_un_puente(self):
+        self.estado(oleadas=1)
+        self.estado(resultado={"correcto": True, "evento_id": 5})
+        self.assertEqual([r[0] for r in self.vista.efectos_mapa.recorridos], ["rumor", "correccion"])
+        self.estado(oleadas=1, resultado={"correcto": True, "evento_id": 5})
+        self.assertEqual(len(self.vista.efectos_mapa.recorridos), 2)
+
+    def test_lo_ocurrido_antes_de_unirse_no_se_repite(self):
+        from interfaz.partida_multijugador import VistaPartida
+        self.caso()["oleadas"] = 3
+        otra = VistaPartida("local", self.vista.estado)
+        otra._lanzar_efectos(self.caso())
+        self.assertEqual(otra.efectos_mapa.recorridos, [])
+
+    def test_los_efectos_tienen_tope(self):
+        from interfaz.efectos_mapa import MAX_EFECTOS
+        for _ in range(30):
+            self.vista.efectos_mapa.lanzar("poder", 10, 10)
+        self.assertEqual(len(self.vista.efectos_mapa.activos), MAX_EFECTOS)
+
+    def test_todas_las_tiras_se_cargaron(self):
+        from interfaz.efectos_mapa import TIRAS
+        for nombre, (_, cantidad, _tam) in TIRAS.items():
+            self.assertEqual(len(self.vista.efectos_mapa.cuadros[nombre]), cantidad, nombre)
+
+    def test_barra_de_recarga_en_sus_tres_estados(self):
+        recarga = self.vista._estado_recarga
+        self.assertEqual(recarga({"habilidad_usada": True}, "guardian"), "vacia")
+        self.assertEqual(recarga({"inventario": []}, "guardian"), "mitad")
+        self.assertEqual(recarga({"inventario": [{"id": "pista_guardian"}]}, "guardian"), "llena")
+        for estado in ("vacia", "mitad", "llena"):
+            self.assertIsNotNone(self.vista.arte.barra_recarga[estado])
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -410,6 +410,7 @@ class CampanaCopa(MisionPuente):
                       tutorial_cargas=[i for i, t in self.acompanante.tutoriales.items() if t["estado"] == "activo" and t["paso"] == 2],
                       sin_prisa=self.ronda == 0, puntos=self.puntos, bono_equipo=self.bono_equipo,
                       proxima_oleada=max(0, 60 - int(self.presion % 60)),
+                      oleadas=self.oleadas, habilidades_usadas=sorted(self.habilidades_usadas),
                       opciones=dict(self.opciones),
                       tipos_pocion={clave: tipo_pocion(clave) for clave in self.opciones},
                       clasificacion_opciones=list(clasificacion.OPCIONES["la_copa"]),

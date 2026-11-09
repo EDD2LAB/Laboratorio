@@ -140,6 +140,10 @@ def cargar_personajes():
     return escalar_personajes(cargar_clips_personajes(), ALTURA_PERSONAJE)
 
 
+def caso_jugadores(estado):
+    return estado.get("mundo", {}).get("jugadores", [])
+
+
 class VistaPartida:
     def __init__(self, identificador, estado, audio=None):
         from mundo.mapas import cargar_fondo_unificado, cargar_mapa_principal, decoraciones_ampliadas, suavizar_cascada
@@ -216,6 +220,9 @@ class VistaPartida:
         self.final_sonado = None
         self.inicio_reparacion = None
         self.evento_reparacion_visto = None
+        from interfaz.efectos_mapa import EfectosMapa
+        self.efectos_mapa = EfectosMapa(ZOOM_COPA)
+        self.efectos_vistos = None  # al unirse no se repite lo que ya pasó
         self.pantalla_final = None  # ilustración del final del equipo
         self.final_visto = False
         self.puente_1 = next((o for o in self.decoraciones
@@ -414,6 +421,7 @@ class VistaPartida:
             self.seleccion = None
             self.ultima_guia_seleccion = destino_guia
         self._revisar_final()
+        self._lanzar_efectos(mundo.get("caso", {}))
         self.ultimo_paquete = time.monotonic()
         self.aviso_red = ""
         presentes = set()
@@ -506,6 +514,37 @@ class VistaPartida:
             cliente.actuar("interactuar", objetivo=guia["objetivo"]["id"])
         else:
             self.panel.abrir("introduccion")
+
+    def _lanzar_efectos(self, caso):
+        """Poderes, rumores y correcciones: una vez por evento, solo en La Copa."""
+        ronda = caso.get("ronda")
+        resultado = caso.get("resultado") or {}
+        eventos = {("poder", ronda, i) for i in caso.get("habilidades_usadas", [])}
+        if caso.get("oleadas"):
+            eventos.add(("rumor", ronda, caso["oleadas"]))
+        if resultado.get("correcto") and resultado.get("evento_id"):
+            eventos.add(("correccion", resultado["evento_id"], None))
+        if self.efectos_vistos is None:
+            self.efectos_vistos = eventos
+            return
+        for evento in eventos - self.efectos_vistos:
+            self.efectos_vistos.add(evento)
+            if self.dimension != LA_COPA:
+                continue
+            if evento[0] == "poder":
+                jugador = next((j for j in caso_jugadores(self.estado) if j["id"] == evento[2]), None)
+                if jugador:
+                    self.efectos_mapa.lanzar("poder", jugador["x"], jugador["y"] - 28)
+            else:
+                self._cruzar_puente(evento[0])
+
+    def _cruzar_puente(self, tipo):
+        """La señal recorre el puente que el jugador tiene más cerca."""
+        yo = self.yo()
+        puentes = [o for o in self.decoraciones if o.get("puente_animable")]
+        if yo and puentes:
+            puente = min(puentes, key=lambda o: math.hypot(o["rect"].centerx - yo["x"], o["rect"].centery - yo["y"]))
+            self.efectos_mapa.recorrer(tipo, puente["rect"].midleft, puente["rect"].midright)
 
     def _revisar_final(self):
         """Al completar La Copa y Distrito Conecta, una vez por partida."""
@@ -812,6 +851,8 @@ class VistaPartida:
         pantalla.blit(pygame.transform.scale(efectos.subsurface(vista), pantalla.get_size()), (0, 0))
         for frame, rect in figuras:
             pantalla.blit(frame, rect)
+        if self.dimension == LA_COPA:
+            self.efectos_mapa.dibujar(pantalla, vista)
         self.particulas.dibujar(pantalla, camara=(vista.x, vista.y, zoom))
         return anclas
 
@@ -949,6 +990,9 @@ class VistaPartida:
             iconos = self.arte.poder_usado if privado.get("habilidad_usada") else self.arte.poder_listo
             if iconos.get(rol) is not None:
                 superficie.blit(iconos[rol], iconos[rol].get_rect(center=(928, 29)))
+            barra = self.arte.barra_recarga[self._estado_recarga(privado, rol)]
+            if barra is not None:
+                superficie.blit(barra, barra.get_rect(center=(915, 58)))
         if not self.mostrar_detalles:
             if not self.panel.activo:
                 self.hud.dibujar_avisos(superficie, 22, 70)
@@ -986,6 +1030,13 @@ class VistaPartida:
             self.hud.dibujar(superficie, 18, 176)
             self._texto_pastilla(superficie, "Shift: correr | E: ayudar | I: pistas | M: tarea | Q: poder | H: HUD | L: nombres",
                                  self.hud.fuente, bottomleft=(22, 672))
+
+    @staticmethod
+    def _estado_recarga(privado, rol):
+        """Llena: se puede usar; media: falta tu prueba; vacía: se recarga el próximo caso."""
+        if privado.get("habilidad_usada"):
+            return "vacia"
+        return "llena" if any(p.get("id") == "pista_" + rol for p in privado.get("inventario", [])) else "mitad"
 
     def _dibujar_capas_superiores(self, superficie):
         self._dibujar_aviso_viaje(superficie)
