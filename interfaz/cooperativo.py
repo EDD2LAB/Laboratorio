@@ -4,6 +4,7 @@ import re
 import time
 
 import pygame
+from interfaz import celular
 from interfaz.arte import dibujar_icono, expresion
 from interfaz.boton import Boton
 from multijugador.mision import TODOS
@@ -162,6 +163,8 @@ class PanelCooperativo:
             self.indice_destino = 0
 
     def cerca_eco(self):
+        if self.dimension == "presente":
+            return False  # los troncos son de La Copa
         return any(o["tipo"] == "eco" and self.vista.cerca(o) for o in self.caso.get("objetivos", []))
 
     def texto_lineas(self, superficie, texto, x, y, ancho=535, fuente=None, color=CREMA):
@@ -173,9 +176,7 @@ class PanelCooperativo:
         return y
 
     def boton(self, superficie, clave, texto, x, y, ancho=280, activo=True):
-        from interfaz.escenas_multijugador import PALETA_PRESENTE
-        paleta = PALETA_PRESENTE if self.dimension == "presente" and self.modo in ("caldero", "resultado") else None
-        b = Boton(texto, centro=(x, y), fuente=self.fuente, tamano=(ancho, 42), desactivado=not activo, paleta=paleta)
+        b = Boton(texto, centro=(x, y), fuente=self.fuente, tamano=(ancho, 42), desactivado=not activo)
         b.dibujar(superficie, self.vista.mouse)
         self.botones[clave] = b
 
@@ -264,22 +265,14 @@ class PanelCooperativo:
         contexto = self.contexto()
         if self.modo == "caldero":
             opciones = contexto.get("opciones", {})
-            if contexto["dimension"] == "presente":
-                pistas, total = contexto.get("pistas", 0), contexto.get("total_pistas", 3)
-                falta = ("Reúnan las tres pistas de Distrito Conecta." if pistas < total else
-                         "Acércate a la pantalla pública para elegir." if not self.vista.cerca_id("presente:pantalla") else "")
-                mensaje = falta or "Elijan juntos qué hacer. Lean las pistas con I."
-            else:
-                falta = self.falta_para_elegir()
-                mensaje = falta or ("Eligieron distinto. Hablen y prueben otra vez." if self.caso.get("empate") else "Lee tus pistas. ¿Qué poción usamos?")
+            falta = self.falta_para_elegir()
+            mensaje = falta or ("Eligieron distinto. Hablen y prueben otra vez." if self.caso.get("empate") else "Lee tus pistas. ¿Qué poción usamos?")
             votos = f"Tus pistas: {len(self.inventario())} · Ya eligieron {contexto.get('votos_emitidos', 0)} de {contexto.get('votantes', 0)}"
             voto = self.privado_voto(contexto)
-            if voto and contexto["dimension"] == "presente":
-                votos += " · Tu elección: " + escenas.nombre_opcion_presente(voto)
-            elif voto:
+            if voto:
                 votos += " · Tu poción: " + escenas.nombre_pocion(contexto.get("tipos_pocion", {}).get(voto, ""))
             escenas.dibujar_decision(self, superficie, contexto, opciones, contexto.get("tipos_pocion", {}), falta, mensaje, votos)
-            if contexto["dimension"] == "la_copa" and len(self.inventario()) < 2:
+            if len(self.inventario()) < 2:
                 self.boton(superficie, "pedir_pista", "Pedir pista", 880, 700, 150)
             self.boton(superficie, "cerrar", "Volver", 82, 700, 150)
             return True
@@ -291,25 +284,19 @@ class PanelCooperativo:
                 self.texto_lineas(superficie, "Antes de seguir: ¿qué tipo de información era?", rect.x + 40, rect.bottom - 70, rect.width - 80, self.pequena, ORO)
                 dibujar_icono(superficie, self.vista.arte.arbol, (rect.right - 50, rect.bottom - 60))
                 self.boton(superficie, "clasificar_abrir", "Clasificar el evento", 480, 595, 420)
-            elif contexto["dimension"] == "la_copa":
+            else:
                 if not resultado.get("correcto") and not self.caso.get("rectificacion"):
                     self.boton(superficie, "rectificar", "Leer las pistas e intentar otra vez", 480, 595, 570, self.en_caldero())
                 self.boton(superficie, "introduccion", "Ver nuestras estrellas" if self.caso.get("fase") == "final" else "Vamos a ayudar a la aldea", 480, 650, 540)
-            elif resultado.get("opcion") == "dejar_pendiente":
-                self.boton(superficie, "caldero", "Volver a decidir", 480, 595, 420, self.vista.cerca_id("presente:pantalla"))
             self.boton(superficie, "cerrar", "Volver al mapa", 480, 700, 310)
             return True
-        presente = contexto["dimension"] == "presente"
-        recursos_escena = self.vista.escenas.r_presente if presente else self.vista.escenas.r
-        dia_escena = escenas.DIA_PRESENTE if presente else 0
         if self.modo == "clasificar":
             opciones = tuple(contexto.get("clasificacion_opciones") or ())
-            r = recursos_escena
+            r = self.vista.escenas.r
             if opciones not in self.botones_clasificacion:
                 self.botones_clasificacion[opciones] = construir_botones_clasificacion(list(opciones), r, r["fuente_boton"])
             botones = self.botones_clasificacion[opciones]
-            encabezado = {"encabezado": "¿CÓMO CLASIFICARÍAS ESTA PUBLICACIÓN?"} if presente else {}
-            dibujar_pregunta_clasificacion(superficie, r, escenas.AdaptadorEstado(dia=dia_escena), botones, self.vista.mouse, **encabezado)
+            dibujar_pregunta_clasificacion(superficie, r, escenas.AdaptadorEstado(), botones, self.vista.mouse)
             for boton in botones:
                 self.botones["clasificar:" + boton.texto] = boton
             return True
@@ -318,11 +305,11 @@ class PanelCooperativo:
             if not propia:
                 return False
             resultado = contexto.get("resultado") or {}
-            adaptador = escenas.AdaptadorEstado(dia=dia_escena, resultado=dict(
+            adaptador = escenas.AdaptadorEstado(resultado=dict(
                 categoria=propia["categoria"], clasificacion_jugador=propia["opcion"],
                 clasificacion_correcta=propia["correcta"], efecto_clasificacion=propia["efectos"],
                 resultado=resultado.get("texto", "")))
-            dibujar_resultado_evento(superficie, recursos_escena, adaptador)
+            dibujar_resultado_evento(superficie, self.vista.escenas.r, adaptador)
             return True
         if self.modo == "reparar":
             escenas.dibujar_minijuego(self, superficie, self.caso.get("puente") or {}, self.tiempo_aguja_ms, self.estado_indicador)
@@ -344,6 +331,12 @@ class PanelCooperativo:
             self._abierto = 0
         elif not getattr(self, "_abierto", 0):
             self._abierto = time.monotonic()
+        if self.activo and self.dimension == "presente" and self.modo != "portal":
+            celular.dibujar(self, superficie)
+            if time.monotonic() < self.toast_hasta:
+                pygame.draw.rect(superficie, (19, 39, 49), (20, 10, 920, 40), border_radius=7)
+                self.texto_lineas(superficie, self.toast, 32, 20, 895, self.pequena, (153, 222, 214))
+            return
         if self.activo and self._dibujar_pantalla_completa(superficie):
             if time.monotonic() < self.toast_hasta and self.modo not in ("clasificar", "clasificacion_resultado"):
                 pygame.draw.rect(superficie, (10, 30, 23), (20, 108, 920, 40), border_radius=7)
@@ -576,6 +569,12 @@ class PanelCooperativo:
             if evento.key == pygame.K_ESCAPE and self.activo:
                 self.modo = None
                 return True
+            if evento.key in (pygame.K_LEFT, pygame.K_RIGHT) and self.modo == "inventario" and self.dimension == "presente":
+                self.indice_pista += 1 if evento.key == pygame.K_RIGHT else -1
+                return True
+            if evento.key == pygame.K_c and self.dimension == "presente":
+                self.modo = None if self.activo else "introduccion"
+                return True
             if evento.key in (pygame.K_LEFT, pygame.K_RIGHT) and self.modo in ("eco", "eco_mensajes", "inventario"):
                 self.indice_destino += 1 if evento.key == pygame.K_RIGHT else -1
                 return True
@@ -585,7 +584,7 @@ class PanelCooperativo:
             if evento.key == pygame.K_m:
                 self.abrir("introduccion")
                 return True
-            if evento.key == pygame.K_q and not self.activo:
+            if evento.key == pygame.K_q and not self.activo and self.dimension != "presente":
                 cliente.actuar("habilidad")
                 return True
             if self.activo:
@@ -609,6 +608,9 @@ class PanelCooperativo:
                 self.modo = None
             elif clave in ("habilidad", "pedir_pista", "sujetar", "trabajar", "recoger_suministro", "depositar", "continuar"):
                 cliente.actuar(clave)
+            elif clave.startswith("pista:"):
+                self.indice_pista = int(clave.split(":")[1])
+                self.modo = "inventario"
             elif clave == "pista_anterior":
                 self.indice_pista -= 1
             elif clave == "pista_siguiente":

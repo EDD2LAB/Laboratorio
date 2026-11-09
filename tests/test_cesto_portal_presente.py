@@ -119,19 +119,47 @@ class EventosDelPresente(ConPantalla):
         self.vista.iniciar_pocion({"tipo_pocion": "quemar", "evento_id": 1, "correcto": True}, "noticia")
         self.assertIsNone(self.vista.animacion_pocion)
 
-    def test_cada_opcion_tiene_tarjeta_con_icono_propio(self):
-        from interfaz.escenas_multijugador import OPCIONES_PRESENTE
-        from multijugador.presente import OPCIONES
-        self.assertEqual(set(OPCIONES), set(OPCIONES_PRESENTE))
-        for clave, texto in OPCIONES.items():
-            self.assertIsNotNone(self.vista.escenas.iconos_presente[clave])
-            self.assertIsNotNone(self.vista.escenas.tarjeta_presente(clave, texto))
+    def dibujar(self, modo, caso=None, privado=None):
+        """Dibuja una pantalla del celular con el estado indicado."""
+        mundo = self.vista.estado["mundo"]
+        mundo["caso"]["presente"] = dict(self.publico, **(caso or {}))
+        mundo["privado"]["presente"] = dict({"inventario": [], "voto": None, "clasificacion": None}, **(privado or {}))
+        self.vista.panel.modo = modo
+        lienzo = pygame.Surface((960, 720))
+        self.vista.panel.dibujar(lienzo)
+        return self.vista.panel.botones
 
-    def test_el_fondo_de_las_escenas_es_distrito_conecta(self):
-        escenas = self.vista.escenas
-        self.assertIsNotNone(escenas.fondo_presente)
-        self.assertIs(escenas.r["fondos_tablilla_por_dia"][1], escenas.fondo_presente)
-        self.assertIsNot(escenas.fondo_presente, escenas.fondo_tablilla)
+    @property
+    def publico(self):
+        from multijugador.presente import OPCIONES
+        return {"pistas": 3, "total_pistas": 3, "titulo": "Publicación", "noticia": "Texto", "opciones": dict(OPCIONES),
+                "votos_emitidos": 0, "votantes": 2, "resultado": None, "clasificacion_opciones": ["Generado con IA"]}
+
+    def test_cada_decision_es_un_boton_del_celular(self):
+        from interfaz.celular import OPCIONES
+        from multijugador.presente import OPCIONES as DEL_SERVIDOR
+        self.assertEqual(set(OPCIONES), set(DEL_SERVIDOR))
+        for clave in DEL_SERVIDOR:
+            self.assertIsNotNone(self.vista.celular.iconos[clave])
+        self.assertLessEqual({"presente_votar:" + c for c in DEL_SERVIDOR}, set(self.dibujar("caldero")))
+
+    def test_todas_las_pantallas_se_abren_en_el_celular(self):
+        resultado = {"opcion": "verificar", "correcto": True, "texto": "T", "efectos": {"sabiduria": 5}}
+        clasificacion = {"opcion": "Generado con IA", "correcta": True, "efectos": {"sabiduria": 8},
+                         "categoria": ["Tablilla", "Contenido Digital", "Generado con IA"]}
+        pista = {"id": "p", "titulo": "Tomás Red · Testimonio", "texto": "T"}
+        for modo in ("introduccion", "inventario", "fuente", "caldero", "resultado", "clasificar", "clasificacion_resultado"):
+            with self.subTest(modo=modo):
+                botones = self.dibujar(modo, {"resultado": resultado}, {"inventario": [pista], "clasificacion": clasificacion})
+                self.assertIn("introduccion", botones)
+        self.assertIn("clasificar:Generado con IA", self.dibujar("clasificar"))
+
+    def test_las_pistas_nombran_a_los_personajes_del_distrito(self):
+        from interfaz.celular import equipo_distrito
+        self.assertEqual(equipo_distrito(self.vista.panel, incluir_yo=True), ["Elías Vega", "Mateo Ríos"])
+        self.assertEqual(equipo_distrito(self.vista.panel), ["Mateo Ríos"])
+        self.dibujar("inventario", privado={"inventario": [{"id": "p", "titulo": "Tomás Red · Testimonio", "texto": "T"}]})
+        self.assertNotIn("entregar", self.vista.panel.botones)  # todo el equipo ya la ve
 
 
 if __name__ == "__main__":

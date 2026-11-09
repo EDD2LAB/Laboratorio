@@ -18,43 +18,16 @@ ORO = (237, 185, 87)
 CREMA = (255, 243, 210)
 VERDE = (130, 222, 158)
 TINTA = (61, 37, 25)
-TURQUESA = (106, 218, 204)
-PANTALLA = (12, 28, 44)
-DIA_PRESENTE = 1  # índice de los fondos de escena de Distrito Conecta
-PALETA_PRESENTE = {"normal": (24, 62, 84), "hover": (36, 90, 116), "presionado": (14, 40, 58),
-                   "borde": TURQUESA, "contorno": (6, 16, 28)}
-# Opción de la pantalla pública -> (nombre corto, imagen, cuadro si es una hoja de 8).
-OPCIONES_PRESENTE = {
-    "verificar": ("Verificar", "Estados/estado_fuente_verificada.png", None),
-    "reportar": ("Reportar", "Iconos/Nuevos/icono_sancion.png", None),
-    "dejar_pendiente": ("Dejar pendiente", "Iconos/Nuevos/icono_tiempo.png", None),
-    "compartir": ("Compartir", "Estados/fx_propagacion_tarjeta_8f_1024x128.png", 4),
-}
-TAMANO_TARJETA = (208, 176)
-
-
-def en_presente(contexto_o_dimension):
-    if isinstance(contexto_o_dimension, dict):
-        return contexto_o_dimension.get("dimension") == "presente"
-    return contexto_o_dimension == "presente"
-
-
-def nombre_opcion_presente(clave):
-    return OPCIONES_PRESENTE.get(clave, (clave,))[0]
-
-
-def pantalla(superficie, rect, color=PANTALLA, borde=TURQUESA, radio=12):
-    pygame.draw.rect(superficie, color, rect, border_radius=radio)
-    pygame.draw.rect(superficie, borde, rect, 2, border_radius=radio)
 
 
 class AdaptadorEstado:
     """Interfaz mínima de EstadoJuego que usan las funciones de ``juego``."""
 
-    def __init__(self, texto="", resultado=None, dia=0):
+    dia = 0
+
+    def __init__(self, texto="", resultado=None):
         self.texto = texto
         self.resultado = resultado
-        self.dia = dia
 
     def texto_actual(self):
         return self.texto
@@ -160,65 +133,6 @@ class RecursosEscenas:
             print("[Multijugador] Sin sprites de materiales:", error)
             self.materiales = {}
         self._rotados = {}
-        self.fondo_presente = None  # lo prepara la vista al cargar Distrito Conecta
-        self.r_presente = self.r
-        self.iconos_presente = {}
-        self.icono_publicacion = None
-        self._tarjetas_presente = {}
-
-    def preparar_presente(self, mapa):
-        """Escenas de decisión de Distrito Conecta sobre su propio mapa.
-
-        Se escala una sola vez, al cargar la dimensión."""
-        from nucleo.recursos import cargar_spritesheet_frames
-        from interfaz.arte import icono as cargar_icono
-        factor = max(960 / mapa.get_width(), 720 / mapa.get_height())
-        ampliado = pygame.transform.scale(mapa, (max(960, round(mapa.get_width() * factor)),
-                                                 max(720, round(mapa.get_height() * factor))))
-        recorte = pygame.Rect(0, 0, 960, 720)
-        recorte.center = ampliado.get_rect().center
-        fondo = ampliado.subsurface(recorte).copy()
-        velo = pygame.Surface((960, 720), pygame.SRCALPHA)
-        velo.fill((6, 16, 32, 170))
-        fondo.blit(velo, (0, 0))
-        self.fondo_presente = fondo
-        self.r["mapas_dia"] = [self.r["mapas_dia"][0], fondo]
-        self.r["fondos_tablilla_por_dia"][DIA_PRESENTE] = fondo
-        # Los marcos de pergamino se cambian por pantallas; el texto queda en su sitio.
-        pregunta = pygame.Surface(self.r["panel_clasificacion"].get_size(), pygame.SRCALPHA)
-        pantalla(pregunta, pygame.Rect(60, 86, 720, 118))
-        resultado = pygame.Surface(self.r["fondo_clasificacion"].get_size(), pygame.SRCALPHA)
-        pantalla(resultado, pygame.Rect(60, 150, 740, 330), (232, 241, 246), (56, 160, 190))
-        self.r_presente = dict(self.r, panel_clasificacion=pregunta, fondo_clasificacion=resultado)
-        for clave, (_, ruta, cuadro) in OPCIONES_PRESENTE.items():
-            if cuadro is None:
-                self.iconos_presente[clave] = cargar_icono(ruta, (72, 72))
-                continue
-            cuadros = cargar_spritesheet_frames(ruta, 8)
-            if len(cuadros) > cuadro:
-                imagen = cuadros[cuadro]
-                imagen = imagen.subsurface(imagen.get_bounding_rect())
-                factor = min(72 / imagen.get_width(), 72 / imagen.get_height())
-                self.iconos_presente[clave] = pygame.transform.scale(
-                    imagen, (round(imagen.get_width() * factor), round(imagen.get_height() * factor)))
-        self.icono_publicacion = cargar_icono("Estados/estado_sin_fuente.png", (104, 104))
-
-    def tarjeta_presente(self, clave, texto):
-        """Tarjeta de una opción de la pantalla pública (se compone una vez)."""
-        from nucleo.recursos import envolver_texto
-        if (clave, texto) not in self._tarjetas_presente:
-            tarjeta = pygame.Surface(TAMANO_TARJETA, pygame.SRCALPHA)
-            pantalla(tarjeta, tarjeta.get_rect(), (20, 50, 70))
-            imagen = self.iconos_presente.get(clave)
-            if imagen is not None:
-                tarjeta.blit(imagen, imagen.get_rect(center=(TAMANO_TARJETA[0] // 2, 50)))
-            nombre = self.r["fuente_boton"].render(nombre_opcion_presente(clave), True, CREMA)
-            tarjeta.blit(nombre, nombre.get_rect(center=(TAMANO_TARJETA[0] // 2, 104)))
-            for i, linea in enumerate(envolver_texto(texto, self.r["fuente_panel"], TAMANO_TARJETA[0] - 20)[:3]):
-                render = self.r["fuente_panel"].render(linea, True, VERDE)
-                tarjeta.blit(render, render.get_rect(midtop=(TAMANO_TARJETA[0] // 2, 122 + i * 15)))
-            self._tarjetas_presente[(clave, texto)] = tarjeta
-        return self._tarjetas_presente[(clave, texto)]
 
     def indicador_rotado(self, estado, progreso):
         base = self.indicadores_puente.get(estado) or self.indicadores_puente.get("normal")
@@ -274,8 +188,6 @@ def estado_caldero(indicadores):
 
 def dibujar_decision(panel, superficie, contexto, opciones, tipos, falta, mensaje, votos):
     """Tablilla del evento y una poción por opción (botones del modo de un jugador)."""
-    if en_presente(contexto):
-        return dibujar_decision_presente(panel, superficie, contexto, opciones, falta, mensaje, votos)
     from nucleo.recursos import envolver_texto
     from un_jugador.tablilla import dibujar_pociones, dibujar_tablilla
     from interfaz.boton import Boton
@@ -313,57 +225,21 @@ def dibujar_decision(panel, superficie, contexto, opciones, tipos, falta, mensaj
         x += 190 + separacion
 
 
-def dibujar_decision_presente(panel, superficie, contexto, opciones, falta, mensaje, votos):
-    """La pantalla pública de Distrito Conecta: una publicación y qué hacer con ella."""
-    recursos = panel.vista.escenas
-    r = recursos.r
-    superficie.blit(recursos.fondo_presente, (0, 0))
-    titulo = r["fuente_resultado"].render("¿QUÉ HACEMOS CON ESTA PUBLICACIÓN?", True, TURQUESA)
-    superficie.blit(titulo, titulo.get_rect(center=(480, 34)))
-    panel.texto_lineas(superficie, mensaje, 70, 60, 820, r["fuente_mapa"], ORO if falta else CREMA)
-    panel.texto_lineas(superficie, votos, 70, 86, 820, r["fuente_panel"], VERDE)
-    caja = pygame.Rect(190, 152, 580, 240)
-    pantalla(superficie, caja)
-    cabecera = pygame.Rect(caja.x + 2, caja.y + 2, caja.width - 4, 36)
-    pygame.draw.rect(superficie, (24, 62, 84), cabecera, border_top_left_radius=10, border_top_right_radius=10)
-    etiqueta = r["fuente_panel_titulo"].render("PANTALLA PÚBLICA", True, TURQUESA)
-    superficie.blit(etiqueta, etiqueta.get_rect(midleft=(caja.x + 18, cabecera.centery)))
-    if recursos.icono_publicacion is not None:
-        superficie.blit(recursos.icono_publicacion, recursos.icono_publicacion.get_rect(center=(caja.x + 78, caja.y + 132)))
-    y = panel.texto_lineas(superficie, contexto.get("titulo", ""), caja.x + 150, caja.y + 56, 405, r["fuente_mapa"], ORO)
-    panel.texto_lineas(superficie, contexto.get("noticia", ""), caja.x + 150, y + 8, 405, r["fuente_mapa"], CREMA)
-    from interfaz.boton import Boton
-    ancho, separacion = TAMANO_TARJETA[0], 20
-    x = (960 - (ancho * len(opciones) + separacion * (len(opciones) - 1))) // 2 + ancho // 2
-    for clave, texto in opciones.items():
-        boton = Boton(texto, recursos.tarjeta_presente(clave, texto), (x, 510), r["fuente_boton"], desactivado=bool(falta))
-        boton.dibujar(superficie, panel.vista.mouse)
-        panel.botones["presente_votar:" + clave] = boton
-        if panel.privado_voto(contexto) == clave:
-            pygame.draw.rect(superficie, ORO, boton.rect.inflate(6, 6), 3, border_radius=14)
-        x += ancho + separacion
-
-
 def dibujar_consecuencia(panel, superficie, resultado, dimension):
     """Mismo panel que un_jugador.tablilla.dibujar_consecuencia_evento, con colores por
     polaridad: verde si ayuda (bueno↑ o malo↓), rojo si perjudica."""
-    recursos = panel.vista.escenas
-    r = recursos.r
-    presente = en_presente(dimension)
-    superficie.blit(recursos.fondo_presente if presente else recursos.fondo_tablilla, (0, 0))
+    r = panel.vista.escenas.r
+    superficie.blit(panel.vista.escenas.fondo_tablilla, (0, 0))
     rect = pygame.Rect(178, 150, 604, 400)
     fondo = pygame.Surface(rect.size, pygame.SRCALPHA)
-    fondo.fill((*PANTALLA, 242) if presente else (18, 36, 29, 238))
+    fondo.fill((18, 36, 29, 238))
     superficie.blit(fondo, rect)
-    color = TURQUESA if presente else ORO
-    pygame.draw.rect(superficie, color, rect, 3, border_radius=16)
-    titulo = r["fuente_panel_titulo"].render("CONSECUENCIA DE LA DECISIÓN", True, color)
+    pygame.draw.rect(superficie, ORO, rect, 3, border_radius=16)
+    titulo = r["fuente_panel_titulo"].render("CONSECUENCIA DE LA DECISIÓN", True, ORO)
     superficie.blit(titulo, titulo.get_rect(center=(rect.centerx, rect.y + 40)))
     tipo = resultado.get("tipo_pocion")
-    icono = recursos.iconos_presente.get(resultado.get("opcion")) if presente else r["pociones"].get(tipo)
-    if icono is not None:
-        if presente:
-            icono = pygame.transform.scale(icono, (icono.get_width() * 2 // 3, icono.get_height() * 2 // 3))
+    if tipo:
+        icono = r["pociones"][tipo]
         superficie.blit(icono, icono.get_rect(center=(rect.x + 50, rect.y + 40)))
         superficie.blit(icono, icono.get_rect(center=(rect.right - 50, rect.y + 40)))
     y = panel.texto_lineas(superficie, resultado.get("texto", ""), rect.x + 40, rect.y + 80, rect.width - 80, r["fuente_mapa"])

@@ -186,6 +186,7 @@ class VistaPartida:
         self.estado = estado
         self.frames_eco = cargar_frames_tronco_eco()
         self._frames_tronco_escalados = {}
+        self.celular = None  # se carga al llegar a Distrito Conecta
         # --- Features del modo de un jugador (cargadas una sola vez) ---
         self.dimension = LA_COPA
         self.mapas = {LA_COPA: {"fondo": self.fondo, "decoraciones": self.decoraciones, "colisiones": self.colisiones}}
@@ -282,6 +283,7 @@ class VistaPartida:
             from logica.dimensiones import DIMENSIONES
             from multijugador.dimensiones_red import cargar_datos
             from mundo.mapas import cargar_mapa_presente
+            from interfaz.celular import ArteCelular
             recursos = cargar_mapa_presente(DIMENSIONES[dimension])
             if recursos is None:
                 raise ValueError("No se pudo cargar " + dimension)
@@ -289,7 +291,7 @@ class VistaPartida:
             self.mapas[dimension] = {"fondo": recursos["mapa"], "decoraciones": recursos["decoraciones"],
                                      "colisiones": colisiones}
             self.escenas_zoom[dimension] = self._escena_presente(DIMENSIONES[dimension], recursos, colisiones)
-            self.escenas.preparar_presente(self.escenas_zoom[dimension]["fondo"])
+            self.celular = self.celular or ArteCelular()
         return self.mapas[dimension]
 
     @staticmethod
@@ -893,8 +895,8 @@ class VistaPartida:
         if presente.get("completada"):
             return "¡Misión completada! Ve al portal", "Sigue la flecha hasta el portal para elegir otra época."
         if pistas < total:
-            return f"Pistas {pistas}/{total}", "Habla con las personas marcadas (E). Luego decidan en la pantalla pública."
-        return "Vayan a la pantalla pública", "¡Tienen las tres pistas! Vayan a la pantalla pública y elijan una poción."
+            return f"Pistas {pistas}/{total}", "Habla con las personas marcadas (E). Tus pistas quedan en el celular (C)."
+        return "Vayan a la pantalla pública", "¡Tienen las tres pistas! Vayan a la pantalla pública y decidan en el celular (C)."
 
     def _dibujar_hud(self, superficie, codigo, caso, privado, guia):
         """Solo lo importante a la vista; lo demás se abre con J."""

@@ -159,15 +159,14 @@ def dibujar_consecuencia_evento(superficie, recursos, estado):
     superficie.blit(continuar, continuar.get_rect(center=(panel.centerx, panel.bottom - 42)))
 
 
-def dibujar_pregunta_clasificacion(superficie, recursos, estado, botones, mouse_pos,
-                                   encabezado="¿CÓMO CLASIFICARÍAS ESTA TABLILLA?"):
+def dibujar_pregunta_clasificacion(superficie, recursos, estado, botones, mouse_pos):
     """Pide la clasificación sin mostrar cuál era la categoría real."""
     superficie.blit(fondo_tablilla_actual(recursos, estado), (0, 0))
     # En clasificación el HUD no se muestra para dejar aire al panel central.
     panel = recursos["panel_clasificacion"]
     rect = panel.get_rect(center=(ANCHO // 2, 238))
     superficie.blit(panel, rect)
-    titulo = recursos["fuente_resultado"].render(encabezado, True, CREMA)
+    titulo = recursos["fuente_resultado"].render("¿CÓMO CLASIFICARÍAS ESTA TABLILLA?", True, CREMA)
     superficie.blit(titulo, titulo.get_rect(center=(rect.centerx, rect.y + 122)))
     # El texto de ayuda se ajusta al interior útil del pergamino para que no
     # se salga por los bordes en ninguna resolución.
