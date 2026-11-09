@@ -9,6 +9,7 @@ class SorteoPartida:
             raise ValueError("La semilla debe ser un entero de 64 bits sin signo.")
         self.semilla = secrets.randbits(64) if semilla is None else semilla
         self.azar = random.Random(self.semilla)
+        self.persona = None
 
     def elegir(self, opciones):
         return self.azar.choice(opciones)
@@ -20,7 +21,7 @@ class SorteoPartida:
         casos = [self.elegir((caso, variantes[caso[0]])) if caso[0] in variantes else caso for caso in originales]
         # Se sortea a quién menciona la acusación, nunca quién es culpable.
         # Las pruebas siguen demostrando retrasos, no apropiación de la ayuda.
-        persona = self.elegir(("Mira", "Kael", "Luma", "Naira"))
+        persona = self.persona = self.elegir(("Mira", "Kael", "Luma", "Naira"))
         ayuda = list(casos[-1])
         ayuda[2] = ayuda[2].replace("Mira", persona)
         ayuda[4] = dict(ayuda[4])

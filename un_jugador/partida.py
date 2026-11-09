@@ -335,27 +335,27 @@ def main():
         },
         "Darío Veraz": {
             "personaje": "Darío Veraz",
-            "texto": "Heredé el método de Odran: separo lo observado de lo supuesto. No hay archivo fuente; revisemos el contexto.",
+            "texto": "Mi método: separo lo observado de lo supuesto. No hay archivo fuente; revisemos el contexto.",
             "respuestas": [],
         },
         "Ronaldo Vélez": {
             "personaje": "Ronaldo Vélez",
-            "texto": "Soy descendiente de Kael. La agenda me sitúa en un debate, no en el lugar de la imagen.",
+            "texto": "La agenda me sitúa en un debate, no en el lugar de la imagen.",
             "respuestas": [],
         },
         "Tomás Red": {
             "personaje": "Tomás Red",
-            "texto": "Como Tarek, suelo estar conectado a lo que comparte la comunidad; vi el post, no el hecho.",
+            "texto": "Suelo estar conectado a lo que comparte la comunidad; vi el post, no el hecho.",
             "respuestas": [],
         },
         "Lía Nova": {
             "personaje": "Lía Nova",
-            "texto": "Luma contaba historias en la aldea; yo las difundo como influencer, pero el alcance no confirma su verdad.",
+            "texto": "Cuento historias como influencer, pero el alcance no confirma su verdad.",
             "respuestas": [],
         },
         "Mateo Ríos": {
             "personaje": "Mateo Ríos",
-            "texto": "Como el antiguo Mensajero, conecto a la gente por la ciudad. Llevaré una corrección con datos confirmados.",
+            "texto": "Conecto a la gente por la ciudad. Llevaré una corrección con datos confirmados.",
             "respuestas": [],
         },
     }

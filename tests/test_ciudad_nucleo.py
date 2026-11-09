@@ -156,7 +156,7 @@ class Decision(unittest.TestCase):
         casos = {c.id: c for c in list(expediente.arbol.casos.values()) + expediente.pendientes}
         self.assertEqual(casos["nucleo_control"].gravedad, 9)
         self.assertEqual(casos["nucleo_control"].datos["tipo"], "Control autónomo sin supervisión")
-        self.assertIsNone(casos["nucleo_control"].datos["ley"])
+        self.assertIn("269B", casos["nucleo_control"].datos["ley"])
 
     def test_desconectarlo_a_la_fuerza_no_es_la_correcta(self):
         resolver_terminales(self.p, self.m)

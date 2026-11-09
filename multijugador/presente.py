@@ -12,6 +12,7 @@ from . import clasificacion
 from .dialogos import identificador_npc
 from .dimensiones_red import spawn_interior
 from .presentacion import aplicar_efectos, tipo_pocion
+from .expediente import campos_legales, ficha_resuelta
 
 MARCAS = json.loads((Path(__file__).resolve().parents[1] / "datos" / "marcas_manipulacion.json").read_text(encoding="utf-8"))
 
@@ -311,7 +312,8 @@ class MisionPresente:
         aplicar_efectos(self.indicadores, efectos)
         self.resultado = {"opcion": opcion, "correcto": opcion == CORRECTA and not apresurada,
                           "texto": evento["sin_analisis"] if apresurada else evento["textos"][opcion],
-                          "efectos": efectos, "tipo_pocion": tipo_pocion(opcion), "evento_id": self.nuevo_evento()}
+                          "efectos": efectos, "tipo_pocion": tipo_pocion(opcion), "evento_id": self.nuevo_evento(),
+                          **campos_legales(ficha_resuelta(evento["id"]))}
         self.votos.clear()
         if self.completada and self.expediente is not None:
             self.expediente.registrar(evento["id"], evento["titulo"], self.resultado, self._pruebas())

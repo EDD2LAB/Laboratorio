@@ -10,6 +10,7 @@ from logica.grafo_fisico import GrafoFisico
 
 from .dialogos import identificador_npc
 from .presentacion import aplicar_efectos, tipo_pocion
+from .expediente import campos_legales, ficha_resuelta
 
 CASO = "nucleo_control"
 TITULO = "NÚCLEO tomó el control"
@@ -341,7 +342,8 @@ class MisionNucleo:
         efectos = dict(EFECTOS[opcion])
         aplicar_efectos(self.indicadores, efectos)
         self.resultado = {"opcion": opcion, "correcto": opcion == CORRECTA, "texto": TEXTOS[opcion], "efectos": efectos,
-                          "tipo_pocion": tipo_pocion(opcion), "evento_id": self.nuevo_evento()}
+                          "tipo_pocion": tipo_pocion(opcion), "evento_id": self.nuevo_evento(),
+                          **campos_legales(ficha_resuelta(CASO))}
         self.votos.clear()
         if self.completada and self.expediente is not None:
             pruebas = [{"id": t[0], "titulo": t[2], "texto": t[3]} for t in TERMINALES]

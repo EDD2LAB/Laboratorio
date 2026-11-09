@@ -49,23 +49,23 @@ REACCIONES = {
 
 TESTIMONIOS_PRESENTE = {
     "Darío Veraz": (
-        "Heredé de Odran el deber de separar los hechos de los ecos. Encontré el video original: compáralo con el que circula.",
-        "Compara cuadro por cuadro. El método de Odran exige contrastar también el testimonio y el contexto.",
+        "Mi trabajo es separar los hechos de los rumores. Encontré el video original: compáralo con el que circula.",
+        "Compara cuadro por cuadro. Verificar exige contrastar también el testimonio y el contexto.",
     ),
     "Ronaldo Vélez": (
-        "Soy descendiente de Kael y aspiro a la Alcaldía. Ese día hice una donación pública; mi agenda lo confirma.",
+        "Aspiro a la Alcaldía. Ese día hice una donación pública; mi agenda lo confirma.",
         "Lo que circula no demuestra culpabilidad. Compárenlo con el material original antes de creerlo.",
     ),
     "Tomás Red": (
-        "Como Tarek, estoy conectado a lo que comparte la comunidad. Vi la publicación, pero no el hecho ni su archivo original.",
+        "Estoy conectado a lo que comparte la comunidad. Vi la publicación, pero no el hecho ni su archivo original.",
         "No vi a Ronaldo en ese lugar. Comprueba el contexto antes de compartir la imagen.",
     ),
     "Lía Nova": (
-        "Luma compartía historias en la aldea; yo soy influencer. Este video circula mucho, pero primero comprobemos su origen.",
+        "Soy influencer y cuento historias a mucha gente. Este video circula mucho, pero primero comprobemos su origen.",
         "El alcance no convierte una publicación en verdad. Busquemos una fuente verificable antes de amplificarla.",
     ),
     "Mateo Ríos": (
-        "Como el Mensajero de antes, conecto a la gente por la ciudad. Puedo llevar una corrección con datos confirmados.",
+        "Soy mensajero: conecto a la gente por la ciudad. Puedo llevar una corrección con datos confirmados.",
         "Una corrección clara debe enlazar la fuente y explicar qué parte del mensaje era dudosa.",
     ),
     "Elías Vega": (

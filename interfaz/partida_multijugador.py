@@ -260,6 +260,8 @@ class VistaPartida:
         self.hud = HUDIndicadores(cargar_fuente(11), self.escenas.iconos_hud,
                                   negativos={k for k, v in POLARIDAD.items() if v == "malo"},
                                   colores_avisos=(COLOR_VERDE, COLOR_ROJO), etiquetar_avisos=True)
+        from interfaz.aviso_legal import AvisoLegal
+        self.aviso_legal = AvisoLegal(cargar_fuente(14), self.narrador)  # la misma fuente del HUD, legible
         self.etiquetas = ETIQUETAS
         self.hud.establecer_etiquetas(ETIQUETAS[LA_COPA])
         self.mostrar_hud = True  # H o el botón de la barra: oculta/muestra todo el HUD
@@ -1490,3 +1492,4 @@ class VistaPartida:
             self.transicion.dibujar(superficie, self.escenas.r["fuente_resultado"])
         if self.pantalla_final is not None:
             self.pantalla_final.dibujar(superficie)
+        self.aviso_legal.dibujar(superficie)

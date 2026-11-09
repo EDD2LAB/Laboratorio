@@ -136,7 +136,7 @@ class IntegracionTests(unittest.TestCase):
         self.assertEqual([prueba["id"] for prueba in pruebas], ["pista_guardian"])
         self.assertNotIn("semilla", json.dumps(publico))
         self.assertNotIn("Informe vigente", json.dumps(publico))
-        self.assertIsNone(publico["expediente"]["raiz"]["caso"]["datos"]["ley"])
+        self.assertEqual(publico["expediente"]["raiz"]["caso"]["datos"]["ley"], "Código Penal, art. 220 (Injuria)")
 
     def test_solicitud_repetida_y_desconexion(self):
         p = self.crear()

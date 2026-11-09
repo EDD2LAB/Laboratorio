@@ -2,6 +2,29 @@
 import pygame
 import time
 
+from interfaz.arte import NUEVOS, icono
+
+X, ANCHO = 495, 390
+ORO = (237, 185, 87)
+GRIS_NOTA = (205, 214, 190)
+
+
+def _ficha_legal(panel, superficie, datos, y):
+    """Conducta, ley, sanción y nota del caso, con sus iconos."""
+    if not hasattr(panel, "iconos_legales"):
+        panel.iconos_legales = {"ley": icono(NUEVOS + "icono_ley.png", (16, 16)),
+                                "sancion": icono(NUEVOS + "icono_sancion.png", (16, 16))}
+    if datos.get("conducta"):
+        y = panel.texto_lineas(superficie, datos["conducta"], X, y, ANCHO, panel.pequena)
+    for clave in ("ley", "sancion"):
+        if datos.get(clave):
+            if panel.iconos_legales[clave]:
+                superficie.blit(panel.iconos_legales[clave], (X, y + 7))
+            y = panel.texto_lineas(superficie, datos[clave], X + 22, y + 6, ANCHO - 22, panel.pequena, ORO)
+    if datos.get("nota"):
+        y = panel.texto_lineas(superficie, datos["nota"], X, y + 6, ANCHO, panel.pequena, GRIS_NOTA)
+    return y
+
 
 def dibujar(panel, superficie):
     estado = panel.caso.get("expediente") or {}
@@ -52,12 +75,16 @@ def dibujar(panel, superficie):
         y = panel.texto_lineas(superficie, "Decisión: " + opciones.get(resultado["opcion"], resultado["opcion"]), 495, y + 8, 390, panel.pequena)
         pruebas = datos.get("pruebas", [])
         indice = getattr(panel, "prueba_expediente", 0) % max(1, len(pruebas))
-        if pruebas:
+        ver_pruebas = pruebas and (getattr(panel, "expediente_ver_pruebas", False) or not datos.get("ley"))
+        if ver_pruebas:
             prueba = pruebas[indice]
             y = panel.texto_lineas(superficie, f"Prueba {indice + 1}/{len(pruebas)}: " + prueba["titulo"], 495, y + 12, 390, panel.pequena)
             panel.texto_lineas(superficie, prueba["texto"], 495, y + 4, 390, panel.pequena)
-            panel.boton(superficie, "expediente_prueba", "Otra prueba", 690, 440, 230)
-        panel.texto_lineas(superficie, "Leyes y sanciones: por confirmar con el profesor.", 495, 480, 390, panel.pequena)
+            panel.boton(superficie, "expediente_prueba", "Otra prueba", 690, 450, 230)
+        else:
+            _ficha_legal(panel, superficie, datos, y + 10)
+        if pruebas and datos.get("ley"):
+            panel.boton(superficie, "expediente_vista", "Ver la ley" if ver_pruebas else "Ver las pruebas", 690, 505, 230)
     else:
         panel.texto_lineas(superficie, "Resuelvan el primer caso. Aquí guardaremos sus descubrimientos.", 495, 150, 390)
     if pendiente:

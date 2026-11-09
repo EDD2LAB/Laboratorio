@@ -282,6 +282,9 @@ class TresEras(unittest.TestCase):
         informe = m.informe()
         self.assertEqual({f["era"] for f in informe["casos"] if f["resuelto"]}, {"La Copa", "Distrito Conecta", "Ciudad Núcleo"})
         self.assertTrue(all(f["resuelto"] for f in informe["casos"]), [f["id"] for f in informe["casos"] if not f["resuelto"]])
+        self.assertTrue(all(f["norma"] and f["pena"] for f in informe["casos"]))  # los bots también dejan la ley
+        for resultado in (m.presente.resultado, m.futuro.resultado):
+            self.assertIn("cita_corta", resultado)
 
 
 if __name__ == "__main__":

@@ -1,7 +1,7 @@
 """Campaña cooperativa de La Copa; todo el progreso pertenece al servidor."""
 from .mision import MisionPuente
 from logica.sorteo_partida import SorteoPartida
-from .expediente import ExpedientePartida
+from .expediente import ExpedientePartida, campos_legales, ficha_resuelta
 from .suministros import EncargoSuministros
 from .guia import GuiaCooperativa
 from . import clasificacion
@@ -187,7 +187,6 @@ class CampanaCopa(MisionPuente):
 
     def informe(self):
         """Datos del informe final: los casos de las tres eras, resueltos o no."""
-        from .expediente import CATALOGO
         from .nucleo import CASO, OPCIONES as OPCIONES_NUCLEO, TITULO
         from .presente import EVENTOS, OPCIONES as OPCIONES_PRESENTE
         guardados = {c.id: c for c in list(self.expediente.arbol.casos.values()) + self.expediente.pendientes}
@@ -196,10 +195,10 @@ class CampanaCopa(MisionPuente):
         definidos.append((CASO, TITULO, "Ciudad Núcleo", OPCIONES_NUCLEO))
         filas = []
         for identificador, titulo, era, opciones in definidos:
-            ficha, caso = CATALOGO[identificador], guardados.get(identificador)
+            ficha, caso = ficha_resuelta(identificador), guardados.get(identificador)
             datos = caso.datos if caso else {}
             resultado = datos.get("resultado", {})
-            filas.append({"id": identificador, "titulo": titulo, "era": era, "tipo": ficha["tipo"], "gravedad": ficha["gravedad"],
+            filas.append({"id": identificador, "titulo": titulo, "era": era, "tipo": datos.get("tipo", ficha["tipo"]), "gravedad": caso.gravedad if caso else ficha["gravedad"],
                           "resuelto": caso is not None, "orden": caso.orden if caso else len(guardados) + len(filas),
                           "decision": opciones.get(resultado.get("opcion"), resultado.get("opcion")),
                           "decision_corta": DECISION_CORTA.get(resultado.get("opcion")),
@@ -503,10 +502,13 @@ class CampanaCopa(MisionPuente):
         super().resolver(presentes)
         if self.resultado:
             caso = self.casos[self.ronda]
+            # La ficha depende de la respuesta correcta y la persona sorteadas.
+            ficha = ficha_resuelta(caso[0], caso[3], self.sorteo.persona)
+            self.resultado.update(campos_legales(ficha))
             pruebas = [{"id": pista, "titulo": self.pruebas[pista.removeprefix("pista_")][0],
                         "texto": self.pruebas[pista.removeprefix("pista_")][1]}
                        for pista in sorted(self.halladas)]
-            self.expediente.registrar(caso[0], caso[1], self.resultado, pruebas)
+            self.expediente.registrar(caso[0], caso[1], self.resultado, pruebas, ficha)
         if self.ronda:
             self.estado_puente = puente
 

@@ -1,10 +1,130 @@
 {
-  "puente_norte": {"tipo": "Aviso descontextualizado", "gravedad": 2, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"},
-  "agua": {"tipo": "Información sobre el agua", "gravedad": 4, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"},
-  "tormenta": {"tipo": "Alerta comunitaria", "gravedad": 3, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"},
-  "ayuda": {"tipo": "Acusación sin verificar", "gravedad": 2, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"},
-  "presente_video": {"tipo": "Acusación Personal", "gravedad": 6, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"},
-  "presente_voz": {"tipo": "Suplantación", "gravedad": 6, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"},
-  "presente_foto": {"tipo": "Suplantación", "gravedad": 7, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"},
-  "nucleo_control": {"tipo": "Control autónomo sin supervisión", "gravedad": 9, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"}
+  "puente_norte": {
+    "tipo": "Acusación Personal",
+    "gravedad": 4,
+    "con_delito": true,
+    "ley": "Código Penal, art. 220 (Injuria)",
+    "conducta": "Atribuir a Kael, sin pruebas, haber roto el puente por descuido: una imputación deshonrosa",
+    "sancion": "Prisión de 16 a 54 meses y multa de 13,33 a 1.500 SMLMV",
+    "cita_corta": "Injuria, art. 220 CP · prisión de 16 a 54 meses",
+    "nota": "Si dijeran que lo rompió a propósito, sería calumnia (art. 221): atribuir falsamente un delito.",
+    "estado_normativo": "verificado"
+  },
+  "agua": {
+    "tipo": "Alarma falsa",
+    "gravedad": 3,
+    "con_delito": true,
+    "ley": "Código Penal, art. 355 (Pánico)",
+    "conducta": "Difundir una alarma falsa sobre el agua que puede causar pánico en la aldea",
+    "sancion": "Multa",
+    "cita_corta": "Pánico, art. 355 CP · multa",
+    "estado_normativo": "verificado",
+    "por_respuesta": {
+      "descartar": {
+        "tipo": "Alarma falsa",
+        "gravedad": 3,
+        "con_delito": true,
+        "ley": "Código Penal, art. 355 (Pánico)",
+        "conducta": "Difundir una alarma falsa sobre el agua que puede causar pánico en la aldea",
+        "sancion": "Multa",
+        "cita_corta": "Pánico, art. 355 CP · multa",
+        "estado_normativo": "verificado"
+      },
+      "difundir": {
+        "tipo": "Alerta verificada",
+        "gravedad": 1,
+        "con_delito": false,
+        "ley": "Sin delito",
+        "conducta": "Difundir una alerta real y verificada",
+        "sancion": "Ninguna",
+        "cita_corta": "Alerta verificada · difundirla no es delito",
+        "estado_normativo": "verificado"
+      }
+    }
+  },
+  "tormenta": {
+    "tipo": "Alerta verificada",
+    "gravedad": 1,
+    "con_delito": false,
+    "ley": "Sin delito",
+    "conducta": "Difundir una alerta real y verificada",
+    "sancion": "Ninguna",
+    "cita_corta": "Alerta verificada · difundirla no es delito",
+    "estado_normativo": "verificado",
+    "por_respuesta": {
+      "difundir": {
+        "tipo": "Alerta verificada",
+        "gravedad": 1,
+        "con_delito": false,
+        "ley": "Sin delito",
+        "conducta": "Difundir una alerta real y verificada",
+        "sancion": "Ninguna",
+        "cita_corta": "Alerta verificada · difundirla no es delito",
+        "estado_normativo": "verificado"
+      },
+      "descartar": {
+        "tipo": "Alarma falsa",
+        "gravedad": 3,
+        "con_delito": true,
+        "ley": "Código Penal, art. 355 (Pánico)",
+        "conducta": "Difundir un simulacro como si fuera una orden real de evacuar",
+        "sancion": "Multa",
+        "cita_corta": "Pánico, art. 355 CP · multa",
+        "estado_normativo": "verificado"
+      }
+    }
+  },
+  "ayuda": {
+    "tipo": "Acusación Personal",
+    "gravedad": 5,
+    "con_delito": true,
+    "ley": "Código Penal, art. 221 (Calumnia); art. 222 (quien la repite); art. 223 (agravante por difusión pública)",
+    "conducta": "Atribuir falsamente a {persona} haberse robado la ayuda y difundirlo en las tablillas",
+    "sancion": "Prisión de 16 a 72 meses y multa de 13,33 a 1.500 SMLMV, aumentada de una sexta parte a la mitad por difusión pública",
+    "cita_corta": "Calumnia, arts. 221 y 223 CP · prisión de 16 a 72 meses, agravada",
+    "estado_normativo": "verificado"
+  },
+  "presente_video": {
+    "tipo": "Acusación Personal",
+    "gravedad": 6,
+    "con_delito": true,
+    "ley": "Código Penal, art. 221 (Calumnia) y art. 223 (difusión pública)",
+    "conducta": "Atribuir falsamente un delito a Ronaldo con un video editado y difundirlo",
+    "sancion": "Prisión de 16 a 72 meses y multa de 13,33 a 1.500 SMLMV, agravada por difusión pública",
+    "cita_corta": "Calumnia, arts. 221 y 223 CP · prisión de 16 a 72 meses, agravada",
+    "nota": "Es la misma conducta del rumor de La Copa: cambia la tecnología, no el delito.",
+    "estado_normativo": "verificado"
+  },
+  "presente_voz": {
+    "tipo": "Suplantación",
+    "gravedad": 6,
+    "con_delito": true,
+    "ley": "Código Penal, art. 296 (Falsedad personal), modificado por la Ley 2502 de 2025",
+    "conducta": "Suplantar a una persona usando inteligencia artificial (clonar su voz)",
+    "sancion": "Multa, aumentada hasta en una tercera parte por usar IA",
+    "cita_corta": "Art. 296 CP (Ley 2502/2025) · suplantación con IA",
+    "nota": "Si con la suplantación se le atribuye un delito, se aplica la calumnia, que es más grave.",
+    "estado_normativo": "verificado"
+  },
+  "presente_foto": {
+    "tipo": "Suplantación",
+    "gravedad": 7,
+    "con_delito": true,
+    "ley": "Ley 1273 de 2009, art. 269F (Violación de datos personales)",
+    "conducta": "Usar sin autorización la foto de otra persona para provecho propio",
+    "sancion": "Prisión de 48 a 96 meses y multa de 100 a 1.000 SMLMV",
+    "cita_corta": "Ley 1273/2009, art. 269F · prisión de 48 a 96 meses",
+    "nota": "La suplantación con IA del art. 296 CP queda absorbida por el delito más grave.",
+    "estado_normativo": "verificado"
+  },
+  "nucleo_control": {
+    "tipo": "Control autónomo sin supervisión",
+    "gravedad": 9,
+    "con_delito": true,
+    "ley": "Ley 1273 de 2009, art. 269B (Obstaculización ilegítima de sistema informático o red de telecomunicación), agravado por el art. 269H, num. 1 y 8",
+    "conducta": "Sin autorización, ceder el control de los sistemas y comunicaciones de la ciudad a una IA sin supervisión humana, impidiendo el acceso normal a ellos",
+    "sancion": "Prisión de 72 a 168 meses, multa de 150 a 1.750 SMLMV e inhabilitación hasta por 3 años",
+    "cita_corta": "Ley 1273/2009, arts. 269B y 269H · prisión de 72 a 168 meses",
+    "estado_normativo": "verificado"
+  }
 }

@@ -190,9 +190,9 @@ class Campana(unittest.TestCase):
         expediente = p.mision.expediente
         casos = {c.id: c for c in list(expediente.arbol.casos.values()) + expediente.pendientes}
         self.assertEqual({c: casos[c].gravedad for c in casos}, {"presente_video": 6, "presente_voz": 6, "presente_foto": 7})
-        for caso in casos.values():  # las leyes las agrega después el equipo
-            self.assertIsNone(caso.datos["ley"])
-            self.assertIsNone(caso.datos["sancion"])
+        for caso in casos.values():
+            self.assertTrue(caso.datos["ley"])
+            self.assertTrue(caso.datos["sancion"])
 
     def test_con_bots_que_ayudan_a_marcar_el_caso_llega_al_expediente(self):
         p = partida(1, bots=True)

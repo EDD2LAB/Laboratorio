@@ -213,17 +213,17 @@ class GestorDimensionesTests(unittest.TestCase):
         estado.dimension_actual = DIMENSION_PRESENTE
         self.assertEqual(dict(controles_hud(estado))["C"], "Celular")
 
-    def test_present_characters_continue_the_ancient_story(self):
+    def test_present_characters_only_talk_about_their_own_era(self):
         estado = EstadoJuego()
         for nombre, antepasado in (
             ("Darío Veraz", "Odran"),
             ("Ronaldo Vélez", "Kael"),
             ("Tomás Red", "Tarek"),
             ("Lía Nova", "Luma"),
-            ("Mateo Ríos", "Mensajero"),
+            ("Mateo Ríos", "Mensajero de antes"),
         ):
             dialogo, _ = construir_conversacion(nombre, estado, set())
-            self.assertIn(antepasado, dialogo["texto"])
+            self.assertNotIn(antepasado, dialogo["texto"])
 
     def test_transition_is_serializable_and_only_runs_once(self):
         gestor = GestorDimensiones()

@@ -87,7 +87,15 @@ class ClienteInternet:
         try:
             self.eventos.put_nowait(evento)
         except queue.Full:
-            self._cerrado.set()
+            # Una carga larga (la vista tarda varios segundos) deja de vaciar la
+            # cola. Los estados ya llegan completos: sobra el más viejo.
+            with self.eventos.mutex:
+                indice = next((i for i, e in enumerate(self.eventos.queue) if e.get("tipo") == "estado"), None)
+                if indice is None:
+                    self._cerrado.set()
+                    return
+                del self.eventos.queue[indice]
+                self.eventos.queue.append(evento)
 
     def enviar(self, tipo, **datos):
         if not self._cerrado.is_set():

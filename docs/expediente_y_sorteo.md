@@ -48,9 +48,32 @@ fecha original al copiarlo. Un aviso caducado deja de transmitirse; volver
 a la fuente lo renueva. Las pruebas principales se conservan y los avisos
 son complementarios, para investigar con calma. Se usa el reloj del servidor.
 
+## Normas por caso
+
+Normas verificadas en fuentes oficiales; rangos con agravantes calculados aplicando las fracciones de la ley. Pendiente: revisión del profesor.
+
+Agua y tormenta tienen una ficha por cada respuesta correcta posible (`por_respuesta`).
+El servidor la elige según la respuesta correcta del caso sorteado y esa ficha fija la
+gravedad con la que el caso entra al AVL. En «ayuda», `{persona}` es la persona sorteada.
+
+| Caso | Tipo | Gravedad | Norma | Pena |
+| --- | --- | --- | --- | --- |
+| puente_norte | Acusación Personal | 4 | Código Penal, art. 220 (Injuria) | Prisión de 16 a 54 meses y multa de 13,33 a 1.500 SMLMV |
+| agua (descartar) | Alarma falsa | 3 | Código Penal, art. 355 (Pánico) | Multa |
+| agua (difundir) | Alerta verificada | 1 | Sin delito | Ninguna |
+| tormenta (difundir) | Alerta verificada | 1 | Sin delito | Ninguna |
+| tormenta (descartar) | Alarma falsa | 3 | Código Penal, art. 355 (Pánico) | Multa |
+| ayuda | Acusación Personal | 5 | Código Penal, art. 221 (Calumnia); art. 222 (quien la repite); art. 223 (agravante por difusión pública) | Prisión de 16 a 72 meses y multa de 13,33 a 1.500 SMLMV, aumentada de una sexta parte a la mitad por difusión pública |
+| presente_video | Acusación Personal | 6 | Código Penal, art. 221 (Calumnia) y art. 223 (difusión pública) | Prisión de 16 a 72 meses y multa de 13,33 a 1.500 SMLMV, agravada por difusión pública |
+| presente_voz | Suplantación | 6 | Código Penal, art. 296 (Falsedad personal), modificado por la Ley 2502 de 2025 | Multa, aumentada hasta en una tercera parte por usar IA |
+| presente_foto | Suplantación | 7 | Ley 1273 de 2009, art. 269F (Violación de datos personales) | Prisión de 48 a 96 meses y multa de 100 a 1.000 SMLMV |
+| nucleo_control | Control autónomo sin supervisión | 9 | Ley 1273 de 2009, art. 269B (Obstaculización ilegítima de sistema informático o red de telecomunicación), agravado por el art. 269H, num. 1 y 8 | Prisión de 72 a 168 meses, multa de 150 a 1.750 SMLMV e inhabilitación hasta por 3 años |
+
 ## Despliegue
 
-Protocolo **11**: actualizar tanto los clientes como el servidor de Render.
+Protocolo **12**: actualizar tanto los clientes como el servidor de Render. El resultado
+de cada evento añade `norma`, `pena`, `cita_corta`, `conducta`, `nota` y `con_delito`.
+El protocolo 11:
 El estado viaja por diferencias (`multijugador/delta.py`): un snapshot al conectar,
 reconectar o cambiar de dimensión o edificio y, luego, mensajes `delta` con lo que
 cambió; `pedir_snapshot` recupera una base perdida. Añade también `pedir_informe`.

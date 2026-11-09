@@ -166,6 +166,7 @@ class PanelCooperativo:
             if resultado["evento_id"] in self.eventos_vistos:
                 continue
             self.eventos_vistos.add(resultado["evento_id"])
+            self.vista.aviso_legal.agregar(resultado)
             if dimension == self.dimension:
                 self.vista.iniciar_pocion(resultado, noticia)
         propia = self.clasificacion_propia()
@@ -726,6 +727,8 @@ class PanelCooperativo:
                 self.modo = None
             elif clave == "expediente_prueba":
                 self.prueba_expediente += 1
+            elif clave == "expediente_vista":
+                self.expediente_ver_pruebas = not getattr(self, "expediente_ver_pruebas", False)
             elif clave.startswith("expediente:"):
                 estado = self.caso.get("expediente") or {}
                 pendiente = estado.get("pendiente")
