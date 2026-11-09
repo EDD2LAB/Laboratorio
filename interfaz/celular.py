@@ -183,7 +183,7 @@ def _imagen(superficie, imagen, arte):
         superficie.blit(imagen, imagen.get_rect(center=IMAGEN.center))
 
 
-def _publicacion(superficie, contexto, arte):
+def _publicacion(superficie, contexto, arte, panel=None):
     """El material real del caso, con la etiqueta que le puso el análisis."""
     tipo = (contexto.get("evento") or {}).get("tipo")
     ui = arte.ui
@@ -195,6 +195,9 @@ def _publicacion(superficie, contexto, arte):
     etiqueta = arte.etiquetas.get(contexto.get("etiqueta"))
     if etiqueta is not None:
         superficie.blit(etiqueta, etiqueta.get_rect(center=IMAGEN.topleft))
+    if tipo == "audio" and panel is not None:  # la nota de voz se puede oír desde la publicación
+        analisis._boton_texto(panel, "analisis:reproducir:suplantado", "Escuchar",
+                              pygame.Rect(IMAGEN.x + 8, IMAGEN.bottom - 36, IMAGEN.width - 16, 30), superficie)
 
 
 def _alcance(panel, superficie, texto):
@@ -245,7 +248,7 @@ def _menu(panel, superficie, contexto, inventario):
 # ------------------------------------------------------------------ pantallas
 def _mision(panel, superficie, contexto, arte):
     _perfil(panel, superficie, "Ciudad Núcleo" if panel.dimension == "futuro" else "Distrito Conecta")
-    _publicacion(superficie, contexto, arte)
+    _publicacion(superficie, contexto, arte, panel)
     y = _texto(panel, superficie, contexto.get("titulo", ""), TEXTO_X, TEXTO_Y, panel.fuente, TINTA)
     _texto(panel, superficie, contexto.get("noticia", ""), TEXTO_X, y + 6)
     evento = contexto.get("evento") or {}
@@ -304,7 +307,7 @@ def falta_para_decidir(panel, contexto):
 
 def _decidir(panel, superficie, contexto, arte):
     _perfil(panel, superficie, "Publicación viral")
-    _publicacion(superficie, contexto, arte)
+    _publicacion(superficie, contexto, arte, panel)
     for i, avatar in enumerate(arte.avatares):  # cuentas distintas que repiten lo mismo
         superficie.blit(avatar, (300 + i * 40, 414))
     y = _texto(panel, superficie, contexto.get("titulo", ""), TEXTO_X, TEXTO_Y, panel.fuente, TINTA)
@@ -370,7 +373,7 @@ def _resultado(panel, superficie, contexto, arte):
 
 def _clasificar(panel, superficie, contexto, arte):
     _perfil(panel, superficie, "Clasificar")
-    _publicacion(superficie, contexto, arte)
+    _publicacion(superficie, contexto, arte, panel)
     y = _texto(panel, superficie, "¿Cómo clasificarías esta publicación?", TEXTO_X, TEXTO_Y, panel.fuente, TINTA)
     _texto(panel, superficie, contexto.get("noticia", ""), TEXTO_X, y + 6)
     _comentarios(panel, superficie, "Elige la categoría que consideres correcta.")

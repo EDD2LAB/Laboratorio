@@ -28,10 +28,9 @@ ORDEN = (LA_COPA, PRESENTE, FUTURO)
 # Interiores de Distrito Conecta: edificio -> nombre del arte y de sus hitboxes.
 CARPETA_INTERIORES = RAIZ / "Hitboxes" / "Fondos" / "Mapas" / "Presente"
 INTERIORES = {
-    "distrito_conecta": "CaféDigitalInt", "centro_comunitario": "CaféDigitalInt",
-    "alcaldia": "SededelAspiranteInt", "campana_ronaldo": "SededelAspiranteInt",
-    "centro_verificacion": "CentrodeVerifInt", "centro_comunicaciones": "EstacionMensajeroInt",
-    "estudio_lia": "EstudioInfluencerInt",
+    "centro_verificacion": "CentrodeVerifInt", "estudio_influencer": "EstudioInfluencerInt",
+    "sede_aspirante": "SededelAspiranteInt", "cafe_digital": "CaféDigitalInt",
+    "estacion_mensajero": "EstacionMensajeroInt",
 }
 RADIO_PUERTA = 40
 RADIO_SALIDA = 58
@@ -127,8 +126,11 @@ def rect_portal(dimension, datos):
                 return (round(objeto["x"] * ANCHO), round(objeto["y"] * ALTO),
                         max(1, round(objeto["w"] * ANCHO)), max(1, round(objeto["h"] * ALTO)))
         return (886, 268, 74, 99)
-    x, y = spawn_presente(datos)
     w, h = TAMANO_PORTAL_PRESENTE
+    centro = datos.get("portal_centro")
+    if isinstance(centro, dict):  # el hueco de las ruinas
+        return (round(centro["x"] - w / 2), round(centro["y"] - h / 2), w, h)
+    x, y = spawn_presente(datos)
     return (round(x - w / 2), round(y - h + 6), w, h)
 
 

@@ -84,9 +84,9 @@ class Snapshots(unittest.TestCase):
         p._viajar_equipo(LA_COPA, PRESENTE)
         cod = CodificadorEstado("0")
         cod.codificar(estado(p, "0"))
-        puerta = p.mision.presente.edificios["alcaldia"]
+        puerta = p.mision.presente.edificios["sede_aspirante"]
         p.jugadores["0"].update(x=float(puerta["x"]), y=float(puerta["y"]))
-        p.actuar("0", dict(accion="entrar_edificio", edificio="alcaldia", id_solicitud=uuid.uuid4().hex, ronda=0), p.ultima)
+        p.actuar("0", dict(accion="entrar_edificio", edificio="sede_aspirante", id_solicitud=uuid.uuid4().hex, ronda=0), p.ultima)
         self.assertEqual(cod.codificar(estado(p, "0"))["tipo"], "estado")
 
     def test_una_base_perdida_pide_snapshot_una_sola_vez(self):
@@ -116,7 +116,7 @@ class Interes(unittest.TestCase):
     def test_de_otro_edificio_solo_llega_lo_minimo(self):
         p = partida(2)
         p._viajar_equipo(LA_COPA, PRESENTE)
-        p.jugadores["1"]["interior"] = "alcaldia"
+        p.jugadores["1"]["interior"] = "sede_aspirante"
         forma, _ = preparar(estado(p, "0"), "0")
         self.assertNotIn("x", forma["mundo"]["jugadores"]["1"])
 

@@ -587,7 +587,7 @@ class VistaPartida:
         conocidas = {p["id"] for p in self.panel.inventario()} if self.dimension != LA_COPA else ()
         # Si soy yo quien tiene la pista, puedo contarla mientras el equipo no la tenga.
         npcs = [n for n in caso.get("npcs", []) if n["dimension"] == self.dimension and self.cerca(n)
-                and (n.get("jugador") != self.identificador or n["pista"] not in conocidas)]
+                and (n.get("jugador") != self.identificador or (n.get("pista") and n["pista"] not in conocidas))]
         junto_a_npc = {(n["x"], n["y"]) for n in npcs}
         # Donde hay alguien con quien hablar, sobra el objetivo "ayuda a otro compañero".
         objetivos = [dict(o) for o in self.contexto().get("objetivos", []) if self.cerca(o)
@@ -770,6 +770,8 @@ class VistaPartida:
             self.mostrar_detalles and self.dimension == LA_COPA and self.boton_guia.collidepoint(posicion)))
 
     def actualizar(self, segundos, cliente):
+        if self.celular is not None:
+            self.celular.ui.progreso_audio()  # devuelve la música al terminar la grabación
         if self.panel.pedir_informe_en is not None and time.monotonic() >= self.panel.pedir_informe_en:
             self.panel.pedir_informe_en = None
             cliente.actuar("pedir_informe")
@@ -1124,7 +1126,7 @@ class VistaPartida:
         if figuras is not None and escena.get("npcs"):  # los NPC de Ciudad Núcleo los coloca el servidor
             zoom = escena["zoom"]
             for npc in caso.get("npcs", []):
-                cuadros = escena["npcs"].get(npc["nombre"]) if npc["dimension"] == self.dimension else None
+                cuadros = escena["npcs"].get(npc["nombre"]) if npc["dimension"] == self.dimension and not npc.get("jugador") else None
                 if cuadros:
                     cuadro = cuadros[(pygame.time.get_ticks() // 180) % len(cuadros)]
                     figuras.append((cuadro, cuadro.get_rect(midbottom=((npc["x"] - vista.x) * zoom, (npc["y"] - vista.y) * zoom))))
@@ -1402,6 +1404,12 @@ class VistaPartida:
         decoraciones = escena.get("decoraciones", self.decoraciones)
         return next((o["imagen"] for o in decoraciones if o.get("personaje") == nombre), None)
 
+    def _alto_etiqueta_npc(self):
+        """Justo encima de la cabeza: cada lugar dibuja a los personajes a su escala."""
+        if self.interior:
+            return ALTURA_INTERIOR + 6
+        return 62 if self.dimension == LA_COPA else ALTURA_DISTRITO + 4
+
     def _nombres_npc_cercanos(self, superficie):
         """Nombre y "E: hablar" sobre cada NPC que el jugador tiene a su alcance."""
         self.etiquetas_npc_actuales = []
@@ -1410,13 +1418,14 @@ class VistaPartida:
         vista = self.vista_camara()
         elementos = []
         for npc in self.estado.get("mundo", {}).get("caso", {}).get("npcs", []):
-            if npc["dimension"] != self.dimension or not self.cerca(npc) or npc.get("jugador") == self.identificador:
+            # A quien juega alguien ya lo nombra su propia etiqueta; "[E] Hablar con…" sale abajo.
+            if npc["dimension"] != self.dimension or not self.cerca(npc) or npc.get("jugador"):
                 continue
             if npc["nombre"] not in self._etiquetas_npc:
                 texto_npc = npc["nombre"] + " · E: hablar"
                 self._etiquetas_npc[npc["nombre"]] = self.fuente.render(texto_npc, True, (255, 243, 210))
             texto = self._etiquetas_npc[npc["nombre"]]
-            x, y = self.a_pantalla(npc["x"], npc["y"] - (ALTURA_INTERIOR + 6 if self.interior else 62), vista)
+            x, y = self.a_pantalla(npc["x"], npc["y"] - self._alto_etiqueta_npc(), vista)
             if superficie.get_rect().collidepoint(x, y):
                 elementos.append(dict(id="npc:" + npc["id"], imagen=texto, ancla=(x, y),
                                       local=False, bot=False, color=(255, 243, 210)))

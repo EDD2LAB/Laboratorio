@@ -36,8 +36,9 @@ def objetivo(m, tarea):
     return next(o for o in m.objetivos if o.get("tarea") == tarea)
 
 
-def npc(m, nombre):
-    return next(n for n in m.npcs if n["nombre"] == nombre)
+def npc(p, nombre):
+    """El personaje tal como se publica: si alguien lo juega, donde esté esa persona."""
+    return next(n for n in p.mision.dialogos.publico() if n["nombre"] == nombre)
 
 
 def lejos_de_pulsos(m):
@@ -48,8 +49,8 @@ class Personajes(unittest.TestCase):
     def test_archivista_y_representante_responden_por_dialogos(self):
         p, m = partida()
         for nombre, pista in (("Archivista", GUIA_FIRMAS), ("Representante Humano", FIRMA)):
-            ir(p, "0", npc(m, nombre))
-            acuse = accion(p, "0", "hablar_npc", npc=npc(m, nombre)["id"])
+            ir(p, "0", npc(p, nombre))
+            acuse = accion(p, "0", "hablar_npc", npc=npc(p, nombre)["id"])
             self.assertEqual(acuse["vista"], "dialogo_npc")
             self.assertIn(pista, m.halladas)
 
@@ -59,8 +60,8 @@ class Personajes(unittest.TestCase):
         ir(p, "0", m.pantalla)
         self.assertFalse(accion(p, "0", "presente_votar", opcion="verificar")["ok"])
         self.assertTrue(accion(p, "0", "presente_votar", opcion="dejar_pendiente")["ok"])
-        ir(p, "0", npc(m, "Representante Humano"))
-        accion(p, "0", "hablar_npc", npc=npc(m, "Representante Humano")["id"])
+        ir(p, "0", npc(p, "Representante Humano"))
+        accion(p, "0", "hablar_npc", npc=npc(p, "Representante Humano")["id"])
         ir(p, "0", m.pantalla)
         self.assertTrue(accion(p, "0", "presente_votar", opcion="verificar")["ok"])
         self.assertTrue(m.completada)
@@ -75,7 +76,8 @@ class Cuentas(unittest.TestCase):
         return accion(self.p, "0", "futuro_resolver", terminal="cuentas", cuentas=cuentas)
 
     def test_se_abre_hablando_con_el_ciudadano(self):
-        dialogo = accion(self.p, "0", "hablar_npc", npc=npc(self.m, "Ciudadano Conectado")["id"])["dialogo"]
+        ir(self.p, "0", npc(self.p, "Ciudadano Conectado"))
+        dialogo = accion(self.p, "0", "hablar_npc", npc=npc(self.p, "Ciudadano Conectado")["id"])["dialogo"]
         acuse = accion(self.p, "0", "responder_npc", npc=dialogo["npc"], respuesta=dialogo["respuestas"][0])
         self.assertEqual((acuse["vista"], acuse["terminal"]), ("terminal", "cuentas"))
 
@@ -101,7 +103,7 @@ class Barreras(unittest.TestCase):
         p, m = partida()
         self.assertTrue(m.barreras_activas)
         self.assertTrue(m.barreras)
-        rechazo = accion(p, "0", "entrar_edificio", edificio="estudio_lia")
+        rechazo = accion(p, "0", "entrar_edificio", edificio="cafe_digital")
         self.assertFalse(rechazo["ok"])
         self.assertIn("bloqueó", rechazo["mensaje"])
         ir(p, "0", objetivo(m, "conexiones"))

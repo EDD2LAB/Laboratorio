@@ -322,6 +322,15 @@ class PlanificadorBot:
                       if n["dimension"] == dimension and n.get("pista") and n["pista"] not in halladas]
         if (not humanos and not self._sin_personas(jugadores)) or not pendientes:
             return None
+        for npc in pendientes:  # nadie se reserva su propia pista (puede pasar justo al viajar)
+            if npc.get("jugador") and memoria.reservas_preparacion.get("distrito:" + npc["pista"]) == npc["jugador"]:
+                del memoria.reservas_preparacion["distrito:" + npc["pista"]]
+        propia = next((n for n in pendientes if n.get("jugador") == bot.identificador and n.get("casa")), None)
+        if propia:  # tiene la pista: espera dentro de su edificio a que vayan a hablarle
+            return self._esperar_en_casa(bot, estado, propia)
+        pendientes = [n for n in pendientes if n.get("jugador") != bot.identificador]
+        if not pendientes:
+            return None
         # Una tarea reservada se termina, aunque la persona se haya movido.
         for objetivo in pendientes:
             if memoria.reservas_preparacion.get("distrito:" + objetivo["pista"]) == bot.identificador:
@@ -334,6 +343,12 @@ class PlanificadorBot:
             if memoria.reservar_preparacion(bot.identificador, "distrito:" + objetivo["pista"]):
                 return self._hablar_con(bot, estado, objetivo)
         return None
+
+    def _esperar_en_casa(self, bot, estado, npc):
+        casa = npc["casa"]
+        if bot.posicion.get("interior") == casa["interior"]:
+            return {"estado": "ESPERANDO_EN_SU_EDIFICIO", "destino": {"id": "casa", "x": casa["x"], "y": casa["y"]}, "esperar": True, "radio": 16}
+        return self._hablar_con(bot, estado, {"interior": casa["interior"], "id": npc["id"]})
 
     def _hablar_con(self, bot, estado, objetivo):
         """Va hasta el personaje; si está en otro edificio, usa las puertas como cualquiera."""

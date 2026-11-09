@@ -23,16 +23,16 @@ el celular).
 Se llega desde la pantalla pública del Presente al resolver sus tres casos. Los
 puntos usan ids de hitboxes existentes:
 
-- `entrada_centro_comunicaciones`: restaurar conexiones (grafo validado con BFS).
-- `entrada_alcaldia`: encontrar el registro alterado.
-- `entrada_centro_verificacion`: entregar la llave del Corredor de Datos, que
-  está junto a `entrada_estudio_lia`. Si un pulso de vigilancia (rutas `npc_routes`
+- `entrada_estacion_mensajero`: restaurar conexiones (grafo validado con BFS).
+- `entrada_sede_aspirante`: encontrar el registro alterado.
+- `entrada_verificacion`: entregar la llave del Corredor de Datos, que
+  está junto a `entrada_cafe_digital`. Si un pulso de vigilancia (rutas `npc_routes`
   del JSON) toca a quien la lleva, la llave vuelve al Corredor.
 - `entrada_centro_comunitario`: el Ciudadano Conectado abre el ataque de cuentas.
-- `entrada_alcaldia` y `entrada_campana_ronaldo`: Archivista y Representante Humano;
+- `entrada_sede_aspirante` y `entrada_campana_ronaldo`: Archivista y Representante Humano;
   sin hablar con el Representante no se vota la reconfiguración.
-- Barreras: `entrada_estudio_lia`, `entrada_campana_ronaldo`, `entrada_centro_comunitario`
-  y `entrada_distrito_conecta`, hasta restaurar las conexiones. Ciudad Núcleo aún no
+- Barreras: `entrada_cafe_digital`, `entrada_influencer`, `entrada_campana_ronaldo` y
+  `entrada_centro_comunitario`, hasta restaurar las conexiones. Ciudad Núcleo aún no
   tiene interiores propios.
 - `pantalla_publica_presente`: decisión final y regreso a Distrito Conecta.
 

@@ -52,9 +52,9 @@ REGISTRO_FALSO = "orden"
 
 # tarea, entrada del JSON, título, texto al completarla.
 TERMINALES = (
-    ("conexiones", "entrada_centro_comunicaciones", "Restaurar conexiones", "El sector aislado volvió a la red de la ciudad."),
-    ("archivos", "entrada_alcaldia", "Revisar archivos", "La orden que autorizaba a NÚCLEO era falsa: la firmó él mismo."),
-    ("llave", "entrada_centro_verificacion", "Llave de supervisión", "La llave devolvió la supervisión de NÚCLEO a las personas."),
+    ("conexiones", "entrada_estacion_mensajero", "Restaurar conexiones", "El sector aislado volvió a la red de la ciudad."),
+    ("archivos", "entrada_sede_aspirante", "Revisar archivos", "La orden que autorizaba a NÚCLEO era falsa: la firmó él mismo."),
+    ("llave", "entrada_verificacion", "Llave de supervisión", "La llave devolvió la supervisión de NÚCLEO a las personas."),
     ("cuentas", "entrada_centro_comunitario", "Ataque coordinado", "Las cuentas eran de NÚCLEO. El Ciudadano no estaba solo contra la ciudad: estaba contra una máquina."),
 )
 LLAVE = "llave_supervision"
@@ -66,10 +66,10 @@ TEXTOS_PISTA = {
     FIRMA: ("Representante Humano · Firma", "El Representante Humano acepta firmar la reconfiguración: NÚCLEO seguirá, pero bajo supervisión."),
 }
 # NPC -> entrada existente junto a la que está y la pista que entrega.
-NPCS = {"Corredor de Datos": ("entrada_estudio_lia", LLAVE), "Ciudadano Conectado": ("entrada_centro_comunitario", None),
-        "Archivista": ("entrada_alcaldia", GUIA_FIRMAS), "Representante Humano": ("entrada_campana_ronaldo", FIRMA)}
+NPCS = {"Corredor de Datos": ("entrada_cafe_digital", LLAVE), "Ciudadano Conectado": ("entrada_centro_comunitario", None),
+        "Archivista": ("entrada_sede_aspirante", GUIA_FIRMAS), "Representante Humano": ("entrada_campana_ronaldo", FIRMA)}
 # Barrera de NÚCLEO en las entradas que no son terminales.
-ENTRADAS_CON_BARRERA = ("entrada_estudio_lia", "entrada_campana_ronaldo", "entrada_centro_comunitario", "entrada_distrito_conecta")
+ENTRADAS_CON_BARRERA = ("entrada_cafe_digital", "entrada_influencer", "entrada_campana_ronaldo", "entrada_centro_comunitario")
 VELOCIDAD_PULSO = 60.0
 RADIO_PULSO = 16
 SEGUNDOS_IMPULSO = 6

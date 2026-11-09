@@ -36,8 +36,8 @@ EFECTOS_CLASIFICACION = {
 }
 OTROS_NPC = {"Influencer": "Lía Nova", "Mensajero urbano": "Mateo Ríos"}
 # Edificio -> dónde espera su personaje (proporción de la imagen del interior).
-SITIOS_INTERIOR = {"centro_verificacion": (.72, .70), "centro_comunitario": (.45, .82), "alcaldia": (.55, .66),
-                   "campana_ronaldo": (.60, .76), "distrito_conecta": (.60, .74)}
+SITIOS_INTERIOR = {"centro_verificacion": (.72, .70), "estacion_mensajero": (.30, .72), "sede_aspirante": (.55, .66),
+                   "cafe_digital": (.60, .74)}
 
 EVENTOS = (
     {
@@ -49,9 +49,9 @@ EVENTOS = (
             # pista, personaje, edificio donde está, título, texto.
             ("fuente_ausente", "Darío Veraz", "centro_verificacion", "Fuente original",
              "Encontré el video original: Ronaldo mete monedas en la caja. Ya pueden compararlo en Analizar."),
-            ("testimonio_y_contexto", "Tomás Red", "centro_comunitario", "Testimonio y contexto",
+            ("testimonio_y_contexto", "Tomás Red", "estacion_mensajero", "Testimonio y contexto",
              "El testigo no presenció el hecho ni conoce quién subió el archivo."),
-            ("respuesta_kael", "Ronaldo Vélez", "alcaldia", "Agenda de Ronaldo",
+            ("respuesta_kael", "Ronaldo Vélez", "sede_aspirante", "Agenda de Ronaldo",
              "La agenda de Ronaldo confirma que ese día hizo una donación pública."),
         ),
         "textos": {
@@ -69,7 +69,7 @@ EVENTOS = (
         "titulo": "La nota de voz",
         "noticia": "Circula una nota de voz en la que Ronaldo admitiría el robo. ¿De verdad es su voz?",
         "pistas": (
-            ("audio_original", "Ronaldo Vélez", "campana_ronaldo", "Audio original",
+            ("audio_original", "Ronaldo Vélez", "sede_aspirante", "Audio original",
              "En la Sede guardamos la grabación auténtica de mi discurso. Compárenla con la nota de voz."),
         ),
         "textos": {
@@ -87,7 +87,7 @@ EVENTOS = (
         "titulo": "La foto del perfil falso",
         "noticia": "Un perfil con la cara de la Habitante conectada publica insultos y pide dinero a sus seguidores.",
         "pistas": (
-            ("foto_original", "Elías Vega", "distrito_conecta", "Foto original",
+            ("foto_original", "Elías Vega", "cafe_digital", "Foto original",
              "Esa selfie se tomó aquí, en el Café Digital. Tenemos la foto original para compararla."),
         ),
         "textos": {

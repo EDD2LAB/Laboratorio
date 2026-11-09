@@ -286,12 +286,14 @@ class PortalTests(unittest.TestCase):
         self.assertIsNone(presente.resultado)  # la decisión no la toman ellos
         humano = p.jugadores["local"]
         for identificador, bot in cliente._bots.bots.items():
-            self.assertEqual(bot.estado, "ACOMPANANDO")
+            # Quien aún tiene una pista espera dentro de su edificio; los demás acompañan.
+            self.assertIn(bot.estado, ("ACOMPANANDO", "ESPERANDO_EN_SU_EDIFICIO"))
             j = p.jugadores[identificador]
-            self.assertLessEqual(((j["x"] - humano["x"]) ** 2 + (j["y"] - humano["y"]) ** 2) ** .5, 110)
+            if bot.estado == "ACOMPANANDO":
+                self.assertLessEqual(((j["x"] - humano["x"]) ** 2 + (j["y"] - humano["y"]) ** 2) ** .5, 110)
         cliente.cerrar()
 
-    def test_con_dos_personas_los_bots_dejan_una_pista_a_cada_una(self):
+    def test_con_dos_personas_los_bots_con_pista_las_esperan_dentro(self):
         from bots.gestor_bots import GestorBots
         roles = ("guardian", "mensajero", "habitante", "aspirante")
         p = PartidaMovimiento([dict(id=str(i), nombre=str(i), rol=roles[i]) for i in range(2)]
@@ -304,7 +306,10 @@ class PortalTests(unittest.TestCase):
             ahora += .15
             p.actualizar(ahora)
             gestor.actualizar(ahora, .15)
-        self.assertEqual(len(p.mision.presente.halladas), 1)
+        # Tomás y Ronaldo son bots: guardan su pista y esperan en su edificio.
+        self.assertEqual(p.mision.presente.halladas, {})
+        self.assertEqual(p.jugadores["bot_habitante"]["interior"], "estacion_mensajero")
+        self.assertEqual(p.jugadores["bot_aspirante"]["interior"], "sede_aspirante")
 
     def test_portal_funciona_antes_y_despues_y_conserva_indicadores(self):
         h, p = Ayuda(), crear(2, mapa_real=True)

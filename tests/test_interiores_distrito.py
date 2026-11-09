@@ -76,7 +76,7 @@ class Puertas(unittest.TestCase):
     def test_lejos_de_la_puerta_no_se_entra(self):
         p = partida()
         p.jugadores["0"].update(x=480.0, y=400.0)
-        self.assertFalse(accion(p, "0", "entrar_edificio", edificio="alcaldia")["ok"])
+        self.assertFalse(accion(p, "0", "entrar_edificio", edificio="sede_aspirante")["ok"])
         self.assertIsNone(p.jugadores["0"].get("interior"))
 
     def test_dentro_se_camina_con_las_paredes_del_interior(self):
@@ -93,11 +93,11 @@ class Puertas(unittest.TestCase):
     def test_quien_esta_dentro_no_se_ve_desde_la_calle(self):
         from multijugador.dimensiones_red import jugadores_visibles
         p = partida()
-        a_la_puerta(p, "0", "alcaldia")
-        accion(p, "0", "entrar_edificio", edificio="alcaldia")
+        a_la_puerta(p, "0", "sede_aspirante")
+        accion(p, "0", "entrar_edificio", edificio="sede_aspirante")
         jugadores = p.estado("1")["jugadores"]
         self.assertEqual([j["id"] for j in jugadores_visibles(jugadores, PRESENTE)], ["1"])
-        self.assertEqual([j["id"] for j in jugadores_visibles(jugadores, PRESENTE, "alcaldia")], ["0"])
+        self.assertEqual([j["id"] for j in jugadores_visibles(jugadores, PRESENTE, "sede_aspirante")], ["0"])
 
 
 class Pistas(unittest.TestCase):

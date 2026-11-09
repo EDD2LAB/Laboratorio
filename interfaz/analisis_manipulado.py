@@ -136,6 +136,7 @@ class ArteAnalisis:
         self.sellos = {"manipulado": sello_manipulado, "suplantacion": [suplantacion] if suplantacion else []}
         self.video = ReproductorVideo()
         self.sonando = None
+        self.canal_voz = None
         self.inicio_audio = 0
         self.vacios = {}
         self.conclusiones_vistas = set()
@@ -160,11 +161,22 @@ class ArteAnalisis:
         pygame.draw.circle(imagen, (225, 255, 255, 255), (lado // 2, lado // 2), 18)
         return imagen
 
+    def _musica_en_pausa(self, en_pausa):
+        """La música calla mientras se escucha la grabación."""
+        from audio.audio_manager import GestorAudio
+        if pygame.mixer.get_init():
+            for indice in GestorAudio.CANALES_MUSICA:
+                canal = pygame.mixer.Channel(indice)
+                canal.pause() if en_pausa else canal.unpause()
+
     def reproducir(self, nombre):
-        pygame.mixer.stop() if pygame.mixer.get_init() and self.sonando else None
+        if self.canal_voz is not None:
+            self.canal_voz.stop()
         self.sonando, self.inicio_audio = nombre, pygame.time.get_ticks()
         if self.audios[nombre].sonido is not None:
-            self.audios[nombre].sonido.play()
+            self.canal_voz = pygame.mixer.find_channel(True)  # siempre hay un canal, aunque estén ocupados
+            self.canal_voz.play(self.audios[nombre].sonido)
+            self._musica_en_pausa(True)
 
     def progreso_audio(self):
         """(pista, segundos) de lo que suena, o (None, 0) si ya terminó."""
@@ -173,6 +185,7 @@ class ArteAnalisis:
         segundos = (pygame.time.get_ticks() - self.inicio_audio) / 1000
         if segundos >= self.audios[self.sonando].duracion:
             self.sonando = None
+            self._musica_en_pausa(False)
             return None, 0
         return self.sonando, segundos
 

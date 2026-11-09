@@ -1,7 +1,7 @@
 {
   "spawn_presente": {
-    "x": 466,
-    "y": 612
+    "x": 462,
+    "y": 232
   },
   "npc_routes": {
     "Agente de verificación": {
@@ -152,7 +152,7 @@
       "zona": "Edificio superior izquierdo: pared oeste"
     },
     {
-      "id": "entrada_distrito_conecta",
+      "id": "entrada_verificacion",
       "role": "interactable",
       "type": "rect",
       "rx": 0.1403,
@@ -161,8 +161,8 @@
       "rh": 0.0382,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
-      "edificio_id": "distrito_conecta",
-      "nombre_edificio": "Distrito Conecta",
+      "edificio_id": "centro_verificacion",
+      "nombre_edificio": "Centro de Verificación",
       "dimension": "presente",
       "activo": true,
       "distancia": 58,
@@ -182,7 +182,7 @@
       "zona": "Edificio izquierdo: pared oeste"
     },
     {
-      "id": "entrada_centro_comunicaciones",
+      "id": "entrada_sede_aspirante",
       "role": "interactable",
       "type": "rect",
       "rx": 0.0842,
@@ -191,8 +191,8 @@
       "rh": 0.0347,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
-      "edificio_id": "centro_comunicaciones",
-      "nombre_edificio": "Centro de Comunicaciones",
+      "edificio_id": "sede_aspirante",
+      "nombre_edificio": "Sede del Aspirante",
       "dimension": "presente",
       "activo": true,
       "distancia": 58,
@@ -218,7 +218,7 @@
       "rx": 0.7982565379825654,
       "ry": 0.08189655172413793,
       "rw": 0.07347447073474471,
-      "rh": 0.14439655172413793,
+      "rh": 0.1063,
       "zona": "Complejo superior derecho: pared oeste"
     },
     {
@@ -232,24 +232,24 @@
       "zona": "Complejo superior derecho: pared este"
     },
     {
-      "id": "entrada_alcaldia",
+      "id": "entrada_influencer",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.8357,
-      "ry": 0.1458,
-      "rw": 0.018,
-      "rh": 0.0486,
+      "rx": 0.7948,
+      "ry": 0.1405,
+      "rw": 0.0292,
+      "rh": 0.0468,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
-      "edificio_id": "alcaldia",
-      "nombre_edificio": "Alcaldía de Distrito Conecta",
+      "edificio_id": "estudio_influencer",
+      "nombre_edificio": "Estudio del Influencer",
       "dimension": "presente",
       "activo": true,
       "distancia": 58,
       "zona": "Acceso al complejo político",
       "target_image": "",
-      "frente_rx": 0.8438,
-      "frente_ry": 0.2414
+      "frente_rx": 0.8104,
+      "frente_ry": 0.2054
     },
     {
       "id": "muro_estudio_lia_este",
@@ -262,24 +262,24 @@
       "zona": "Edificio derecho: pared este"
     },
     {
-      "id": "entrada_estudio_lia",
+      "id": "entrada_cafe_digital",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.8778,
-      "ry": 0.5069,
-      "rw": 0.02,
-      "rh": 0.0382,
+      "rx": 0.8521,
+      "ry": 0.4649,
+      "rw": 0.0333,
+      "rh": 0.0432,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
-      "edificio_id": "estudio_lia",
-      "nombre_edificio": "Estudio de Lía Nova",
+      "edificio_id": "cafe_digital",
+      "nombre_edificio": "Café Digital",
       "dimension": "presente",
       "activo": true,
       "distancia": 58,
       "zona": "Acceso del café/estudio derecho",
       "target_image": "",
-      "frente_rx": 0.8896,
-      "frente_ry": 0.5441
+      "frente_rx": 0.8646,
+      "frente_ry": 0.5225
     },
     {
       "id": "muro_comunitario_norte",
@@ -303,20 +303,16 @@
     },
     {
       "id": "entrada_centro_comunitario",
-      "role": "interactable",
+      "role": "other",
       "type": "rect",
       "rx": 0.0822,
       "ry": 0.8472,
       "rw": 0.02,
       "rh": 0.0312,
-      "action": "entrar_edificio",
-      "tipo": "entrada_edificio",
-      "edificio_id": "centro_comunitario",
-      "nombre_edificio": "Centro Comunitario",
       "dimension": "presente",
       "activo": true,
       "distancia": 58,
-      "zona": "Puerta del edificio inferior izquierdo",
+      "zona": "Zona residencial: sin interior",
       "target_image": "",
       "frente_rx": 0.0938,
       "frente_ry": 0.8829
@@ -343,20 +339,16 @@
     },
     {
       "id": "entrada_campana_ronaldo",
-      "role": "interactable",
+      "role": "other",
       "type": "rect",
       "rx": 0.1884,
       "ry": 0.9514,
       "rw": 0.022,
       "rh": 0.0417,
-      "action": "entrar_edificio",
-      "tipo": "entrada_edificio",
-      "edificio_id": "campana_ronaldo",
-      "nombre_edificio": "Sede de campaña de Ronaldo Vélez",
       "dimension": "presente",
       "activo": true,
       "distancia": 58,
-      "zona": "Sede compartida para evitar duplicar oficinas en el mapa",
+      "zona": "Zona residencial: sin interior",
       "target_image": "",
       "frente_rx": 0.1688,
       "frente_ry": 0.991
@@ -368,21 +360,21 @@
       "rx": 0.365,
       "ry": 0.747,
       "rw": 0.058,
-      "rh": 0.142,
+      "rh": 0.0937,
       "zona": "Edificio central inferior: pared oeste"
     },
     {
-      "id": "entrada_centro_verificacion",
+      "id": "entrada_estacion_mensajero",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.4208,
-      "ry": 0.7847,
-      "rw": 0.0301,
-      "rh": 0.0486,
+      "rx": 0.4229,
+      "ry": 0.7838,
+      "rw": 0.0292,
+      "rh": 0.0505,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
-      "edificio_id": "centro_verificacion",
-      "nombre_edificio": "Centro de Verificación Digital",
+      "edificio_id": "estacion_mensajero",
+      "nombre_edificio": "Estación del Mensajero",
       "dimension": "presente",
       "activo": true,
       "distancia": 58,
@@ -1540,5 +1532,9 @@
       "rh": 0.12
     }
   },
-  "decoracion": []
+  "decoracion": [],
+  "portal_centro": {
+    "x": 462,
+    "y": 180
+  }
 }

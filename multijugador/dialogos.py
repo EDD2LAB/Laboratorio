@@ -16,6 +16,8 @@ PATRONES_COPA = (("/naira/", "Naira"), ("/odran/", "Sabio de las Raices"), ("/da
 NOMBRES_CON_TILDE = {"Sabio de las Raices": "Sabio de las Raíces"}
 # Quien juega un rol ya es ese personaje en Distrito Conecta.
 PERSONAJE_DE_ROL = {"guardian": "Elías Vega", "mensajero": "Mateo Ríos", "habitante": "Tomás Red", "aspirante": "Ronaldo Vélez"}
+PERSONAJE_FUTURO_DE_ROL = {"guardian": "Archivista", "mensajero": "Corredor de Datos", "habitante": "Ciudadano Conectado",
+                           "aspirante": "Representante Humano"}
 VER_CUENTAS = "Ver las cuentas que te atacan"
 CAMINOS = {"colgar": "Colgarla", "quemar": "Quemarla", "consultar": "Consultar", "ignorar": "Ignorarla"}
 
@@ -97,9 +99,13 @@ class DialogosNPC:
                     npcs.append(npc)  # quien lo juega está en otra era: el personaje sigue en su edificio
                 elif npc.get("pista"):
                     npcs.append(dict(npc, x=round(jugador["x"]), y=round(jugador["y"]), jugador=jugador["id"],
-                                     interior=jugador.get("interior")))
+                                     interior=jugador.get("interior"), casa={c: npc[c] for c in ("interior", "x", "y")}))
         if self.campana.futuro is not None:
-            npcs += self.campana.futuro.npcs
+            # Quien juega a ese personaje ya está en el mapa: se le habla a él, sin un doble quieto.
+            jugados = {PERSONAJE_FUTURO_DE_ROL[j["rol"]]: j for j in self.campana.jugadores.values() if j.get("dimension") == "futuro"}
+            for npc in self.campana.futuro.npcs:
+                jugador = jugados.get(npc["nombre"])
+                npcs.append(dict(npc, x=round(jugador["x"]), y=round(jugador["y"]), jugador=jugador["id"]) if jugador else npc)
         return npcs
 
     def publico(self):

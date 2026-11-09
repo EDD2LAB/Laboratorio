@@ -29,10 +29,10 @@ class HitboxEditorTests(unittest.TestCase):
         ]
         self.assertGreaterEqual(len(hitboxes), 45)
         self.assertGreaterEqual(len(paredes), 30)
-        self.assertEqual(len(entradas), 7)
+        self.assertEqual(len(entradas), 5)
         self.assertEqual(len({
             hitbox["edificio_id"] for hitbox in entradas
-        }), 7)
+        }), 5)
         self.assertIn("default", spawn)
 
     def test_saving_preserves_game_metadata_not_managed_by_editor(self):
