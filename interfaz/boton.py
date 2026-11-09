@@ -31,7 +31,9 @@ class Boton:
         identificador=None,
         sonido_hover=None,
         sonido_clic=None,
+        paleta=None,
     ):
+        self.paleta = paleta  # {"normal", "hover", "presionado", "borde", "contorno"}
         self.texto = texto
         self.imagen = imagen
         self.centro = centro
@@ -121,10 +123,11 @@ class Boton:
             "presionado": MADERA_PRESIONADA,
             "bloqueado": DESACTIVADO,
         }
-        color = colores[self.estado]
-        pygame.draw.rect(superficie, BORDE, self.rect.inflate(6, 6), border_radius=10)
+        paleta = self.paleta or {}
+        color = paleta.get(self.estado, colores[self.estado])
+        pygame.draw.rect(superficie, paleta.get("contorno", BORDE), self.rect.inflate(6, 6), border_radius=10)
         pygame.draw.rect(superficie, color, self.rect, border_radius=8)
-        borde = ORO if self.estado != "bloqueado" else (120, 112, 94)
+        borde = paleta.get("borde", ORO) if self.estado != "bloqueado" else (120, 112, 94)
         pygame.draw.rect(superficie, borde, self.rect, width=2, border_radius=8)
         if self.fuente:
             etiqueta = self.fuente.render(self.texto, True, CREMA if not self.desactivado else (185, 177, 153))

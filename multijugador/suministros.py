@@ -1,23 +1,25 @@
 """Encargos de transporte con carga, dos aportes distintos y efectos únicos."""
 
+CESTO = "Cesto de la aldea"  # todos los encargos se reúnen en el mismo cesto
+
 ENCARGOS = (
     # Primer evento: SIEMPRE 3 objetos (tablas, cuerda y canasta de
     # herramientas), sin importar cuántos jugadores haya. Antes eran 2 porque
     # esta configuración solo listaba dos materiales y materiales_listos exigía
     # exactamente 2; no dependía del número de jugadores.
-    {"titulo": "Reparar el Puente 1", "motivo": "El Puente 1 está roto. Lleven tablas, cuerda y la canasta de herramientas al puesto; después reparen el puente.",
+    {"titulo": "Reparar el Puente 1", "motivo": "El Puente 1 está roto. Metan tablas, cuerda y la canasta de herramientas en el cesto de la aldea; después reparen el puente.",
      "materiales": (("tablas", "Tablas", "archivo"), ("cuerdas", "Cuerda", "propuesta"),
                     ("herramientas", "Canasta de herramientas", "testigo")),
-     "destino": "eco_central", "lugar": "Puesto de mantenimiento", "efecto": "Puente 1 reparado", "indicador": "armonia", "delta": 4,
+     "lugar": CESTO, "efecto": "Puente 1 reparado", "indicador": "armonia", "delta": 4,
      # Cada objeto es único (nadie puede llevar el que ya carga otro) y una
      # misma persona puede aportar más de uno, de a uno por vez.
      "objetos_unicos": True, "aportes_libres": True, "requiere_puente": True},
-    {"titulo": "Abastecer a las familias", "motivo": "Después de investigar el agua, entreguen agua segura y provisiones a las familias.",
+    {"titulo": "Abastecer a las familias", "motivo": "Después de investigar el agua, reúnan en el cesto de la aldea agua segura y provisiones para repartirlas a las familias.",
      "materiales": (("agua", "Agua segura", "archivo"), ("provisiones", "Provisiones", "propuesta")),
-     "destino": "testigo", "lugar": "Familias de Luma", "efecto": "Reserva comunitaria abastecida", "indicador": "confianza", "delta": 4},
-    {"titulo": "Preparar un boletín verificado", "motivo": "Pongan por escrito el resultado de la alerta: lleven pergaminos y tinta al archivo.",
+     "lugar": CESTO, "efecto": "Reserva comunitaria abastecida", "indicador": "confianza", "delta": 4},
+    {"titulo": "Preparar un boletín verificado", "motivo": "Pongan por escrito el resultado de la alerta: reúnan pergaminos y tinta en el cesto de la aldea.",
      "materiales": (("pergaminos", "Pergaminos", "testigo"), ("tinta", "Tinta", "propuesta")),
-     "destino": "archivo", "lugar": "Archivo de Naira", "efecto": "Boletín verificado publicado", "indicador": "desinformacion", "delta": -6},
+     "lugar": CESTO, "efecto": "Boletín verificado publicado", "indicador": "desinformacion", "delta": -6},
 )
 
 
@@ -32,8 +34,7 @@ class EncargoSuministros:
         self.ultima_accion = -10
         self.objetivos = {o["id"]: o for o in objetivos}
         self.puente_reparado = False
-        central = next(o["id"] for o in objetivos if o.get("rol") == "mensajero")
-        self.destino = self.objetivos[central if self.config["destino"] == "eco_central" else self.config["destino"]]
+        self.destino = self.objetivos["cesto"]
 
     @property
     def materiales_listos(self):
@@ -66,7 +67,7 @@ class EncargoSuministros:
         if not self.materiales_listos or self.materiales_colocados:
             raise ValueError("Primero traigan los materiales. Si ya terminaron, vuelvan al caldero.")
         if jugador not in presentes or not cerca(jugador):
-            raise ValueError("Acércate al círculo verde del puesto para ayudar.")
+            raise ValueError("Acércate al círculo verde del cesto para ayudar.")
         self.revisar_ayudante(presentes, jugadores)
         if accion == "sujetar":
             self.ayudante = jugador
@@ -74,7 +75,7 @@ class EncargoSuministros:
         if accion != "trabajar":
             raise ValueError("Elige ayudar o hacer la tarea.")
         if not self.ayudante or self.ayudante == jugador:
-            raise ValueError("Necesitas que otro compañero pulse 'Yo ayudo' y se quede en el puesto.")
+            raise ValueError("Necesitas que otro compañero pulse 'Yo ayudo' y se quede junto al cesto.")
         if ahora - self.ultima_accion < .6:
             raise ValueError("¡Bien! Espera a que se llene el brillo y vuelve a pulsar.")
         self.ultima_accion = ahora

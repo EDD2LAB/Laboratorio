@@ -7,6 +7,7 @@ from multijugador.movimiento import VELOCIDAD, orientacion_de
 class NavegadorBot:
     PASO = 8
     RADIO_INTERACCION = 68
+    rutas_disponibles = math.inf  # GestorBots lo limita mientras actualiza
 
     def __init__(self, colisiones):
         self.colisiones = colisiones
@@ -100,6 +101,9 @@ class NavegadorBot:
         if self.error and self._reintento_ms:
             return False
         if self.destino is None or not self.ruta:
+            if NavegadorBot.rutas_disponibles <= 0:
+                return False  # le toca calcular en el próximo cuadro
+            NavegadorBot.rutas_disponibles -= 1
             radio_ruta = max(0, radio - self.PASO)
             if self.buscar_ruta(actual, destino, radio_ruta) is None:
                 return False

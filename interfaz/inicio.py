@@ -135,6 +135,22 @@ class MenuInicio:
         self.lienzo.blit(capa, rect)
         pygame.draw.rect(self.lienzo, borde, rect, 2, border_radius=14)
 
+    def campo_texto(self, clave, rect, size):
+        """Campo editable con su cursor parpadeante; el texto largo se desplaza."""
+        self.panel(rect, (9, 24, 20, 255), ORO if clave == self.foco else (88, 113, 93))
+        self.areas_campos[clave] = rect
+        fuente = self.fuentes[size]
+        texto = self.campos[clave]
+        x = rect.x + 12 - max(0, fuente.size(texto)[0] - rect.width + 30)
+        y = rect.centery - fuente.get_height() // 2
+        clip = self.lienzo.get_clip()
+        self.lienzo.set_clip(rect.inflate(-20, -8))
+        self.texto(texto, x, y, size)
+        if self.foco == clave and pygame.time.get_ticks() % 1000 < 500:
+            cursor = x + fuente.size(texto)[0] + 2
+            pygame.draw.line(self.lienzo, CREMA, (cursor, rect.y + 9), (cursor, rect.bottom - 10), 2)
+        self.lienzo.set_clip(clip)
+
     def boton(self, clave, texto, centro, ancho=270, activo=True, alto=48, tamano_fuente=20):
         boton = Boton(texto, centro=centro, fuente=self.fuentes[tamano_fuente], tamano=(ancho, alto), desactivado=not activo)
         boton.dibujar(self.lienzo, self.mouse)
@@ -272,8 +288,8 @@ class MenuInicio:
             self.partida.mostrar_hud = not self.partida.mostrar_hud
             return
         if clave == "campana_local":
-            self.campos["nombre"] = self.campos["nombre"] or "Jugador"
             self.vista = "campana_rol"
+            self.foco = "nombre"
             pygame.key.start_text_input()
         elif clave.startswith("rol_solo:"):
             self.rol_solo = clave.split(":", 1)[1]
@@ -358,10 +374,7 @@ class MenuInicio:
             self.texto("CAMPAÑA LOCAL CON BOTS", 480, 34, 32, ORO, True)
             self.texto("Elige tu personaje. Los otros tres los controlará un bot.", 480, 80, 16, centro=True)
             self.texto("Tu nombre", 250, 122, 18)
-            rect_nombre = pygame.Rect(355, 112, 360, 42)
-            self.panel(rect_nombre, (9, 24, 20, 255), ORO)
-            self.areas_campos["nombre"] = rect_nombre
-            self.texto(self.campos["nombre"] or "Jugador", 369, 122, 18)
+            self.campo_texto("nombre", pygame.Rect(355, 112, 360, 42), 18)
             for indice, rol in enumerate(ROLES):
                 elegido = rol == self.rol_solo
                 self.tarjeta_rol(indice, 170, elegido, "rol_solo:" + rol, "Elegido" if elegido else "Elegir")
@@ -402,15 +415,7 @@ class MenuInicio:
                     ("nombre", "Tu nombre", 195), ("codigo", "Código de sala", 345)]
             for clave, etiqueta, y in campos:
                 self.texto(etiqueta, 230, y, 18)
-                rect = pygame.Rect(230, y + 29, 500, 46)
-                self.panel(rect, (9, 24, 20, 255), ORO if clave == self.foco else (88, 113, 93))
-                self.areas_campos[clave] = rect
-                texto = self.campos[clave] + ("|" if self.foco == clave and pygame.time.get_ticks() % 1000 < 500 else "")
-                ancho = self.fuentes[20].size(texto)[0]
-                clip = self.lienzo.get_clip()
-                self.lienzo.set_clip(rect.inflate(-20, -8))
-                self.texto(texto, rect.x + 12 - max(0, ancho - rect.width + 26), rect.y + 11, 20)
-                self.lienzo.set_clip(clip)
+                self.campo_texto(clave, pygame.Rect(230, y + 29, 500, 46), 20)
             if self.anfitrion:
                 self.parrafo("Recibirás un código para invitar a tus compañeros desde cualquier red." if self.internet else
                              "Tus compañeros usarán tu IP local. Al salir de la sala se desconectará todo el equipo.", pygame.Rect(230, 295, 500, 65), 16)

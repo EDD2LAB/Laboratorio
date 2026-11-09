@@ -1,5 +1,8 @@
+import math
+
 from .bot_cooperativo import BotCooperativo
 from .memoria_bot import MemoriaEquipo
+from .navegador_bot import NavegadorBot
 from .planificador_bot import PlanificadorBot
 
 
@@ -59,10 +62,14 @@ class GestorBots:
             for identificador in self.bots
         }
         self._asignar_ayuda(estado_por_bot, jugadores)
+        # Una ruta nueva por actualización: si varios bots cambian de destino a
+        # la vez se reparten el cálculo en cuadros seguidos y no hay tirón.
+        NavegadorBot.rutas_disponibles = 1
         for identificador, bot in self.bots.items():
             estado = estado_por_bot[identificador]
             estado["caso"] = estado_publico
             bot.actualizar(ahora, segundos, estado, jugadores)
+        NavegadorBot.rutas_disponibles = math.inf
 
     def _asignar_ayuda(self, estados, jugadores):
         peticiones = list(self.memoria.solicitudes_ayuda.items())

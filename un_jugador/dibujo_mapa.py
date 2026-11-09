@@ -291,7 +291,12 @@ def dibujar_puente_balanceandose(superficie, objeto, tiempo):
     amplitud_x = min(13, max(5, round(rect_base.width * .028)))
     desplazamiento_x = round(oscilacion * amplitud_x)
     inclinacion = oscilacion * 1.35
-    imagen = pygame.transform.rotate(objeto["imagen"], inclinacion)
+    # El balanceo pasa siempre por los mismos ángulos: cada giro se calcula una vez.
+    giros = objeto.setdefault("giros", {})
+    clave = (id(objeto["imagen"]), round(inclinacion, 1))
+    if clave not in giros:
+        giros[clave] = pygame.transform.rotate(objeto["imagen"], clave[1])
+    imagen = giros[clave]
     rect_visual = imagen.get_rect(center=(rect_base.centerx + desplazamiento_x, rect_base.centery))
     superficie.blit(imagen, rect_visual)
 

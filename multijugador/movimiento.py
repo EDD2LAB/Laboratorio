@@ -2,6 +2,7 @@
 import hashlib
 import json
 import math
+from collections import deque
 from pathlib import Path
 import unicodedata
 
@@ -174,16 +175,31 @@ class ColisionesMapa:
                 y += paso_y
         return x, y
 
+    def _sitio_libre(self, x, y, ocupadas, separacion=22):
+        return (not any(self.bloqueado(x + ox, y + oy) for ox, oy in ((0, 0), (-8, 0), (8, 0), (0, -8), (0, 8)))
+                and all(math.hypot(x - a, y - b) >= separacion for a, b in ocupadas))
+
     def inicio_libre(self, x, y, ocupadas=()):
         for radio in range(0, 161, 4):
             for dx in range(-radio, radio + 1, 4):
                 for dy in ({-radio, radio} if radio else {0}):
-                    px, py = x + dx, y + dy
-                    libre = not any(self.bloqueado(px + ox, py + oy)
-                                    for ox, oy in ((0, 0), (-8, 0), (8, 0), (0, -8), (0, 8)))
-                    if libre and all(math.hypot(px - a, py - b) >= 22 for a, b in ocupadas):
-                        return float(px), float(py)
+                    if self._sitio_libre(x + dx, y + dy, ocupadas):
+                        return float(x + dx), float(y + dy)
         raise ValueError("No se encontró una posición inicial libre en el mapa.")
+
+    def inicio_alcanzable(self, x, y, ocupadas=(), separacion=22):
+        """Como ``inicio_libre``, pero buscando a pie desde (x, y): nunca aparece
+        al otro lado de una pared, como en el vacío junto a una plataforma."""
+        vistos, cola = {(x, y)}, deque([(x, y)])
+        while cola and len(vistos) < 6000 and not self.bloqueado(x, y):
+            px, py = cola.popleft()
+            if self._sitio_libre(px, py, ocupadas, separacion):
+                return float(px), float(py)
+            for vecino in ((px + 4, py), (px - 4, py), (px, py + 4), (px, py - 4)):
+                if vecino not in vistos and not self.bloqueado(*vecino):
+                    vistos.add(vecino)
+                    cola.append(vecino)
+        return self.inicio_libre(x, y, ocupadas)
 
 
 class PartidaMovimiento:
@@ -299,8 +315,9 @@ class PartidaMovimiento:
     def _viajar_equipo(self, origen, destino):
         mapa = self.colisiones_de(destino)
         if destino == LA_COPA:
+            # Sobre las tablas, justo delante de la boca del portal.
             px, py, pw, ph = rect_portal(LA_COPA, mapa.datos)
-            inicio = (px - 20, py + ph)
+            inicio = (px + pw // 2 - 9, py + ph + 3)
         else:
             inicio = spawn_presente(mapa.datos)
         viajeros = [i for i, j in self.jugadores.items() if j.get("dimension", LA_COPA) == origen]
@@ -313,7 +330,8 @@ class PartidaMovimiento:
         ocupadas = [(j["x"], j["y"]) for j in self.jugadores.values() if j.get("dimension", LA_COPA) == destino]
         self.viajes += 1
         for identificador in viajeros:
-            x, y = mapa.inicio_libre(*inicio, ocupadas)
+            # Más juntos que al empezar: la plataforma del portal es estrecha.
+            x, y = mapa.inicio_alcanzable(*inicio, ocupadas, separacion=18)
             ocupadas.append((x, y))
             self.controles.pop(identificador, None)
             self.jugadores[identificador].update(dimension=destino, x=x, y=y, direccion="abajo",

@@ -101,18 +101,21 @@ class ArteEnPartida(unittest.TestCase):
         self.assertIn(self.panel.imagen_retrato("Observación del mirador"), self.vista.arte.retratos["guardian"])
 
     def test_el_cesto_se_llena_con_los_materiales(self):
-        lienzo = pygame.Surface((960, 720), pygame.SRCALPHA)
-        fuente = pygame.font.Font(None, 16)
-        encargo = {"materiales": [], "destino": {"x": 400, "y": 400, "nombre": "Puesto"}, "completo": False,
-                   "cargas": {}, "actividad": {}, "materiales_listos": False}
-        cestos = dict(suministros._cestos)
-        self.assertEqual(set(cestos), {"vacio", "lleno"})
-        with mock.patch.dict(suministros._cestos, {"lleno": None}):
-            suministros.dibujar_encargos(lienzo, {"encargo": encargo}, fuente)  # usa el vacío
-        with mock.patch.dict(suministros._cestos, {"vacio": None}):
-            encargo["materiales_listos"] = True
-            suministros.dibujar_encargos(lienzo, {"encargo": encargo}, fuente)  # usa el lleno
-        self.assertGreater(lienzo.get_bounding_rect().width, 0)
+        encargo = {"materiales_listos": False, "materiales_colocados": False}
+        self.assertEqual(suministros.clave_cesto(encargo), "vacio")
+        encargo["materiales_listos"] = True
+        self.assertEqual(suministros.clave_cesto(encargo), "lleno")
+        encargo["materiales_colocados"] = True  # ya se usaron: el cesto queda libre
+        self.assertEqual(suministros.clave_cesto(encargo), "vacio")
+        self.assertEqual(suministros.clave_cesto(None), "vacio")
+
+    def test_el_tronco_central_se_dibuja_como_cesto(self):
+        marcados = [o for o in self.vista.decoraciones_zoom if o.get("cesto")]
+        self.assertEqual(len(marcados), 1)
+        self.assertTrue(marcados[0]["tronco_eco"])
+        cesto = next(o for o in self.vista.contexto()["objetivos"] if o["id"] == "cesto")
+        self.assertEqual(marcados[0]["original"]["rect"].midbottom, (cesto["x"], cesto["y"]))
+        self.assertEqual(set(self.vista.cesto_zoom), {"vacio", "lleno"})
 
 
 class ZoomYHudDeLaCopa(unittest.TestCase):
