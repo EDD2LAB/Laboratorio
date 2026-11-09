@@ -138,5 +138,20 @@ class PruebasHTTP(unittest.TestCase):
             servidor.server_close()
 
 
+class RellenoConBots(unittest.TestCase):
+    def test_los_roles_libres_se_cubren_con_bots(self):
+        from unittest import mock
+        from multijugador.servicio_internet import SalaInternet
+        sala = SalaInternet(lambda: 0.0)
+        for identificador, rol, anfitrion in (("a", "guardian", True), ("b", "habitante", False)):
+            sala._sesiones[identificador] = {
+                "jugador": {"id": identificador, "nombre": identificador, "rol": rol, "listo": True, "anfitrion": anfitrion},
+                "salida": mock.Mock(), "cerrar": mock.Mock()}
+        sala._accion("a", {"tipo": "iniciar"})
+        self.assertEqual(len(sala.partida.jugadores), 4)
+        self.assertEqual({i for i in sala.partida.jugadores if i.startswith("bot_")}, {"bot_mensajero", "bot_aspirante"})
+        self.assertEqual(set(sala.bots.bots), {"bot_mensajero", "bot_aspirante"})
+
+
 if __name__ == "__main__":
     unittest.main()

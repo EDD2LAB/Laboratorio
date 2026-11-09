@@ -20,3 +20,25 @@ la raíz).
 
 ## Falta
 - Fases 1 a 8.
+
+
+---
+
+# Progreso — rama `arte-pendiente`
+
+Implementa el arte que ya existía en `Imagenes/` y aún no se usaba.
+
+| Bloque | Estado |
+| --- | --- |
+| A. Expediente AVL | Pendiente: faltan `logica/expediente_avl.py` y `datos/casos_expediente.json` |
+| B. Informe y finales | Finales hechos (`interfaz/finales.py`); informe pendiente, depende de A |
+| C. Ayuda y accesibilidad | Hecho, salvo la pestaña del árbol AVL, que depende de A |
+| D. Ciberacoso | Parcial: análisis, comparador, sellos, avatares y etiqueta. Faltan los eventos de burlas y perfil falso, que no existen en la campaña |
+| E. Efectos del celular | Hecho |
+| F. Habilidades y propagación | Hecho en el multijugador (`interfaz/efectos_mapa.py`) |
+| G. Caldero, troncos, puentes, diálogos | Hecho; las tiras de balanceo no coinciden con los puentes y se conserva la rotación |
+| H. Ambiente | Catálogo del editor listo; la niebla se retiró a pedido |
+| I. Materiales | Hecho |
+
+Asignación de filas del caldero: 1 estable, 2 peligroso, 3 crítico, 4 campaña terminada.
+Barra de recarga: llena si se puede usar, media si falta la prueba propia, vacía si ya se usó.

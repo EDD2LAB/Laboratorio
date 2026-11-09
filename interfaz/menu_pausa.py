@@ -66,7 +66,7 @@ PAGINAS_COMO_JUGAR = (
         "2. Habla con las personas marcadas (E) hasta reunir las tres pistas: Darío Veraz, "
         "Tomás Red y Ronaldo Vélez.",
         "3. Tu celular (C) guarda las pistas. Junto a la pantalla pública decidan en él: Verificar, "
-        "Denunciar, Ignorar o Publicar. Aquí los bots solo acompañan: deciden las personas.",
+        "Denunciar, Ignorar o Publicar. Los bots reúnen las demás pistas y te dejan una; decidir les toca a las personas.",
         "4. Clasifica la publicación. Si la dejaron pendiente, pueden volver a decidir.",
         "Usa el portal para volver a La Copa. Los indicadores viajan contigo.",
     )),
