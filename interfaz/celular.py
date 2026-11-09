@@ -297,15 +297,17 @@ def _analizar(panel, superficie, contexto, arte):
     sospecha = _sospecha_confirmada(panel)
     resultado = contexto.get("resultado") or {}
     if resultado.get("correcto"):
-        _sello(superficie, arte.sello_correcto, (880, 70))
+        _sello(superficie, arte.sello_correcto, (326, 150))
     elif sospecha:
-        _sello(superficie, arte.sello_manipulado, (880, 70))
-    franja = pygame.Rect(20, 660, 620, 46)
+        _sello(superficie, arte.sello_manipulado, (326, 150))
+    # La franja tapa los botones de muestra del arte, que aquí no hacen nada.
+    franja = pygame.Rect(16, 612, 928, 100)
     pygame.draw.rect(superficie, (19, 39, 49), franja, border_radius=8)
+    pygame.draw.rect(superficie, TURQUESA, franja, 2, border_radius=8)
     texto = next((p["texto"] for p in panel.inventario() if p["id"] == "fuente_ausente"),
                  "Habla con Darío Veraz para analizar el origen de la imagen.")
-    _texto(panel, superficie, texto, franja.x + 12, franja.y + 4, panel.pequena, (153, 222, 214), franja.width - 24)
-    _boton(panel, superficie, "comparar", "Ver análisis" if panel.comparando else "Comparar videos", (760, 684), 200, alto=34)
+    _texto(panel, superficie, texto, franja.x + 14, franja.y + 14, panel.pequena, (153, 222, 214), 440)
+    _boton(panel, superficie, "comparar", "Ver análisis" if panel.comparando else "Comparar videos", (590, 640), 190, alto=34)
 
 
 def _decidir(panel, superficie, contexto, arte):
@@ -397,8 +399,7 @@ def _clasificado(panel, superficie, contexto, arte):
 
 
 PANTALLAS = {"caldero": _decidir, "resultado": _resultado, "clasificar": _clasificar,
-             "clasificacion_resultado": _clasificado, "fuente": _fuente, "inventario": _pistas,
-             "analizar": _analizar}
+             "clasificacion_resultado": _clasificado, "fuente": _fuente, "inventario": _pistas}
 
 
 def dibujar(panel, superficie):
@@ -409,17 +410,15 @@ def dibujar(panel, superficie):
         _analizar(panel, superficie, contexto, arte)
         pestanas = {"inventario": "Mis pistas", "caldero": "Decidir"}
         for i, (clave, nombre) in enumerate(pestanas.items()):
-            _boton(panel, superficie, clave, nombre, (720 + i * 130, 30), 120, alto=30)
+            _boton(panel, superficie, clave, nombre, (590 + i * 200, 684), 190, alto=34)
     else:
         for centro, avatar in zip(AVATARES_COMENTARIOS, arte.avatares):
             superficie.blit(avatar, avatar.get_rect(center=centro))
         _menu(panel, superficie, contexto, panel.inventario())
         PANTALLAS.get(panel.modo, _mision)(panel, superficie, contexto, arte)
     if panel.modo != "clasificacion_resultado":
-        boton = Boton("Guardar el celular", centro=(795, 700), fuente=panel.pequena, tamano=(232, 30), paleta=PALETA)
-        if panel.modo == "analizar":
-            boton.rect.center = boton.centro = (918 - 40, 684)
-            boton.rect.width = 150
+        centro, ancho = ((790, 640), 190) if panel.modo == "analizar" else ((795, 700), 232)
+        boton = Boton("Guardar el celular", centro=centro, fuente=panel.pequena, tamano=(ancho, 30), paleta=PALETA)
         boton.dibujar(superficie, panel.vista.mouse)
         panel.botones["cerrar"] = boton
     if panel.modo == "fuente":

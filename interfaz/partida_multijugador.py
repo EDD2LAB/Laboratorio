@@ -216,6 +216,8 @@ class VistaPartida:
         self.final_sonado = None
         self.inicio_reparacion = None
         self.evento_reparacion_visto = None
+        self.pantalla_final = None  # ilustración del final del equipo
+        self.final_visto = False
         self.puente_1 = next((o for o in self.decoraciones
                               if o.get("nombre", "").replace("\\", "/").lower().endswith("puentes/puente1.png")), None)
         self.puente_roto = None
@@ -411,6 +413,7 @@ class VistaPartida:
         if destino_guia != self.ultima_guia_seleccion:
             self.seleccion = None
             self.ultima_guia_seleccion = destino_guia
+        self._revisar_final()
         self.ultimo_paquete = time.monotonic()
         self.aviso_red = ""
         presentes = set()
@@ -504,7 +507,21 @@ class VistaPartida:
         else:
             self.panel.abrir("introduccion")
 
+    def _revisar_final(self):
+        """Al completar La Copa y Distrito Conecta, una vez por partida."""
+        caso = self.estado.get("mundo", {}).get("caso", {})
+        if self.final_visto or caso.get("fase") != "final" or not (caso.get("presente") or {}).get("completada"):
+            return
+        from interfaz.finales import PantallaFinal
+        self.final_visto = True
+        self.pantalla_final = PantallaFinal(caso.get("indicadores", {}), self.etiquetas[self.dimension],
+                                            self.escenas.r["fuente_resultado"], self.titulo)
+
     def manejar_evento(self, evento, posicion, cliente):
+        if self.pantalla_final is not None:
+            if evento.type == pygame.MOUSEBUTTONDOWN or (evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE):
+                self.pantalla_final = None
+            return True
         if self.animacion_pocion or self.transicion:
             if (evento.type == pygame.MOUSEBUTTONDOWN or (evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE)) \
                     and self.animacion_pocion and self.animacion_pocion.datos["tiempo_transcurrido"] > .6:
@@ -1022,3 +1039,5 @@ class VistaPartida:
             self.animacion_pocion.dibujar(superficie, self.escenas)
         if self.transicion:
             self.transicion.dibujar(superficie, self.escenas.r["fuente_resultado"])
+        if self.pantalla_final is not None:
+            self.pantalla_final.dibujar(superficie)
