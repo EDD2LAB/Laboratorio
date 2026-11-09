@@ -362,6 +362,23 @@ def cuadros_reposo_de(nombre_sprite, orientacion):
     return _recortar_juntos(cargar_spritesheet_frames(archivos[DIRECCION_A_FILA_REPOSO[orientacion] - 1], 8))
 
 
+def preparar_hablando(objeto):
+    """Animación de hablar de un NPC, del mismo alto que su sprite, si la tiene."""
+    carpeta = "NPCS/" + os.path.dirname(str(objeto.get("nombre", "")).replace("\\", "/")).rsplit("/", 1)[-1]
+    directorio = os.path.join(str(RAIZ), "Imagenes", *carpeta.split("/"))
+    if not os.path.isdir(directorio):
+        return
+    hojas = sorted(a for a in os.listdir(directorio) if "hablando" in a.casefold() and a.lower().endswith(".png"))
+    limites = objeto["imagen"].get_bounding_rect()
+    if len(hojas) != 1 or not limites.height:
+        return
+    cuadros = _recortar_juntos(cargar_spritesheet_frames(carpeta + "/" + hojas[0], 8))
+    factor = limites.height / cuadros[0].get_height()
+    objeto["cuadros_hablando"] = [
+        pygame.transform.scale(c, (max(1, round(c.get_width() * factor)), limites.height)) for c in cuadros]
+    objeto["ancla_reposo"] = (objeto["rect"].x + limites.centerx, objeto["rect"].y + limites.bottom)
+
+
 def preparar_reposo(objeto):
     """Da a un NPC colocado su animación de reposo, del mismo alto que su sprite.
 

@@ -267,26 +267,25 @@ class PlanificadorBot:
         """Los bots reúnen pistas y dejan una por persona, la más cercana a ella.
 
         La decisión y la clasificación siguen siendo de las personas."""
-        presente = estado["caso"].get("presente") or {}
         privado = estado["privado"].get("presente") or {}
         dimension = bot.posicion.get("dimension")
         humanos = [j for j in jugadores if j.get("controlador") != "bot"
                    and j.get("dimension") == dimension and j.get("conectado", True)]
         halladas = {p["id"] for p in privado.get("inventario", [])}
-        pendientes = [o for o in presente.get("objetivos", []) if o.get("tipo") == "fuente" and o["pista"] not in halladas]
+        pendientes = [n for n in estado["caso"].get("npcs", []) if n.get("pista") and n["pista"] not in halladas]
         if not humanos or not pendientes:
             return None
         # Una tarea reservada se termina, aunque la persona se haya movido.
         for objetivo in pendientes:
             if memoria.reservas_preparacion.get("distrito:" + objetivo["id"]) == bot.identificador:
-                return self._tarea("INVESTIGANDO", objetivo, "interactuar", objetivo=objetivo["id"])
+                return self._tarea("INVESTIGANDO", objetivo, "hablar_npc", npc=objetivo["id"])
         reservadas = sum("distrito:" + o["id"] in memoria.reservas_preparacion for o in pendientes)
         if len(pendientes) - reservadas <= len(humanos):
             return None
         cercania = lambda o: min(math.hypot(o["x"] - j["x"], o["y"] - j["y"]) for j in humanos)
         for objetivo in sorted(pendientes, key=cercania, reverse=True):
             if memoria.reservar_preparacion(bot.identificador, "distrito:" + objetivo["id"]):
-                return self._tarea("INVESTIGANDO", objetivo, "interactuar", objetivo=objetivo["id"])
+                return self._tarea("INVESTIGANDO", objetivo, "hablar_npc", npc=objetivo["id"])
         return None
 
     @staticmethod

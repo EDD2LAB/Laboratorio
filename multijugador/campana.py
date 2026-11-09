@@ -4,6 +4,7 @@ import random
 from .suministros import EncargoSuministros
 from .guia import GuiaCooperativa
 from . import clasificacion
+from .dialogos import DialogosNPC
 from .presentacion import aplicar_efectos, tipo_pocion
 from .reparacion import PuenteRed
 
@@ -90,6 +91,7 @@ class CampanaCopa(MisionPuente):
         super().__init__(jugadores, datos_mapa)
         self.opciones = {"corregir": "Corregir las partes equivocadas", "difundir": "Compartirlo: las pistas lo confirman", "descartar": "No compartirlo: es un aviso falso"}
         self.casos = tuple(random.choice((caso, VARIANTES[caso[0]])) if caso[0] in VARIANTES else caso for caso in CASOS)
+        self.dialogos = DialogosNPC(self, datos_mapa)
         self.ronda = 0
         self.metadatos_pruebas = self._metadatos(self.pruebas)
         self.resumen = []
@@ -204,6 +206,8 @@ class CampanaCopa(MisionPuente):
             if self.cancelar_viaje is None:
                 raise ValueError("El portal no está disponible.")
             return self.cancelar_viaje(identificador)
+        if accion in ("hablar_npc", "responder_npc"):
+            return self.dialogos.ejecutar(identificador, solicitud)
         objetivo_pedido = solicitud.get("objetivo")
         if accion in ("presente_votar", "presente_clasificar") or (
                 accion == "interactuar" and isinstance(objetivo_pedido, str) and objetivo_pedido.startswith("presente:")):
@@ -411,6 +415,7 @@ class CampanaCopa(MisionPuente):
                       sin_prisa=self.ronda == 0, puntos=self.puntos, bono_equipo=self.bono_equipo,
                       proxima_oleada=max(0, 60 - int(self.presion % 60)),
                       oleadas=self.oleadas, habilidades_usadas=sorted(self.habilidades_usadas),
+                      npcs=self.dialogos.publico(), npcs_en_dialogo=self.dialogos.nombres_en_dialogo(),
                       opciones=dict(self.opciones),
                       tipos_pocion={clave: tipo_pocion(clave) for clave in self.opciones},
                       clasificacion_opciones=list(clasificacion.OPCIONES["la_copa"]),

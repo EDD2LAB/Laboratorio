@@ -219,6 +219,9 @@ class VistaPartida:
         self.estado = estado
         self.variantes_eco = cargar_variantes_tronco_eco()
         self._frames_tronco_escalados = {}
+        self._etiquetas_npc = {}
+        from interfaz.dialogo_npc import ArteDialogo
+        self.arte_dialogo = ArteDialogo()
         self.rect_caldero, self.cuadros_caldero = self._cargar_caldero()
         from audio.narracion import Narrador
         self.narrador = Narrador()
@@ -517,8 +520,13 @@ class VistaPartida:
             return []
         caso = mundo.get("caso", {})
         puente = caso.get("puente") or {}
+        npcs = [n for n in caso.get("npcs", []) if n["dimension"] == self.dimension and self.cerca(n)]
+        junto_a_npc = {(n["x"], n["y"]) for n in npcs}
+        # Donde hay alguien con quien hablar, sobra el objetivo "ayuda a otro compañero".
         objetivos = [dict(o) for o in self.contexto().get("objetivos", []) if self.cerca(o)
-                     and not (o["id"] == "puente_1" and puente.get("estado") not in ("READY_TO_REPAIR", "REPAIR_MINIGAME"))]
+                     and not (o["id"] == "puente_1" and puente.get("estado") not in ("READY_TO_REPAIR", "REPAIR_MINIGAME"))
+                     and not (o.get("tipo") == "fuente" and (o["x"], o["y"]) in junto_a_npc and o.get("rol") != yo["rol"])]
+        objetivos.extend({"id": "npc:" + n["id"], "nombre": "Hablar con " + n["nombre"], "x": n["x"], "y": n["y"]} for n in npcs)
         encargo = caso.get("encargo") if self.dimension == LA_COPA else None
         if encargo:
             for o in objetivos:
@@ -647,6 +655,8 @@ class VistaPartida:
             elif evento.key == pygame.K_e:
                 if self.seleccion == "portal":
                     self.panel.abrir("portal")
+                elif self.seleccion and self.seleccion.startswith("npc:"):
+                    cliente.actuar("hablar_npc", npc=self.seleccion[4:])
                 elif self.seleccion:
                     cliente.actuar("interactuar", objetivo=self.seleccion)
                 else:
@@ -825,6 +835,7 @@ class VistaPartida:
         caso = self.estado.get("mundo", {}).get("caso", {})
         puente = caso.get("puente") or {}
         encargo = caso.get("encargo")
+        hablando = caso.get("npcs_en_dialogo", ())
         cestos = self.cesto_zoom if escena is not None else self.arte.cestos
         gemelos = self._npcs_gemelos()
         for objeto in decoraciones:
@@ -836,6 +847,11 @@ class VistaPartida:
                 # Roto hasta que estén los materiales; deteriorado mientras se repara.
                 listo = puente.get("estado") in ("READY_TO_REPAIR", "REPAIR_MINIGAME", "REPAIR_ANIMATION")
                 superficie.blit((puente_det if listo else None) or puente_roto or objeto["imagen"], objeto["rect"])
+                continue
+            if objeto.get("cuadros_hablando") and objeto.get("personaje") in hablando:
+                cuadros = objeto["cuadros_hablando"]
+                cuadro = cuadros[(ahora_ms // 130) % len(cuadros)]
+                superficie.blit(cuadro, cuadro.get_rect(midbottom=objeto["ancla_reposo"]))
                 continue
             if objeto.get("cuadros_reposo"):  # NPC con su animación de reposo
                 cuadros = objeto["cuadros_reposo"]
@@ -1141,7 +1157,35 @@ class VistaPartida:
             return "vacia"
         return "llena" if any(p.get("id") == "pista_" + rol for p in privado.get("inventario", [])) else "mitad"
 
+    def imagen_npc(self, nombre):
+        """Retrato del personaje o, si no tiene, su sprite (ya cargados)."""
+        retrato = {"Luma": "luma", "Mira": "mira"}.get(nombre)
+        if retrato and self.arte.retratos.get(retrato):
+            return self.arte.retratos[retrato][0]
+        if nombre == "Darío Veraz" and self.arte.retrato_agente is not None:
+            return self.arte.retrato_agente
+        decoraciones = (self.escenas_zoom.get(self.dimension) or {}).get("decoraciones", self.decoraciones)
+        return next((o["imagen"] for o in decoraciones if o.get("personaje") == nombre), None)
+
+    def _nombres_npc_cercanos(self, superficie):
+        """Nombre y "E: hablar" sobre cada NPC que el jugador tiene a su alcance."""
+        if self.panel.activo:
+            return
+        vista = self.vista_camara()
+        for npc in self.estado.get("mundo", {}).get("caso", {}).get("npcs", []):
+            if npc["dimension"] != self.dimension or not self.cerca(npc):
+                continue
+            if npc["nombre"] not in self._etiquetas_npc:
+                self._etiquetas_npc[npc["nombre"]] = self.fuente.render(npc["nombre"] + " · E: hablar", True, (255, 243, 210))
+            texto = self._etiquetas_npc[npc["nombre"]]
+            x, y = self.a_pantalla(npc["x"], npc["y"] - 62, vista)
+            caja = texto.get_rect(midbottom=(round(x), round(y)))
+            caja.clamp_ip(superficie.get_rect().inflate(-8, -8))
+            self._pastilla(superficie, caja.inflate(12, 6), 165)
+            superficie.blit(texto, caja)
+
     def _dibujar_capas_superiores(self, superficie):
+        self._nombres_npc_cercanos(superficie)
         self._dibujar_aviso_viaje(superficie)
         if self.depurar:
             bots = [

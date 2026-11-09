@@ -4,7 +4,7 @@ import re
 import time
 
 import pygame
-from interfaz import celular
+from interfaz import celular, dialogo_npc
 from interfaz.arte import dibujar_icono, expresion
 from interfaz.boton import Boton
 from multijugador.mision import TODOS
@@ -25,6 +25,7 @@ class PanelCooperativo:
         self.indice_pista = self.indice_destino = 0
         self.destino_fijo = None
         self._velo = None
+        self.dialogo = None  # conversación abierta con un NPC
         self.comparando = False  # celular: panel de análisis o comparador de video
         self.botones = {}
         self.fuente = cargar_fuente(18)
@@ -146,6 +147,11 @@ class PanelCooperativo:
         self.toast, self.toast_hasta = texto, time.monotonic() + 6
 
     def recibir(self, acuse):
+        if acuse.get("ok") and acuse.get("vista") == "dialogo_npc":
+            dialogo_npc.abrir(self, acuse["dialogo"])
+            return
+        if acuse.get("silencioso"):
+            return
         self.notificar(acuse.get("mensaje", "Acción confirmada."))
         if acuse.get("ok") and acuse.get("resultado") in ("acierto", "error"):
             self.estado_indicador = acuse["resultado"]
@@ -338,6 +344,9 @@ class PanelCooperativo:
             self._abierto = 0
         elif not getattr(self, "_abierto", 0):
             self._abierto = time.monotonic()
+        if self.modo == "dialogo_npc" and self.dialogo:
+            dialogo_npc.dibujar(self, superficie)
+            return
         if self.activo and self.dimension == "presente" and self.modo != "portal":
             celular.dibujar(self, superficie)
             if time.monotonic() < self.toast_hasta:
@@ -596,6 +605,8 @@ class PanelCooperativo:
         return self.destinos_eco() if self.cerca_eco() and not self.destino_fijo else self.destinatarios()
 
     def manejar(self, evento, posicion, cliente):
+        if self.modo == "dialogo_npc" and self.dialogo:
+            return dialogo_npc.manejar(self, evento, posicion, cliente)
         if self.modo == "reparar" and evento.type == pygame.KEYDOWN:
             if evento.key in (pygame.K_e, pygame.K_SPACE):
                 cliente.actuar("intento_reparacion", tiempo_aguja_ms=round(self.tiempo_aguja_ms, 1))
