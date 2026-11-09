@@ -61,9 +61,9 @@ class RegistroTests(unittest.TestCase):
 
     def test_ruta_validada_version_y_turno_compartido(self):
         e = ExpedientePartida()
-        self.registrar(e, "puente_norte")
-        self.registrar(e, "agua")
-        datos = dict(caso="agua", revision=e.revision, paso=0, direccion="izquierda")
+        self.registrar(e, "puente_norte")  # gravedad 4
+        self.registrar(e, "ayuda")  # gravedad 5: va a la derecha
+        datos = dict(caso="ayuda", revision=e.revision, paso=0, direccion="izquierda")
         with self.assertRaises(ValueError):
             e.paso_insercion(datos)
         self.assertEqual(e.paso, 0)
@@ -141,10 +141,10 @@ class IntegracionTests(unittest.TestCase):
     def test_solicitud_repetida_y_desconexion(self):
         p = self.crear()
         e = p.mision.expediente
-        for evento in ("puente_norte", "agua"):
+        for evento in ("puente_norte", "ayuda"):
             e.registrar(evento, evento, {"evento_id": evento}, [])
         solicitud = dict(accion="expediente_paso", id_solicitud=uuid.uuid4().hex,
-                         caso="agua", revision=1, paso=0, direccion="derecha")
+                         caso="ayuda", revision=1, paso=0, direccion="derecha")
         a = p.actuar("a", solicitud, 0)
         self.assertTrue(a["ok"])
         self.assertEqual(a, p.actuar("a", solicitud, 0))
