@@ -46,6 +46,9 @@ class PanelCooperativo:
         self.indicador_hasta = 0.0
         self.intento_ultimo = None
         self.clasificacion_sonada = set()
+        self.nodos_expediente = {}
+        self.caso_expediente = None
+        self.prueba_expediente = 0
 
     @property
     def dimension(self):
@@ -267,12 +270,12 @@ class PanelCooperativo:
             opciones = contexto.get("opciones", {})
             falta = self.falta_para_elegir()
             mensaje = falta or ("Eligieron distinto. Hablen y prueben otra vez." if self.caso.get("empate") else "Lee tus pistas. ¿Qué poción usamos?")
-            votos = f"Tus pistas: {len(self.inventario())} · Ya eligieron {contexto.get('votos_emitidos', 0)} de {contexto.get('votantes', 0)}"
+            votos = f"Tus pistas: {self.cantidad_pruebas()} · Ya eligieron {contexto.get('votos_emitidos', 0)} de {contexto.get('votantes', 0)}"
             voto = self.privado_voto(contexto)
             if voto:
                 votos += " · Tu poción: " + escenas.nombre_pocion(contexto.get("tipos_pocion", {}).get(voto, ""))
             escenas.dibujar_decision(self, superficie, contexto, opciones, contexto.get("tipos_pocion", {}), falta, mensaje, votos)
-            if len(self.inventario()) < 2:
+            if self.cantidad_pruebas() < 2:
                 self.boton(superficie, "pedir_pista", "Pedir pista", 880, 700, 150)
             self.boton(superficie, "cerrar", "Volver", 82, 700, 150)
             return True
@@ -323,7 +326,14 @@ class PanelCooperativo:
     def inventario(self):
         if self.dimension == "presente":
             return (self.privado.get("presente") or {}).get("inventario", [])
-        return self.privado.get("inventario", [])
+        pistas = self.privado.get("inventario", [])
+        avisos = [dict(id=p["id"], titulo="Aviso: " + p["titulo"], texto=p["temporal"]["texto"],
+                       es_temporal=True, vigente=p["temporal"]["vigente"], segundos=p["temporal"]["segundos"])
+                  for p in pistas if p.get("temporal")]
+        return pistas + avisos
+
+    def cantidad_pruebas(self):
+        return sum(not p.get("es_temporal") for p in self.inventario())
 
     def dibujar(self, superficie):
         self.botones = {}
@@ -331,6 +341,11 @@ class PanelCooperativo:
             self._abierto = 0
         elif not getattr(self, "_abierto", 0):
             self._abierto = time.monotonic()
+        if self.modo == "expediente":
+            from interfaz.expediente import dibujar
+            self.nodos_expediente = {}
+            dibujar(self, superficie)
+            return
         if self.activo and self.dimension == "presente" and self.modo != "portal":
             celular.dibujar(self, superficie)
             if time.monotonic() < self.toast_hasta:
@@ -420,6 +435,8 @@ class PanelCooperativo:
                 pista = inventario[self.indice_pista]
                 self.texto_lineas(superficie, pista["titulo"], 165, 170, 630, color=ORO)
                 self.texto_lineas(superficie, pista["texto"], 165, 215, 630)
+                if pista.get("es_temporal") and pista.get("vigente"):
+                    self.texto_lineas(superficie, f"Vigente por {pista['segundos']} s. Compartirlo conserva su fecha original.", 165, 300, 630, self.pequena, VERDE)
                 dibujar_icono(superficie, self.vista.arte.iconos_pista.get(pista["id"]), (775, 186))
                 arte = self.vista.arte
                 self.boton_flecha(superficie, "pista_anterior", arte.flecha_izq, "<", 205, 353)
@@ -435,18 +452,19 @@ class PanelCooperativo:
                     persona = self.pequena.render("Cambiar persona", True, VERDE)
                     superficie.blit(persona, persona.get_rect(center=(480, 450)))
                     cerca = self.cerca_eco() or self.vista.cerca(destino, 64)
-                    self.boton(superficie, "entregar", "Enviar mi pista" if self.cerca_eco() else "Dar mi pista", 480, 506, 420, cerca)
+                    vigente = not pista.get("es_temporal") or pista.get("vigente")
+                    self.boton(superficie, "entregar", ("Enviar mi pista" if self.cerca_eco() else "Dar mi pista") if vigente else "Aviso caducado: visita la fuente", 480, 506, 420, cerca and vigente)
                     if not cerca:
                         self.texto_lineas(superficie, "Acércate a esa persona o a un tronco para enviarla.", 165, 538, 630, self.pequena, ORO)
-            if len(inventario) < 2:
+            if self.cantidad_pruebas() < 2:
                 self.boton(superficie, "pedir_pista", "Me falta una pista: pedir ayuda", 480, 582, 530)
         elif self.modo == "caldero":
             self.texto_lineas(superficie, self.caso.get("noticia", ""), 165, 175, 630)
             falta = self.falta_para_elegir()
             mensaje = falta or ("Eligieron distinto. Hablen y prueben otra vez." if self.caso.get("empate") else "Lee tus pistas. ¿Qué crees que pasó?")
             self.texto_lineas(superficie, mensaje, 165, 265, 630, color=ORO)
-            self.texto_lineas(superficie, f"Tus pistas: {len(inventario)} · Ya eligieron {self.caso.get('votos_emitidos', 0)} de {self.caso.get('votantes', 0)}", 165, 325, 630, self.pequena)
-            if len(inventario) < 2:
+            self.texto_lineas(superficie, f"Tus pistas: {self.cantidad_pruebas()} · Ya eligieron {self.caso.get('votos_emitidos', 0)} de {self.caso.get('votantes', 0)}", 165, 325, 630, self.pequena)
+            if self.cantidad_pruebas() < 2:
                 self.boton(superficie, "pedir_pista", "Pedir la pista que me falta", 480, 375, 500)
             elif self.privado.get("voto"):
                 self.texto_lineas(superficie, "Tu elección: " + self.caso["opciones"][self.privado["voto"]], 165, 365, 630, self.pequena, VERDE)
@@ -566,6 +584,9 @@ class PanelCooperativo:
             self.abrir("resultado")
             return True
         if evento.type == pygame.KEYDOWN:
+            if evento.key == pygame.K_t:
+                self.modo = None if self.modo == "expediente" else "expediente"
+                return True
             if evento.key == pygame.K_ESCAPE and self.activo:
                 self.modo = None
                 return True
@@ -591,10 +612,26 @@ class PanelCooperativo:
                 return True
         if not self.activo or evento.type != pygame.MOUSEBUTTONDOWN or evento.button != 1:
             return False
+        if self.modo == "expediente":
+            for caso, rect in self.nodos_expediente.items():
+                if rect.collidepoint(posicion):
+                    self.caso_expediente = caso
+                    self.prueba_expediente = 0
+                    return True
         for clave, boton in self.botones.items():
             if not boton.fue_clickeado(posicion):
                 continue
-            if clave in ("cerrar", "seguir"):
+            if clave == "expediente_cerrar":
+                self.modo = None
+            elif clave == "expediente_prueba":
+                self.prueba_expediente += 1
+            elif clave.startswith("expediente:"):
+                estado = self.caso.get("expediente") or {}
+                pendiente = estado.get("pendiente")
+                if pendiente:
+                    cliente.actuar("expediente_paso", direccion=clave.split(":")[1],
+                                   caso=pendiente["id"], revision=estado["revision"], paso=estado["paso"])
+            elif clave in ("cerrar", "seguir"):
                 if self.privado.get("tutorial", {}).get("estado") == "pendiente" and self.caso.get("ronda", 0) == 0:
                     cliente.actuar("iniciar_tutorial")
                 self.modo = None

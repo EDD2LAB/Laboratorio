@@ -4,7 +4,7 @@ import time
 import unittest
 
 from multijugador.cliente import ClienteSala
-from multijugador.protocolo import codificar, extraer
+from multijugador.protocolo import MAX_MENSAJE, codificar, extraer
 from multijugador.servidor import ServidorSala
 
 
@@ -138,9 +138,11 @@ class PruebasProtocolo(unittest.TestCase):
         self.assertEqual(resto, b"")
 
     def test_limites_y_formato(self):
-        for datos in (b"[]\n", b"no es json\n", b"x" * 16385):
+        for datos in (b"[]\n", b"no es json\n", b"x" * (MAX_MENSAJE + 1), b"x" * (MAX_MENSAJE + 1) + b"\n"):
             with self.assertRaises(ValueError):
                 extraer(datos)
+        mensaje = {"tipo": "estado", "expediente": "x" * 18000}
+        self.assertEqual(extraer(codificar(mensaje)), ([mensaje], b""))
 
 
 if __name__ == "__main__":

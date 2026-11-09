@@ -203,7 +203,7 @@ class ColisionesMapa:
 
 
 class PartidaMovimiento:
-    def __init__(self, jugadores, ahora, colisiones=None):
+    def __init__(self, jugadores, ahora, colisiones=None, semilla=None):
         self.colisiones = colisiones or ColisionesMapa()
         self.jugadores = {}
         self.controles = {}
@@ -221,7 +221,7 @@ class PartidaMovimiento:
         self.conectados = set(self.jugadores)
         self.mapas = {LA_COPA: self.colisiones}
         self.viajes = 0
-        self.mision = CampanaCopa(self.jugadores, self.colisiones.datos)
+        self.mision = CampanaCopa(self.jugadores, self.colisiones.datos, semilla=semilla)
         self.mision.viajar = self.viajar
         self.mision.cancelar_viaje = self.cancelar_viaje
         self.viaje = None  # propuesta de viaje en grupo (ver viajar)
@@ -350,7 +350,8 @@ class PartidaMovimiento:
 
     def actuar(self, identificador, datos, ahora):
         self.actualizar(ahora)
-        return self.mision.actuar(identificador, datos, ahora, self.presentes_en(LA_COPA))
+        presentes = self.conectados if datos.get("accion") == "expediente_paso" else self.presentes_en(LA_COPA)
+        return self.mision.actuar(identificador, datos, ahora, presentes)
 
     def recibir(self, identificador, datos, ahora):
         if identificador not in self.jugadores:

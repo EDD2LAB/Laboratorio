@@ -31,7 +31,7 @@ class PlanificadorBotTests(unittest.TestCase):
         for indice_variante in (0, 1):
             with self.subTest(variante=indice_variante):
                 with patch(
-                    "multijugador.campana.random.choice",
+                    "logica.sorteo_partida.SorteoPartida.elegir",
                     side_effect=lambda opciones: opciones[indice_variante],
                 ):
                     partida = PartidaMovimiento(

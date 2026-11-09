@@ -154,7 +154,7 @@ class CampanaTests(unittest.TestCase):
     def test_variantes_tienen_soluciones_distintas_y_no_se_publican_pruebas(self):
         from unittest.mock import patch
         for ultimo in (False, True):
-            with patch("multijugador.campana.random.choice", side_effect=lambda opciones: opciones[-1 if ultimo else 0]):
+            with patch("logica.sorteo_partida.SorteoPartida.elegir", side_effect=lambda opciones: opciones[-1 if ultimo else 0]):
                 p = self.crear(("guardian", "habitante"))
             self.assertEqual(p.mision.casos[1][3], "difundir" if ultimo else "descartar")
             self.assertEqual(p.mision.casos[2][3], "descartar" if ultimo else "difundir")

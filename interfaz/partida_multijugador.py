@@ -965,7 +965,7 @@ class VistaPartida:
                 texto = self.panel.pequena.render(texto_boton, True, (255, 243, 210))
                 superficie.blit(texto, texto.get_rect(center=self.boton_guia.center))
             self.hud.dibujar(superficie, 18, 176)
-            self._texto_pastilla(superficie, "Shift: correr | E: ayudar | I: pistas | M: tarea | Q: poder | H: HUD | L: nombres",
+            self._texto_pastilla(superficie, "Shift: correr | E: ayudar | I: pistas | M: tarea | T: casos | Q: poder | H: HUD | L: nombres",
                                  self.hud.fuente, bottomleft=(22, 672))
 
     def _dibujar_capas_superiores(self, superficie):

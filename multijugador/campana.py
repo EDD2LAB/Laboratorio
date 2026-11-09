@@ -1,11 +1,13 @@
 """Campaña cooperativa de La Copa; todo el progreso pertenece al servidor."""
 from .mision import MisionPuente
-import random
+from logica.sorteo_partida import SorteoPartida
+from .expediente import ExpedientePartida
 from .suministros import EncargoSuministros
 from .guia import GuiaCooperativa
 from . import clasificacion
 from .presentacion import aplicar_efectos, tipo_pocion
 from .reparacion import PuenteRed
+from copy import deepcopy
 
 
 CASOS = (
@@ -57,6 +59,12 @@ VARIANTES = {
     }, "Se retira la copia descontextualizada del simulacro: no existe una orden real de evacuar."),
 }
 
+AVISOS_RECIENTES = {
+    "agua": "El punto de reparto de agua segura está atendido para recibir consultas.",
+    "tormenta": "El puesto del mirador está atendido para confirmar los avisos.",
+    "ayuda": "El equipo de reparto recibe consultas sobre las entregas pendientes.",
+}
+
 SEMANTICA_PRUEBAS = {
     "Acta del consejo": {"problema_parcial": True},
     "Registro de la ruta": {"problema_parcial": True},
@@ -82,14 +90,18 @@ SEMANTICA_PRUEBAS = {
     "Carga retenida": {"problema_parcial": True},
     "Recibos familiares": {"problema_parcial": True},
     "Inventario de Mira": {"problema_parcial": True},
+    "Inventario del reparto": {"problema_parcial": True},
 }
 
 
 class CampanaCopa(MisionPuente):
-    def __init__(self, jugadores, datos_mapa):
+    def __init__(self, jugadores, datos_mapa, semilla=None):
         super().__init__(jugadores, datos_mapa)
         self.opciones = {"corregir": "Corregir las partes equivocadas", "difundir": "Compartirlo: las pistas lo confirman", "descartar": "No compartirlo: es un aviso falso"}
-        self.casos = tuple(random.choice((caso, VARIANTES[caso[0]])) if caso[0] in VARIANTES else caso for caso in CASOS)
+        self.sorteo = SorteoPartida(semilla)
+        self.casos = self.sorteo.casos(CASOS, VARIANTES)
+        self.expediente = ExpedientePartida()
+        self.avisos_recientes = {i: {} for i in jugadores}
         self.ronda = 0
         self.metadatos_pruebas = self._metadatos(self.pruebas)
         self.resumen = []
@@ -195,6 +207,10 @@ class CampanaCopa(MisionPuente):
 
     def _ejecutar(self, identificador, solicitud, ahora, presentes):
         accion = solicitud.get("accion")
+        if accion == "expediente_paso":
+            if identificador not in presentes:
+                raise ValueError("Debes estar conectado para ordenar un caso.")
+            return self.expediente.paso_insercion(solicitud)
         # El portal y Distrito Conecta no pertenecen a un caso de La Copa.
         if accion == "usar_portal":
             if self.viajar is None:
@@ -300,6 +316,27 @@ class CampanaCopa(MisionPuente):
         if self.fase != "investigacion" and accion in ("votar",):
             raise ValueError("La investigación ya terminó.")
         respuesta = super()._ejecutar(identificador, solicitud, ahora, presentes)
+        if accion == "interactuar" and self.ronda and self.fase == "investigacion":
+            rol = self.jugadores[identificador]["rol"]
+            fuente = next(o for o in self.objetivos if o.get("rol") == rol)
+            if solicitud.get("objetivo") == fuente["id"]:
+                evento = self.casos[self.ronda][0]
+                self.avisos_recientes[identificador]["pista_" + rol] = {
+                    "texto": AVISOS_RECIENTES[evento],
+                    "vence": self.reloj + self.sorteo.vigencia(evento, rol),
+                }
+                respuesta["mensaje"] += " Aviso temporal: " + AVISOS_RECIENTES[evento]
+        if accion == "entregar":
+            pista = solicitud.get("pista")
+            aviso = self.avisos_recientes[identificador].get(pista)
+            if aviso and self.reloj < aviso["vence"]:
+                receptor = solicitud.get("destinatario")
+                from .mision import TODOS
+                receptores = ((set(presentes) & self.jugadores.keys()) - {identificador}) if receptor == TODOS else {receptor}
+                for receptor in receptores:
+                    anterior = self.avisos_recientes[receptor].get(pista)
+                    if anterior is None or anterior["vence"] < aviso["vence"]:
+                        self.avisos_recientes[receptor][pista] = deepcopy(aviso)
         if accion == "interactuar" and respuesta.get("titulo"):
             rol = self.jugadores[identificador]["rol"]
             metadatos = self.metadatos_pruebas.get(rol)
@@ -316,6 +353,7 @@ class CampanaCopa(MisionPuente):
         self.metadatos_pruebas = self._metadatos(self.pruebas)
         self.correcta = self.casos[self.ronda][3]
         self.conocidas = {i: set() for i in self.jugadores}
+        self.avisos_recientes = {i: {} for i in self.jugadores}
         self.halladas.clear()
         self.entregas.clear()
         self.votos.clear()
@@ -395,6 +433,12 @@ class CampanaCopa(MisionPuente):
             return
         puente = self.estado_puente
         super().resolver(presentes)
+        if self.resultado:
+            caso = self.casos[self.ronda]
+            pruebas = [{"id": pista, "titulo": self.pruebas[pista.removeprefix("pista_")][0],
+                        "texto": self.pruebas[pista.removeprefix("pista_")][1]}
+                       for pista in sorted(self.halladas)]
+            self.expediente.registrar(caso[0], caso[1], self.resultado, pruebas)
         if self.ronda:
             self.estado_puente = puente
 
@@ -414,13 +458,21 @@ class CampanaCopa(MisionPuente):
                       tipos_pocion={clave: tipo_pocion(clave) for clave in self.opciones},
                       clasificacion_opciones=list(clasificacion.OPCIONES["la_copa"]),
                       puente=self.puente.publico(), dimension_completa=self.fase == "final",
-                      presente=self.presente.publico(self.presentes_presente) if self.presente else None)
+                      presente=self.presente.publico(self.presentes_presente) if self.presente else None,
+                      expediente=self.expediente.publico())
         return estado
 
     def privado(self, identificador):
         estado = super().privado(identificador)
         if not estado:
             return {}
+        for pista in estado["inventario"]:
+            aviso = self.avisos_recientes[identificador].get(pista["id"])
+            if aviso:
+                vigente = self.reloj < aviso["vence"]
+                pista["temporal"] = {"vigente": vigente, "segundos": max(0, int(aviso["vence"] - self.reloj)),
+                                     "texto": aviso["texto"] if vigente else
+                                     "Este aviso caducó. Vuelve a la fuente para renovarlo. Tus pruebas originales siguen guardadas."}
         rol = self.jugadores[identificador]["rol"]
         estado.update(habilidad=HABILIDADES[rol][0], descripcion_habilidad=HABILIDADES[rol][1],
                       habilidad_usada=identificador in self.habilidades_usadas,

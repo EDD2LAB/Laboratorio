@@ -1,0 +1,6 @@
+{
+  "puente_norte": {"tipo": "Aviso descontextualizado", "gravedad": 2, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"},
+  "agua": {"tipo": "Información sobre el agua", "gravedad": 4, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"},
+  "tormenta": {"tipo": "Alerta comunitaria", "gravedad": 3, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"},
+  "ayuda": {"tipo": "Acusación sin verificar", "gravedad": 2, "ley": null, "sancion": null, "estado_normativo": "pendiente_profesor"}
+}

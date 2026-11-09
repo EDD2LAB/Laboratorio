@@ -10,6 +10,10 @@
 !logica/
 !logica/__init__.py
 !logica/Arboles.py
+!logica/expediente_avl.py
+!logica/sorteo_partida.py
+!datos/
+!datos/casos_expediente.json
 !bots/
 !bots/*.py
 !Dockerfile.multijugador

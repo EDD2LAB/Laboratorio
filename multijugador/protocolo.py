@@ -1,12 +1,12 @@
 """Mensajes JSON delimitados por nueva línea; sin dependencias externas."""
 import json
 
-VERSION = 7  # 7: viaje en grupo por el portal, correr (Shift) y bots de relleno
+VERSION = 8  # 8: expediente AVL compartido y sorteo privado por partida
 # 6: pociones, clasificación, puente 1, portal y Distrito Conecta
 PUERTO = 45871
 ROLES = ("guardian", "mensajero", "habitante", "aspirante")
 NOMBRES_ROLES = ("Guardián", "Mensajero", "Habitante", "Aspirante")
-MAX_MENSAJE = 16384
+MAX_MENSAJE = 32768  # Incluye el expediente acotado a los cuatro casos de La Copa.
 
 
 def codificar(mensaje):

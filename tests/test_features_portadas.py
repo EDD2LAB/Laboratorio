@@ -376,6 +376,14 @@ class PortalTests(unittest.TestCase):
                 h.accion(p, i, "votar", opcion=caso[3])
             if ronda < 3:
                 h.avanzar(p)
+        # También debe caber el libro completo, no solo el primer caso y su cola.
+        expediente = p.mision.expediente
+        while expediente.pendientes:
+            caso = expediente.pendientes[0]
+            ruta = expediente.arbol.ruta_insercion(caso)
+            expediente.paso_insercion(dict(caso=caso.id, revision=expediente.revision,
+                                          paso=expediente.paso, direccion=ruta[expediente.paso]["direccion"]))
+        self.assertEqual(expediente.publico()["total"], 4)
         tamano = len(json.dumps({"mundo": p.estado("0")}, ensure_ascii=False).encode())
         self.assertLess(tamano, MAX_MENSAJE)
 

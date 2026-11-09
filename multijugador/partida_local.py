@@ -8,7 +8,7 @@ from .protocolo import NOMBRES_ROLES, ROLES
 
 
 class ClienteCampanaLocal:
-    def __init__(self, nombre, rol_humano, dificultad="normal"):
+    def __init__(self, nombre, rol_humano, dificultad="normal", semilla=None):
         if rol_humano not in ROLES:
             raise ValueError("El rol elegido no existe.")
         jugadores = []
@@ -21,7 +21,7 @@ class ClienteCampanaLocal:
             })
         self.identificador = "local"
         self.eventos = Queue(maxsize=128)
-        self._partida = PartidaMovimiento(jugadores, 0)
+        self._partida = PartidaMovimiento(jugadores, 0, semilla=semilla)
         self._bots = GestorBots(self._partida, self.identificador, dificultad)
         self._movimiento = (0, 0)
         self._correr = False

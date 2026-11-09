@@ -20,3 +20,17 @@ la raíz).
 
 ## Falta
 - Fases 1 a 8.
+
+## Expediente AVL y sorteo — 2026-11-08
+
+- Integrado expediente autoritativo para los cuatro eventos de La Copa,
+  actualización por rectificación y cola de inserción paso a paso.
+- Consulta compartida con T y validación de cada movimiento del árbol en servidor.
+- Sorteo privado por semilla de variantes y persona mencionada en la ayuda;
+  el tutorial se conserva. Avisos temporales renovables desde el segundo caso,
+  con caducidad del servidor y copias que conservan su vencimiento original.
+  Catálogo educativo sin leyes o sanciones inventadas.
+- Docker y protocolo 8 preparados. Alcance y pendientes en
+  `docs/expediente_y_sorteo.md`.
+- Validación final: 207 pruebas aprobadas y revisión visual del expediente
+  y de las tarjetas temporales. Cambios locales, pendientes de push y despliegue.
