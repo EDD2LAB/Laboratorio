@@ -12,7 +12,7 @@ import pygame  # noqa: E402
 from bots.gestor_bots import GestorBots  # noqa: E402
 from multijugador.dimensiones_red import FUTURO, LA_COPA, PRESENTE, jugadores_visibles, rect_portal  # noqa: E402
 from multijugador.movimiento import PartidaMovimiento  # noqa: E402
-from multijugador.nucleo import ARISTAS_BLOQUEADAS, LLAVE, grafo_con, red_conectada  # noqa: E402
+from multijugador.nucleo import ARISTAS_BLOQUEADAS, FIRMA, LLAVE, grafo_con, red_conectada  # noqa: E402
 from multijugador.presente import EVENTOS  # noqa: E402
 from multijugador.protocolo import ROLES  # noqa: E402
 from nucleo.rutas import RAIZ  # noqa: E402
@@ -57,6 +57,9 @@ def resolver_terminales(p, m, i="0"):
     m.halladas[LLAVE] = i
     ir(p, objetivo(m, "llave"), i)
     assert accion(p, i, "interactuar", objetivo="futuro:llave")["ok"]
+    ir(p, objetivo(m, "cuentas"), i)
+    assert accion(p, i, "futuro_resolver", terminal="cuentas", cuentas=["voz_1", "voz_2", "voz_3"])["ok"]
+    m.halladas[FIRMA] = i
 
 
 class Acceso(unittest.TestCase):

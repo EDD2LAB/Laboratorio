@@ -72,6 +72,14 @@ TESTIMONIOS_PRESENTE = {
         "Como periodista cuido lo que se publica. Una foto dice más cuando sabes de dónde salió.",
         "Antes de creer en una imagen, busca la original y compárala.",
     ),
+    "Archivista": (
+        "Guardo los registros de la ciudad. Una orden vale si la firma quien tiene autoridad para darla.",
+        "Mira primero la firma y luego la fecha. Un documento puede decir cualquier cosa.",
+    ),
+    "Representante Humano": (
+        "El consejo nunca autorizó esto. Firmo la reconfiguración: NÚCLEO seguirá, pero supervisado por personas.",
+        "No queremos apagarlo. Queremos que alguien pueda revisar lo que decide.",
+    ),
     "Corredor de Datos": (
         "Antes de que NÚCLEO bloqueara los sectores saqué la llave de supervisión. Llévala a la terminal del Centro de Verificación.",
         "La llave no apaga a NÚCLEO: solo hace que las personas vuelvan a revisar lo que decide.",

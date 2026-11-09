@@ -2,6 +2,7 @@
 import pygame
 
 from interfaz.analisis_manipulado import CLARO, CORAL, CREMA, FRANJA, MESA_FOTOS, ORO, OSCURO, TINTA, _zona
+from interfaz.boton import Boton
 
 AZUL_NOCHE = (12, 24, 48)
 CIAN = (90, 230, 230)
@@ -67,6 +68,9 @@ def _dibujar_archivos(panel, superficie, contexto, arte):
         pygame.draw.rect(superficie, ORO if encima else OSCURO, fila, 3 if encima else 2, border_radius=10)
         y = panel.texto_lineas(superficie, registro["titulo"], fila.x + 16, fila.y + 12, fila.w - 32, panel.fuente, TINTA)
         y = panel.texto_lineas(superficie, registro["texto"], fila.x + 16, y + 4, fila.w - 32, panel.pequena, TINTA)
+        resaltada = contexto.get("registro_resaltado") == registro["id"]  # Lupa de Memoria
+        if resaltada:
+            pygame.draw.rect(superficie, ORO, (fila.x + 10, y + 3, fila.w - 20, 26), 2, border_radius=6)
         panel.texto_lineas(superficie, registro["firma"], fila.x + 16, y + 6, fila.w - 32, panel.pequena, (120, 70, 150))
     pygame.draw.rect(superficie, (19, 39, 49), FRANJA, border_radius=8)
     pygame.draw.rect(superficie, CIAN, FRANJA, 2, border_radius=8)
@@ -74,7 +78,33 @@ def _dibujar_archivos(panel, superficie, contexto, arte):
                        FRANJA.x + 14, FRANJA.y + 14, 620, panel.pequena, CIAN)
 
 
-PANTALLAS = {"conexiones": _dibujar_conexiones, "archivos": _dibujar_archivos}
+def _dibujar_cuentas(panel, superficie, contexto, arte):
+    pygame.draw.rect(superficie, AZUL_NOCHE, PANEL, border_radius=14)
+    pygame.draw.rect(superficie, CIAN, PANEL, 3, border_radius=14)
+    panel.texto_lineas(superficie, "CUENTAS QUE ATACAN AL CIUDADANO", 90, 76, 780, panel.encabezado, CIAN)
+    panel.texto_lineas(superficie, "Tres son automáticas de NÚCLEO. Márcalas: fíjate en la hora, la frase y la fecha de creación.",
+                       90, 110, 780, panel.pequena, CLARO)
+    for indice, cuenta in enumerate(contexto["cuentas"]):
+        tarjeta = pygame.Rect(84 + indice % 2 * 400, 142 + indice // 2 * 212, 392, 202)
+        marcada, descartada = cuenta["id"] in panel.cuentas_marcadas, cuenta["id"] == contexto.get("cuenta_descartada")
+        encima = not descartada and _zona(panel, arte.ui, "terminal:cuenta:" + cuenta["id"], tarjeta).hover
+        pygame.draw.rect(superficie, (28, 44, 74) if not descartada else (40, 46, 56), tarjeta, border_radius=10)
+        pygame.draw.rect(superficie, CORAL if marcada else ORO if encima else CIAN, tarjeta, 3 if marcada or encima else 1, border_radius=10)
+        if arte.avatares:
+            superficie.blit(arte.avatares[cuenta["avatar"] % len(arte.avatares)], (tarjeta.x + 12, tarjeta.y + 12))
+        panel.texto_lineas(superficie, cuenta["nombre"], tarjeta.x + 54, tarjeta.y + 10, tarjeta.w - 64, panel.fuente, CLARO)
+        panel.texto_lineas(superficie, cuenta["creada"], tarjeta.x + 54, tarjeta.y + 34, tarjeta.w - 64, panel.pequena, CIAN)
+        y = tarjeta.y + 66
+        for hora, texto in cuenta["publicaciones"]:
+            y = panel.texto_lineas(superficie, f"{hora}  {texto}", tarjeta.x + 14, y, tarjeta.w - 28, panel.pequena, CLARO) + 4
+        if descartada:
+            panel.texto_lineas(superficie, "Persona real: descartada por la Voz Comunitaria", tarjeta.x + 14, tarjeta.bottom - 26, tarjeta.w - 28, panel.pequena, ORO)
+    boton = Boton("Confirmar marcas", centro=(480, 624), fuente=panel.fuente, tamano=(260, 40))
+    boton.dibujar(superficie, panel.vista.mouse)
+    panel.botones["terminal:confirmar:cuentas"] = boton
+
+
+PANTALLAS = {"conexiones": _dibujar_conexiones, "archivos": _dibujar_archivos, "cuentas": _dibujar_cuentas}
 
 
 def dibujar(panel, superficie, contexto, arte):
@@ -86,5 +116,9 @@ def accion(panel, clave, cliente):
     _, tipo, valor = clave.split(":", 2)
     if tipo == "arista":
         cliente.actuar("futuro_resolver", terminal="conexiones", arista=int(valor))
+    elif tipo == "cuenta":
+        panel.cuentas_marcadas ^= {valor}
+    elif tipo == "confirmar":
+        cliente.actuar("futuro_resolver", terminal="cuentas", cuentas=sorted(panel.cuentas_marcadas))
     else:
         cliente.actuar("futuro_resolver", terminal="archivos", registro=valor)

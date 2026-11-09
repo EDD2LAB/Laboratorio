@@ -30,6 +30,7 @@ class PanelCooperativo:
         self.dialogo = None  # conversación abierta con un NPC
         self.caso_presente = None  # índice del caso de Distrito Conecta a la vista
         self.terminal = None  # terminal abierta en Ciudad Núcleo
+        self.cuentas_marcadas = set()
         self.informe = None  # último informe recibido del servidor
         self.informe_inicio = 0
         self.informe_exportado = ""
@@ -701,7 +702,7 @@ class PanelCooperativo:
             if evento.key == pygame.K_m:
                 self.abrir("introduccion")
                 return True
-            if evento.key == pygame.K_q and not self.activo and not self.digital:
+            if evento.key == pygame.K_q and not self.activo and (not self.digital or self.dimension == "futuro"):
                 cliente.actuar("habilidad")
                 return True
             if self.activo:

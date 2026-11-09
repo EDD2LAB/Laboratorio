@@ -29,6 +29,7 @@ DIRECCIONES = ("abajo", "derecha", "arriba", "izquierda")
 DIAGONALES = ("abajo_derecha", "arriba_derecha", "arriba_izquierda", "abajo_izquierda")
 ALTURA_PERSONAJE = 53
 ALTURA_DISTRITO = 30  # en Distrito Conecta el mapa está dibujado a menor escala
+DESTELLO_BARRERAS_MS = 600
 ALTURA_INTERIOR = 84  # los interiores se ven enteros, con los muebles a tamaño real
 ESCALA_ANILLOS_DISTRITO = .6
 # La cámara va siempre cerca del personaje: el mapa se descubre al recorrerlo
@@ -239,6 +240,10 @@ class VistaPartida:
         from audio.narracion import Narrador
         self.narrador = Narrador()
         self.interior = None  # edificio de Distrito Conecta en el que estoy
+        self.capas_barrera = {}
+        self.evento_barreras_visto = None
+        self.barreras_vistas_activas = False
+        self.destello_barreras_hasta = 0
         self.interiores = {}
         self.personajes_interior = None
         self.npcs_interior = {}
@@ -613,6 +618,11 @@ class VistaPartida:
 
     def _puertas_cercanas(self, yo):
         from multijugador.dimensiones_red import RADIO_PUERTA, RADIO_SALIDA, cerca_de_rect
+        if self.dimension == FUTURO:
+            mision = self.contexto()
+            if mision.get("barreras_activas") and any(cerca_de_rect(yo["x"], yo["y"], r, RADIO_PUERTA) for r in mision.get("barreras", [])):
+                return [{"id": "barrera", "nombre": "NÚCLEO bloqueó este sector", "x": yo["x"], "y": yo["y"]}]
+            return []
         if self.dimension != PRESENTE:
             return []
         if self.interior:
@@ -741,6 +751,8 @@ class VistaPartida:
                     cliente.actuar("entrar_edificio", edificio=self.seleccion[7:])
                 elif self.seleccion == "salir":
                     cliente.actuar("salir_edificio")
+                elif self.seleccion == "barrera":
+                    self.panel.notificar("NÚCLEO bloqueó este sector. Restaura las conexiones.")
                 elif self.seleccion:
                     cliente.actuar("interactuar", objetivo=self.seleccion)
                 else:
@@ -1015,6 +1027,7 @@ class VistaPartida:
         self.adornos.ruta(superficie, self.ruta_guia, ahora_ms)
         if self.dimension == FUTURO:
             self._dibujar_nucleo(superficie, ahora_ms)
+            self._dibujar_barreras_y_pulsos(superficie, ahora_ms)
         mundo = self.estado.get("mundo", {})
         caso = mundo.get("caso", {})
         privado = mundo.get("privado", {})
@@ -1039,14 +1052,51 @@ class VistaPartida:
                 self.adornos.anillo_objetivo(superficie, (o["x"], o["y"] + 5), o.get("rol") or "mensajero", ahora_ms,
                                              ESCALA_ANILLOS_DISTRITO if self.dimension != LA_COPA else 1)
 
+    def _capa_barrera(self, tamano, fase):
+        """Panel cian translúcido con líneas; se calcula una vez por tamaño y fase."""
+        clave = (tamano, fase)
+        if clave not in self.capas_barrera:
+            capa = pygame.Surface(tamano, pygame.SRCALPHA)
+            capa.fill((70, 220, 230, 90))
+            for y in range(fase * 2, tamano[1], 8):
+                pygame.draw.line(capa, (190, 250, 255, 170), (0, y), (tamano[0], y))
+            pygame.draw.rect(capa, (150, 245, 250, 230), capa.get_rect(), 1)
+            self.capas_barrera[clave] = capa
+        return self.capas_barrera[clave]
+
+    def _dibujar_barreras_y_pulsos(self, superficie, ahora_ms):
+        mision = self.contexto()
+        evento = mision.get("barreras_evento")
+        if evento is not None and evento != self.evento_barreras_visto:
+            # Las barreras se disuelven con un destello, una vez por evento.
+            if self.evento_barreras_visto is not None or self.barreras_vistas_activas:
+                self.destello_barreras_hasta = ahora_ms + DESTELLO_BARRERAS_MS
+            self.evento_barreras_visto = evento
+        if mision.get("barreras_activas"):
+            self.barreras_vistas_activas = True
+            fase = ahora_ms // 180 % 4
+            for x, y, ancho, alto in mision.get("barreras", []):
+                superficie.blit(self._capa_barrera((ancho, alto), fase), (x, y))
+        elif ahora_ms < self.destello_barreras_hasta:
+            for rect in mision.get("barreras", []):
+                pygame.draw.rect(superficie, (235, 255, 255), rect, 2)
+        for x, y in mision.get("pulsos", []):
+            pygame.draw.circle(superficie, (120, 240, 250), (x, y), 9, 2)
+
     def _dibujar_nucleo(self, superficie, ahora_ms):
         """Avatar provisional: agitado y coral; se calma y vuelve cian al reconfigurarlo."""
         mision = self.contexto()
         pantalla = next((o for o in mision.get("objetivos", []) if o["id"] == "futuro:pantalla"), None)
         if pantalla is None:
             return
-        calmado = bool((mision.get("resultado") or {}).get("correcto"))
-        periodo, amplitud, color = (2400, 1.5, (90, 230, 230)) if calmado else (520, 5, (239, 110, 84))
+        resultado = mision.get("resultado") or {}
+        calma = mision.get("pistas", 0) / max(1, mision.get("total_pistas", 1))  # cada terminal lo serena un poco
+        if resultado.get("opcion") == "compartir":  # le dieron aún más control: saturado
+            periodo, amplitud, color = 300, 7, (190, 90, 255)
+        elif resultado.get("correcto"):
+            periodo, amplitud, color = 2400, 1.5, (90, 230, 230)
+        else:
+            periodo, amplitud, color = round(520 + 700 * calma), 5 - 2.5 * calma, (239, 110, 84)
         latido = amplitud * math.sin(ahora_ms * math.tau / periodo)
         centro = (pantalla["x"], pantalla["y"] - 30)
         pygame.draw.circle(superficie, color, centro, round(16 + latido), 2)

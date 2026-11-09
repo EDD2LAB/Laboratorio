@@ -89,3 +89,7 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   `IndicadorDirrKael.png` ya señalaba el objetivo del equipo, no a Kael.
 - Bloque B: icono de ventana y logo animado en el menú. No hay ffmpeg en esta
   máquina, así que `Video_icono.mp4` no se convirtió.
+- Bloque C: informe final (`interfaz/informe_final.py`) con recorrido inorden,
+  línea de tiempo, reporte, sello, exportación y pestaña AVL en F1.
+- Bloque D: Ciudad Núcleo completa (Archivista, Representante, cuentas, barreras,
+  pulsos, habilidades); un equipo solo de bots recorre las tres eras.

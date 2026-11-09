@@ -16,6 +16,7 @@ PATRONES_COPA = (("/naira/", "Naira"), ("/odran/", "Sabio de las Raices"), ("/da
 NOMBRES_CON_TILDE = {"Sabio de las Raices": "Sabio de las Raíces"}
 # Quien juega un rol ya es ese personaje en Distrito Conecta.
 PERSONAJE_DE_ROL = {"guardian": "Elías Vega", "mensajero": "Mateo Ríos", "habitante": "Tomás Red", "aspirante": "Ronaldo Vélez"}
+VER_CUENTAS = "Ver las cuentas que te atacan"
 CAMINOS = {"colgar": "Colgarla", "quemar": "Quemarla", "consultar": "Consultar", "ignorar": "Ignorarla"}
 
 
@@ -92,11 +93,11 @@ class DialogosNPC:
             gemelos = {PERSONAJE_DE_ROL[j["rol"]]: j for j in self.campana.jugadores.values()}
             for npc in presente.npcs:
                 jugador = gemelos.get(npc["nombre"])
-                if jugador is None:
-                    npcs.append(npc)
+                if jugador is None or (npc.get("pista") and jugador.get("dimension") != "presente"):
+                    npcs.append(npc)  # quien lo juega está en otra era: el personaje sigue en su edificio
                 elif npc.get("pista"):
                     npcs.append(dict(npc, x=round(jugador["x"]), y=round(jugador["y"]), jugador=jugador["id"],
-                                     dimension=jugador.get("dimension", "la_copa"), interior=jugador.get("interior")))
+                                     interior=jugador.get("interior")))
         if self.campana.futuro is not None:
             npcs += self.campana.futuro.npcs
         return npcs
@@ -129,6 +130,8 @@ class DialogosNPC:
         dialogo, clave = construir_conversacion(npc["nombre"], EstadoConversacion(self.campana), vistas)
         if npc["dimension"] == "presente" and npc.get("pista"):  # el personaje cuenta la pista de este caso
             dialogo = dict(dialogo, texto=self.campana.presente.texto_pista(npc["pista"]))
+        if npc["nombre"] == "Ciudadano Conectado" and "cuentas" not in self.campana.futuro.tareas:
+            dialogo = dict(dialogo, respuestas=[VER_CUENTAS, *dialogo["respuestas"]])
         self.abiertos[identificador] = {"npc": npc_id, "clave": clave, "respuestas": list(dialogo["respuestas"])}
         self._registrar_pista(identificador, npc)
         return {"mensaje": "", "vista": "dialogo_npc", "silencioso": True,
@@ -160,6 +163,8 @@ class DialogosNPC:
             raise ValueError("Esa respuesta no está disponible.")
         del self.abiertos[identificador]
         self.vistas.setdefault(identificador, set()).add(abierto["clave"])
+        if respuesta == VER_CUENTAS:
+            return {"mensaje": "Estas cuentas lo atacan. ¿Cuáles son automáticas?", "vista": "terminal", "terminal": "cuentas"}
         if respuesta == "Entrega el mensaje":
             return {"mensaje": "Elige a quién llevarle el mensaje.", "vista": "eco_mensajes"}
         if respuesta == "Consultar tablilla":

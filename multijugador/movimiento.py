@@ -252,6 +252,7 @@ class PartidaMovimiento:
                 from .nucleo import MisionNucleo
                 self.mision.futuro = MisionNucleo(self.mapas[dimension], datos, self.mision.indicadores,
                                                   self.mision.siguiente_evento, self.mision.expediente)
+                self.mision.futuro.avisar = self.mision._avisar
             if dimension == PRESENTE and self.mision.presente is None:
                 from .presente import MisionPresente
                 self.interiores = {e: ColisionesMapa(cargar_interior(e)) for e in INTERIORES}
@@ -273,6 +274,8 @@ class PartidaMovimiento:
         jugador = self.jugadores[identificador]
         presente = self.mision.presente
         puerta = presente.edificios.get(edificio) if presente else None
+        if jugador.get("dimension") == FUTURO and self.mision.futuro.barreras_activas:
+            raise ValueError("NÚCLEO bloqueó este sector.")
         if jugador.get("dimension") != PRESENTE or jugador.get("interior") or puerta is None:
             raise ValueError("Aquí no hay una puerta.")
         if not cerca_de_rect(jugador["x"], jugador["y"], puerta["rect"], RADIO_PUERTA):
@@ -430,6 +433,8 @@ class PartidaMovimiento:
             segundos = max(0, min(ahora, recibido + .35) - desde)
             x, y = jugador["x"], jugador["y"]
             factor = MULTIPLICADOR_CORRER if correr else 1.0
+            if self.mision.futuro is not None:
+                factor *= self.mision.futuro.factor_impulso(identificador)
             nx, ny = self.colisiones_de_jugador(jugador).mover(x, y, dx, dy, segundos, factor)
             jugador["x"], jugador["y"] = nx, ny
             if ahora > desde:  # sin tiempo transcurrido nadie se mueve: se conserva su estado
@@ -445,8 +450,10 @@ class PartidaMovimiento:
         # Cada misión solo cuenta a quienes están en su dimensión.
         copa = self.presentes_en(LA_COPA)
         # En el Presente los bots solo acompañan: votan y deciden los humanos.
-        self.mision.presentes_presente = {i for i in self.presentes_en(PRESENTE) if self._humano(i)}
-        self.mision.presentes_futuro = {i for i in self.presentes_en(FUTURO) if self._humano(i)}
+        # Decide quien juega; un equipo sin personas decide por sí mismo.
+        sin_personas = not any(self._humano(i) for i in self.conectados)
+        self.mision.presentes_presente = {i for i in self.presentes_en(PRESENTE) if sin_personas or self._humano(i)}
+        self.mision.presentes_futuro = {i for i in self.presentes_en(FUTURO) if sin_personas or self._humano(i)}
         self.mision.resolver(copa)
         self.mision.actualizar(ahora - desde, copa)
         self._sincronizar_bloqueos()

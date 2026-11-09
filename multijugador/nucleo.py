@@ -4,6 +4,7 @@ El administrador del sistema le dio a NÚCLEO el control absoluto sin autorizaci
 del consejo humano. Tres terminales devuelven el acceso; luego el equipo decide.
 """
 from collections import Counter
+import math
 
 from logica.grafo_fisico import GrafoFisico
 
@@ -54,11 +55,37 @@ TERMINALES = (
     ("conexiones", "entrada_centro_comunicaciones", "Restaurar conexiones", "El sector aislado volvió a la red de la ciudad."),
     ("archivos", "entrada_alcaldia", "Revisar archivos", "La orden que autorizaba a NÚCLEO era falsa: la firmó él mismo."),
     ("llave", "entrada_centro_verificacion", "Llave de supervisión", "La llave devolvió la supervisión de NÚCLEO a las personas."),
+    ("cuentas", "entrada_centro_comunitario", "Ataque coordinado", "Las cuentas eran de NÚCLEO. El Ciudadano no estaba solo contra la ciudad: estaba contra una máquina."),
 )
 LLAVE = "llave_supervision"
+FIRMA = "firma_representante"
+GUIA_FIRMAS = "guia_de_firmas"
 TEXTO_LLAVE = "El Corredor de Datos te entregó la llave de supervisión. Llévala al Centro de Verificación."
-# NPC -> entrada existente junto a la que está.
-NPCS = {"Corredor de Datos": ("entrada_estudio_lia", LLAVE), "Ciudadano Conectado": ("entrada_centro_comunitario", None)}
+TEXTOS_PISTA = {
+    GUIA_FIRMAS: ("Archivista · Cómo leer un registro", "Una orden vale si la firma quien tiene autoridad para darla. Mira primero la firma y luego la fecha."),
+    FIRMA: ("Representante Humano · Firma", "El Representante Humano acepta firmar la reconfiguración: NÚCLEO seguirá, pero bajo supervisión."),
+}
+# NPC -> entrada existente junto a la que está y la pista que entrega.
+NPCS = {"Corredor de Datos": ("entrada_estudio_lia", LLAVE), "Ciudadano Conectado": ("entrada_centro_comunitario", None),
+        "Archivista": ("entrada_alcaldia", GUIA_FIRMAS), "Representante Humano": ("entrada_campana_ronaldo", FIRMA)}
+# Barrera de NÚCLEO en las entradas que no son terminales.
+ENTRADAS_CON_BARRERA = ("entrada_estudio_lia", "entrada_campana_ronaldo", "entrada_centro_comunitario", "entrada_distrito_conecta")
+VELOCIDAD_PULSO = 60.0
+RADIO_PULSO = 16
+SEGUNDOS_IMPULSO = 6
+IMPULSO_VELOCIDAD = 1.5
+CUENTAS = (
+    {"id": "voz_1", "avatar": 0, "nombre": "@ciudad_segura_01", "creada": "Creada hoy · 0 seguidores reales",
+     "publicaciones": [("03:12:07", "Ese ciudadano miente sobre NÚCLEO."), ("03:40:07", "NÚCLEO nos protege a todos.")]},
+    {"id": "voz_2", "avatar": 1, "nombre": "@ciudad_segura_02", "creada": "Creada hoy · 0 seguidores reales",
+     "publicaciones": [("03:12:07", "Ese ciudadano engaña sobre NÚCLEO."), ("03:40:07", "NÚCLEO nos cuida a todos.")]},
+    {"id": "voz_3", "avatar": 2, "nombre": "@orden_y_calma_7", "creada": "Creada hoy · 0 seguidores reales",
+     "publicaciones": [("03:12:07", "Ese ciudadano exagera sobre NÚCLEO."), ("03:40:07", "NÚCLEO nos salva a todos.")]},
+    {"id": "vecina", "avatar": 3, "nombre": "@vecina_del_muelle", "creada": "Desde hace 6 años · 214 seguidores",
+     "publicaciones": [("08:21:40", "No comparto su protesta, pero tiene derecho a hacerla."), ("19:05:12", "¿Alguien sabe cuándo abren el Muelle?")]},
+)
+CUENTA_REAL = "vecina"
+CUENTAS_AUTOMATICAS = {c["id"] for c in CUENTAS} - {CUENTA_REAL}
 
 
 def grafo_con(abierta_extra=None):
@@ -83,7 +110,29 @@ def intento_bot(tarea, aleatorio, acierto):
         return {"arista": 0 if falla else 1}
     if tarea == "archivos":
         return {"registro": "acta" if falla else REGISTRO_FALSO}
+    if tarea == "cuentas":
+        return {"cuentas": sorted(CUENTAS_AUTOMATICAS if not falla else {CUENTA_REAL, "voz_1", "voz_2"})}
     return {}
+
+
+def _ruta_pulso(ruta, rect):
+    """Puntos en el lienzo y largo de su recorrido a velocidad constante."""
+    x0, y0, ancho, alto = rect
+    puntos = [(x0 + p["rx"] * ancho, y0 + p["ry"] * alto) for p in ruta["points"]]
+    if ruta["pattern"] == "ping_pong":
+        puntos = puntos + puntos[-2:0:-1]
+    return puntos + puntos[:1]
+
+
+def posicion_en_ruta(puntos, distancia):
+    tramos = [(a, b, math.hypot(b[0] - a[0], b[1] - a[1])) for a, b in zip(puntos, puntos[1:])]
+    distancia %= max(.001, sum(t[2] for t in tramos))
+    for a, b, largo in tramos:
+        if distancia <= largo and largo:
+            avance = distancia / largo
+            return a[0] + (b[0] - a[0]) * avance, a[1] + (b[1] - a[1]) * avance
+        distancia -= largo
+    return puntos[0]
 
 
 class MisionNucleo:
@@ -97,7 +146,10 @@ class MisionNucleo:
         def sitio(entrada, respaldo=(480, 400)):
             hitbox = hitboxes.get(entrada)
             punto = respaldo
-            if hitbox and hitbox.get("type", "rect") == "rect":
+            if hitbox and "frente_rx" in hitbox:  # la calle justo delante de la puerta
+                x0, y0, ancho, alto = datos["rect_mapa"]
+                punto = (x0 + hitbox["frente_rx"] * ancho, y0 + hitbox["frente_ry"] * alto)
+            elif hitbox and hitbox.get("type", "rect") == "rect":
                 punto = ((hitbox["rx"] + hitbox["rw"] / 2) * 960, (hitbox["ry"] + hitbox["rh"]) * 720 + 12)
             x, y = colisiones.inicio_libre(*punto, ocupadas)
             ocupadas.append((x, y))
@@ -105,6 +157,8 @@ class MisionNucleo:
 
         self.objetivos = []
         for tarea, entrada, titulo, _ in TERMINALES:
+            if tarea == "cuentas":
+                continue  # es el propio Ciudadano Conectado
             x, y = sitio(entrada)
             self.objetivos.append({"id": "futuro:" + tarea, "nombre": "Terminal · " + titulo, "tipo": "fuente", "tarea": tarea,
                                    "pista": tarea, "dimension": "futuro", "x": x, "y": y})
@@ -115,10 +169,25 @@ class MisionNucleo:
             if pista:
                 npc["pista"] = pista
             self.npcs.append(npc)
+            if nombre == "Ciudadano Conectado":
+                self.objetivos.append({"id": "futuro:cuentas", "nombre": "Ciudadano Conectado · cuentas", "tipo": "fuente", "tarea": "cuentas",
+                                       "pista": "cuentas", "dimension": "futuro", "x": x, "y": y})
         x, y = sitio("pantalla_publica_presente", (480, 300))
         self.pantalla = {"id": "futuro:pantalla", "nombre": "Pantalla central · decidir", "tipo": "caldero",
                          "dimension": "futuro", "x": x, "y": y}
         self.objetivos.append(self.pantalla)
+        self.barreras = [[round(hitboxes[e]["rx"] * 960), round(hitboxes[e]["ry"] * 720), round(hitboxes[e]["rw"] * 960), round(hitboxes[e]["rh"] * 720)]
+                         for e in ENTRADAS_CON_BARRERA if e in hitboxes]
+        self.barreras_evento = None
+        rect = datos.get("rect_mapa") or (0, 0, 960, 720)
+        self.rutas_pulso = [_ruta_pulso(r, rect) for r in datos.get("npc_routes", {}).values()]
+        self.reloj = 0.0
+        self.avisar = lambda receptores, texto, tipo="info": None
+        self.habilidades_usadas = set()
+        self.impulso_hasta = {}
+        self.registro_resaltado = None
+        self.cuenta_descartada = None
+        self.comunicado = None
         self.tareas = {}  # tarea -> quién la completó
         self.halladas = {}  # la llave del Corredor de Datos
         self.votos = {}
@@ -140,7 +209,62 @@ class MisionNucleo:
 
     def _completar(self, identificador, tarea):
         self.tareas.setdefault(tarea, identificador)
+        if tarea == "conexiones" and self.barreras_evento is None:
+            self.barreras_evento = self.nuevo_evento()
         return next(t[3] for t in TERMINALES if t[0] == tarea)
+
+    @property
+    def barreras_activas(self):
+        return "conexiones" not in self.tareas
+
+    @property
+    def portador(self):
+        return self.halladas.get(LLAVE)
+
+    def posiciones_pulsos(self):
+        return [posicion_en_ruta(ruta, self.reloj * VELOCIDAD_PULSO) for ruta in self.rutas_pulso]
+
+    def actualizar(self, segundos, jugadores):
+        """Los pulsos recorren sus rutas; si tocan al portador, la llave vuelve al Corredor."""
+        self.reloj += max(0, min(segundos, 1))
+        portador = jugadores.get(self.portador) if self.portador else None
+        if portador is None or portador.get("dimension") != "futuro" or portador.get("interior") or "llave" in self.tareas:
+            return
+        if any(math.hypot(portador["x"] - x, portador["y"] - y) <= RADIO_PULSO for x, y in self.posiciones_pulsos()):
+            quien = self.halladas.pop(LLAVE)
+            self.avisar([quien], "Un pulso de NÚCLEO detectó la llave. Volvió al Corredor de Datos.", "info")
+
+    def factor_impulso(self, identificador):
+        return IMPULSO_VELOCIDAD if self.impulso_hasta.get(identificador, 0) > self.reloj else 1.0
+
+    def habilidad(self, identificador, jugador, cerca):
+        """El poder de cada rol en esta era; una vez por partida."""
+        if identificador in self.habilidades_usadas:
+            raise ValueError("Ya usaste tu poder en Ciudad Núcleo.")
+        rol = jugador["rol"]
+        if rol == "guardian":
+            self._objetivo(jugador, "futuro:archivos", cerca)
+            self.registro_resaltado = REGISTRO_FALSO
+            mensaje = "La Lupa de Memoria resalta una firma sospechosa."
+        elif rol == "mensajero":
+            if self.portador != identificador:
+                raise ValueError("El Impulso del Viento funciona mientras llevas la llave.")
+            self.impulso_hasta[identificador] = self.reloj + SEGUNDOS_IMPULSO
+            mensaje = "¡Impulso del Viento! Corre hasta la terminal."
+        elif rol == "habitante":
+            self._objetivo(jugador, "futuro:cuentas", cerca)
+            self.cuenta_descartada = CUENTA_REAL
+            mensaje = "La Voz Comunitaria reconoce a una vecina real entre las cuentas."
+        else:
+            if not (self.resultado and self.resultado["correcto"]):
+                raise ValueError("El Comunicado Público llega después de la decisión correcta.")
+            grafo = grafo_con(1)
+            ruta = [s[1] for s in SECTORES if grafo.bfs(SECTORES[0][0], s[0]) is not None]
+            aplicar_efectos(self.indicadores, {"confianza": 4})
+            self.comunicado = {"evento_id": self.nuevo_evento(), "ruta": ruta}
+            mensaje = "El comunicado recorrió la red: " + " → ".join(ruta) + "."
+        self.habilidades_usadas.add(identificador)
+        return {"mensaje": mensaje}
 
     def interactuar(self, identificador, jugador, clave, cerca):
         objetivo = self._objetivo(jugador, clave, cerca)
@@ -150,13 +274,16 @@ class MisionNucleo:
             if not self.tareas_listas:
                 faltan = len(TERMINALES) - len(self.tareas)
                 return {"mensaje": f"NÚCLEO no acepta órdenes: faltan {faltan} terminales.", "titulo": "Pantalla central", "vista": "fuente"}
-            return {"mensaje": "Elijan juntos qué hacer con NÚCLEO.", "vista": "caldero"}
+            aviso = "Elijan juntos qué hacer con NÚCLEO." if FIRMA in self.halladas else "Para reconfigurarlo hace falta hablar antes con el Representante Humano."
+            return {"mensaje": aviso, "vista": "caldero"}
         tarea = objetivo["tarea"]
         if tarea in self.tareas:
             return {"mensaje": self._completar(identificador, tarea), "titulo": objetivo["nombre"], "vista": "fuente"}
         if tarea == "llave":
-            if LLAVE not in self.halladas:
+            if self.portador is None:
                 return {"mensaje": "Falta la llave de supervisión. La tiene el Corredor de Datos.", "titulo": objetivo["nombre"], "vista": "fuente"}
+            if self.portador != identificador:
+                return {"mensaje": "La llave la lleva otro compañero: debe traerla hasta aquí.", "titulo": objetivo["nombre"], "vista": "fuente"}
             return {"mensaje": self._completar(identificador, tarea), "titulo": objetivo["nombre"], "vista": "fuente"}
         return {"mensaje": "Terminal abierta.", "titulo": objetivo["nombre"], "vista": "terminal", "terminal": tarea}
 
@@ -177,8 +304,15 @@ class MisionNucleo:
             if solicitud["registro"] != REGISTRO_FALSO:
                 return {"mensaje": "Ese registro está firmado por quien debe. Revisa las firmas."}
         elif tarea == "llave":
-            if LLAVE not in self.halladas:
+            if self.portador != identificador:
                 raise ValueError("Falta la llave de supervisión.")
+        elif tarea == "cuentas":
+            cuentas = solicitud.get("cuentas")
+            if (type(cuentas) is not list or len(set(map(str, cuentas))) != len(cuentas) or any(type(c) is not str for c in cuentas)
+                    or not set(cuentas) <= {c["id"] for c in CUENTAS}):
+                raise ValueError("Marca cuentas de la lista, sin repetir.")
+            if set(cuentas) != CUENTAS_AUTOMATICAS:
+                return {"mensaje": "Compara la hora, las frases y la fecha de creación: una cuenta no encaja."}
         else:
             raise ValueError("Terminal desconocida.")
         return {"mensaje": "¡Terminal resuelta! " + self._completar(identificador, tarea), "vista": "cerrar"}
@@ -191,6 +325,8 @@ class MisionNucleo:
             raise ValueError("Completen las tres terminales antes de decidir.")
         if opcion not in OPCIONES:
             raise ValueError("Decisión inválida.")
+        if opcion == CORRECTA and FIRMA not in self.halladas:
+            raise ValueError("Antes de reconfigurar a NÚCLEO hablen con el Representante Humano.")
         self.votos[identificador] = opcion
         self.resolver(presentes)
         return {"mensaje": "¡El equipo decidió!" if self.resultado else "¡Ya elegiste! Espera a tu equipo."}
@@ -221,6 +357,10 @@ class MisionNucleo:
                 "votos_emitidos": sum(i in self.votos for i in presentes), "votantes": len(presentes),
                 "resultado": dict(self.resultado) if self.resultado else None, "completada": self.completada,
                 "fin": self.completada, "sin_clasificacion": True,
+                "portador": self.portador, "pulsos": [[round(x), round(y)] for x, y in self.posiciones_pulsos()],
+                "barreras": self.barreras, "barreras_activas": self.barreras_activas, "barreras_evento": self.barreras_evento,
+                "registro_resaltado": self.registro_resaltado, "cuenta_descartada": self.cuenta_descartada,
+                "comunicado": self.comunicado, "cuentas": [dict(c) for c in CUENTAS],
                 "red": {"sectores": [list(s) for s in SECTORES], "abiertas": [list(a) for a in ARISTAS_ABIERTAS],
                         "bloqueadas": [list(a) for a in ARISTAS_BLOQUEADAS]},
                 "registros": [dict(r) for r in REGISTROS]}
@@ -229,4 +369,6 @@ class MisionNucleo:
         inventario = [{"id": t[0], "titulo": t[2] + " · Terminal", "texto": t[3]} for t in TERMINALES if t[0] in self.tareas]
         if LLAVE in self.halladas:
             inventario.append({"id": LLAVE, "titulo": "Corredor de Datos · Llave", "texto": TEXTO_LLAVE})
-        return {"inventario": inventario, "voto": self.votos.get(identificador), "clasificacion": None}
+        inventario += [{"id": clave, "titulo": titulo, "texto": texto} for clave, (titulo, texto) in TEXTOS_PISTA.items() if clave in self.halladas]
+        return {"inventario": inventario, "voto": self.votos.get(identificador), "clasificacion": None,
+                "habilidad_usada": identificador in self.habilidades_usadas}

@@ -160,6 +160,8 @@ class CampanaCopa(MisionPuente):
         en_futuro = jugador.get("dimension") == "futuro"
         if accion == "futuro_resolver" or (accion == "interactuar" and solicitud.get("objetivo", "").startswith("futuro:")):
             en_futuro = True
+        if accion == "habilidad":
+            return self.futuro.habilidad(identificador, jugador, self._cerca_presente)
         mision, presentes = (self.futuro, self.presentes_futuro) if en_futuro else (self.presente, self.presentes_presente)
         if mision is None:
             raise ValueError("Esa dimensión no está disponible.")
@@ -273,6 +275,8 @@ class CampanaCopa(MisionPuente):
         if accion in ("hablar_npc", "responder_npc"):
             return self.dialogos.ejecutar(identificador, solicitud)
         objetivo_pedido = solicitud.get("objetivo")
+        if accion == "habilidad" and self.jugadores[identificador].get("dimension") == "futuro":
+            return self._ejecutar_presente(identificador, solicitud)
         if accion in ("presente_votar", "presente_clasificar", "futuro_resolver") + ACCIONES_ANALISIS or (
                 accion == "interactuar" and isinstance(objetivo_pedido, str) and objetivo_pedido.startswith(("presente:", "futuro:"))):
             return self._ejecutar_presente(identificador, solicitud)
@@ -468,6 +472,7 @@ class CampanaCopa(MisionPuente):
             self.presente.resolver(self.presentes_presente)
         if self.futuro is not None:
             self.futuro.resolver(self.presentes_futuro)
+            self.futuro.actualizar(segundos, self.jugadores)
         self.acompanante.actualizar(self)
         if self.encargo:
             self.encargo.revisar_ayudante(presentes, self.jugadores)

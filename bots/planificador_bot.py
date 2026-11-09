@@ -1,6 +1,7 @@
 from collections import Counter
 import math
 
+from multijugador import clasificacion
 from multijugador.nucleo import LLAVE, intento_bot as intento_nucleo
 from multijugador.presente import intento_bot
 from multijugador.reparacion import CONFIGURACION as CONFIG_PUENTE, angulo_objetivo
@@ -10,6 +11,7 @@ RADIO_EMISOR = 56  # junto a quien llamó, dentro del alcance de una entrega dir
 ESPERA_ORDEN = 12.0  # segundos que se queda donde lo llamaron si no hay más que hacer
 ESPERA_ALIADO = 25.0  # segundos que el Habitante espera compañero para su habilidad
 PASO_ACOMPANAR = 40  # solo recalcula la ruta cuando el humano cambia de casilla
+DISTANCIA_PULSO = 44  # a menos de esto, un bot con la llave se aparta del pulso
 ACIERTO_MARCA = {"facil": .55, "normal": .75, "dificil": .9}  # probabilidad de señalar bien
 
 
@@ -70,8 +72,11 @@ class PlanificadorBot:
             tarea_de_era = self._tareas_nucleo if bot.posicion.get("dimension") == "futuro" else self._analizar_distrito
             return (self._distrito(bot, estado, jugadores, memoria)
                     or tarea_de_era(bot, estado, jugadores, memoria, dificultad)
+                    or (self._sin_personas(jugadores) and self._decidir_solos(bot, estado))
                     or self._acompanar(bot, jugadores, estado))
         caso = estado["caso"]
+        if caso["fase"] == "final" and self._sin_personas(jugadores):
+            return self._al_portal(bot, estado, "presente")
         privado = estado["privado"]
         ronda = caso["ronda"]
         jugadores = [j for j in jugadores if j.get("conectado", True)]
@@ -266,6 +271,41 @@ class PlanificadorBot:
         return True
 
     @staticmethod
+    def _sin_personas(jugadores):
+        return not any(j.get("controlador") != "bot" and j.get("conectado", True) for j in jugadores)
+
+    @staticmethod
+    def _al_portal(bot, estado, destino):
+        x, y, ancho, alto = estado["portales"][bot.posicion.get("dimension", "la_copa")]
+        return {"estado": "VIAJANDO", "destino": {"id": "portal", "x": x + ancho // 2, "y": y + alto + 3},
+                "accion": "usar_portal", "datos": {"destino": destino}, "radio": 30}
+
+    def _decidir_solos(self, bot, estado):
+        """Un equipo solo de bots también decide, clasifica y sigue a la siguiente era."""
+        dimension = bot.posicion.get("dimension")
+        mision, privado = estado["caso"].get(dimension) or {}, estado["privado"].get(dimension) or {}
+        if bot.posicion.get("interior") or mision.get("pistas", 0) < mision.get("total_pistas", 1):
+            return None
+        pantalla = next(o for o in mision["objetivos"] if o["id"] == dimension + ":pantalla")
+        if not mision.get("completada"):
+            if dimension == "presente" and not (mision.get("analisis") or {}).get("concluido"):
+                return None
+            if privado.get("voto"):
+                return {"estado": "ESPERANDO_EQUIPO"}
+            return self._tarea("VOTANDO", pantalla, "presente_votar", opcion="verificar")
+        if dimension == "futuro":
+            return {"estado": "ESPERANDO_EQUIPO"}
+        if mision.get("fin"):
+            return self._al_portal(bot, estado, "futuro")
+        if not privado.get("clasificacion"):
+            real = clasificacion.CATEGORIA_EVENTO[mision["evento"]["id"]]
+            categoria = next(nombre for nombre, ruta in clasificacion.OPCIONES["presente"].items() if ruta == real)
+            return {"estado": "ANALIZANDO_PRUEBAS", "accion": "presente_clasificar", "datos": {"categoria": categoria}}
+        if not privado.get("listo"):
+            return {"estado": "ESPERANDO_EQUIPO", "accion": "presente_siguiente", "datos": {}}
+        return {"estado": "ESPERANDO_EQUIPO"}
+
+    @staticmethod
     def _distancia(bot, punto):
         return math.hypot(punto["x"] - bot.posicion["x"], punto["y"] - bot.posicion["y"])
 
@@ -280,7 +320,7 @@ class PlanificadorBot:
         halladas = {p["id"] for p in privado.get("inventario", [])}
         pendientes = [n for n in estado["caso"].get("npcs", [])
                       if n["dimension"] == dimension and n.get("pista") and n["pista"] not in halladas]
-        if not humanos or not pendientes:
+        if (not humanos and not self._sin_personas(jugadores)) or not pendientes:
             return None
         # Una tarea reservada se termina, aunque la persona se haya movido.
         for objetivo in pendientes:
@@ -289,7 +329,7 @@ class PlanificadorBot:
         reservadas =sum("distrito:" + o["pista"] in memoria.reservas_preparacion for o in pendientes)
         if len(pendientes) - reservadas <= len(humanos):
             return None
-        cercania = lambda o: min(math.hypot(o["x"] - j["x"], o["y"] - j["y"]) for j in humanos)
+        cercania = lambda o: min((math.hypot(o["x"] - j["x"], o["y"] - j["y"]) for j in humanos), default=0)
         for objetivo in sorted(pendientes, key=cercania, reverse=True):
             if memoria.reservar_preparacion(bot.identificador, "distrito:" + objetivo["pista"]):
                 return self._hablar_con(bot, estado, objetivo)
@@ -312,8 +352,11 @@ class PlanificadorBot:
         humanos = [j for j in jugadores if j.get("controlador") != "bot"
                    and j.get("dimension") == "futuro" and j.get("conectado", True)]
         pendientes = [o for o in futuro.get("objetivos", []) if o.get("tarea") and o["tarea"] not in futuro.get("tareas", [])
-                      and (o["tarea"] != "llave" or LLAVE in inventario)]
-        if not humanos or not pendientes:
+                      and o["tarea"] != "llave"]
+        terminal_llave = next((o for o in futuro.get("objetivos", []) if o.get("tarea") == "llave" and "llave" not in futuro.get("tareas", [])), None)
+        if terminal_llave and futuro.get("portador") == bot.identificador:
+            return self._llevar_llave(bot, futuro, terminal_llave)
+        if (not humanos and not self._sin_personas(jugadores)) or not pendientes:
             bot.marca_planeada = None
             return None
         objetivo = next((o for o in pendientes if memoria.reservas_preparacion.get("nucleo:" + o["tarea"]) == bot.identificador), None)
@@ -328,20 +371,34 @@ class PlanificadorBot:
             bot.marca_planeada = intento_nucleo(objetivo["tarea"], bot._random, ACIERTO_MARCA.get(dificultad, .75))
         return self._tarea("INVESTIGANDO", objetivo, "futuro_resolver", terminal=objetivo["tarea"], **bot.marca_planeada)
 
+    def _llevar_llave(self, bot, futuro, terminal):
+        """Va a la terminal, y se aparta si un pulso de vigilancia se le acerca."""
+        posicion = bot.posicion
+        cercano = min(futuro.get("pulsos", []), key=lambda p: math.hypot(p[0] - posicion["x"], p[1] - posicion["y"]), default=None)
+        if cercano is not None:
+            distancia = math.hypot(cercano[0] - posicion["x"], cercano[1] - posicion["y"])
+            if 0 < distancia < DISTANCIA_PULSO:
+                factor = 80 / distancia
+                return {"estado": "ESQUIVANDO", "destino": {"id": "esquiva", "x": posicion["x"] + (posicion["x"] - cercano[0]) * factor,
+                                                            "y": posicion["y"] + (posicion["y"] - cercano[1]) * factor}, "esperar": True, "radio": 20}
+        return self._tarea("INVESTIGANDO", terminal, "futuro_resolver", terminal="llave")
+
     def _analizar_distrito(self, bot, estado, jugadores, memoria, dificultad):
         """Un bot ayuda a marcar, con los mismos mensajes, y deja la última marca a las personas."""
         presente = estado["caso"].get("presente") or {}
         privado = estado["privado"].get("presente") or {}
         analisis = presente.get("analisis") or {}
         evento = (presente.get("evento") or {}).get("id")
+        solos = self._sin_personas(jugadores)
+        faltan_para_personas = 0 if solos else 1  # la última marca es de las personas
         if (not analisis.get("disponible") or presente.get("completada")
-                or len(analisis.get("halladas", [])) >= analisis.get("minimo", 0) - 1):
+                or len(analisis.get("halladas", [])) >= analisis.get("minimo", 0) - faltan_para_personas):
             bot.marca_planeada = None
             return None
         if not memoria.reservar_preparacion(bot.identificador, "analisis:" + evento):
             return None
-        companero = self._acompanar(bot, jugadores)
-        if "destino" not in companero:
+        companero = {} if solos else self._acompanar(bot, jugadores)
+        if not solos and "destino" not in companero:
             return None
         companero.pop("esperar", None)
         if not privado.get("analizando"):
