@@ -60,7 +60,7 @@ class SeleccionCampana(unittest.TestCase):
         with mock.patch.object(self.menu, "tarjeta_rol", wraps=self.menu.tarjeta_rol) as tarjeta:
             self.menu.dibujar()
         self.assertEqual(tarjeta.call_count, len(ROLES))
-        self.assertEqual(set(self.menu.retratos), set(ROLES))
+        self.assertLessEqual(set(ROLES), set(self.menu.retratos))
         for rol in ROLES:
             self.assertIn("rol_solo:" + rol, self.menu.botones)
 

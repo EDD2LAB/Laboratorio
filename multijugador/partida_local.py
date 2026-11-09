@@ -8,7 +8,7 @@ from .protocolo import NOMBRES_ROLES, ROLES
 
 
 class ClienteCampanaLocal:
-    def __init__(self, nombre, rol_humano, dificultad="normal"):
+    def __init__(self, nombre, rol_humano, dificultad="normal", apariencia=None):
         if rol_humano not in ROLES:
             raise ValueError("El rol elegido no existe.")
         jugadores = []
@@ -17,7 +17,7 @@ class ClienteCampanaLocal:
             jugadores.append({
                 "id": "local" if es_humano else "bot_" + rol,
                 "nombre": nombre.strip() if es_humano else self._nombre_bot(rol),
-                "rol": rol,
+                "rol": rol, "apariencia": apariencia if es_humano else None,
             })
         self.identificador = "local"
         self.eventos = Queue(maxsize=128)

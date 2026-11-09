@@ -43,9 +43,12 @@ class MenuInicio:
         self.fondo = self.imagen("Fondos/Multijugador/FondoFernado.png", (1080, 725), recortar=False)
         self.iconos = [self.imagen("Iconos/Multijugador/" + nombre, (54, 54)) for nombre in (
             "IcRol-guardian.png", "IcRol-Mensajero.png", "IcRol-Habitante.png", "IcRol-Aspirante.png")]
-        self.retratos = {rol: arte.cargar_retratos(rol, (105, 105)) for rol in ROLES}
+        self.retratos = {clave: arte.cargar_retratos(clave, (105, 105)) for clave in (*ROLES, "mira", "luma")}
         self.emblema = arte.icono(arte.NUEVOS + "emblema_copa.png", (64, 64))
         self.emblemas_ayuda = arte.cargar_emblemas((56, 56))
+        self.iconos_ajustes = {nombre: arte.icono(arte.NUEVOS + "icono_" + nombre + ".png", (30, 30))
+                               for nombre in ("audio", "contraste", "apariencia", "libro", "arbol")}
+        self.arbol_clasificacion = None  # se carga al abrir esa pestaña
         self.icono_sonido = arte.icono(arte.NUEVOS + "icono_sonido.png", (24, 24))
         self.icono_silencio = arte.icono(arte.NUEVOS + "icono_silencio.png", (24, 24))
         self.corona = self.imagen("Iconos/Multijugador/IcAnfitrión.png", (26, 26))
@@ -170,6 +173,18 @@ class MenuInicio:
         cursor, _ = self.editor.posiciones(clave)
         return rect.x + 12 - max(0, fuente.size(self.campos[clave][:cursor])[0] - rect.width + 30)
 
+    def _apariencia(self, rol):
+        return self.pausa.preferencias.get("apariencia_" + rol, "hombre") if rol else None
+
+    def aplicar_preferencias(self):
+        """Lleva los ajustes guardados a la partida en curso."""
+        if self.partida is None:
+            return
+        p = self.pausa.preferencias
+        self.partida.niebla_activa = p["niebla"]
+        self.partida.hud.alto_contraste = p["alto_contraste"]
+        self.partida.narrador.activo = p["narracion"]
+
     def _indice_raton(self, clave, x):
         size = self._tamano_campo(clave)
         return self.editor.indice_en(clave, x - self._origen_texto(clave, self.areas_campos[clave], size), self.fuentes[size])
@@ -271,7 +286,7 @@ class MenuInicio:
                         if self.partida is None:
                             from interfaz.partida_multijugador import VistaPartida
                             self.partida = VistaPartida(self.identificador, evento, self.audio)
-                            self.partida.niebla_activa = self.pausa.preferencias["niebla"]
+                            self.aplicar_preferencias()
                         else:
                             self.partida.recibir(evento)
                         self.vista = "partida"
@@ -311,6 +326,9 @@ class MenuInicio:
         if clave == "ajustes":
             self.pausa.abrir("ajustes")
             return
+        if clave == "ayuda_f1":
+            self.pausa.abrir("ayuda_f1")
+            return
         if clave == "copiar_sala":
             portapapeles.copiar(self.campos["sala"])
             self.mensaje, self.error = "Copiado. Pégalo con Ctrl+V donde quieras compartirlo.", False
@@ -339,13 +357,14 @@ class MenuInicio:
                     nombre,
                     self.rol_solo,
                     self.dificultad_solo,
+                    self._apariencia(self.rol_solo),
                 )
                 self.campana_local = True
                 self.identificador = self.cliente.identificador
                 self.codigo_sala = "LOCAL"
                 self.estado = self.cliente.eventos.get_nowait()
                 self.partida = VistaPartida(self.identificador, self.estado, self.audio)
-                self.partida.niebla_activa = self.pausa.preferencias["niebla"]
+                self.aplicar_preferencias()
                 self.vista = "partida"
                 pygame.key.stop_text_input()
             except (OSError, ValueError, RuntimeError) as error:
@@ -379,7 +398,7 @@ class MenuInicio:
         elif clave.startswith("rol:") and self.cliente:
             rol = clave.split(":")[1]
             yo = next((j for j in self.estado["jugadores"] if j["id"] == self.identificador), {})
-            self.cliente.enviar("rol", rol=None if yo.get("rol") == rol else rol)
+            self.cliente.enviar("rol", rol=None if yo.get("rol") == rol else rol, apariencia=self._apariencia(rol))
         elif clave == "listo" and self.cliente:
             yo = next((j for j in self.estado["jugadores"] if j["id"] == self.identificador), {})
             self.cliente.enviar("listo", listo=not yo.get("listo", False))
@@ -397,10 +416,11 @@ class MenuInicio:
             arte.dibujar_icono(self.lienzo, self.emblema, (480, 110))
             self.texto("LA COPA", 480, 145, 44, ORO, True)
             self.texto("Consejo de los Ecos", 480, 207, 24, centro=True)
-            self.boton("campana_local", "Campaña con bots", (480, 315))
-            self.boton("multi", "Multijugador", (480, 395))
-            self.boton("ajustes", "Ajustes", (480, 475))
-            self.boton("salir", "Salir", (480, 555))
+            self.boton("campana_local", "Campaña con bots", (480, 300))
+            self.boton("multi", "Multijugador", (480, 380))
+            self.boton("ajustes", "Ajustes", (480, 460))
+            self.boton("ayuda_f1", "Ayuda · F1", (480, 525))
+            self.boton("salir", "Salir", (480, 600))
         elif self.vista == "campana_rol":
             self.panel(pygame.Rect(16, 16, 928, 688))
             self.texto("CAMPAÑA LOCAL CON BOTS", 480, 34, 32, ORO, True)
@@ -472,7 +492,8 @@ class MenuInicio:
         x = 32 + indice * 228
         self.panel(pygame.Rect(x, y, 212, 265), (34, 58, 39, 245), VERDE if resaltada else ORO)
         self.texto(NOMBRES_ROLES[indice], x + 106, y + 15, 24, ORO, True)
-        frames = self.retratos[ROLES[indice]]
+        variante = {"aspirante": "mira", "habitante": "luma"}.get(ROLES[indice])
+        frames = self.retratos[variante if variante and self._apariencia(ROLES[indice]) == "mujer" else ROLES[indice]]
         # El personaje elegido cambia de expresión; los demás quedan quietos.
         retrato = arte.expresion(frames, pygame.time.get_ticks()) if resaltada else (frames[0] if frames else None)
         if retrato is not None:
@@ -546,6 +567,9 @@ class MenuInicio:
                 for evento in pygame.event.get():
                     if evento.type == pygame.QUIT:
                         return "salir"
+                    if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F1:
+                        self.pausa.abrir("ayuda_f1")
+                        continue
                     if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F11:
                         self.pausa.alternar_pantalla_completa()
                         continue

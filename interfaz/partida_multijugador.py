@@ -125,6 +125,28 @@ def cargar_clips_personajes():
     return por_rol
 
 
+# Variantes femeninas: carpeta, prefijo de la caminata y archivos de reposo.
+VARIANTES_MUJER = {
+    "aspirante": ("Aspirante mujer", "MujerAspirante Fila {}.png",
+                  ("Aspirante_mujer_reposo_fila1.png", "Aspirante_mujer_reposo _fila2.png",
+                   "Aspirante_mujer_reposo _fila3.png", "Aspirante_mujer_reposo_ fila4.png")),
+    "habitante": ("Habitante mujer", "HabMujer Fila {}.png",
+                  tuple(f"Habitante_femenina-reposo_fila{i}.png" for i in range(1, 5))),
+}
+
+
+def cargar_clips_variante(rol):
+    """Cuadros de la variante de un rol. No tiene diagonales ni hoja de correr propias."""
+    from nucleo.recursos import cargar_imagen
+    carpeta, caminar, reposo = VARIANTES_MUJER[rol]
+    clips = {}
+    for i, direccion in enumerate(DIRECCIONES):
+        marcha = separar_frames(cargar_imagen(os.path.join("NPCS", carpeta, caminar.format(i + 2))))
+        clips[("caminar", direccion)] = clips[("correr", direccion)] = marcha
+        clips[("reposo", direccion)] = separar_frames(cargar_imagen(os.path.join("NPCS", carpeta, "Reposo", reposo[i])))
+    return clips
+
+
 def escalar_personajes(por_rol, altura):
     """Ajusta cada rol a ``altura`` (se escala una vez, con la de reposo como referencia)."""
     personajes = {}
@@ -196,6 +218,8 @@ class VistaPartida:
         self.rect_caldero, self.cuadros_caldero = self._cargar_caldero()
         self.cuadros_niebla = self._cargar_niebla()
         self.niebla_activa = True  # el menú de ajustes la apaga
+        from audio.narracion import Narrador
+        self.narrador = Narrador()
         self.celular = None  # se carga al llegar a Distrito Conecta
         # --- Features del modo de un jugador (cargadas una sola vez) ---
         self.dimension = LA_COPA
@@ -525,6 +549,22 @@ class VistaPartida:
             cliente.actuar("interactuar", objetivo=guia["objetivo"]["id"])
         else:
             self.panel.abrir("introduccion")
+
+    def _clave_figura(self, datos):
+        """Rol o variante elegida; se carga la primera vez que alguien la usa."""
+        rol = datos["rol"]
+        if datos.get("apariencia") != "mujer" or rol not in VARIANTES_MUJER or self.dimension != LA_COPA:
+            return rol
+        clave = rol + "_mujer"
+        if clave not in self.personajes:
+            try:
+                clips = {clave: cargar_clips_variante(rol)}
+            except (pygame.error, ValueError, FileNotFoundError, RuntimeError) as error:
+                print("[Arte] Sin variante de", rol, error)
+                return rol
+            self.personajes.update(escalar_personajes(clips, ALTURA_PERSONAJE))
+            self.personajes_zoom.update(escalar_personajes(clips, ALTURA_PERSONAJE * ZOOM_COPA))
+        return clave
 
     def _lanzar_efectos(self, caso):
         """Poderes, rumores y correcciones: una vez por evento, solo en La Copa."""
@@ -874,7 +914,7 @@ class VistaPartida:
             estado = datos["animacion"] if time.monotonic() - self.ultimo_paquete < .5 else "reposo"
             if estado == "caminar" and datos.get("corriendo"):
                 estado = "correr"
-            hojas = (escena["personajes"] if figuras is not None else self.personajes)[rol]
+            hojas = (escena["personajes"] if figuras is not None else self.personajes)[self._clave_figura(datos)]
             frames = hojas.get((estado, datos.get("orientacion"))) or hojas[(estado, datos["direccion"])]
             velocidad_cuadros = {"caminar": 9, "correr": 14}.get(estado, 4)
             frame = frames[int(jugador["reloj"] * velocidad_cuadros) % len(frames)]

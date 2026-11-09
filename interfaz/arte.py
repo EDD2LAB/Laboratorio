@@ -98,6 +98,8 @@ class ArtePartida:
         self.sello = icono(NUEVOS + "sello_consejo.png", (70, 70))
         self.insignia = icono(NUEVOS + "insignia_base.png", (70, 70))
         self.cestos = self.cargar_cestos(1)
+        self.iconos_ajustes = {nombre: icono(NUEVOS + "icono_" + nombre + ".png", (30, 30))
+                               for nombre in ("audio", "contraste", "apariencia", "libro", "arbol")}
         self.marco_dialogo = cargar_imagen("Dialogo/Marco_dialogo.png", (860, 484), requerido=False)
         if self.marco_dialogo is None:
             print("[Arte] Falta la imagen: Dialogo/Marco_dialogo.png")

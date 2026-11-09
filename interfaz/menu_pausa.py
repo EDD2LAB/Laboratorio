@@ -102,6 +102,7 @@ class MenuPausa:
         self.menu = menu
         self.vista = None
         self.pagina_ayuda = 0
+        self.pestana_ayuda = "reglas"
         self.preferencias = preferencias.cargar()
 
     @property
@@ -151,7 +152,11 @@ class MenuPausa:
     def tecla(self, tecla):
         """Teclado mientras el menú está abierto (se consume todo)."""
         if tecla == pygame.K_ESCAPE:
-            if self.vista == "como_jugar":
+            if self.vista == "ayuda_f1":
+                self.cerrar()
+            elif self.vista == "accesibilidad":
+                self.vista = "ajustes"
+            elif self.vista == "como_jugar":
                 self.vista = "ajustes"
             elif self.vista == "principal" or not self.en_partida:
                 self.cerrar()
@@ -165,8 +170,18 @@ class MenuPausa:
         """Devuelve "salir" para cerrar el juego; None en los demás casos."""
         if clave == "continuar":
             self.cerrar()
-        elif clave in ("ajustes", "ayuda", "confirmar_salida", "como_jugar"):
+        elif clave in ("ajustes", "ayuda", "confirmar_salida", "como_jugar", "ayuda_f1", "accesibilidad"):
             self.vista = clave
+        elif clave.startswith("pestana:"):
+            self.pestana_ayuda = clave.split(":", 1)[1]
+        elif clave in ("alto_contraste", "narracion"):
+            self.preferencias[clave] = not self.preferencias[clave]
+            preferencias.guardar(self.preferencias)
+            self.menu.aplicar_preferencias()
+        elif clave.startswith("apariencia:"):
+            _, opcion, valor = clave.split(":")
+            self.preferencias[opcion] = valor
+            preferencias.guardar(self.preferencias)
         elif clave.startswith("pagina:"):
             self.pagina_ayuda = int(clave.split(":", 1)[1])
         elif clave == "volver":
@@ -214,8 +229,9 @@ class MenuPausa:
                  "Tus compañeros siguen jugando.")
         menu.texto(aviso, 480, 200, 16, CREMA, True)
         self._boton("continuar", "Continuar", (480, 270))
-        self._boton("ajustes", "Ajustes", (480, 345))
-        self._boton("ayuda", "Ayuda y controles", (480, 420))
+        self._boton("ajustes", "Ajustes", (480, 340))
+        self._boton("ayuda_f1", "Reglas y clasificación · F1", (480, 397), 340)
+        self._boton("ayuda", "Ayuda y controles", (480, 455))
         self._boton("confirmar_salida", "Salir", (480, 525))
 
     def _dibujar_ajustes(self):
@@ -255,8 +271,74 @@ class MenuPausa:
             self._boton(f"volumen:{clave}:+", "+", (738, fila_y), 46, valor < 1, alto=36)
         if not self.menu.audio:
             menu.texto("(sin dispositivo de sonido)", 480, y + 58 + 4 * 46 - 14, 14, ROJO, True)
-        self._boton("como_jugar", "Ayuda: cómo jugar", (480, 592), 300, alto=36, tamano_fuente=18)
+        self._boton("como_jugar", "Ayuda: cómo jugar", (340, 592), 260, alto=36, tamano_fuente=18)
+        self._boton("accesibilidad", "Accesibilidad", (620, 592), 260, alto=36, tamano_fuente=18)
         self._boton("volver", "Volver", (480, 642), 220, alto=40)
+
+    def _dibujar_ayuda_f1(self):
+        """Ayuda rápida (F1): reglas y árbol de clasificación."""
+        menu = self.menu
+        menu.panel(pygame.Rect(100, 20, 760, 680))
+        menu.texto("AYUDA", 480, 34, 32, ORO, True)
+        for indice, (clave, nombre, icono) in enumerate((("reglas", "Reglas", "libro"), ("clasificacion", "Clasificación", "arbol"))):
+            centro = (370 + indice * 220, 104)
+            activa = clave == self.pestana_ayuda
+            self._boton("pestana:" + clave, f"» {nombre} «" if activa else nombre, centro, 200, alto=38, tamano_fuente=18)
+            imagen = menu.iconos_ajustes.get(icono)
+            if imagen is not None:
+                menu.lienzo.blit(imagen, imagen.get_rect(midright=(centro[0] - 104, centro[1])))
+        if self.pestana_ayuda == "clasificacion":
+            if menu.arbol_clasificacion is None:
+                menu.arbol_clasificacion = menu.imagen("Clasificación/CLasificaciónCompl.png", (720, 500))
+            menu.lienzo.blit(menu.arbol_clasificacion, menu.arbol_clasificacion.get_rect(center=(480, 380)))
+        else:
+            for indice, (nombre, _) in enumerate(PAGINAS_COMO_JUGAR):
+                texto = f"» {nombre} «" if indice == self.pagina_ayuda else nombre
+                self._boton(f"pagina:{indice}", texto, (290 + indice * 190, 150), 178, alto=34, tamano_fuente=16)
+            fuente = menu.fuentes[16]
+            y = 182
+            parrafos = list(PAGINAS_COMO_JUGAR[self.pagina_ayuda][1])
+            parrafos.append("Indicadores: los cambios en verde ayudan al equipo; los que salen en rojo lo perjudican.")
+            for parrafo in parrafos:
+                for linea in envolver_texto(parrafo, fuente, 680):
+                    menu.texto(linea, 140, y, 16)
+                    y += fuente.get_linesize() + 2
+                y += 7
+        self._boton("continuar", "Cerrar · Esc", (480, 668), 220, alto=38)
+
+    def _fila_opcion(self, y, icono, nombre, clave, texto, activo=True, ancho=220):
+        menu = self.menu
+        imagen = menu.iconos_ajustes.get(icono)
+        if imagen is not None:
+            menu.lienzo.blit(imagen, imagen.get_rect(center=(205, y)))
+        menu.texto(nombre, 235, y - 12, 18)
+        self._boton(clave, texto, (640, y), ancho, activo, alto=38, tamano_fuente=18)
+
+    def _dibujar_accesibilidad(self):
+        from audio.narracion import disponible
+        menu = self.menu
+        menu.panel(pygame.Rect(170, 90, 620, 540))
+        menu.texto("ACCESIBILIDAD", 480, 116, 32, ORO, True)
+        p = self.preferencias
+        self._fila_opcion(200, "contraste", "Alto contraste", "alto_contraste", "Activado" if p["alto_contraste"] else "Apagado")
+        voz = disponible()
+        self._fila_opcion(255, "audio", "Narración de mensajes", "narracion",
+                          ("Activada" if p["narracion"] else "Apagada") if voz else "No disponible", voz)
+        if not voz:
+            menu.texto("Instala pyttsx3 para activar la narración.", 480, 282, 14, ROJO, True)
+        menu.texto("Apariencia de tu personaje en La Copa", 480, 320, 20, ORO, True)
+        for fila, (nombre, opcion) in enumerate((("Aspirante", "apariencia_aspirante"), ("Habitante", "apariencia_habitante"))):
+            y = 385 + fila * 62
+            imagen = menu.iconos_ajustes.get("apariencia")
+            if imagen is not None:
+                menu.lienzo.blit(imagen, imagen.get_rect(center=(205, y)))
+            menu.texto(nombre, 235, y - 12, 18)
+            for columna, valor in enumerate(("hombre", "mujer")):
+                texto = valor.capitalize()
+                self._boton(f"apariencia:{opcion}:{valor}", f"» {texto} «" if p[opcion] == valor else texto,
+                            (540 + columna * 170, y), 155, alto=38, tamano_fuente=18)
+        menu.texto("La apariencia se aplica al elegir tu personaje en la próxima partida.", 480, 500, 14, CREMA, True)
+        self._boton("ajustes", "Volver", (480, 572), 220, alto=40)
 
     def _dibujar_como_jugar(self):
         menu = self.menu

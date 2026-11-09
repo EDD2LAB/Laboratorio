@@ -215,7 +215,7 @@ class PartidaMovimiento:
             self.jugadores[jugador["id"]] = {
                 "id": jugador["id"], "nombre": jugador["nombre"], "rol": jugador["rol"],
                 "x": x, "y": y, "direccion": "abajo", "animacion": "reposo", "seq": -1,
-                "dimension": LA_COPA,
+                "dimension": LA_COPA, "apariencia": jugador.get("apariencia"),
             }
         from .campana import CampanaCopa
         self.conectados = set(self.jugadores)
