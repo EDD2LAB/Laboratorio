@@ -46,4 +46,23 @@ Conclusiones que guían las fases 5 y 6:
 
 ## Después
 
-(se completa en la fase 7)
+Medido sobre `cd77f66` (protocolo 11) con la misma herramienta, 60 s y el mismo
+modo de participantes (`clientes`), en la misma PC de desarrollo.
+
+| Métrica | Línea base | Después |
+| --- | --- | --- |
+| FPS medio (Clock.tick(60)) | 57,1 | 60,3 |
+| Frame p50 / p95 / p99 (actualizar + dibujar) | 2,95 / 5,57 / 11,58 ms | 5,03 / 6,93 / 12,21 ms |
+| Tick del servidor p50 / p95 / máx | 1,58 / 3,01 / 12,14 ms | 0,44 / 0,59 / 1,44 ms |
+| Mensajes/s por cliente | 19,2 | 19,6 |
+| KB/s por cliente | ~118 | 4,3 (≈ 220 bytes por mensaje) |
+| Ping | no se medía | no se mide |
+
+Lectura de los resultados:
+1. El cuadro es algo más costoso (p95 de 5,57 a 6,93 ms) porque el juego dibuja
+   bastante más que en la línea base, pero sigue muy por debajo de los 16,7 ms
+   de un cuadro a 60 FPS, y el FPS medio alcanza el límite.
+2. El tick del servidor bajó de 3,01 a 0,59 ms en p95 con la rejilla de colisiones.
+3. Justo antes de enviar diferencias, el estado completo ya ocupaba 246,9 KB/s por
+   cliente. Con `multijugador/delta.py` (snapshot al conectar o cambiar de lugar, y
+   luego solo lo que cambia) bajó a 4,3 KB/s, por debajo de la meta de 30 KB/s.
