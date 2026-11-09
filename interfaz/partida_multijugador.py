@@ -1,4 +1,5 @@
 """Vista del mapa compartido: sprites locales y posiciones del servidor."""
+import json
 import math
 import os
 import time
@@ -16,6 +17,7 @@ COLORES = ((83, 222, 212), (241, 199, 86), (183, 137, 246), (247, 140, 120))
 # Boca del caldero en el lienzo 960x720 (el objetivo "caldero" está en su base, 480,380).
 BOCA_CALDERO = (480, 336)
 DESVIO_FAROL = (44, 6)  # respecto al objetivo del caldero
+FILAS_CALDERO = {"estable": 1, "peligroso": 2, "critico": 3}
 COLORES_CALDERO = {
     "estable": ((93, 218, 205), (111, 219, 150), (190, 245, 255)),
     "peligroso": ((238, 201, 92), (255, 150, 70), (200, 130, 255)),
@@ -76,6 +78,7 @@ def separar_frames(imagen, cantidad=8):
 
 def cargar_clips_personajes():
     """Cuadros originales de cada rol, sin escalar."""
+    from mundo.personajes import RECTA_EQUIVALENTE
     from nucleo.recursos import cargar_imagen
     carpetas = ("Guardian", "mensajero", "Habitante hombre", "Aspirante hombre")
     caminar = (
@@ -118,9 +121,32 @@ def cargar_clips_personajes():
             imagen = cargar_imagen(os.path.join("NPCS", carpetas[indice], diagonales[indice].format(fila)))
             frames = separar_frames(imagen)
             clips[("caminar", orientacion)] = clips[("correr", orientacion)] = frames
-            clips[("reposo", orientacion)] = frames[:1]  # el primer cuadro es su pose quieta
+            # Las diagonales no tienen hoja de reposo: usan la de la dirección recta.
+            clips[("reposo", orientacion)] = clips[("reposo", RECTA_EQUIVALENTE[orientacion])]
         por_rol[rol] = clips
     return por_rol
+
+
+# Variantes femeninas: carpeta, prefijo de la caminata y archivos de reposo.
+VARIANTES_MUJER = {
+    "aspirante": ("Aspirante mujer", "MujerAspirante Fila {}.png",
+                  ("Aspirante_mujer_reposo_fila1.png", "Aspirante_mujer_reposo _fila2.png",
+                   "Aspirante_mujer_reposo _fila3.png", "Aspirante_mujer_reposo_ fila4.png")),
+    "habitante": ("Habitante mujer", "HabMujer Fila {}.png",
+                  tuple(f"Habitante_femenina-reposo_fila{i}.png" for i in range(1, 5))),
+}
+
+
+def cargar_clips_variante(rol):
+    """Cuadros de la variante de un rol. No tiene diagonales ni hoja de correr propias."""
+    from nucleo.recursos import cargar_imagen
+    carpeta, caminar, reposo = VARIANTES_MUJER[rol]
+    clips = {}
+    for i, direccion in enumerate(DIRECCIONES):
+        marcha = separar_frames(cargar_imagen(os.path.join("NPCS", carpeta, caminar.format(i + 2))))
+        clips[("caminar", direccion)] = clips[("correr", direccion)] = marcha
+        clips[("reposo", direccion)] = separar_frames(cargar_imagen(os.path.join("NPCS", carpeta, "Reposo", reposo[i])))
+    return clips
 
 
 def escalar_personajes(por_rol, altura):
@@ -141,10 +167,14 @@ def cargar_personajes():
     return escalar_personajes(cargar_clips_personajes(), ALTURA_PERSONAJE)
 
 
+def caso_jugadores(estado):
+    return estado.get("mundo", {}).get("jugadores", [])
+
+
 class VistaPartida:
     def __init__(self, identificador, estado, audio=None):
         from mundo.mapas import cargar_fondo_unificado, cargar_mapa_principal, decoraciones_ampliadas, suavizar_cascada
-        from mundo.personajes import cargar_frames_tronco_eco
+        from mundo.personajes import cargar_variantes_tronco_eco, preparar_reposo
         from nucleo.recursos import cargar_fuente, cargar_imagen
         from interfaz.arte import ArtePartida
         from interfaz.efectos_visuales import AdornosMapa, FlechaGuia
@@ -171,6 +201,9 @@ class VistaPartida:
                 suavizar_cascada(objeto)
         self._marcar_cesto(estado)
         self.decoraciones_zoom = decoraciones_ampliadas(self.decoraciones, ZOOM_COPA)
+        for objeto in self.decoraciones + self.decoraciones_zoom:
+            if objeto.get("personaje"):
+                preparar_reposo(objeto)
         self.fondo_zoom = cargar_fondo_unificado(ZOOM_COPA)
         self.escenas_zoom = {LA_COPA: {
             "zoom": ZOOM_COPA, "origen": (0, 0), "fondo": self.fondo_zoom,
@@ -185,8 +218,14 @@ class VistaPartida:
         self.ultimo_paquete = time.monotonic()
         self.aviso_red = ""
         self.estado = estado
-        self.frames_eco = cargar_frames_tronco_eco()
+        self.variantes_eco = cargar_variantes_tronco_eco()
         self._frames_tronco_escalados = {}
+        self._etiquetas_npc = {}
+        from interfaz.dialogo_npc import ArteDialogo
+        self.arte_dialogo = ArteDialogo()
+        self.rect_caldero, self.cuadros_caldero = self._cargar_caldero()
+        from audio.narracion import Narrador
+        self.narrador = Narrador()
         self.celular = None  # se carga al llegar a Distrito Conecta
         # --- Features del modo de un jugador (cargadas una sola vez) ---
         self.dimension = LA_COPA
@@ -217,6 +256,11 @@ class VistaPartida:
         self.final_sonado = None
         self.inicio_reparacion = None
         self.evento_reparacion_visto = None
+        from interfaz.efectos_mapa import EfectosMapa
+        self.efectos_mapa = EfectosMapa(ZOOM_COPA)
+        self.efectos_vistos = None  # al unirse no se repite lo que ya pasó
+        self.pantalla_final = None  # ilustración del final del equipo
+        self.final_visto = False
         self.puente_1 = next((o for o in self.decoraciones
                               if o.get("nombre", "").replace("\\", "/").lower().endswith("puentes/puente1.png")), None)
         self.puente_roto = None
@@ -228,6 +272,11 @@ class VistaPartida:
         self.puente_1_zoom = next((o for o in self.decoraciones_zoom if o["original"] is self.puente_1), None)
         self.puente_roto_zoom = None
         self.frames_reparacion_zoom = []
+        self.puente_det = self.puente_det_zoom = None
+        if self.puente_1 is not None and self.escenas.puente_det is not None:
+            self.puente_det = pygame.transform.scale(self.escenas.puente_det, self.puente_1["rect"].size)
+        if self.puente_1_zoom is not None and self.escenas.puente_det is not None:
+            self.puente_det_zoom = pygame.transform.scale(self.escenas.puente_det, self.puente_1_zoom["rect"].size)
         if self.puente_1_zoom is not None:
             tamano = self.puente_1_zoom["rect"].size
             if self.escenas.puente_roto is not None:
@@ -383,6 +432,8 @@ class VistaPartida:
         tipo = resultado.get("tipo_pocion")
         if self.dimension == PRESENTE:  # en Distrito Conecta no hay pociones
             self.sonido({"tipo": "clasificacion", "correcta": bool(resultado.get("correcto"))})
+            if self.celular is not None:
+                self.celular.efectos.por_resultado(resultado)
             return
         if not tipo:
             return
@@ -412,6 +463,8 @@ class VistaPartida:
         if destino_guia != self.ultima_guia_seleccion:
             self.seleccion = None
             self.ultima_guia_seleccion = destino_guia
+        self._revisar_final()
+        self._lanzar_efectos(mundo.get("caso", {}))
         self.ultimo_paquete = time.monotonic()
         self.aviso_red = ""
         presentes = set()
@@ -470,8 +523,13 @@ class VistaPartida:
             return []
         caso = mundo.get("caso", {})
         puente = caso.get("puente") or {}
+        npcs = [n for n in caso.get("npcs", []) if n["dimension"] == self.dimension and self.cerca(n)]
+        junto_a_npc = {(n["x"], n["y"]) for n in npcs}
+        # Donde hay alguien con quien hablar, sobra el objetivo "ayuda a otro compañero".
         objetivos = [dict(o) for o in self.contexto().get("objetivos", []) if self.cerca(o)
-                     and not (o["id"] == "puente_1" and puente.get("estado") not in ("READY_TO_REPAIR", "REPAIR_MINIGAME"))]
+                     and not (o["id"] == "puente_1" and puente.get("estado") not in ("READY_TO_REPAIR", "REPAIR_MINIGAME"))
+                     and not (o.get("tipo") == "fuente" and (o["x"], o["y"]) in junto_a_npc and o.get("rol") != yo["rol"])]
+        objetivos.extend({"id": "npc:" + n["id"], "nombre": "Hablar con " + n["nombre"], "x": n["x"], "y": n["y"]} for n in npcs)
         encargo = caso.get("encargo") if self.dimension == LA_COPA else None
         if encargo:
             for o in objetivos:
@@ -505,7 +563,68 @@ class VistaPartida:
         else:
             self.panel.abrir("introduccion")
 
+    def _clave_figura(self, datos):
+        """Rol o variante elegida; se carga la primera vez que alguien la usa."""
+        rol = datos["rol"]
+        if datos.get("apariencia") != "mujer" or rol not in VARIANTES_MUJER or self.dimension != LA_COPA:
+            return rol
+        clave = rol + "_mujer"
+        if clave not in self.personajes:
+            try:
+                clips = {clave: cargar_clips_variante(rol)}
+            except (pygame.error, ValueError, FileNotFoundError, RuntimeError) as error:
+                print("[Arte] Sin variante de", rol, error)
+                return rol
+            self.personajes.update(escalar_personajes(clips, ALTURA_PERSONAJE))
+            self.personajes_zoom.update(escalar_personajes(clips, ALTURA_PERSONAJE * ZOOM_COPA))
+        return clave
+
+    def _lanzar_efectos(self, caso):
+        """Poderes, rumores y correcciones: una vez por evento, solo en La Copa."""
+        ronda = caso.get("ronda")
+        resultado = caso.get("resultado") or {}
+        eventos = {("poder", ronda, i) for i in caso.get("habilidades_usadas", [])}
+        if caso.get("oleadas"):
+            eventos.add(("rumor", ronda, caso["oleadas"]))
+        if resultado.get("correcto") and resultado.get("evento_id"):
+            eventos.add(("correccion", resultado["evento_id"], None))
+        if self.efectos_vistos is None:
+            self.efectos_vistos = eventos
+            return
+        for evento in eventos - self.efectos_vistos:
+            self.efectos_vistos.add(evento)
+            if self.dimension != LA_COPA:
+                continue
+            if evento[0] == "poder":
+                jugador = next((j for j in caso_jugadores(self.estado) if j["id"] == evento[2]), None)
+                if jugador:
+                    self.efectos_mapa.lanzar("poder", jugador["x"], jugador["y"] - 28)
+            else:
+                self._cruzar_puente(evento[0])
+
+    def _cruzar_puente(self, tipo):
+        """La señal recorre el puente que el jugador tiene más cerca."""
+        yo = self.yo()
+        puentes = [o for o in self.decoraciones if o.get("puente_animable")]
+        if yo and puentes:
+            puente = min(puentes, key=lambda o: math.hypot(o["rect"].centerx - yo["x"], o["rect"].centery - yo["y"]))
+            self.efectos_mapa.recorrer(tipo, puente["rect"].midleft, puente["rect"].midright)
+
+    def _revisar_final(self):
+        """Al completar La Copa y Distrito Conecta, una vez por partida."""
+        caso = self.estado.get("mundo", {}).get("caso", {})
+        if self.final_visto or caso.get("fase") != "final" or not (caso.get("presente") or {}).get("completada"):
+            return
+        from interfaz.finales import PantallaFinal
+        self.final_visto = True
+        self.pantalla_final = PantallaFinal(caso.get("indicadores", {}), self.etiquetas[self.dimension],
+                                            self.escenas.r["fuente_resultado"], self.titulo)
+
     def manejar_evento(self, evento, posicion, cliente):
+        if self.pantalla_final is not None:
+            if evento.type == pygame.MOUSEBUTTONDOWN or (evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE):
+                self.pantalla_final = None
+            return True
         if self.animacion_pocion or self.transicion:
             if (evento.type == pygame.MOUSEBUTTONDOWN or (evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE)) \
                     and self.animacion_pocion and self.animacion_pocion.datos["tiempo_transcurrido"] > .6:
@@ -539,6 +658,8 @@ class VistaPartida:
             elif evento.key == pygame.K_e:
                 if self.seleccion == "portal":
                     self.panel.abrir("portal")
+                elif self.seleccion and self.seleccion.startswith("npc:"):
+                    cliente.actuar("hablar_npc", npc=self.seleccion[4:])
                 elif self.seleccion:
                     cliente.actuar("interactuar", objetivo=self.seleccion)
                 else:
@@ -650,11 +771,51 @@ class VistaPartida:
             return min(pendientes, key=lambda o: math.hypot(o["x"] - yo["x"], o["y"] - yo["y"]))
         return next((o for o in presente.get("objetivos", []) if o["id"] == "presente:pantalla"), None)
 
-    def _frames_tronco(self, tamano):
-        """Cuadros del Tronco de los Ecos, escalados una sola vez por tamaño."""
-        if tamano not in self._frames_tronco_escalados:
-            self._frames_tronco_escalados[tamano] = [pygame.transform.scale(f, tamano) for f in self.frames_eco]
-        return self._frames_tronco_escalados[tamano]
+    def _frames_tronco(self, tamano, variante=1):
+        """Cuadros de un diseño de tronco, escalados una sola vez por tamaño."""
+        if (tamano, variante) not in self._frames_tronco_escalados:
+            self._frames_tronco_escalados[(tamano, variante)] = [
+                pygame.transform.scale(f, tamano) for f in self.variantes_eco.get(variante, [])]
+        return self._frames_tronco_escalados[(tamano, variante)]
+
+    def _cargar_caldero(self):
+        """Caldero animado sobre el pintado en el mapa; (zoom, fila) -> cuadros.
+
+        El ajuste fino está en Hitboxes/caldero_alineacion.json (mundo 960x720).
+        Filas: 1 estable, 2 peligroso, 3 crítico y 4 campaña terminada."""
+        from nucleo.recursos import cargar_spritesheet_frames
+        from nucleo.rutas import RAIZ
+        try:
+            datos = json.loads((RAIZ / "Hitboxes" / "caldero_alineacion.json").read_text(encoding="utf-8"))
+            rect = pygame.Rect(datos["x"], datos["y"], datos["w"], datos["h"])
+        except (OSError, ValueError, KeyError) as error:
+            print("[Arte] Sin alineación del caldero:", error)
+            return None, {}
+        cuadros = {}
+        for fila in range(1, 5):
+            originales = cargar_spritesheet_frames(f"Caldero/Caldero-ecos-fila{fila}.png", 4)
+            for zoom in (1, ZOOM_COPA):
+                cuadros[(zoom, fila)] = [self._caldero_con_sombra(c, (rect.w * zoom, rect.h * zoom)) for c in originales]
+        return rect, cuadros
+
+    @staticmethod
+    def _caldero_con_sombra(cuadro, tamano):
+        """La sombra de contacto tapa, entre las patas, la base del caldero pintado."""
+        lienzo = pygame.Surface(tamano, pygame.SRCALPHA)
+        ancho, alto = tamano
+        pygame.draw.ellipse(lienzo, (47, 35, 24), (ancho * 22 // 100, alto * 76 // 100, ancho * 56 // 100, alto * 18 // 100))
+        lienzo.blit(pygame.transform.scale(cuadro, tamano), (0, 0))
+        return lienzo
+
+    def _dibujar_caldero(self, superficie, ahora_ms, zoom, area):
+        if self.rect_caldero is None:
+            return
+        fase_final = self.estado.get("mundo", {}).get("caso", {}).get("fase") == "final"
+        fila = 4 if fase_final else FILAS_CALDERO.get(self.estado_caldero, 1)
+        cuadros = self.cuadros_caldero.get((zoom, fila))
+        rect = pygame.Rect(self.rect_caldero.x * zoom, self.rect_caldero.y * zoom, self.rect_caldero.w * zoom, self.rect_caldero.h * zoom)
+        if cuadros and (area is None or rect.colliderect(area)):
+            superficie.blit(cuadros[(ahora_ms // 180) % len(cuadros)], rect)
 
     def _dibujar_mapa(self, superficie, ahora_ms, escena=None, area=None):
         """Mapa y decoraciones. ``escena`` y ``area``: recursos ampliados y zona
@@ -668,13 +829,16 @@ class VistaPartida:
             superficie.blit(escena["fondo"], area, area)
             decoraciones, puente_1, puente_roto, frames_reparacion = (
                 escena["decoraciones"], self.puente_1_zoom, self.puente_roto_zoom, self.frames_reparacion_zoom)
+            puente_det = self.puente_det_zoom
         else:
             superficie.blit(self.fondo, (0, 0))
             decoraciones, puente_1, puente_roto, frames_reparacion = (
                 self.decoraciones, self.puente_1, self.puente_roto, self.frames_reparacion)
+            puente_det = self.puente_det
         caso = self.estado.get("mundo", {}).get("caso", {})
         puente = caso.get("puente") or {}
         encargo = caso.get("encargo")
+        hablando = caso.get("npcs_en_dialogo", ())
         cestos = self.cesto_zoom if escena is not None else self.arte.cestos
         gemelos = self._npcs_gemelos()
         for objeto in decoraciones:
@@ -683,16 +847,27 @@ class VistaPartida:
             if area is not None and not objeto.get("mariposa") and not objeto["rect"].inflate(40, 40).colliderect(area):
                 continue  # fuera de cámara: no se escala ni se rota
             if self.dimension == LA_COPA and objeto is puente_1 and puente.get("estado", "REPAIRED") != "REPAIRED":
-                # Puente 1 roto (imagen real Puente1Roto.png) hasta repararlo.
-                superficie.blit(puente_roto or objeto["imagen"], objeto["rect"])
+                # Roto hasta que estén los materiales; deteriorado mientras se repara.
+                listo = puente.get("estado") in ("READY_TO_REPAIR", "REPAIR_MINIGAME", "REPAIR_ANIMATION")
+                superficie.blit((puente_det if listo else None) or puente_roto or objeto["imagen"], objeto["rect"])
+                continue
+            if objeto.get("cuadros_hablando") and objeto.get("personaje") in hablando:
+                cuadros = objeto["cuadros_hablando"]
+                cuadro = cuadros[(ahora_ms // 130) % len(cuadros)]
+                superficie.blit(cuadro, cuadro.get_rect(midbottom=objeto["ancla_reposo"]))
+                continue
+            if objeto.get("cuadros_reposo"):  # NPC con su animación de reposo
+                cuadros = objeto["cuadros_reposo"]
+                cuadro = cuadros[(ahora_ms // 180) % len(cuadros)]
+                superficie.blit(cuadro, cuadro.get_rect(midbottom=objeto["ancla_reposo"]))
                 continue
             if es_hoja_portales(objeto.get("nombre", "")) and self.adornos.portal:
                 continue  # se dibuja el portal animado
             if objeto.get("cesto") and cestos.get(clave_cesto(encargo)) is not None:
                 imagen = cestos[clave_cesto(encargo)]
                 superficie.blit(imagen, imagen.get_rect(midbottom=objeto["rect"].midbottom))
-            elif objeto.get("tronco_eco") and self.frames_eco:
-                frames = self._frames_tronco(objeto["rect"].size)
+            elif objeto.get("tronco_eco") and self._frames_tronco(objeto["rect"].size, objeto.get("variante_tronco", 1)):
+                frames = self._frames_tronco(objeto["rect"].size, objeto.get("variante_tronco", 1))
                 superficie.blit(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
             elif objeto.get("puente_animable"):
                 dibujar_puente_balanceandose(superficie, objeto, ahora_ms)
@@ -703,6 +878,8 @@ class VistaPartida:
                 superficie.blit(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
             else:
                 superficie.blit(objeto["imagen"], objeto["rect"])
+        if self.dimension == LA_COPA:
+            self._dibujar_caldero(superficie, ahora_ms, zoom, area)
         rect = self.rect_portal()
         if rect:
             self.adornos.dibujar_portal(
@@ -762,7 +939,7 @@ class VistaPartida:
             estado = datos["animacion"] if time.monotonic() - self.ultimo_paquete < .5 else "reposo"
             if estado == "caminar" and datos.get("corriendo"):
                 estado = "correr"
-            hojas = (escena["personajes"] if figuras is not None else self.personajes)[rol]
+            hojas = (escena["personajes"] if figuras is not None else self.personajes)[self._clave_figura(datos)]
             frames = hojas.get((estado, datos.get("orientacion"))) or hojas[(estado, datos["direccion"])]
             velocidad_cuadros = {"caminar": 9, "correr": 14}.get(estado, 4)
             frame = frames[int(jugador["reloj"] * velocidad_cuadros) % len(frames)]
@@ -804,6 +981,8 @@ class VistaPartida:
         pantalla.blit(pygame.transform.scale(efectos.subsurface(vista), pantalla.get_size()), (0, 0))
         for frame, rect in figuras:
             pantalla.blit(frame, rect)
+        if self.dimension == LA_COPA:
+            self.efectos_mapa.dibujar(pantalla, vista)
         self.particulas.dibujar(pantalla, camara=(vista.x, vista.y, zoom))
         return anclas
 
@@ -941,6 +1120,9 @@ class VistaPartida:
             iconos = self.arte.poder_usado if privado.get("habilidad_usada") else self.arte.poder_listo
             if iconos.get(rol) is not None:
                 superficie.blit(iconos[rol], iconos[rol].get_rect(center=(928, 29)))
+            barra = self.arte.barra_recarga[self._estado_recarga(privado, rol)]
+            if barra is not None:
+                superficie.blit(barra, barra.get_rect(center=(915, 58)))
         if not self.mostrar_detalles:
             if not self.panel.activo:
                 self.hud.dibujar_avisos(superficie, 22, 70)
@@ -979,7 +1161,42 @@ class VistaPartida:
             self._texto_pastilla(superficie, "Shift: correr | E: ayudar | I: pistas | M: tarea | T: casos | Q: poder | H: HUD | L: nombres",
                                  self.hud.fuente, bottomleft=(22, 672))
 
+    @staticmethod
+    def _estado_recarga(privado, rol):
+        """Llena: se puede usar; media: falta tu prueba; vacía: se recarga el próximo caso."""
+        if privado.get("habilidad_usada"):
+            return "vacia"
+        return "llena" if any(p.get("id") == "pista_" + rol for p in privado.get("inventario", [])) else "mitad"
+
+    def imagen_npc(self, nombre):
+        """Retrato del personaje o, si no tiene, su sprite (ya cargados)."""
+        retrato = {"Luma": "luma", "Mira": "mira"}.get(nombre)
+        if retrato and self.arte.retratos.get(retrato):
+            return self.arte.retratos[retrato][0]
+        if nombre == "Darío Veraz" and self.arte.retrato_agente is not None:
+            return self.arte.retrato_agente
+        decoraciones = (self.escenas_zoom.get(self.dimension) or {}).get("decoraciones", self.decoraciones)
+        return next((o["imagen"] for o in decoraciones if o.get("personaje") == nombre), None)
+
+    def _nombres_npc_cercanos(self, superficie):
+        """Nombre y "E: hablar" sobre cada NPC que el jugador tiene a su alcance."""
+        if self.panel.activo:
+            return
+        vista = self.vista_camara()
+        for npc in self.estado.get("mundo", {}).get("caso", {}).get("npcs", []):
+            if npc["dimension"] != self.dimension or not self.cerca(npc):
+                continue
+            if npc["nombre"] not in self._etiquetas_npc:
+                self._etiquetas_npc[npc["nombre"]] = self.fuente.render(npc["nombre"] + " · E: hablar", True, (255, 243, 210))
+            texto = self._etiquetas_npc[npc["nombre"]]
+            x, y = self.a_pantalla(npc["x"], npc["y"] - 62, vista)
+            caja = texto.get_rect(midbottom=(round(x), round(y)))
+            caja.clamp_ip(superficie.get_rect().inflate(-8, -8))
+            self._pastilla(superficie, caja.inflate(12, 6), 165)
+            superficie.blit(texto, caja)
+
     def _dibujar_capas_superiores(self, superficie):
+        self._nombres_npc_cercanos(superficie)
         self._dibujar_aviso_viaje(superficie)
         if self.depurar:
             bots = [
@@ -1031,3 +1248,5 @@ class VistaPartida:
             self.animacion_pocion.dibujar(superficie, self.escenas)
         if self.transicion:
             self.transicion.dibujar(superficie, self.escenas.r["fuente_resultado"])
+        if self.pantalla_final is not None:
+            self.pantalla_final.dibujar(superficie)

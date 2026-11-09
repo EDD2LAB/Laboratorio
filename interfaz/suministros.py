@@ -2,9 +2,9 @@
 
 Tablas, cuerda y canasta de herramientas usan el arte real
 (Herramientas/HerramientasReparación.png, recortado una vez por
-SistemaReparacionPuente.recortar_spritesheet_materiales); el farol, Assets
-eventos/farol.png. Los materiales sin arte conservan su icono de píxeles, que
-también sirve de respaldo si una imagen no carga.
+SistemaReparacionPuente.recortar_spritesheet_materiales); agua, provisiones,
+pergaminos, tinta y farol, Assets eventos/. Si una imagen no carga, el material
+conserva su icono de píxeles como respaldo.
 """
 import math
 
@@ -15,6 +15,8 @@ from nucleo.recursos import cargar_imagen
 # id de material en red -> clave del recorte del spritesheet.
 CLAVES_SPRITE = {"tablas": "tablas", "cuerdas": "cuerda", "herramientas": "herramientas"}
 RUTA_FAROL = "Assets eventos/farol.png"
+RUTAS_EVENTOS = {"agua": "Assets eventos/agua.png", "provisiones": "Assets eventos/proviciones.png",
+                 "pergaminos": "Assets eventos/pergaminon.png", "tinta": "Assets eventos/tinta.png"}
 _sprites = {}
 _brillos = {}  # radio -> círculo translúcido ya dibujado
 
@@ -28,12 +30,14 @@ def configurar_sprites(materiales):
     """Escala una vez cada material a los dos tamaños que se dibujan."""
     _sprites.clear()
     imagenes = {material: (materiales or {}).get(clave) for material, clave in CLAVES_SPRITE.items()}
-    farol = cargar_imagen(RUTA_FAROL, requerido=False)
-    if farol is None:
-        print("[Arte] Falta la imagen:", RUTA_FAROL)
-    else:
-        # Con umbral de alfa: los píxeles casi invisibles del borde lo harían ver más pequeño.
-        imagenes["farol"] = farol.subsurface(farol.get_bounding_rect(min_alpha=32))
+    rutas = dict(RUTAS_EVENTOS, farol=RUTA_FAROL)
+    for material, ruta in rutas.items():
+        imagen = cargar_imagen(ruta, requerido=False)
+        if imagen is None:
+            print("[Arte] Falta la imagen:", ruta)
+        else:
+            # Con umbral de alfa: los píxeles casi invisibles del borde lo harían ver más pequeño.
+            imagenes[material] = imagen.subsurface(imagen.get_bounding_rect(min_alpha=32))
     for material, imagen in imagenes.items():
         if imagen is None:
             continue
@@ -106,7 +110,7 @@ def dibujar_encargos(superficie, caso, fuente):
         if not encargo.get("materiales_listos"):
             for i, material in enumerate(colocados):
                 # Lo que ya entró asoma sobre el cesto hasta que se llena.
-                dibujar_carga(superficie, material["id"], (d["x"] - (len(colocados) - 1) * 14 + i * 28, d["y"] - 46))
+                dibujar_carga(superficie, material["id"], (d["x"] - (len(colocados) - 1) * 14 + i * 28, d["y"] - 60))
         for material in encargo["materiales"]:
             if material["entregado"] or material["id"] in llevados:
                 continue  # El objeto ya no está en su punto de recogida.
@@ -123,7 +127,7 @@ def dibujar_encargos(superficie, caso, fuente):
         progreso = encargo.get("actividad", {}).get("progreso", 0)
         if encargo.get("materiales_listos"):
             for i in range(3):
-                x, y = d["x"]-27+i*19, d["y"]-56
+                x, y = d["x"]-27+i*19, d["y"]-72
                 color = (246, 202, 105) if i < progreso else (48, 74, 51)
                 pygame.draw.rect(superficie, color, (x, y, 15, 8), border_radius=2)
         etiqueta = fuente.render("¡GRACIAS, EQUIPO!" if encargo["completo"] else "AHORA: REPARAR EL PUENTE 1" if encargo.get("materiales_colocados")

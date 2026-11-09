@@ -1,9 +1,11 @@
 """Sprites de personajes y NPC, decoraciones animadas del presente y jugador local."""
 
+import re
 import math
 import os
 import pygame
 import random
+from nucleo.rutas import RAIZ
 from logica.dimensiones import DIMENSION_PRESENTE
 from nucleo.config import (
     ALTO,
@@ -334,12 +336,70 @@ def _recortar_juntos(frames):
     return [frame.subsurface(limites).copy() for frame in frames]
 
 
+def archivos_reposo_de(nombre_sprite):
+    """Hojas de reposo (una por fila) de la carpeta del personaje; [] si no tiene."""
+    carpeta = os.path.dirname(str(nombre_sprite).replace("\\", "/"))
+    if not carpeta.lower().startswith("npcs/"):
+        return []
+    # El mapa guarda algunas rutas anidadas ("NPCS/Aspirante hombre/Habitante mujer").
+    carpeta = "NPCS/" + carpeta.rsplit("/", 1)[-1]
+    base = os.path.join(str(RAIZ), "Imagenes", *carpeta.split("/"))
+    encontrados = []
+    for relativa in ("", "Reposo"):
+        directorio = os.path.join(base, relativa) if relativa else base
+        if os.path.isdir(directorio):
+            encontrados += [os.path.join(carpeta, relativa, archivo).replace("\\", "/") for archivo in os.listdir(directorio)
+                            if "reposo" in archivo.casefold() and archivo.lower().endswith(".png")]
+    fila = lambda ruta: int(re.findall(r"\d+", os.path.basename(ruta).split(".")[0].replace("Num", ""))[0])
+    return sorted(encontrados, key=fila) if len(encontrados) == 4 else []
+
+
+def cuadros_reposo_de(nombre_sprite, orientacion):
+    """Los ocho cuadros de reposo de una orientación; [] si no tiene."""
+    archivos = archivos_reposo_de(nombre_sprite)
+    if not archivos:
+        return []
+    return _recortar_juntos(cargar_spritesheet_frames(archivos[DIRECCION_A_FILA_REPOSO[orientacion] - 1], 8))
+
+
+def preparar_hablando(objeto):
+    """Animación de hablar de un NPC, del mismo alto que su sprite, si la tiene."""
+    carpeta = "NPCS/" + os.path.dirname(str(objeto.get("nombre", "")).replace("\\", "/")).rsplit("/", 1)[-1]
+    directorio = os.path.join(str(RAIZ), "Imagenes", *carpeta.split("/"))
+    if not os.path.isdir(directorio):
+        return
+    hojas = sorted(a for a in os.listdir(directorio) if "hablando" in a.casefold() and a.lower().endswith(".png"))
+    limites = objeto["imagen"].get_bounding_rect()
+    if len(hojas) != 1 or not limites.height:
+        return
+    cuadros = _recortar_juntos(cargar_spritesheet_frames(carpeta + "/" + hojas[0], 8))
+    factor = limites.height / cuadros[0].get_height()
+    objeto["cuadros_hablando"] = [
+        pygame.transform.scale(c, (max(1, round(c.get_width() * factor)), limites.height)) for c in cuadros]
+    objeto["ancla_reposo"] = (objeto["rect"].x + limites.centerx, objeto["rect"].y + limites.bottom)
+
+
+def preparar_reposo(objeto):
+    """Da a un NPC colocado su animación de reposo, del mismo alto que su sprite.
+
+    Se hace una vez por tamaño de dibujo; sin hojas de reposo queda como estaba."""
+    orientacion = objeto.get("direccion") if objeto.get("direccion") in ORIENTACIONES_SPRITE else "abajo"
+    cuadros = cuadros_reposo_de(objeto.get("nombre", ""), orientacion)
+    limites = objeto["imagen"].get_bounding_rect()
+    if len(cuadros) < 2 or not limites.height:
+        return
+    factor = limites.height / cuadros[0].get_height()
+    objeto["cuadros_reposo"] = [
+        pygame.transform.scale(c, (max(1, round(c.get_width() * factor)), limites.height)) for c in cuadros]
+    objeto["ancla_reposo"] = (objeto["rect"].x + limites.centerx, objeto["rect"].y + limites.bottom)
+
+
 def cargar_personajes_distrito(altura):
     """Clips de los equivalentes de Distrito Conecta, a ``altura`` píxeles (una sola vez)."""
     personajes = {}
     for rol, (_, plantilla, ultima_fila) in PERSONAJES_DISTRITO.items():
         reposo = cargar_spritesheet_frames(plantilla.format(fila=1), len(ORIENTACIONES_SPRITE))
-        clips = {("reposo", orientacion): _recortar_juntos([frame])
+        clips = {("reposo", orientacion): (cuadros_reposo_de(plantilla, orientacion) or _recortar_juntos([frame]))
                  for orientacion, frame in zip(ORIENTACIONES_SPRITE, reposo)}
         for orientacion, fila in FILAS_CAMINAR.items():
             if fila <= ultima_fila:
@@ -524,6 +584,12 @@ def cargar_frames_tronco_eco():
             cantidad=4,
         ))
     return frames
+
+
+def cargar_variantes_tronco_eco():
+    """Cada fila es un diseño de tronco con sus cuatro cuadros (1..4 -> cuadros)."""
+    return {fila: cargar_spritesheet_frames(os.path.join("Tronco ecos", f"Tronco-ecos-fila{fila}.png"), cantidad=4)
+            for fila in range(1, 5)}
 
 
 def cargar_frames_idle_guardian():

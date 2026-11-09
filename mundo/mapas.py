@@ -1,5 +1,6 @@
 """Carga de mapas (La Copa, Distrito Conecta, interiores) y adaptación de hitboxes al lienzo."""
 
+import re
 import json
 import os
 import pygame
@@ -56,7 +57,7 @@ def cargar_fondo_presente(configuracion, rect_mapa, zoom):
 
 def npcs_presente_ampliados(decoraciones, zoom, origen):
     """NPC de Distrito Conecta a ``zoom`` veces, en coordenadas de la capa ampliada."""
-    from mundo.personajes import _cargar_sprite_direccional as cargar_idle
+    from mundo.personajes import _cargar_sprite_direccional as cargar_idle, preparar_hablando, preparar_reposo
     ampliados = []
     for objeto in decoraciones:
         r = objeto["rect"]
@@ -64,6 +65,8 @@ def npcs_presente_ampliados(decoraciones, zoom, origen):
         idle = cargar_idle(objeto["nombre"], rect.size)
         ampliados.append(dict(objeto, rect=rect, hitbox=rect,
                               imagen=idle.get(objeto["direccion"]) or idle.get("abajo") or objeto["imagen"]))
+        preparar_reposo(ampliados[-1])
+        preparar_hablando(ampliados[-1])
     return ampliados
 
 
@@ -206,6 +209,8 @@ def cargar_mapa_principal():
             "frames": imagenes_frames,
             "origenes": origenes,
             "tronco_eco": nombre_normalizado.startswith("tronco ecos/"),
+            # Diseño del tronco: campo opcional "variante" o el archivo elegido en el editor.
+            "variante_tronco": int(objeto.get("variante") or (re.search(r"fila([1-4])", nombre_normalizado) or (0, 1))[1]),
             # La mariposa vuela alrededor del punto del editor (dibujar_mariposa).
             "mariposa": nombre_normalizado.endswith("animales/mariposa.png"),
         })

@@ -215,7 +215,7 @@ class PartidaMovimiento:
             self.jugadores[jugador["id"]] = {
                 "id": jugador["id"], "nombre": jugador["nombre"], "rol": jugador["rol"],
                 "x": x, "y": y, "direccion": "abajo", "animacion": "reposo", "seq": -1,
-                "dimension": LA_COPA,
+                "dimension": LA_COPA, "apariencia": jugador.get("apariencia"),
             }
         from .campana import CampanaCopa
         self.conectados = set(self.jugadores)
@@ -402,10 +402,14 @@ class PartidaMovimiento:
         self.conectados.discard(identificador)
 
     def estado(self, identificador=None):
+        caso = self.mision.publico(self.conectados)
+        if identificador in self.jugadores:  # solo los NPC del mapa en el que está
+            dimension = self.jugadores[identificador].get("dimension", LA_COPA)
+            caso["npcs"] = [n for n in caso.get("npcs", []) if n["dimension"] == dimension]
         return {"mapa": "la_copa", "firma_mapa": self.colisiones.firma,
                 "portales": {d: list(rect_portal(d, m.datos)) for d, m in self.mapas.items()},
                 "destinos": {d: destinos(d) for d in self.mapas},
                 "viaje": self.publico_viaje(),
                 "jugadores": [dict(j, conectado=clave in self.conectados) for clave, j in self.jugadores.items()],
-                "caso": self.mision.publico(self.conectados),
+                "caso": caso,
                 "privado": self.mision.privado(identificador) if identificador else {}}

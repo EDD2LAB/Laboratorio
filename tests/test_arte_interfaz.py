@@ -60,7 +60,7 @@ class SeleccionCampana(unittest.TestCase):
         with mock.patch.object(self.menu, "tarjeta_rol", wraps=self.menu.tarjeta_rol) as tarjeta:
             self.menu.dibujar()
         self.assertEqual(tarjeta.call_count, len(ROLES))
-        self.assertEqual(set(self.menu.retratos), set(ROLES))
+        self.assertLessEqual(set(ROLES), set(self.menu.retratos))
         for rol in ROLES:
             self.assertIn("rol_solo:" + rol, self.menu.botones)
 
@@ -108,6 +108,12 @@ class ArteEnPartida(unittest.TestCase):
         encargo["materiales_colocados"] = True  # ya se usaron: el cesto queda libre
         self.assertEqual(suministros.clave_cesto(encargo), "vacio")
         self.assertEqual(suministros.clave_cesto(None), "vacio")
+
+    def test_los_materiales_de_los_encargos_tienen_su_imagen(self):
+        for material in ("tablas", "cuerdas", "herramientas", "agua", "provisiones", "pergaminos", "tinta", "farol"):
+            for tamano in (26, 34):
+                self.assertIn((material, tamano), suministros._sprites)
+                self.assertLessEqual(max(suministros._sprites[(material, tamano)].get_size()), tamano)
 
     def test_el_tronco_central_se_dibuja_como_cesto(self):
         marcados = [o for o in self.vista.decoraciones_zoom if o.get("cesto")]
@@ -301,7 +307,8 @@ class DistritoConecta(unittest.TestCase):
         for rol in ROLES:
             for orientacion in ORIENTACIONES_SPRITE:
                 self.assertEqual(len(personajes[rol][("caminar", orientacion)]), 8, (rol, orientacion))
-                self.assertEqual(len(personajes[rol][("reposo", orientacion)]), 1, (rol, orientacion))
+                # Ocho cuadros si tiene hojas de reposo; Elías Vega (Guardián) solo tiene su pose.
+                self.assertEqual(len(personajes[rol][("reposo", orientacion)]), 1 if rol == "guardian" else 8, (rol, orientacion))
         # Las diagonales usan sus propias filas donde el arte las tiene.
         mensajero = personajes["mensajero"]
         self.assertIsNot(mensajero[("caminar", "abajo_derecha")], mensajero[("caminar", "derecha")])

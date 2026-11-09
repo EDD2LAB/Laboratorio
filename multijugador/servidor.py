@@ -110,6 +110,9 @@ class ServidorSala:
                        for clave, s in self._sesiones.items()):
                     raise ValueError("Otro jugador acaba de elegir ese rol.")
                 jugador.update(rol=rol, listo=False)
+                # Aditivo: solo un id de variante; los clientes antiguos no lo envían.
+                if mensaje.get("apariencia") in ("hombre", "mujer"):
+                    jugador["apariencia"] = mensaje["apariencia"]
             elif tipo == "listo":
                 if not jugador["rol"]:
                     raise ValueError("Elige un rol antes de marcarte como listo.")

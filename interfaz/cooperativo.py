@@ -4,7 +4,7 @@ import re
 import time
 
 import pygame
-from interfaz import celular
+from interfaz import celular, dialogo_npc
 from interfaz.arte import dibujar_icono, expresion
 from interfaz.boton import Boton
 from interfaz.suministros import dibujar_carga
@@ -26,6 +26,8 @@ class PanelCooperativo:
         self.indice_pista = self.indice_destino = 0
         self.destino_fijo = None
         self._velo = None
+        self.dialogo = None  # conversación abierta con un NPC
+        self.comparando = False  # celular: panel de análisis o comparador de video
         self.botones = {}
         self.fuente = cargar_fuente(18)
         self.pequena = cargar_fuente(14)
@@ -96,6 +98,10 @@ class PanelCooperativo:
     def abrir(self, modo):
         self.modo = modo
         self.destino_fijo = None
+        if modo == "eco":
+            tronco = next((o for o in self.caso.get("objetivos", []) if o["tipo"] == "eco" and self.vista.cerca(o)), None)
+            if tronco:
+                self.vista.efectos_mapa.lanzar("eco", tronco["x"], tronco["y"] - 28)
 
     def actualizar(self):
         estrellas = self.caso.get("estrellas", 0)
@@ -141,9 +147,15 @@ class PanelCooperativo:
             self.vista.sonido({"tipo": "clasificacion", "correcta": bool(propia["correcta"])})
 
     def notificar(self, texto):
+        self.vista.narrador.decir(texto)
         self.toast, self.toast_hasta = texto, time.monotonic() + 6
 
     def recibir(self, acuse):
+        if acuse.get("ok") and acuse.get("vista") == "dialogo_npc":
+            dialogo_npc.abrir(self, acuse["dialogo"])
+            return
+        if acuse.get("silencioso"):
+            return
         self.notificar(acuse.get("mensaje", "Acción confirmada."))
         if acuse.get("ok") and acuse.get("resultado") in ("acierto", "error"):
             self.estado_indicador = acuse["resultado"]
@@ -207,7 +219,8 @@ class PanelCooperativo:
             if sprite is not None:
                 return sprite
         yo = next((j for j in self.vista.estado.get("mundo", {}).get("jugadores", []) if j["id"] == self.vista.identificador), {})
-        frames = arte.retratos.get(yo.get("rol"))
+        variante = {"habitante": "luma", "aspirante": "mira"}.get(yo.get("rol")) if yo.get("apariencia") == "mujer" else None
+        frames = arte.retratos.get(variante or yo.get("rol"))
         if frames:
             return expresion(frames, pygame.time.get_ticks())
         return self.vista.personajes.get(yo.get("rol"), {}).get(("reposo", "abajo"), [None])[0]
@@ -347,11 +360,20 @@ class PanelCooperativo:
             self.nodos_expediente = {}
             dibujar(self, superficie)
             return
+        if self.modo == "dialogo_npc" and self.dialogo:
+            dialogo_npc.dibujar(self, superficie)
+            return
         if self.activo and self.dimension == "presente" and self.modo != "portal":
             celular.dibujar(self, superficie)
             if time.monotonic() < self.toast_hasta:
                 pygame.draw.rect(superficie, (19, 39, 49), (20, 10, 920, 40), border_radius=7)
                 self.texto_lineas(superficie, self.toast, 32, 20, 895, self.pequena, (153, 222, 214))
+            return
+        if self.activo and self.modo == "fuente" and self.vista.arte.marco_dialogo is not None:
+            self._dibujar_dialogo(superficie)
+            if time.monotonic() < self.toast_hasta:
+                pygame.draw.rect(superficie, (10, 30, 23), (20, 10, 920, 40), border_radius=7)
+                self.texto_lineas(superficie, self.toast, 32, 20, 895, self.pequena, VERDE)
             return
         if self.activo and self._dibujar_pantalla_completa(superficie):
             if time.monotonic() < self.toast_hasta and self.modo not in ("clasificar", "clasificacion_resultado"):
@@ -506,6 +528,34 @@ class PanelCooperativo:
             pygame.draw.rect(superficie, (10, 30, 23), (20, 3, 920, 49), border_radius=7)
             self.texto_lineas(superficie, self.toast, 32, 8, 895, self.pequena, VERDE)
 
+    def _dibujar_dialogo(self, superficie):
+        """Conversación con un personaje en el marco de diálogo del juego."""
+        if self._velo is None:
+            self._velo = pygame.Surface((960, 720), pygame.SRCALPHA)
+            self._velo.fill((2, 12, 8, 150))
+        superficie.blit(self._velo, (0, 0))
+        marco = self.vista.arte.marco_dialogo
+        x, y = 50, 118
+        superficie.blit(marco, (x, y))
+        imagen = self.imagen_retrato(self.titulo)
+        if imagen is not None:
+            escala = min(136 / imagen.get_width(), 136 / imagen.get_height())
+            img = pygame.transform.scale(imagen, (max(1, round(imagen.get_width() * escala)), max(1, round(imagen.get_height() * escala))))
+            superficie.blit(img, img.get_rect(center=(x + 172, y + 174)))
+        tinta = (61, 37, 25)
+        fin = self.texto_lineas(superficie, self.titulo, x + 292, y + 158, 430, self.fuente, tinta)
+        self.texto_lineas(superficie, self.texto, x + 292, fin + 2, 430, self.pequena, tinta)
+        guia = self.privado.get("guia", {})
+        tutorial = guia.get("paso") == "tutorial"
+        opciones = [("seguir", "Llevar el farol") if tutorial else ("inventario", "Ver y compartir mis pistas"), ("cerrar", "Volver al mapa")]
+        for (clave, texto), caja in zip(opciones, (pygame.Rect(x + 292, y + 292, 412, 42), pygame.Rect(x + 292, y + 347, 412, 42))):
+            boton = Boton(texto, pygame.Surface(caja.size, pygame.SRCALPHA), caja.center)
+            boton.actualizar(self.vista.mouse)
+            self.botones[clave] = boton
+            render = self.pequena.render(texto, True, (146, 66, 20) if boton.hover else tinta)
+            superficie.blit(render, render.get_rect(center=caja.center))
+        self.texto_lineas(superficie, "Siguiente paso: " + guia.get("detalle", "Sigue la luz del mapa."), x + 40, y + 500, 780, self.fuente, VERDE)
+
     def dibujar_selector_destino(self, superficie, y):
         destinos = self.destinos_eco()
         self.indice_destino %= len(destinos)
@@ -576,6 +626,8 @@ class PanelCooperativo:
         return self.destinos_eco() if self.cerca_eco() and not self.destino_fijo else self.destinatarios()
 
     def manejar(self, evento, posicion, cliente):
+        if self.modo == "dialogo_npc" and self.dialogo:
+            return dialogo_npc.manejar(self, evento, posicion, cliente)
         if self.modo == "reparar" and evento.type == pygame.KEYDOWN:
             if evento.key in (pygame.K_e, pygame.K_SPACE):
                 cliente.actuar("intento_reparacion", tiempo_aguja_ms=round(self.tiempo_aguja_ms, 1))
@@ -680,6 +732,10 @@ class PanelCooperativo:
                                categoria=clave.split(":", 1)[1])
             elif clave == "caldero":
                 self.abrir("caldero")
+            elif clave == "analizar":
+                self.abrir("analizar")
+            elif clave == "comparar":
+                self.comparando = not self.comparando
             elif clave.startswith("viajar:"):
                 self.vista.viajar(cliente, clave.split(":", 1)[1])
             elif clave == "cancelar_portal":

@@ -177,6 +177,10 @@ class BotCooperativo:
 
         self.ultimo_error = ""
         self.reintentos = 0
+        if self._accion == "hablar_npc" and acuse.get("dialogo"):
+            # Los bots no tienen ventana: escuchan y dan la primera respuesta útil.
+            self._adaptador.solicitar("responder_npc", ahora, npc=acuse["dialogo"]["npc"],
+                                      respuesta=acuse["dialogo"]["respuestas"][0])
         if plan.get("marca_compartida"):
             self.compartidas.setdefault(self._ronda, set()).add(plan["marca_compartida"])
         if plan.get("marca_voto"):

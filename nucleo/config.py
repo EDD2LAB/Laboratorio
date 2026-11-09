@@ -8,7 +8,6 @@ ANCHO, ALTO = 960, 720
 RELACION_ASPECTO = ANCHO / ALTO
 FPS = 60
 RUTA_ASSETS = os.path.join(str(RAIZ), "Imagenes")
-RUTA_FUENTE = os.path.join(str(RAIZ), "Fuentes", "determination.ttf")
 
 CREMA = (255, 243, 210)
 TINTA = (61, 37, 25)

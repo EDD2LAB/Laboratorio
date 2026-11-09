@@ -125,6 +125,7 @@ class RecursosEscenas:
                                              ("error", "IndicadorError.png"))}
         self.indicadores_puente = indicador
         self.puente_roto = cargar("Puentes/Puente1Roto.png", requerido=False)
+        self.puente_det = cargar("Puentes/Puente1Det.png", requerido=False)
         self.efecto_reparacion = cargar_spritesheet_frames("Animaciones/Efectos/EfectoReparacion.png", 8)
         try:
             self.materiales = SistemaReparacionPuente.recortar_spritesheet_materiales(

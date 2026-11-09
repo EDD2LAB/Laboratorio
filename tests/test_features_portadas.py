@@ -271,21 +271,40 @@ class PortalTests(unittest.TestCase):
         p.actualizar(p.ultima + .1)
         self.assertIsNone(p.viaje)
 
-    def test_bots_viajan_con_el_humano_y_lo_acompanan(self):
+    def test_bots_viajan_y_te_dejan_una_sola_pista(self):
         from multijugador.partida_local import ClienteCampanaLocal
         cliente = ClienteCampanaLocal("Prueba", "guardian")
         p = cliente._partida
         self.ir_al_portal(p, "local")
         cliente.actuar("usar_portal", destino=PRESENTE)
         self.assertEqual({j["dimension"] for j in p.jugadores.values()}, {PRESENTE})
-        for _ in range(40):
+        for _ in range(500):
             cliente.actualizar(.15)
+        presente = p.mision.presente
+        self.assertEqual(len(presente.halladas), 2)  # la tercera te toca a ti
+        self.assertTrue(all(i != "local" for i in presente.halladas.values()))
+        self.assertIsNone(presente.resultado)  # la decisión no la toman ellos
         humano = p.jugadores["local"]
         for identificador, bot in cliente._bots.bots.items():
             self.assertEqual(bot.estado, "ACOMPANANDO")
             j = p.jugadores[identificador]
             self.assertLessEqual(((j["x"] - humano["x"]) ** 2 + (j["y"] - humano["y"]) ** 2) ** .5, 110)
         cliente.cerrar()
+
+    def test_con_dos_personas_los_bots_dejan_una_pista_a_cada_una(self):
+        from bots.gestor_bots import GestorBots
+        roles = ("guardian", "mensajero", "habitante", "aspirante")
+        p = PartidaMovimiento([dict(id=str(i), nombre=str(i), rol=roles[i]) for i in range(2)]
+                              + [dict(id="bot_" + r, nombre=r, rol=r, controlador="bot") for r in roles[2:]], 0)
+        gestor = GestorBots(p, {"0", "1"})
+        p.colisiones_de(PRESENTE)
+        p._viajar_equipo(LA_COPA, PRESENTE)
+        ahora = 0
+        for _ in range(500):
+            ahora += .15
+            p.actualizar(ahora)
+            gestor.actualizar(ahora, .15)
+        self.assertEqual(len(p.mision.presente.halladas), 1)
 
     def test_portal_funciona_antes_y_despues_y_conserva_indicadores(self):
         h, p = Ayuda(), crear(2, mapa_real=True)

@@ -32,6 +32,12 @@ FILAS = 11
 BARRA_ACCIONES = pygame.Rect(40, 588, 600, 124)  # botones y rótulos del arte
 ACCIONES_Y = 628
 
+# Efectos del celular (Estados/fx_*.png): 8 cuadros de 128x128.
+EFECTOS = ("publicar_avion", "likes", "alcance_ondas", "fuego_viral", "campana", "comentario")
+CUADRO_EFECTO_MS = 70
+MAX_EFECTOS = 6
+AVATARES_COMENTARIOS = ((110, 491), (110, 532))
+
 # Botón del arte -> (nombre, zona, imagen, cuadro si la imagen es una hoja de 8).
 OPCIONES = {
     "compartir": ("Publicar", pygame.Rect(58, 595, 130, 71), "Estados/fx_propagacion_tarjeta_8f_1024x128.png", 4),
@@ -43,6 +49,48 @@ OPCIONES = {
 
 def nombre_opcion(clave):
     return OPCIONES[clave][0] if clave in OPCIONES else clave
+
+
+class EfectosCelular:
+    """Efectos disparados por evento: cada uno una vez y con un tope activo."""
+
+    def __init__(self, cuadros):
+        self.cuadros = cuadros
+        self.activos = []
+        self.vistos = set()
+
+    def lanzar(self, clave, *secuencia):
+        """``secuencia``: (nombre, centro, retraso en ms). Una sola vez por clave."""
+        if clave in self.vistos:
+            return False
+        self.vistos.add(clave)
+        ahora = pygame.time.get_ticks()
+        for nombre, centro, retraso in secuencia:
+            if len(self.activos) < MAX_EFECTOS and self.cuadros.get(nombre):
+                self.activos.append((nombre, centro, ahora + retraso))
+        return True
+
+    def por_resultado(self, resultado):
+        """Publicar se vuelve avión, likes y alcance; lo falso, además, fuego viral."""
+        if resultado.get("opcion") != "compartir":
+            return
+        secuencia = [("publicar_avion", (123, 560), 0), ("likes", (170, 430), 450), ("alcance_ondas", (130, 383), 800)]
+        if not resultado.get("correcto"):
+            secuencia.append(("fuego_viral", (565, 118), 1100))
+        self.lanzar(("resultado", resultado.get("evento_id")), *secuencia)
+
+    def dibujar(self, superficie):
+        ahora = pygame.time.get_ticks()
+        siguen = []
+        for nombre, centro, inicio in self.activos:
+            cuadros = self.cuadros[nombre]
+            indice = (ahora - inicio) // CUADRO_EFECTO_MS
+            if indice >= len(cuadros):
+                continue
+            siguen.append((nombre, centro, inicio))
+            if indice >= 0:
+                superficie.blit(cuadros[indice], cuadros[indice].get_rect(center=centro))
+        self.activos = siguen
 
 
 class ArteCelular:
@@ -72,6 +120,25 @@ class ArteCelular:
                 factor = min(100 / imagen.get_width(), 84 / imagen.get_height())
                 self.iconos[clave] = pygame.transform.scale(
                     imagen, (round(imagen.get_width() * factor), round(imagen.get_height() * factor)))
+        self.efectos = EfectosCelular({
+            nombre: cargar_spritesheet_frames(f"Estados/fx_{nombre}_8f_1024x128.png", 8) for nombre in EFECTOS})
+        self.manipulado = icono("Estados/estado_contenido_manipulado.png", (104, 104))
+        self.pistas_vistas = 0
+        hoja = cargar_imagen("Iconos/Nuevos/avatares_cuentas.png", requerido=False)
+        self.avatares = []
+        if hoja is None:
+            print("[Arte] Falta la imagen: Iconos/Nuevos/avatares_cuentas.png")
+        else:
+            ancho = hoja.get_width() // 4
+            for i in range(4):
+                avatar = hoja.subsurface((i * ancho, 0, ancho, hoja.get_height()))
+                avatar = avatar.subsurface(avatar.get_bounding_rect())
+                self.avatares.append(pygame.transform.scale(avatar, (32, 32)))
+        self.analisis = cargar_imagen("Elementos presente/PanelAnaliDeContenido.png", (960, 720), requerido=False)
+        self.comparador = cargar_imagen("Elementos presente/ComparadordeVideos.png", (960, 720), requerido=False)
+        verificaciones = "Elementos presente/Verificaciones/"
+        self.sello_manipulado = cargar_spritesheet_frames(verificaciones + "ContenidoManipulado_spritesheet.png", 4)
+        self.sello_correcto = cargar_spritesheet_frames(verificaciones + "VerificaciónCorrecta_spritesheet.png", 4)
         self.retratos = {}  # (id de la imagen) -> retrato ya ajustado al recuadro
 
     def ajustar(self, imagen):
@@ -133,7 +200,7 @@ def _boton(panel, superficie, clave, texto, centro, ancho=300, activo=True, alto
 
 def _menu(panel, superficie, contexto, inventario):
     """Tendencias es el menú del celular; las pistas se abren desde ahí."""
-    filas = [("introduccion", "Misión"), ("inventario", "Mis pistas"), ("caldero", "Decidir")]
+    filas = [("introduccion", "Misión"), ("inventario", "Mis pistas"), ("caldero", "Decidir"), ("analizar", "Analizar")]
     filas += [("pista:" + str(i), pista["titulo"].split(" · ")[0]) for i, pista in enumerate(inventario)]
     transparente = pygame.Surface((FILA_ANCHO, FILA_ALTO), pygame.SRCALPHA)
     for i in range(FILAS):
@@ -212,9 +279,42 @@ def falta_para_decidir(panel, contexto):
     return "" if panel.vista.cerca_id("presente:pantalla") else "Acércate a la pantalla pública para elegir."
 
 
+def _sospecha_confirmada(panel):
+    return any(p["id"] == "fuente_ausente" for p in panel.inventario())
+
+
+def _sello(superficie, cuadros, centro):
+    if cuadros:
+        cuadro = cuadros[(pygame.time.get_ticks() // 160) % len(cuadros)]
+        superficie.blit(cuadro, cuadro.get_rect(center=centro))
+
+
+def _analizar(panel, superficie, contexto, arte):
+    """Panel de análisis y comparador de video, con lo que el equipo ya averiguó."""
+    fondo = arte.comparador if panel.comparando else arte.analisis
+    if fondo is not None:
+        superficie.blit(fondo, (0, 0))
+    sospecha = _sospecha_confirmada(panel)
+    resultado = contexto.get("resultado") or {}
+    if resultado.get("correcto"):
+        _sello(superficie, arte.sello_correcto, (326, 150))
+    elif sospecha:
+        _sello(superficie, arte.sello_manipulado, (326, 150))
+    # La franja tapa los botones de muestra del arte, que aquí no hacen nada.
+    franja = pygame.Rect(16, 612, 928, 100)
+    pygame.draw.rect(superficie, (19, 39, 49), franja, border_radius=8)
+    pygame.draw.rect(superficie, TURQUESA, franja, 2, border_radius=8)
+    texto = next((p["texto"] for p in panel.inventario() if p["id"] == "fuente_ausente"),
+                 "Habla con Darío Veraz para analizar el origen de la imagen.")
+    _texto(panel, superficie, texto, franja.x + 14, franja.y + 14, panel.pequena, (153, 222, 214), 440)
+    _boton(panel, superficie, "comparar", "Ver análisis" if panel.comparando else "Comparar videos", (590, 640), 190, alto=34)
+
+
 def _decidir(panel, superficie, contexto, arte):
     _perfil(panel, superficie, "Publicación viral")
-    _imagen(superficie, arte.publicacion, arte)
+    _imagen(superficie, arte.manipulado if _sospecha_confirmada(panel) else arte.publicacion, arte)
+    for i, avatar in enumerate(arte.avatares):  # cuentas distintas que repiten lo mismo
+        superficie.blit(avatar, (300 + i * 40, 414))
     y = _texto(panel, superficie, contexto.get("titulo", ""), TEXTO_X, TEXTO_Y, panel.fuente, TINTA)
     _texto(panel, superficie, contexto.get("noticia", ""), TEXTO_X, y + 6)
     _alcance(panel, superficie, f"Ya eligieron {contexto.get('votos_emitidos', 0)} de {contexto.get('votantes', 0)}")
@@ -306,9 +406,25 @@ def dibujar(panel, superficie):
     arte = panel.vista.celular
     contexto = panel.contexto()
     superficie.blit(arte.feed if panel.modo == "caldero" else arte.feed_sin_botones, (0, 0))
-    _menu(panel, superficie, contexto, panel.inventario())
-    PANTALLAS.get(panel.modo, _mision)(panel, superficie, contexto, arte)
+    if panel.modo == "analizar":
+        _analizar(panel, superficie, contexto, arte)
+        pestanas = {"inventario": "Mis pistas", "caldero": "Decidir"}
+        for i, (clave, nombre) in enumerate(pestanas.items()):
+            _boton(panel, superficie, clave, nombre, (590 + i * 200, 684), 190, alto=34)
+    else:
+        for centro, avatar in zip(AVATARES_COMENTARIOS, arte.avatares):
+            superficie.blit(avatar, avatar.get_rect(center=centro))
+        _menu(panel, superficie, contexto, panel.inventario())
+        PANTALLAS.get(panel.modo, _mision)(panel, superficie, contexto, arte)
     if panel.modo != "clasificacion_resultado":
-        boton = Boton("Guardar el celular", centro=(795, 700), fuente=panel.pequena, tamano=(232, 30), paleta=PALETA)
+        centro, ancho = ((790, 640), 190) if panel.modo == "analizar" else ((795, 700), 232)
+        boton = Boton("Guardar el celular", centro=centro, fuente=panel.pequena, tamano=(ancho, 30), paleta=PALETA)
         boton.dibujar(superficie, panel.vista.mouse)
         panel.botones["cerrar"] = boton
+    if panel.modo == "fuente":
+        arte.efectos.lanzar(("fuente", panel.titulo, panel.texto), ("comentario", (110, 470), 0))
+    pistas = contexto.get("pistas", 0)
+    if pistas > arte.pistas_vistas:
+        arte.pistas_vistas = pistas
+        arte.efectos.lanzar(("pista", pistas), ("campana", (795, 175), 0))
+    arte.efectos.dibujar(superficie)

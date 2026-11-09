@@ -3,7 +3,7 @@
 import os
 import pygame
 import unicodedata
-from nucleo.config import RUTA_ASSETS, RUTA_FUENTE
+from nucleo.config import RUTA_ASSETS
 
 
 def normalizar_ruta(ruta):
@@ -86,11 +86,20 @@ def cargar_spritesheet_frames(nombre, cantidad=8):
     ]
 
 
+# Letra de lectura clara, por orden de preferencia. Son fuentes del sistema: en
+# un equipo sin ellas se usa la que trae Pygame, para que el juego nunca falle.
+FUENTES_LEGIBLES = ("seguisb.ttf", "arialbd.ttf", "verdanab.ttf", "tahomabd.ttf")
+
+
+def _ruta_fuente_legible():
+    carpeta = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "Fonts")
+    return next((os.path.join(carpeta, nombre) for nombre in FUENTES_LEGIBLES
+                 if os.path.isfile(os.path.join(carpeta, nombre))), None)
+
+
 def cargar_fuente(tamano):
-    """Usa la tipografía pixel-art incluida con el proyecto."""
-    if not os.path.isfile(RUTA_FUENTE):
-        raise RuntimeError(f"No se encontró la fuente del juego: {RUTA_FUENTE}")
-    return pygame.font.Font(RUTA_FUENTE, tamano)
+    """Letra de toda la interfaz; ``None`` es la fuente incluida en Pygame."""
+    return pygame.font.Font(_ruta_fuente_legible(), tamano)
 
 
 def cargar_icono_hud(nombre):

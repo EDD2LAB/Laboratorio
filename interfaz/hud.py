@@ -19,6 +19,7 @@ class HUDIndicadores:
         self.negativos = set(negativos) if negativos is not None else NEGATIVOS
         self.colores_avisos = colores_avisos or ((111, 220, 126), (242, 113, 90))
         self.etiquetar_avisos = etiquetar_avisos
+        self.alto_contraste = False
         self.etiquetas = {}
         self.valores = {}
         self.objetivos = {}
@@ -84,7 +85,9 @@ class HUDIndicadores:
                 border_radius=10,
             )
 
-        if es_negativo:
+        if self.alto_contraste:
+            color = (255, 255, 255) if not es_negativo else (255, 225, 0)
+        elif es_negativo:
             color = (221, 82, 68) if valor >= 55 else (215, 159, 69)
         else:
             color = (102, 200, 112) if valor >= 35 else (225, 171, 69)
@@ -120,8 +123,12 @@ class HUDIndicadores:
             progreso = aviso["vida"] / 2.8
             movimiento = int((1 - progreso) * 22) + indice * 22
             color = self.colores_avisos[0] if aviso["beneficioso"] else self.colores_avisos[1]
+            if self.alto_contraste:
+                color = (255, 255, 120) if aviso["beneficioso"] else (255, 255, 255)
             nombre = (self.etiquetas.get(aviso["nombre"]) if self.etiquetar_avisos else None) or aviso["nombre"].replace("_", " ").capitalize()
             texto = f"{'+' if aviso['cambio'] > 0 else ''}{aviso['cambio']} {nombre}"
+            if self.alto_contraste:  # la dirección no depende solo del color
+                texto = ("▲ " if aviso["beneficioso"] else "▼ ") + texto
             render = self.fuente.render(texto, True, color)
             sombra = self.fuente.render(texto, True, (12, 20, 16))
             render.set_alpha(min(255, round(255 * progreso * 2)))

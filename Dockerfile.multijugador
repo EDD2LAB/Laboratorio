@@ -3,7 +3,7 @@ WORKDIR /app
 COPY multijugador/ /app/multijugador/
 COPY Hitboxes/Mapas/ /app/Hitboxes/Mapas/
 # Árbol de clasificación compartido con el modo de un jugador (sin Pygame).
-COPY logica/__init__.py logica/Arboles.py /app/logica/
+COPY logica/__init__.py logica/Arboles.py logica/conversaciones.py /app/logica/
 COPY logica/expediente_avl.py logica/sorteo_partida.py /app/logica/
 COPY datos/casos_expediente.json /app/datos/
 # Bots de relleno de las salas (sin Pygame).

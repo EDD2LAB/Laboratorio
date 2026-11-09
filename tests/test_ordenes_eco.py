@@ -276,7 +276,7 @@ class PantallaYMenuTests(unittest.TestCase):
             from interfaz.inicio import MenuInicio
             menu = MenuInicio()
             menu.dibujar()
-            self.assertEqual(set(menu.botones), {"campana_local", "multi", "ajustes", "salir"})
+            self.assertEqual(set(menu.botones), {"campana_local", "multi", "ajustes", "ayuda_f1", "salir"})
             menu.accionar("ajustes")
             menu.dibujar()
             self.assertIn("pausa:como_jugar", menu.botones)

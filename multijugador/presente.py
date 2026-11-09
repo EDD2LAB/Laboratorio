@@ -8,6 +8,7 @@ de La Copa; ``tipo_pocion`` se sigue publicando por compatibilidad de protocolo.
 from collections import Counter
 
 from . import clasificacion
+from .dialogos import identificador_npc
 from .presentacion import aplicar_efectos, tipo_pocion
 
 PISTAS = (
@@ -46,6 +47,7 @@ EFECTOS_CLASIFICACION = {
     False: {"sabiduria": -6, "confianza": -5, "desinformacion": 6, "susurros_falsos": 4},
 }
 EVENTO = "publicacion_presente"
+OTROS_NPC = {"Influencer": "Lía Nova", "Mensajero urbano": "Mateo Ríos"}
 
 
 class MisionPresente:
@@ -65,6 +67,17 @@ class MisionPresente:
         x, y = colisiones.inicio_libre(x, y, ocupadas)
         self.objetivos.append({"id": "presente:pantalla", "nombre": "Pantalla pública · decidir", "tipo": "caldero",
                                "dimension": "presente", "x": round(x), "y": round(y)})
+        # Quienes dan pista hablan donde está su luz; los demás, donde los puso el editor.
+        self.npcs = [{"id": identificador_npc(o["nombre"].split(" · ")[0]), "nombre": o["nombre"].split(" · ")[0],
+                      "dimension": "presente", "x": o["x"], "y": o["y"], "pista": o["pista"]}
+                     for o in self.objetivos if o["tipo"] == "fuente"]
+        rect = datos.get("rect_mapa") or (0, 0, 960, 720)
+        for clave, nombre in OTROS_NPC.items():
+            sitio = datos.get("npc_positions", {}).get(clave)
+            if sitio:
+                x, y = colisiones.inicio_libre(round(rect[0] + sitio["rx"] * rect[2]),
+                                               round(rect[1] + (sitio["ry"] + sitio.get("rh", .12) / 2) * rect[3]), ocupadas)
+                self.npcs.append({"id": identificador_npc(nombre), "nombre": nombre, "dimension": "presente", "x": round(x), "y": round(y)})
         self.halladas = {}
         self.votos = {}
         self.resultado = None
