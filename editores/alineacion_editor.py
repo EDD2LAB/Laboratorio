@@ -1,5 +1,5 @@
 """
-Editor visual de alineación — La Copa
+Editor visual de alineación — Timeless Glitch
 ==========================================
 PANTALLA 1 — Elige el objeto interactuable y el sprite/animación.
 PANTALLA 2 — Alinea, escala y guarda con Enter.
@@ -687,7 +687,7 @@ def main():
     pygame.init()
     pygame.key.set_repeat(170, 26)
     screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
-    pygame.display.set_caption("Editor de Alineación — La Copa")
+    pygame.display.set_caption("Editor de Alineación — Timeless Glitch")
 
     font_sm = pygame.font.SysFont("Consolas", 15)
     font_md = pygame.font.SysFont("Consolas", 18, bold=True)

@@ -1,4 +1,4 @@
-"""Botones reutilizables para todas las escenas de La Copa."""
+"""Botones reutilizables para todas las escenas de Timeless Glitch."""
 
 import pygame
 

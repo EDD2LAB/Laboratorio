@@ -1,2 +1,2 @@
-"""Componentes de interfaz reutilizables de La Copa."""
+"""Componentes de interfaz reutilizables de Timeless Glitch."""
 

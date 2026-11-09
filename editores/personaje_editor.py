@@ -1,5 +1,5 @@
 """
-Editor de personajes y hitboxes — La Copa
+Editor de personajes y hitboxes — Timeless Glitch
 - Selector visual de personajes/imágenes al inicio.
 - Escala e hitboxes independientes por imagen seleccionada.
 - Assets de minijuego (Corazon/Puño/Mensaje): solo hitbox roja, sin amarilla,
@@ -712,7 +712,7 @@ def main():
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     screen = pygame.display.set_mode((1400, 860))
-    pygame.display.set_caption("Editor de personajes — La Copa")
+    pygame.display.set_caption("Editor de personajes — Timeless Glitch")
     clock = pygame.time.Clock()
 
     if len(sys.argv) > 1:
