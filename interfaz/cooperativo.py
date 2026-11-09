@@ -4,7 +4,7 @@ import re
 import time
 
 import pygame
-from interfaz import analisis_manipulado, celular, dialogo_npc, terminal_nucleo
+from interfaz import analisis_manipulado, celular, dialogo_npc, informe_final, terminal_nucleo
 from interfaz.arte import dibujar_icono, expresion
 from interfaz.boton import Boton
 from interfaz.suministros import dibujar_carga
@@ -14,6 +14,7 @@ from multijugador.reparacion import CONFIGURACION as CONFIG_REPARACION
 ORO = (237, 185, 87)
 CREMA = (255, 243, 210)
 VERDE = (130, 222, 158)
+SEGUNDOS_ANTES_DEL_INFORME = 4
 
 
 class PanelCooperativo:
@@ -29,6 +30,12 @@ class PanelCooperativo:
         self.dialogo = None  # conversación abierta con un NPC
         self.caso_presente = None  # índice del caso de Distrito Conecta a la vista
         self.terminal = None  # terminal abierta en Ciudad Núcleo
+        self.informe = None  # último informe recibido del servidor
+        self.informe_inicio = 0
+        self.informe_exportado = ""
+        self.arte_informe = None
+        self.pedir_informe_en = None  # se abre poco después de resolver Ciudad Núcleo
+        self.evento_futuro_visto = None
         self.botones = {}
         self.fuente = cargar_fuente(18)
         self.pequena = cargar_fuente(14)
@@ -134,6 +141,11 @@ class PanelCooperativo:
             if clave != self.resultado_visto:
                 self.resultado_visto = clave
                 self.abrir("resultado")
+        futuro = self.caso.get("futuro") or {}
+        if futuro.get("fin") and futuro["resultado"]["evento_id"] != self.evento_futuro_visto:
+            if self.evento_futuro_visto is not None or self.dimension == "futuro":
+                self.pedir_informe_en = time.monotonic() + SEGUNDOS_ANTES_DEL_INFORME
+            self.evento_futuro_visto = futuro["resultado"]["evento_id"]
         distrito = self.caso.get("presente") or {}
         indice = (distrito.get("evento") or {}).get("indice")
         if indice != self.caso_presente:
@@ -165,6 +177,11 @@ class PanelCooperativo:
         self.toast, self.toast_hasta = texto, time.monotonic() + 6
 
     def recibir(self, acuse):
+        if acuse.get("ok") and acuse.get("vista") == "informe":
+            self.informe, self.informe_exportado = acuse["informe"], ""
+            self.informe_inicio = pygame.time.get_ticks()
+            self.modo = "informe"
+            return
         if acuse.get("ok") and acuse.get("vista") == "dialogo_npc":
             dialogo_npc.abrir(self, acuse["dialogo"])
             return
@@ -374,6 +391,9 @@ class PanelCooperativo:
             self._abierto = 0
         elif not getattr(self, "_abierto", 0):
             self._abierto = time.monotonic()
+        if self.modo == "informe" and self.informe:
+            informe_final.dibujar(self, superficie)
+            return
         if self.modo == "expediente":
             from interfaz.expediente import dibujar
             self.nodos_expediente = {}
@@ -697,7 +717,11 @@ class PanelCooperativo:
         for clave, boton in self.botones.items():
             if not boton.fue_clickeado(posicion):
                 continue
-            if clave == "expediente_cerrar":
+            if clave == "informe_cerrar":
+                self.modo = None
+            elif clave == "informe_exportar":
+                self.informe_exportado = str(informe_final.exportar(self.informe))
+            elif clave == "expediente_cerrar":
                 self.modo = None
             elif clave == "expediente_prueba":
                 self.prueba_expediente += 1

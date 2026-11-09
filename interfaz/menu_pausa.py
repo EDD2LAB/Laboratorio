@@ -200,6 +200,9 @@ class MenuPausa:
         elif clave.startswith("volumen:"):
             _, canal, signo = clave.split(":")
             self.cambiar_volumen(canal, .1 if signo == "+" else -.1)
+        elif clave == "expediente_final" and self.en_partida:
+            self.cerrar()
+            self.menu.cliente.actuar("pedir_informe")
         elif clave == "salir_partida":
             self.cerrar()
             self.menu.accionar("volver")
@@ -227,11 +230,13 @@ class MenuPausa:
         aviso = ("La campaña está detenida." if menu.campana_local else
                  "Tus compañeros siguen jugando.")
         menu.texto(aviso, 480, 200, 16, CREMA, True)
-        self._boton("continuar", "Continuar", (480, 270))
-        self._boton("ajustes", "Ajustes", (480, 340))
-        self._boton("ayuda_f1", "Reglas y clasificación · F1", (480, 397), 340)
-        self._boton("ayuda", "Ayuda y controles", (480, 455))
-        self._boton("confirmar_salida", "Salir", (480, 525))
+        self._boton("continuar", "Continuar", (480, 258))
+        self._boton("ajustes", "Ajustes", (480, 316))
+        self._boton("ayuda_f1", "Reglas y clasificación · F1", (480, 370), 340)
+        self._boton("ayuda", "Ayuda y controles", (480, 424))
+        if self.en_partida:
+            self._boton("expediente_final", "Ver expediente final", (480, 478))
+        self._boton("confirmar_salida", "Salir", (480, 545))
 
     def _dibujar_ajustes(self):
         menu = self.menu
@@ -272,13 +277,41 @@ class MenuPausa:
         self._boton("accesibilidad", "Accesibilidad", (620, 592), 260, alto=36, tamano_fuente=18)
         self._boton("volver", "Volver", (480, 642), 220, alto=40)
 
+    def _dibujar_ejemplo_avl(self):
+        """Ejemplo de 3 nodos: la cadena desequilibrada y su rotación."""
+        menu = self.menu
+        lienzo = menu.lienzo
+        menu.texto("El libro de casos guarda cada caso por su gravedad.", 480, 150, 18, CREMA, True)
+        menu.texto("Si una rama crece demasiado, el árbol rota para seguir equilibrado.", 480, 178, 16, CREMA, True)
+
+        def nodo(valor, punto, color=ORO):
+            pygame.draw.circle(lienzo, color, punto, 30)
+            render = menu.fuentes[24].render(str(valor), True, (13, 35, 28))
+            lienzo.blit(render, render.get_rect(center=punto))
+
+        izquierda = ((240, 260), (320, 360), (400, 460))
+        pygame.draw.line(lienzo, CREMA, izquierda[0], izquierda[1], 4)
+        pygame.draw.line(lienzo, CREMA, izquierda[1], izquierda[2], 4)
+        for valor, punto in zip((2, 4, 7), izquierda):
+            nodo(valor, punto)
+        menu.texto("Se insertan 2, 4 y 7: desequilibrado", 300, 530, 16, CREMA, True)
+        menu.texto("Rotación a la izquierda  →", 480, 335, 16, ORO, True)
+        raiz, menor, mayor = (680, 290), (600, 410), (760, 410)
+        pygame.draw.line(lienzo, CREMA, raiz, menor, 4)
+        pygame.draw.line(lienzo, CREMA, raiz, mayor, 4)
+        nodo(4, raiz, (130, 222, 158))
+        nodo(2, menor, (130, 222, 158))
+        nodo(7, mayor, (130, 222, 158))
+        menu.texto("El 4 sube y el árbol queda equilibrado", 680, 530, 16, CREMA, True)
+        menu.texto("Menor a la izquierda, mayor a la derecha; recorrerlo en orden da los casos de menor a mayor gravedad.", 480, 590, 14, CREMA, True)
+
     def _dibujar_ayuda_f1(self):
         """Ayuda rápida (F1): reglas y árbol de clasificación."""
         menu = self.menu
         menu.panel(pygame.Rect(100, 20, 760, 680))
         menu.texto("AYUDA", 480, 34, 32, ORO, True)
-        for indice, (clave, nombre, icono) in enumerate((("reglas", "Reglas", "libro"), ("clasificacion", "Clasificación", "arbol"))):
-            centro = (370 + indice * 220, 104)
+        for indice, (clave, nombre, icono) in enumerate((("reglas", "Reglas", "libro"), ("clasificacion", "Clasificación", "arbol"), ("avl", "Árbol AVL", "arbol"))):
+            centro = (260 + indice * 220, 104)
             activa = clave == self.pestana_ayuda
             self._boton("pestana:" + clave, f"» {nombre} «" if activa else nombre, centro, 200, alto=38, tamano_fuente=18)
             imagen = menu.iconos_ajustes.get(icono)
@@ -288,6 +321,8 @@ class MenuPausa:
             if menu.arbol_clasificacion is None:
                 menu.arbol_clasificacion = menu.imagen("Clasificación/CLasificaciónCompl.png", (720, 500))
             menu.lienzo.blit(menu.arbol_clasificacion, menu.arbol_clasificacion.get_rect(center=(480, 380)))
+        elif self.pestana_ayuda == "avl":
+            self._dibujar_ejemplo_avl()
         else:
             for indice, (nombre, _) in enumerate(PAGINAS_COMO_JUGAR):
                 texto = f"» {nombre} «" if indice == self.pagina_ayuda else nombre

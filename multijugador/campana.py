@@ -181,6 +181,29 @@ class CampanaCopa(MisionPuente):
             return self.presente.siguiente(identificador, self.presentes_presente)
         raise ValueError("Acción desconocida.")
 
+    def informe(self):
+        """Datos del informe final: los casos de las tres eras, resueltos o no."""
+        from .expediente import CATALOGO
+        from .nucleo import CASO, OPCIONES as OPCIONES_NUCLEO, TITULO
+        from .presente import EVENTOS, OPCIONES as OPCIONES_PRESENTE
+        guardados = {c.id: c for c in list(self.expediente.arbol.casos.values()) + self.expediente.pendientes}
+        definidos = [(c[0], c[1], "La Copa", self.opciones) for c in self.casos]
+        definidos += [(e["id"], e["titulo"], "Distrito Conecta", OPCIONES_PRESENTE) for e in EVENTOS]
+        definidos.append((CASO, TITULO, "Ciudad Núcleo", OPCIONES_NUCLEO))
+        filas = []
+        for identificador, titulo, era, opciones in definidos:
+            ficha, caso = CATALOGO[identificador], guardados.get(identificador)
+            datos = caso.datos if caso else {}
+            resultado = datos.get("resultado", {})
+            filas.append({"id": identificador, "titulo": titulo, "era": era, "tipo": ficha["tipo"], "gravedad": ficha["gravedad"],
+                          "resuelto": caso is not None, "orden": caso.orden if caso else len(guardados) + len(filas),
+                          "decision": opciones.get(resultado.get("opcion"), resultado.get("opcion")),
+                          "correcto": bool(resultado.get("correcto")), "norma": datos.get("ley"), "pena": datos.get("sancion")})
+        filas.sort(key=lambda f: (f["gravedad"], f["orden"]))
+        arbol = self.expediente.arbol.publico()
+        return {"casos": filas, "raiz": arbol["raiz"], "total_arbol": arbol["total"],
+                "inorden": [c.id for c in self.expediente.arbol.inorden()]}
+
     def _clasificar(self, identificador, opcion):
         if not self.resultado:
             raise ValueError("Primero decidan qué contar a la aldea.")
@@ -241,6 +264,8 @@ class CampanaCopa(MisionPuente):
             if self.cancelar_viaje is None:
                 raise ValueError("El portal no está disponible.")
             return self.cancelar_viaje(identificador)
+        if accion == "pedir_informe":
+            return {"mensaje": "", "vista": "informe", "informe": self.informe()}
         if accion == "entrar_edificio":
             return self.entrar_edificio(identificador, solicitud.get("edificio"))
         if accion == "salir_edificio":

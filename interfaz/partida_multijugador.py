@@ -758,6 +758,9 @@ class VistaPartida:
             self.mostrar_detalles and self.dimension == LA_COPA and self.boton_guia.collidepoint(posicion)))
 
     def actualizar(self, segundos, cliente):
+        if self.panel.pedir_informe_en is not None and time.monotonic() >= self.panel.pedir_informe_en:
+            self.panel.pedir_informe_en = None
+            cliente.actuar("pedir_informe")
         teclas = pygame.key.get_pressed()
         dx = int(tecla_activa(teclas, pygame.K_d, pygame.K_RIGHT)) - int(tecla_activa(teclas, pygame.K_a, pygame.K_LEFT))
         dy = int(tecla_activa(teclas, pygame.K_s, pygame.K_DOWN)) - int(tecla_activa(teclas, pygame.K_w, pygame.K_UP))

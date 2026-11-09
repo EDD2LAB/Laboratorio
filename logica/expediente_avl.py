@@ -96,6 +96,19 @@ class ExpedienteAVL:
         self.casos[caso.id] = caso
         return True
 
+    def inorden(self):
+        """Casos del árbol de menor a mayor clave."""
+        orden = []
+
+        def recorrer(nodo):
+            if nodo is not None:
+                recorrer(nodo.izquierda)
+                orden.append(nodo.caso)
+                recorrer(nodo.derecha)
+
+        recorrer(self.raiz)
+        return orden
+
     def publico(self):
         def recorrer(nodo):
             if nodo is None:
