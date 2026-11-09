@@ -1,7 +1,9 @@
 """Mensajes JSON delimitados por nueva línea; sin dependencias externas."""
 import json
 
-VERSION = 9  # 9: Mira jugable, Kael NPC y separación autoritativa entre bots
+VERSION = 10  # 10: eventos manipulados, Ciudad Núcleo y edificios (presente_analizar, presente_marcar,
+# presente_siguiente, futuro_resolver, entrar_edificio, salir_edificio)
+# 9: Mira jugable, Kael NPC y separación autoritativa entre bots
 # 8: expediente AVL compartido y sorteo privado por partida
 # 6: pociones, clasificación, puente 1, portal y Distrito Conecta
 PUERTO = 45871

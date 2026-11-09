@@ -86,20 +86,21 @@ class GestorBots:
                 continue
             dimension = yo.get("dimension", "la_copa")
             otros = [j for i, j in self.partida.jugadores.items() if i != bot.identificador
-                     and i in self.partida.conectados and j.get("dimension", "la_copa") == dimension]
+                     and i in self.partida.conectados and j.get("dimension", "la_copa") == dimension
+                     and j.get("interior") == yo.get("interior")]
             if not otros:
                 continue
             def espacio(x, y):
                 return min(math.hypot(x - j["x"], y - j["y"]) for j in otros)
             actual = espacio(yo["x"], yo["y"])
-            separacion = 30 if dimension == "la_copa" else 14
+            separacion = 30 if dimension == "la_copa" or yo.get("interior") else 14
             if actual >= separacion:
                 continue
             cercano = min(otros, key=lambda j: math.hypot(yo["x"] - j["x"], yo["y"] - j["y"]))
             dx, dy = yo["x"] - cercano["x"], yo["y"] - cercano["y"]
             angulo = math.atan2(dy, dx) if dx or dy else indice * math.tau / max(1, len(self.bots))
             paso = min(20 * dt, separacion - actual)
-            colisiones = self.partida.colisiones_de(dimension)
+            colisiones = self.partida.colisiones_de_jugador(yo)
             mejor, margen = (yo["x"], yo["y"]), actual
             destino = bot.objetivo_actual
             radio = bot.radio_objetivo

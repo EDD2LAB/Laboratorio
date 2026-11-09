@@ -50,8 +50,11 @@ son complementarios, para investigar con calma. Se usa el reloj del servidor.
 
 ## Despliegue
 
-Protocolo **9**: actualizar tanto los clientes como el servidor de Render.
-Incluye las correcciones de identidad de Mira y la separación entre bots.
+Protocolo **10**: actualizar tanto los clientes como el servidor de Render.
+Añade las acciones `presente_analizar`, `presente_marcar`, `presente_siguiente`
+(casos manipulados del Presente), `futuro_resolver` (terminales de Ciudad Núcleo),
+`entrar_edificio` y `salir_edificio` (interiores). El protocolo 9 trajo las
+correcciones de identidad de Mira y la separación entre bots.
 El límite LAN pasa a 32 KiB para incluir los cuatro casos archivados;
 las pruebas verifican que el estado completo quede dentro de ese límite.
 El Dockerfile incluye los módulos de lógica y el catálogo JSON, sin Pygame.
