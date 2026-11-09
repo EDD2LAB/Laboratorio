@@ -18,7 +18,13 @@ GRIS = (120, 110, 96)
 AREA_ARBOL = pygame.Rect(30, 90, 400, 230)
 EJE_TIEMPO = pygame.Rect(90, 372, 330, 4)
 PERGAMINO = pygame.Rect(440, 56, 500, 610)
-TEXTO_REPORTE = pygame.Rect(492, 126, 396, 450)
+TEXTO_REPORTE = pygame.Rect(497, 168, 369, 386)  # solo la parte lisa del pergamino
+PISTA_BARRA = pygame.Rect(874, 168, 10, 386)
+ZONA_BARRA = PISTA_BARRA.inflate(14, 0)  # más ancha que la barra para agarrarla sin puntería
+COLOR_PISTA = (205, 170, 125)
+MINIMO_PULGAR = 28
+PASO_RUEDA = 40
+PASO_TECLA = 24
 SELLO = (96, 96)
 CARPETA = RAIZ / "informes"
 
@@ -30,6 +36,8 @@ class ArteInforme:
         self.tiempo = icono(NUEVOS + "icono_tiempo.png", (46, 46))
         self.ley = icono(NUEVOS + "icono_ley.png", (16, 16))
         self.sancion = icono(NUEVOS + "icono_sancion.png", (16, 16))
+        self.reporte = None
+        self.reporte_de = None  # informe del que salió ``reporte``
 
 
 def lineas_reporte(fila, corta=False):
@@ -106,20 +114,92 @@ def _dibujar_tiempo(panel, superficie, datos, arte):
         superficie.blit(numero, numero.get_rect(midtop=(x, EJE_TIEMPO.centery + 10)))
 
 
+def _contenido_reporte(panel, datos, arte):
+    """Todo el texto del informe en una imagen, renderizada una sola vez."""
+    if arte.reporte_de is not datos:
+        lienzo = pygame.Surface((TEXTO_REPORTE.w, 4000), pygame.SRCALPHA)
+        y = 0
+        for fila in datos["casos"]:
+            for tipo, texto in lineas_reporte(fila, corta=True):
+                x = 0
+                imagen = {"ley": arte.ley, "sancion": arte.sancion}.get(tipo)
+                if imagen is not None:
+                    lienzo.blit(imagen, (x, y + 1))
+                    x += 20
+                color = GRIS if not fila["resuelto"] else TINTA
+                y = panel.texto_lineas(lienzo, texto, x, y, TEXTO_REPORTE.w - x, panel.pequena, color)
+            y += 2
+        arte.reporte, arte.reporte_de = lienzo.subsurface((0, 0, TEXTO_REPORTE.w, max(1, y))).copy(), datos
+    return arte.reporte
+
+
+def maximo_desplazamiento(panel):
+    return max(0, panel.informe_alto - TEXTO_REPORTE.h)
+
+
+def _desplazar_a(panel, valor):
+    panel.informe_scroll = max(0, min(maximo_desplazamiento(panel), valor))
+
+
+def rect_pulgar(panel):
+    """La parte de la barra que se arrastra; None si todo el informe ya cabe."""
+    maximo = maximo_desplazamiento(panel)
+    if not maximo:
+        return None
+    alto = max(MINIMO_PULGAR, round(PISTA_BARRA.h * TEXTO_REPORTE.h / panel.informe_alto))
+    y = PISTA_BARRA.y + round((PISTA_BARRA.h - alto) * panel.informe_scroll / maximo)
+    return pygame.Rect(PISTA_BARRA.x, y, PISTA_BARRA.w, alto)
+
+
+def _colocar_pulgar(panel, y, alto):
+    recorrido = PISTA_BARRA.h - alto
+    _desplazar_a(panel, (y - PISTA_BARRA.y) / recorrido * maximo_desplazamiento(panel))
+
+
+def manejar_desplazamiento(panel, evento, posicion):
+    """Rueda, flechas y arrastre de la barrita. True si el evento era para el informe."""
+    if evento.type == pygame.MOUSEWHEEL:
+        _desplazar_a(panel, panel.informe_scroll - evento.y * PASO_RUEDA)
+        return True
+    if evento.type == pygame.KEYDOWN:
+        destino = {pygame.K_UP: panel.informe_scroll - PASO_TECLA, pygame.K_DOWN: panel.informe_scroll + PASO_TECLA,
+                   pygame.K_PAGEUP: panel.informe_scroll - TEXTO_REPORTE.h, pygame.K_PAGEDOWN: panel.informe_scroll + TEXTO_REPORTE.h,
+                   pygame.K_HOME: 0, pygame.K_END: maximo_desplazamiento(panel)}.get(evento.key)
+        if destino is None:
+            return False
+        _desplazar_a(panel, destino)
+        return True
+    pulgar = rect_pulgar(panel)
+    if pulgar is None:
+        return False
+    if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1 and ZONA_BARRA.collidepoint(posicion):
+        panel.informe_arrastre = posicion[1] - pulgar.y if pulgar.collidepoint(PISTA_BARRA.centerx, posicion[1]) else pulgar.h // 2
+        _colocar_pulgar(panel, posicion[1] - panel.informe_arrastre, pulgar.h)
+        return True
+    if panel.informe_arrastre is None:
+        return False
+    if evento.type == pygame.MOUSEBUTTONUP and evento.button == 1:
+        panel.informe_arrastre = None
+        return True
+    if evento.type == pygame.MOUSEMOTION:
+        if evento.buttons[0]:
+            _colocar_pulgar(panel, posicion[1] - panel.informe_arrastre, pulgar.h)
+        else:  # se soltó fuera de la ventana
+            panel.informe_arrastre = None
+        return True
+    return False
+
+
 def _dibujar_reporte(panel, superficie, datos, arte):
     superficie.blit(arte.pergamino, PERGAMINO)
-    y = TEXTO_REPORTE.y
-    for fila in datos["casos"]:
-        for tipo, texto in lineas_reporte(fila, corta=True):
-            x = TEXTO_REPORTE.x
-            imagen = {"ley": arte.ley, "sancion": arte.sancion}.get(tipo)
-            if imagen is not None:
-                superficie.blit(imagen, (x, y + 1))
-                x += 20
-            color = GRIS if not fila["resuelto"] else TINTA
-            fuente = panel.pequena
-            y = panel.texto_lineas(superficie, texto, x, y, TEXTO_REPORTE.right - x, fuente, color)
-        y += 2
+    contenido = _contenido_reporte(panel, datos, arte)
+    panel.informe_alto = contenido.get_height()
+    _desplazar_a(panel, panel.informe_scroll)
+    superficie.blit(contenido, TEXTO_REPORTE.topleft, (0, round(panel.informe_scroll), TEXTO_REPORTE.w, TEXTO_REPORTE.h))
+    pulgar = rect_pulgar(panel)
+    if pulgar is not None:
+        pygame.draw.rect(superficie, COLOR_PISTA, PISTA_BARRA, border_radius=5)
+        pygame.draw.rect(superficie, TINTA, pulgar, border_radius=5)
 
 
 def dibujar(panel, superficie):

@@ -35,6 +35,9 @@ class PanelCooperativo:
         self.informe_inicio = 0
         self.informe_exportado = ""
         self.arte_informe = None
+        self.informe_scroll = 0
+        self.informe_alto = 0
+        self.informe_arrastre = None
         self.pedir_informe_en = None  # se abre poco después de resolver Ciudad Núcleo
         self.evento_futuro_visto = None
         self.botones = {}
@@ -181,6 +184,7 @@ class PanelCooperativo:
     def recibir(self, acuse):
         if acuse.get("ok") and acuse.get("vista") == "informe":
             self.informe, self.informe_exportado = acuse["informe"], ""
+            self.informe_scroll, self.informe_arrastre = 0, None
             self.informe_inicio = pygame.time.get_ticks()
             self.modo = "informe"
             return
@@ -667,6 +671,8 @@ class PanelCooperativo:
         return self.destinos_eco() if self.cerca_eco() and not self.destino_fijo else self.destinatarios()
 
     def manejar(self, evento, posicion, cliente):
+        if self.modo == "informe" and self.informe and informe_final.manejar_desplazamiento(self, evento, posicion):
+            return True
         if self.modo == "dialogo_npc" and self.dialogo:
             return dialogo_npc.manejar(self, evento, posicion, cliente)
         if self.modo == "reparar" and evento.type == pygame.KEYDOWN:

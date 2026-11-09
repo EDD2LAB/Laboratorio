@@ -91,6 +91,81 @@ class Exportacion(unittest.TestCase):
         self.assertEqual([t for t, _ in lineas_reporte(fila)], ["titulo", "datos", "ley", "sancion"])
 
 
+class Desplazamiento(unittest.TestCase):
+    def setUp(self):
+        pygame.init()
+        pygame.display.set_mode((960, 720))
+        self.addCleanup(pygame.quit)
+        from interfaz.partida_multijugador import VistaPartida
+        from multijugador.expediente import ficha_resuelta
+        p = partida()
+        for orden, caso in enumerate(("puente_norte", "agua", "tormenta", "ayuda", "presente_video", "presente_voz", "presente_foto", "nucleo_control")):
+            p.mision.expediente.registrar(caso, "Caso " + caso, dict(opcion="corregir", correcto=True, evento_id=orden), [], ficha_resuelta(caso, "descartar"))
+        self.v = VistaPartida("0", {"mundo": p.estado("0")})
+        self.panel = self.v.panel
+        self.panel.recibir(accion(p, "pedir_informe"))
+        self.lienzo = pygame.Surface((960, 720))
+        self.panel.dibujar(self.lienzo)
+
+    def evento(self, tipo, **datos):
+        return self.panel.manejar(pygame.event.Event(tipo, **datos), datos.get("pos", (0, 0)), mock.Mock())
+
+    def test_el_informe_largo_tiene_barra_y_la_rueda_llega_hasta_el_final(self):
+        from interfaz.informe_final import maximo_desplazamiento, rect_pulgar
+        self.assertGreater(maximo_desplazamiento(self.panel), 0)
+        self.assertEqual(rect_pulgar(self.panel).y, 168)
+        for _ in range(200):
+            self.assertTrue(self.evento(pygame.MOUSEWHEEL, y=-1))
+        self.assertEqual(self.panel.informe_scroll, maximo_desplazamiento(self.panel))
+        self.assertEqual(rect_pulgar(self.panel).bottom, 554)
+        self.evento(pygame.MOUSEWHEEL, y=1)
+        self.assertLess(self.panel.informe_scroll, maximo_desplazamiento(self.panel))
+
+    def test_se_arrastra_la_barrita(self):
+        from interfaz.informe_final import maximo_desplazamiento, rect_pulgar
+        pulgar = rect_pulgar(self.panel)
+        self.assertTrue(self.evento(pygame.MOUSEBUTTONDOWN, button=1, pos=pulgar.center))
+        self.assertTrue(self.evento(pygame.MOUSEMOTION, pos=(879, 700), rel=(0, 0), buttons=(1, 0, 0)))
+        self.assertEqual(self.panel.informe_scroll, maximo_desplazamiento(self.panel))
+        self.assertTrue(self.evento(pygame.MOUSEBUTTONUP, button=1, pos=(879, 700)))
+        self.assertIsNone(self.panel.informe_arrastre)
+        self.assertFalse(self.evento(pygame.MOUSEMOTION, pos=(879, 200), rel=(0, 0), buttons=(0, 0, 0)))
+        self.assertEqual(self.panel.informe_scroll, maximo_desplazamiento(self.panel))
+
+    def test_las_teclas_tambien_desplazan(self):
+        self.evento(pygame.KEYDOWN, key=pygame.K_END)
+        self.assertGreater(self.panel.informe_scroll, 0)
+        self.evento(pygame.KEYDOWN, key=pygame.K_HOME)
+        self.assertEqual(self.panel.informe_scroll, 0)
+
+    def test_el_texto_no_se_sale_del_area_lisa_del_pergamino(self):
+        from interfaz.informe_final import PERGAMINO, TEXTO_REPORTE
+        limpio = pygame.Surface((960, 720))
+        limpio.blit(self.panel.arte_informe.pergamino, PERGAMINO)
+        for scroll in (0, 150, 10 ** 6):
+            self.panel.informe_scroll = scroll
+            self.panel.dibujar(self.lienzo)
+            for y in (TEXTO_REPORTE.top - 1, TEXTO_REPORTE.bottom):
+                for x in range(TEXTO_REPORTE.left, TEXTO_REPORTE.right, 3):
+                    self.assertEqual(self.lienzo.get_at((x, y)), limpio.get_at((x, y)), (x, y, scroll))
+
+    def test_el_texto_se_renderiza_una_sola_vez(self):
+        arte = self.panel.arte_informe
+        imagen = arte.reporte
+        self.panel.informe_scroll = 90
+        self.panel.dibujar(self.lienzo)
+        self.assertIs(arte.reporte, imagen)
+
+    def test_un_informe_nuevo_vuelve_arriba_y_cerrar_sigue_funcionando(self):
+        self.evento(pygame.KEYDOWN, key=pygame.K_END)
+        self.panel.recibir({"ok": True, "vista": "informe", "informe": dict(self.panel.informe)})
+        self.assertEqual(self.panel.informe_scroll, 0)
+        self.panel.dibujar(self.lienzo)
+        centro = self.panel.botones["informe_cerrar"].rect.center
+        self.evento(pygame.MOUSEBUTTONDOWN, button=1, pos=centro)
+        self.assertIsNone(self.panel.modo)
+
+
 class Pantalla(unittest.TestCase):
     def setUp(self):
         pygame.init()
