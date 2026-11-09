@@ -97,5 +97,35 @@ class EfectosDelMapa(ConPartida):
             self.assertIsNotNone(self.vista.arte.barra_recarga[estado])
 
 
+class MapaDeLaCopa(ConPartida):
+    def test_el_caldero_tiene_una_fila_por_estado(self):
+        for fila in range(1, 5):
+            self.assertEqual(len(self.vista.cuadros_caldero[(2, fila)]), 4)
+        self.assertIsNotNone(self.vista.rect_caldero)
+
+    def test_cada_tronco_usa_solo_su_diseno(self):
+        self.assertEqual(set(self.vista.variantes_eco), {1, 2, 3, 4})
+        self.assertEqual(len(self.vista.variantes_eco[1]), 4)
+        tamano = (30, 56)
+        self.assertEqual(len(self.vista._frames_tronco(tamano, 3)), 4)
+        self.assertIs(self.vista._frames_tronco(tamano, 3), self.vista._frames_tronco(tamano, 3))
+
+    def test_el_puente_deteriorado_se_cargo(self):
+        self.assertIsNotNone(self.vista.puente_det)
+        self.assertIsNotNone(self.vista.puente_det_zoom)
+
+    def test_usar_un_tronco_lanza_su_efecto(self):
+        tronco = next(o for o in self.caso()["objetivos"] if o["tipo"] == "eco")
+        self.vista.cerca = lambda objetivo, *r: objetivo is tronco or objetivo == tronco
+        self.vista.panel.abrir("eco")
+        self.assertEqual(self.vista.efectos_mapa.activos[0][0], "eco")
+
+    def test_las_conversaciones_usan_el_marco_de_dialogo(self):
+        self.vista.panel.modo, self.vista.panel.titulo, self.vista.panel.texto = "fuente", "Luma · testimonio", "Hola"
+        self.vista.panel.dibujar(pygame.Surface((960, 720)))
+        self.assertIn("cerrar", self.vista.panel.botones)
+        self.assertIn("inventario", self.vista.panel.botones)
+
+
 if __name__ == "__main__":
     unittest.main()

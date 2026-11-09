@@ -1,4 +1,5 @@
 """Vista del mapa compartido: sprites locales y posiciones del servidor."""
+import json
 import math
 import os
 import time
@@ -15,6 +16,7 @@ CONFIG_REPARACION_MS = _CONFIG_REPARACION["duracion_animacion_ms"]
 COLORES = ((83, 222, 212), (241, 199, 86), (183, 137, 246), (247, 140, 120))
 # Boca del caldero en el lienzo 960x720 (el objetivo "caldero" está en su base, 480,380).
 BOCA_CALDERO = (480, 336)
+FILAS_CALDERO = {"estable": 1, "peligroso": 2, "critico": 3}
 COLORES_CALDERO = {
     "estable": ((93, 218, 205), (111, 219, 150), (190, 245, 255)),
     "peligroso": ((238, 201, 92), (255, 150, 70), (200, 130, 255)),
@@ -147,7 +149,7 @@ def caso_jugadores(estado):
 class VistaPartida:
     def __init__(self, identificador, estado, audio=None):
         from mundo.mapas import cargar_fondo_unificado, cargar_mapa_principal, decoraciones_ampliadas, suavizar_cascada
-        from mundo.personajes import cargar_frames_tronco_eco
+        from mundo.personajes import cargar_variantes_tronco_eco
         from nucleo.recursos import cargar_fuente, cargar_imagen
         from interfaz.arte import ArtePartida
         from interfaz.efectos_visuales import AdornosMapa, FlechaGuia
@@ -188,8 +190,9 @@ class VistaPartida:
         self.ultimo_paquete = time.monotonic()
         self.aviso_red = ""
         self.estado = estado
-        self.frames_eco = cargar_frames_tronco_eco()
+        self.variantes_eco = cargar_variantes_tronco_eco()
         self._frames_tronco_escalados = {}
+        self.rect_caldero, self.cuadros_caldero = self._cargar_caldero()
         self.celular = None  # se carga al llegar a Distrito Conecta
         # --- Features del modo de un jugador (cargadas una sola vez) ---
         self.dimension = LA_COPA
@@ -236,6 +239,11 @@ class VistaPartida:
         self.puente_1_zoom = next((o for o in self.decoraciones_zoom if o["original"] is self.puente_1), None)
         self.puente_roto_zoom = None
         self.frames_reparacion_zoom = []
+        self.puente_det = self.puente_det_zoom = None
+        if self.puente_1 is not None and self.escenas.puente_det is not None:
+            self.puente_det = pygame.transform.scale(self.escenas.puente_det, self.puente_1["rect"].size)
+        if self.puente_1_zoom is not None and self.escenas.puente_det is not None:
+            self.puente_det_zoom = pygame.transform.scale(self.escenas.puente_det, self.puente_1_zoom["rect"].size)
         if self.puente_1_zoom is not None:
             tamano = self.puente_1_zoom["rect"].size
             if self.escenas.puente_roto is not None:
@@ -705,11 +713,42 @@ class VistaPartida:
             return min(pendientes, key=lambda o: math.hypot(o["x"] - yo["x"], o["y"] - yo["y"]))
         return next((o for o in presente.get("objetivos", []) if o["id"] == "presente:pantalla"), None)
 
-    def _frames_tronco(self, tamano):
-        """Cuadros del Tronco de los Ecos, escalados una sola vez por tamaño."""
-        if tamano not in self._frames_tronco_escalados:
-            self._frames_tronco_escalados[tamano] = [pygame.transform.scale(f, tamano) for f in self.frames_eco]
-        return self._frames_tronco_escalados[tamano]
+    def _frames_tronco(self, tamano, variante=1):
+        """Cuadros de un diseño de tronco, escalados una sola vez por tamaño."""
+        if (tamano, variante) not in self._frames_tronco_escalados:
+            self._frames_tronco_escalados[(tamano, variante)] = [
+                pygame.transform.scale(f, tamano) for f in self.variantes_eco.get(variante, [])]
+        return self._frames_tronco_escalados[(tamano, variante)]
+
+    def _cargar_caldero(self):
+        """Caldero animado sobre el pintado en el mapa; (zoom, fila) -> cuadros.
+
+        El ajuste fino está en Hitboxes/caldero_alineacion.json (mundo 960x720).
+        Filas: 1 estable, 2 peligroso, 3 crítico y 4 campaña terminada."""
+        from nucleo.recursos import cargar_spritesheet_frames
+        from nucleo.rutas import RAIZ
+        try:
+            datos = json.loads((RAIZ / "Hitboxes" / "caldero_alineacion.json").read_text(encoding="utf-8"))
+            rect = pygame.Rect(datos["x"], datos["y"], datos["w"], datos["h"])
+        except (OSError, ValueError, KeyError) as error:
+            print("[Arte] Sin alineación del caldero:", error)
+            return None, {}
+        cuadros = {}
+        for fila in range(1, 5):
+            originales = cargar_spritesheet_frames(f"Caldero/Caldero-ecos-fila{fila}.png", 4)
+            for zoom in (1, ZOOM_COPA):
+                cuadros[(zoom, fila)] = [pygame.transform.scale(c, (rect.w * zoom, rect.h * zoom)) for c in originales]
+        return rect, cuadros
+
+    def _dibujar_caldero(self, superficie, ahora_ms, zoom, area):
+        if self.rect_caldero is None:
+            return
+        fase_final = self.estado.get("mundo", {}).get("caso", {}).get("fase") == "final"
+        fila = 4 if fase_final else FILAS_CALDERO.get(self.estado_caldero, 1)
+        cuadros = self.cuadros_caldero.get((zoom, fila))
+        rect = pygame.Rect(self.rect_caldero.x * zoom, self.rect_caldero.y * zoom, self.rect_caldero.w * zoom, self.rect_caldero.h * zoom)
+        if cuadros and (area is None or rect.colliderect(area)):
+            superficie.blit(cuadros[(ahora_ms // 180) % len(cuadros)], rect)
 
     def _dibujar_mapa(self, superficie, ahora_ms, escena=None, area=None):
         """Mapa y decoraciones. ``escena`` y ``area``: recursos ampliados y zona
@@ -723,10 +762,12 @@ class VistaPartida:
             superficie.blit(escena["fondo"], area, area)
             decoraciones, puente_1, puente_roto, frames_reparacion = (
                 escena["decoraciones"], self.puente_1_zoom, self.puente_roto_zoom, self.frames_reparacion_zoom)
+            puente_det = self.puente_det_zoom
         else:
             superficie.blit(self.fondo, (0, 0))
             decoraciones, puente_1, puente_roto, frames_reparacion = (
                 self.decoraciones, self.puente_1, self.puente_roto, self.frames_reparacion)
+            puente_det = self.puente_det
         caso = self.estado.get("mundo", {}).get("caso", {})
         puente = caso.get("puente") or {}
         encargo = caso.get("encargo")
@@ -738,16 +779,17 @@ class VistaPartida:
             if area is not None and not objeto.get("mariposa") and not objeto["rect"].inflate(40, 40).colliderect(area):
                 continue  # fuera de cámara: no se escala ni se rota
             if self.dimension == LA_COPA and objeto is puente_1 and puente.get("estado", "REPAIRED") != "REPAIRED":
-                # Puente 1 roto (imagen real Puente1Roto.png) hasta repararlo.
-                superficie.blit(puente_roto or objeto["imagen"], objeto["rect"])
+                # Roto hasta que estén los materiales; deteriorado mientras se repara.
+                listo = puente.get("estado") in ("READY_TO_REPAIR", "REPAIR_MINIGAME", "REPAIR_ANIMATION")
+                superficie.blit((puente_det if listo else None) or puente_roto or objeto["imagen"], objeto["rect"])
                 continue
             if es_hoja_portales(objeto.get("nombre", "")) and self.adornos.portal:
                 continue  # se dibuja el portal animado
             if objeto.get("cesto") and cestos.get(clave_cesto(encargo)) is not None:
                 imagen = cestos[clave_cesto(encargo)]
                 superficie.blit(imagen, imagen.get_rect(midbottom=objeto["rect"].midbottom))
-            elif objeto.get("tronco_eco") and self.frames_eco:
-                frames = self._frames_tronco(objeto["rect"].size)
+            elif objeto.get("tronco_eco") and self._frames_tronco(objeto["rect"].size, objeto.get("variante_tronco", 1)):
+                frames = self._frames_tronco(objeto["rect"].size, objeto.get("variante_tronco", 1))
                 superficie.blit(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
             elif objeto.get("puente_animable"):
                 dibujar_puente_balanceandose(superficie, objeto, ahora_ms)
@@ -758,6 +800,8 @@ class VistaPartida:
                 superficie.blit(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
             else:
                 superficie.blit(objeto["imagen"], objeto["rect"])
+        if self.dimension == LA_COPA:
+            self._dibujar_caldero(superficie, ahora_ms, zoom, area)
         rect = self.rect_portal()
         if rect:
             self.adornos.dibujar_portal(

@@ -526,6 +526,12 @@ def cargar_frames_tronco_eco():
     return frames
 
 
+def cargar_variantes_tronco_eco():
+    """Cada fila es un diseño de tronco con sus cuatro cuadros (1..4 -> cuadros)."""
+    return {fila: cargar_spritesheet_frames(os.path.join("Tronco ecos", f"Tronco-ecos-fila{fila}.png"), cantidad=4)
+            for fila in range(1, 5)}
+
+
 def cargar_frames_idle_guardian():
     return _cargar_frames_idle_personaje("Guardián")
 
