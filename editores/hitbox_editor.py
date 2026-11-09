@@ -380,6 +380,8 @@ def choose_image_gui(scan_dir, title="Elegir imagen"):
     WIN_H = min(900, di.current_h)
     cols = max(1, (WIN_W - PADDING * 2) // CELL_W)
 
+    from nucleo.recursos import aplicar_icono_ventana
+    aplicar_icono_ventana()
     screen = pygame.display.set_mode((WIN_W, WIN_H))
     pygame.display.set_caption(title)
     picker_clock = pygame.time.Clock()
@@ -644,6 +646,8 @@ def main(forzar_selector=False):
     world_h = max(1, int(ih * fit_scale))
     image_view = pygame.transform.smoothscale(raw_image, (world_w, world_h))
 
+    from nucleo.recursos import aplicar_icono_ventana
+    aplicar_icono_ventana()
     screen = pygame.display.set_mode((win_w, win_h), pygame.NOFRAME)
     pygame.display.set_caption("Editor de Hitboxes")
     image_view = image_view.convert()

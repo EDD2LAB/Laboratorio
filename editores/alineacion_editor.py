@@ -686,6 +686,8 @@ def run_alignment(screen, obj_entry, spr_entry, all_offsets, font_sm, font_md):
 def main():
     pygame.init()
     pygame.key.set_repeat(170, 26)
+    from nucleo.recursos import aplicar_icono_ventana
+    aplicar_icono_ventana()
     screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
     pygame.display.set_caption("Editor de Alineación — Timeless Glitch")
 

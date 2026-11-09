@@ -81,6 +81,8 @@ PAGINAS_COMO_JUGAR = (
 
 def aplicar_modo_pantalla(modo):
     """Crea la ventana en el modo pedido y devuelve la superficie de pantalla."""
+    from nucleo.recursos import aplicar_icono_ventana
+    aplicar_icono_ventana()
     if modo == "completa":
         return pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     pygame.display.set_mode(tamano_ventana_inicial(), pygame.RESIZABLE)

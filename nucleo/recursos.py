@@ -48,6 +48,18 @@ def cargar_imagen(nombre, tamano=None, requerido=True):
     return imagen
 
 
+def aplicar_icono_ventana():
+    """Icono de la ventana a 32x32; se llama antes de ``set_mode``."""
+    try:
+        imagen = pygame.image.load(buscar_asset("Iconos/Icono_pequeño.png"))
+    except (pygame.error, FileNotFoundError) as error:
+        print("[Arte] Sin icono de ventana:", error)
+        return None
+    icono = pygame.transform.scale(imagen.subsurface(imagen.get_bounding_rect()), (32, 32))
+    pygame.display.set_icon(icono)
+    return icono
+
+
 def es_hoja_portales(nombre):
     return os.path.basename(normalizar_ruta(nombre)) == "portales 4x4.png"
 

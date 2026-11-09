@@ -9,6 +9,7 @@ import pygame
 
 from interfaz import arte
 from interfaz.boton import Boton
+from interfaz.logo import LogoAnimado
 from interfaz.edicion_texto import EditorCampos
 from interfaz.menu_pausa import MenuPausa
 from interfaz.presentacion_pantalla import a_lienzo, presentar
@@ -23,6 +24,7 @@ BASE = os.path.dirname(os.path.dirname(__file__))
 ORO = (237, 185, 87)
 CREMA = (255, 243, 210)
 VERDE = (136, 219, 155)
+CENTRO_LOGO = (480, 124)
 DESCRIPCIONES_ROL = (
     "Busca pistas y revisa los mensajes.", "Lleva pistas a tus compañeros.",
     "Habla con los vecinos y ayuda.", "Explica lo que pasó usando pistas.")
@@ -44,7 +46,7 @@ class MenuInicio:
         self.iconos = [self.imagen("Iconos/Multijugador/" + nombre, (54, 54)) for nombre in (
             "IcRol-guardian.png", "IcRol-Mensajero.png", "IcRol-Habitante.png", "IcRol-Aspirante.png")]
         self.retratos = {clave: arte.cargar_retratos(clave, (105, 105)) for clave in (*ROLES, "mira", "luma")}
-        self.emblema = arte.icono(arte.NUEVOS + "emblema_copa.png", (64, 64))
+        self.logo = LogoAnimado()
         self.emblemas_ayuda = arte.cargar_emblemas((56, 56))
         self.iconos_ajustes = {nombre: arte.icono(arte.NUEVOS + "icono_" + nombre + ".png", (30, 30))
                                for nombre in ("audio", "contraste", "apariencia", "libro", "arbol")}
@@ -412,10 +414,9 @@ class MenuInicio:
         self.lienzo.blit(velo, (0, 0))
         if self.vista == "principal":
             self.panel(pygame.Rect(240, 70, 480, 590))
-            arte.dibujar_icono(self.lienzo, self.emblema, (480, 110))
-            self.texto("TIMELESS GLITCH", 480, 145, 44, ORO, True)
-            self.texto("Era I: La Copa · Era II: Distrito Conecta", 480, 207, 18, centro=True)
-            self.texto("Era III: Ciudad Núcleo", 480, 233, 18, centro=True)
+            self.logo.dibujar(self.lienzo, CENTRO_LOGO, pygame.time.get_ticks())
+            self.texto("TIMELESS GLITCH", 480, 172, 44, ORO, True)
+            self.texto("Era I: La Copa · Era II: Distrito Conecta · Era III: Ciudad Núcleo", 480, 230, 14, centro=True)
             self.boton("campana_local", "Campaña con bots", (480, 300))
             self.boton("multi", "Multijugador", (480, 380))
             self.boton("ajustes", "Ajustes", (480, 460))

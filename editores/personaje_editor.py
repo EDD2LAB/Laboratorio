@@ -711,6 +711,8 @@ def main():
     pygame.init()
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+    from nucleo.recursos import aplicar_icono_ventana
+    aplicar_icono_ventana()
     screen = pygame.display.set_mode((1400, 860))
     pygame.display.set_caption("Editor de personajes — Timeless Glitch")
     clock = pygame.time.Clock()

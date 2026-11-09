@@ -19,6 +19,8 @@ def tamano_ventana_inicial():
 
 def crear_ventana(pantalla_completa, maximizada=False):
     """Crea una ventana cuyo lienzo se escala hasta ocupar todo el espacio."""
+    from nucleo.recursos import aplicar_icono_ventana
+    aplicar_icono_ventana()
     if pantalla_completa:
         return pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
     pantalla = pygame.display.set_mode(tamano_ventana_inicial(), pygame.RESIZABLE)
