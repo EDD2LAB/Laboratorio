@@ -377,14 +377,10 @@ class PanelCooperativo:
     def inventario(self):
         if self.digital:
             return (self.privado.get(self.dimension) or {}).get("inventario", [])
-        pistas = self.privado.get("inventario", [])
-        avisos = [dict(id=p["id"], titulo="Aviso: " + p["titulo"], texto=p["temporal"]["texto"],
-                       es_temporal=True, vigente=p["temporal"]["vigente"], segundos=p["temporal"]["segundos"])
-                  for p in pistas if p.get("temporal")]
-        return pistas + avisos
+        return self.privado.get("inventario", [])
 
     def cantidad_pruebas(self):
-        return sum(not p.get("es_temporal") for p in self.inventario())
+        return len(self.inventario())
 
     def dibujar(self, superficie):
         self.botones = {}
@@ -499,9 +495,12 @@ class PanelCooperativo:
                 self.indice_pista %= len(inventario)
                 pista = inventario[self.indice_pista]
                 self.texto_lineas(superficie, pista["titulo"], 165, 170, 630, color=ORO)
-                self.texto_lineas(superficie, pista["texto"], 165, 215, 630)
-                if pista.get("es_temporal") and pista.get("vigente"):
-                    self.texto_lineas(superficie, f"Vigente por {pista['segundos']} s. Compartirlo conserva su fecha original.", 165, 300, 630, self.pequena, VERDE)
+                y = self.texto_lineas(superficie, pista["texto"], 165, 215, 630)
+                aviso = pista.get("temporal")
+                if aviso:  # el aviso va dentro de su pista, no como otra tarjeta
+                    y = self.texto_lineas(superficie, "Aviso: " + aviso["texto"], 165, y + 6, 630, self.pequena, ORO)
+                    if aviso.get("vigente"):
+                        self.texto_lineas(superficie, f"Vigente por {aviso['segundos']} s. Compartirlo conserva su fecha original.", 165, y, 630, self.pequena, VERDE)
                 dibujar_icono(superficie, self.vista.arte.iconos_pista.get(pista["id"]), (775, 186))
                 arte = self.vista.arte
                 self.boton_flecha(superficie, "pista_anterior", arte.flecha_izq, "<", 205, 353)
@@ -517,8 +516,9 @@ class PanelCooperativo:
                     persona = self.pequena.render("Cambiar persona", True, VERDE)
                     superficie.blit(persona, persona.get_rect(center=(480, 450)))
                     cerca = self.cerca_eco() or self.vista.cerca(destino, 64)
-                    vigente = not pista.get("es_temporal") or pista.get("vigente")
-                    self.boton(superficie, "entregar", ("Enviar mi pista" if self.cerca_eco() else "Dar mi pista") if vigente else "Aviso caducado: visita la fuente", 480, 506, 420, cerca and vigente)
+                    ya_la_tiene = destino["id"] in pista.get("la_tienen", ()) and not (aviso or {}).get("vigente")
+                    self.boton(superficie, "entregar", "Ya tiene esta pista" if ya_la_tiene else "Enviar mi pista" if self.cerca_eco() else "Dar mi pista",
+                               480, 506, 420, cerca and not ya_la_tiene)
                     if not cerca:
                         self.texto_lineas(superficie, "Acércate a esa persona o a un tronco para enviarla.", 165, 538, 630, self.pequena, ORO)
             if self.cantidad_pruebas() < 2:

@@ -43,7 +43,7 @@ ClienteCampanaLocal("Prueba", "guardian", semilla=935)
 
 Desde el segundo caso, visitar la fuente entrega además un aviso temporal.
 Su duración (90, 120 o 150 segundos) depende de la semilla, el evento y el rol.
-Aparece como otra tarjeta en I, se comparte junto a la prueba y conserva la
+Aparece dentro de la tarjeta de su prueba en I, se comparte con ella y conserva la
 fecha original al copiarlo. Un aviso caducado deja de transmitirse; volver
 a la fuente lo renueva. Las pruebas principales se conservan y los avisos
 son complementarios, para investigar con calma. Se usa el reloj del servidor.

@@ -538,6 +538,7 @@ class CampanaCopa(MisionPuente):
         if not estado:
             return {}
         for pista in estado["inventario"]:
+            pista["la_tienen"] = [i for i, conocidas in self.conocidas.items() if pista["id"] in conocidas]
             aviso = self.avisos_recientes[identificador].get(pista["id"])
             if aviso:
                 vigente = self.reloj < aviso["vence"]

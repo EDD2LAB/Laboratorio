@@ -55,6 +55,6 @@ class LibroInterfazTests(unittest.TestCase):
         panel.vista.estado["mundo"]["privado"] = {"inventario": [
             {"id": "pista_guardian", "titulo": "Documento", "texto": "Prueba permanente",
              "temporal": {"texto": "Observación caducada", "segundos": 0, "vigente": False}}]}
-        self.assertEqual(len(panel.inventario()), 2)
+        self.assertEqual(len(panel.inventario()), 1)  # el aviso va dentro de su pista
         self.assertEqual(panel.cantidad_pruebas(), 1)
-        self.assertFalse(panel.inventario()[1]["vigente"])
+        self.assertFalse(panel.inventario()[0]["temporal"]["vigente"])

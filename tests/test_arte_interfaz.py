@@ -320,7 +320,7 @@ class DistritoConecta(unittest.TestCase):
 
     def test_el_portal_queda_centrado_con_las_escaleras(self):
         rect = self.vista.rect_portal()
-        self.assertEqual(rect.centerx, 462)  # en el hueco de las ruinas
+        self.assertEqual(rect.centerx, 466)  # en el centro de las runas
 
 
 class PuentesAmpliados(unittest.TestCase):

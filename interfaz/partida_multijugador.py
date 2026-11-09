@@ -1040,11 +1040,6 @@ class VistaPartida:
             caldero = next((o for o in caso.get("objetivos", []) if o["id"] == "caldero"), None)
             if caldero and self._farol_en_el_suelo(privado.get("tutorial", {})):
                 dibujar_farol_en_suelo(superficie, (caldero["x"] + DESVIO_FAROL[0], caldero["y"] + DESVIO_FAROL[1]), ahora_ms)
-            propuesta = next((o for o in caso.get("objetivos", []) if o["id"] == "propuesta"), None)
-            if propuesta:
-                from interfaz.arte import dibujar_icono
-                dibujar_icono(superficie, self.arte.iconos_pista.get("pista_aspirante"),
-                              (propuesta["x"], propuesta["y"] - 14))
         objetivo = (guia.get("objetivo") or privado.get("objetivo") or {}) if self.dimension == LA_COPA else (self._objetivo_presente() or {})
         for o in ([] if self.interior else self.contexto().get("objetivos", [])):
             mismo_rol = objetivo.get("rol") and o.get("rol") == objetivo["rol"]

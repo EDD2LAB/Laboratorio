@@ -124,5 +124,40 @@ class NotaDeVoz(unittest.TestCase):
         self.assertEqual(self.ui.sonando, "suplantado")
 
 
+class Estudio(unittest.TestCase):
+    def test_se_entra_por_abajo_y_lo_del_suelo_no_choca(self):
+        from multijugador.dimensiones_red import cargar_interior, rect_salida, spawn_interior
+        datos = cargar_interior("estudio_influencer")
+        x0, y0, ancho, alto = datos["rect_mapa"]
+        mapa = ColisionesMapa(datos)
+        x, y = spawn_interior(datos)
+        self.assertGreater((y - y0) / alto, .8)
+        self.assertFalse(mapa.bloqueado(x, y))
+        self.assertGreater((rect_salida(datos)[1] - y0) / alto, .8)
+        self.assertFalse(mapa.bloqueado(x0 + .55 * ancho, y0 + .5 * alto))  # donde estaban la cámara y el trípode
+        self.assertNotIn("tripodes_estudio", {h["id"] for h in datos["hitboxes"]})
+
+
+class TarjetasDePistas(unittest.TestCase):
+    def test_el_aviso_no_es_una_tarjeta_aparte_y_se_sabe_quien_la_tiene(self):
+        pygame.init()
+        pygame.display.set_mode((960, 720))
+        self.addCleanup(pygame.quit)
+        from interfaz.partida_multijugador import VistaPartida
+        p = PartidaMovimiento([dict(id="0", nombre="A", rol="guardian"), dict(id="1", nombre="B", rol="habitante")], 0)
+        m = p.mision
+        m.conocidas["0"].add("pista_guardian")
+        m.conocidas["1"].add("pista_guardian")
+        m.halladas["pista_guardian"] = "0"
+        m.avisos_recientes["0"]["pista_guardian"] = {"texto": "Aviso de prueba", "vence": m.reloj + 90}
+        v = VistaPartida("0", {"mundo": p.estado("0")})
+        inventario = v.panel.inventario()
+        self.assertEqual(len(inventario), 1)
+        self.assertEqual(sorted(inventario[0]["la_tienen"]), ["0", "1"])
+        self.assertTrue(inventario[0]["temporal"]["vigente"])
+        v.panel.modo = "inventario"
+        v.panel.dibujar(pygame.Surface((960, 720)))
+
+
 if __name__ == "__main__":
     unittest.main()
