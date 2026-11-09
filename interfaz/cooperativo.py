@@ -219,7 +219,8 @@ class PanelCooperativo:
             if sprite is not None:
                 return sprite
         yo = next((j for j in self.vista.estado.get("mundo", {}).get("jugadores", []) if j["id"] == self.vista.identificador), {})
-        variante = {"habitante": "luma", "aspirante": "mira"}.get(yo.get("rol")) if yo.get("apariencia") == "mujer" else None
+        femenina = yo.get("apariencia") == "mujer" or (yo.get("rol") == "aspirante" and yo.get("apariencia") is None)
+        variante = {"habitante": "luma", "aspirante": "mira"}.get(yo.get("rol")) if femenina else None
         frames = arte.retratos.get(variante or yo.get("rol"))
         if frames:
             return expresion(frames, pygame.time.get_ticks())

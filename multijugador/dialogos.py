@@ -12,7 +12,7 @@ from .presentacion import tipo_pocion
 
 # Fragmento de la ruta del sprite colocado en el mapa -> personaje.
 PATRONES_COPA = (("/naira/", "Naira"), ("/odran/", "Sabio de las Raices"), ("/darek/", "Darek"),
-                 ("habitante mujer", "Luma"), ("aspirante mujer", "Mira"))
+                 ("habitante mujer", "Luma"), ("aspirante mujer", "Mira"), ("aspirante hombre", "Kael"))
 NOMBRES_CON_TILDE = {"Sabio de las Raices": "Sabio de las Raíces"}
 # Quien juega un rol ya es ese personaje en Distrito Conecta.
 PERSONAJE_DE_ROL = {"guardian": "Elías Vega", "mensajero": "Mateo Ríos", "habitante": "Tomás Red", "aspirante": "Ronaldo Vélez"}
@@ -34,6 +34,9 @@ def npcs_de_la_copa(datos_mapa):
     for objeto in datos_mapa.get("decoracion", []):
         ruta = _normalizar(objeto["name"])
         nombre = next((n for patron, n in PATRONES_COPA if patron in ruta), None)
+        # Algunas carpetas de otros personajes están anidadas en «Aspirante hombre».
+        if nombre == "Kael" and any(p in ruta for p in ("habitante", "guardian", "mensajero", "aspirante mujer")):
+            continue
         if nombre:
             nombre = NOMBRES_CON_TILDE.get(nombre, nombre)
             npcs.append({"id": identificador_npc(nombre), "nombre": nombre, "dimension": "la_copa",
@@ -117,6 +120,7 @@ class DialogosNPC:
         jugador = campana.jugadores[identificador]
         propia = any(o.get("rol") == jugador["rol"] and (o["x"], o["y"]) == (npc["x"], npc["y"]) for o in campana.objetivos)
         if propia and campana.fase == "investigacion":
+            campana._renovar_aviso(identificador)
             pista = "pista_" + jugador["rol"]
             campana.conocidas[identificador].add(pista)
             if pista not in campana.halladas:

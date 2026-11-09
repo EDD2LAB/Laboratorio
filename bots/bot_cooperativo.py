@@ -51,6 +51,7 @@ class BotCooperativo:
         self.dimension = "la_copa"
         self.estado = "ESPERANDO"
         self.objetivo_actual = None
+        self.radio_objetivo = None
         self.posicion = partida.jugadores[self.identificador]
         self.ruta = []
         self.prueba_propia = None
@@ -127,6 +128,7 @@ class BotCooperativo:
         )
         self.estado = plan["estado"]
         destino = plan.get("destino")
+        self.radio_objetivo = (plan.get("radio") if plan.get("radio") is not None else NavegadorBot.RADIO_INTERACCION) if destino else None
         if plan.get("accion") != self._accion or plan.get("datos", {}) != self._datos_accion:
             self._accion = plan.get("accion")
             self._datos_accion = dict(plan.get("datos", {}))

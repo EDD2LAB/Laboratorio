@@ -130,7 +130,8 @@ class MapaDeLaCopa(ConPartida):
 class Reposo(ConPartida):
     def test_los_npc_con_hojas_de_reposo_se_animan(self):
         animados = {o["personaje"] for o in self.vista.decoraciones_zoom if o.get("cuadros_reposo")}
-        self.assertLessEqual({"Naira", "Darek", "Luma", "Mira"}, animados)
+        self.assertLessEqual({"Naira", "Darek", "Luma", "Kael"}, animados)
+        self.assertNotIn("Mira", animados)  # ya es la Aspirante jugable, no un NPC duplicado
         for objeto in self.vista.decoraciones_zoom:
             if objeto.get("cuadros_reposo"):
                 self.assertEqual(len(objeto["cuadros_reposo"]), 8)

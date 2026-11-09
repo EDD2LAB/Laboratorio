@@ -5,6 +5,8 @@ import os
 import time
 
 import pygame
+from interfaz.boton import Boton
+from interfaz.etiquetas_jugadores import colocar_etiquetas
 
 from multijugador.movimiento import ColisionesMapa, es_personaje_jugable
 from multijugador.dimensiones_red import LA_COPA, PRESENTE
@@ -146,6 +148,10 @@ def cargar_clips_variante(rol):
         marcha = separar_frames(cargar_imagen(os.path.join("NPCS", carpeta, caminar.format(i + 2))))
         clips[("caminar", direccion)] = clips[("correr", direccion)] = marcha
         clips[("reposo", direccion)] = separar_frames(cargar_imagen(os.path.join("NPCS", carpeta, "Reposo", reposo[i])))
+    from mundo.personajes import RECTA_EQUIVALENTE
+    for diagonal in DIAGONALES:
+        for estado in ("caminar", "correr", "reposo"):
+            clips[(estado, diagonal)] = clips[(estado, RECTA_EQUIVALENTE[diagonal])]
     return clips
 
 
@@ -213,6 +219,8 @@ class VistaPartida:
         self.capa_efectos = pygame.Surface((960, 720), pygame.SRCALPHA)
         self.fondo = pygame.transform.scale(self.fondo_zoom, (960, 720))
         self.fuente = cargar_fuente(16)
+        self.boton_expediente = Boton("Casos · T", fuente=self.fuente, centro=(846, 626), tamano=(200, 36))
+        self.etiquetas_jugadores = []
         self.titulo = cargar_fuente(20)
         self.jugadores = {}
         self.ultimo_paquete = time.monotonic()
@@ -529,7 +537,7 @@ class VistaPartida:
         objetivos = [dict(o) for o in self.contexto().get("objetivos", []) if self.cerca(o)
                      and not (o["id"] == "puente_1" and puente.get("estado") not in ("READY_TO_REPAIR", "REPAIR_MINIGAME"))
                      and not (o.get("tipo") == "fuente" and (o["x"], o["y"]) in junto_a_npc and o.get("rol") != yo["rol"])]
-        objetivos.extend({"id": "npc:" + n["id"], "nombre": "Hablar con " + n["nombre"], "x": n["x"], "y": n["y"]} for n in npcs)
+        objetivos.extend({"id": "npc:" + n["id"], "nombre": "Consultar el archivo de Mira" if n["nombre"] == "Mira" else "Hablar con " + n["nombre"], "x": n["x"], "y": n["y"]} for n in npcs)
         encargo = caso.get("encargo") if self.dimension == LA_COPA else None
         if encargo:
             for o in objetivos:
@@ -566,7 +574,10 @@ class VistaPartida:
     def _clave_figura(self, datos):
         """Rol o variante elegida; se carga la primera vez que alguien la usa."""
         rol = datos["rol"]
-        if datos.get("apariencia") != "mujer" or rol not in VARIANTES_MUJER or self.dimension != LA_COPA:
+        apariencia = datos.get("apariencia")
+        if rol == "aspirante" and apariencia is None:
+            apariencia = "mujer"  # Mira es la Aspirante predeterminada, también para bots.
+        if apariencia != "mujer" or rol not in VARIANTES_MUJER or self.dimension != LA_COPA:
             return rol
         clave = rol + "_mujer"
         if clave not in self.personajes:
@@ -644,6 +655,10 @@ class VistaPartida:
             return True
         if self.panel.manejar(evento, posicion, cliente):
             return True
+        if (evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1 and self.mostrar_hud
+                and not self.panel.activo and self.boton_expediente.fue_clickeado(posicion)):
+            self.panel.abrir("expediente")
+            return True
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1 and self.mostrar_hud and self.mostrar_detalles \
                 and self.dimension == LA_COPA and self.boton_guia.collidepoint(posicion):
             self.accion_guiada(cliente)
@@ -666,6 +681,15 @@ class VistaPartida:
                     self.panel.notificar("Acércate a una fuente, al caldero, al portal o a otro jugador para pulsar E.")
             return True
         return False
+
+    def cursor_interactivo(self, posicion):
+        if self.animacion_pocion or self.transicion or self.pantalla_final:
+            return False
+        if self.panel.activo:
+            return any(not b.desactivado and b.rect.collidepoint(posicion) for b in self.panel.botones.values()) or (
+                self.panel.modo == "expediente" and any(r.collidepoint(posicion) for r in self.panel.nodos_expediente.values()))
+        return self.mostrar_hud and (self.boton_expediente.rect.collidepoint(posicion) or (
+            self.mostrar_detalles and self.dimension == LA_COPA and self.boton_guia.collidepoint(posicion)))
 
     def actualizar(self, segundos, cliente):
         teclas = pygame.key.get_pressed()
@@ -911,6 +935,11 @@ class VistaPartida:
             caldero = next((o for o in caso.get("objetivos", []) if o["id"] == "caldero"), None)
             if caldero and self._farol_en_el_suelo(privado.get("tutorial", {})):
                 dibujar_farol_en_suelo(superficie, (caldero["x"] + DESVIO_FAROL[0], caldero["y"] + DESVIO_FAROL[1]), ahora_ms)
+            propuesta = next((o for o in caso.get("objetivos", []) if o["id"] == "propuesta"), None)
+            if propuesta:
+                from interfaz.arte import dibujar_icono
+                dibujar_icono(superficie, self.arte.iconos_pista.get("pista_aspirante"),
+                              (propuesta["x"], propuesta["y"] - 14))
         objetivo = (guia.get("objetivo") or privado.get("objetivo") or {}) if self.dimension == LA_COPA else (self._objetivo_presente() or {})
         for o in self.contexto().get("objetivos", []):
             mismo_rol = objetivo.get("rol") and o.get("rol") == objetivo["rol"]
@@ -1033,6 +1062,8 @@ class VistaPartida:
         for datos, color, (x, tope) in anclas:
             x, tope = self.a_pantalla(x, tope, vista)
             x, tope = round(x), round(tope)
+            if not superficie.get_rect().collidepoint(x, tope):
+                continue
             if not self.mostrar_nombres:
                 if datos["id"] == self.identificador:  # sin etiquetas, igual te ubicas
                     self.adornos.marcador_local(superficie, (x, tope - 6), color, ahora_ms)
@@ -1042,20 +1073,27 @@ class VistaPartida:
                 from mundo.personajes import PERSONAJES_DISTRITO
                 nombre = "Bot · " + PERSONAJES_DISTRITO[datos["rol"]][0]
             elif datos.get("controlador") == "bot":
-                nombre = "Bot · " + nombre
+                nombre = "Bot · " + nombre.split(" · ", 1)[0]
             etiqueta = self.fuente.render(nombre, True, color)
-            caja = etiqueta.get_rect(midbottom=(x, tope - 7))
-            caja.clamp_ip(superficie.get_rect().inflate(-8, -8))
-            while any(caja.inflate(12, 8).colliderect(anterior) for _, anterior, *_ in etiquetas) and caja.top > 24:
-                caja.y -= 20
-            etiquetas.append((etiqueta, caja, color, datos["id"] == self.identificador))
-        for etiqueta, caja, color, local in etiquetas:
-            fondo = pygame.Surface(caja.inflate(10, 6).size, pygame.SRCALPHA)
+            etiquetas.append(dict(imagen=etiqueta, ancla=(x, tope), color=color, id=datos["id"],
+                                   local=datos["id"] == self.identificador, bot=datos.get("controlador") == "bot"))
+        reservas = []
+        if self.mostrar_hud:
+            reservas.append(self.boton_expediente.rect)
+            if self.mostrar_detalles:
+                reservas.extend((pygame.Rect(12, 48, 590, 112), pygame.Rect(13, 172, 226, 220)))
+        self.etiquetas_jugadores = colocar_etiquetas(etiquetas, pygame.Rect(8, 60, 944, 584), reservas)
+        for elemento in self.etiquetas_jugadores:
+            caja, color = elemento["rect"], elemento["color"]
+            x, tope = elemento["ancla"]
+            if abs(caja.bottom - tope) > 18 or abs(caja.centerx - x) > 18:
+                pygame.draw.line(superficie, color, (x, tope - 2), (caja.centerx, caja.bottom), 1)
+            fondo = pygame.Surface(caja.size, pygame.SRCALPHA)
             fondo.fill((13, 29, 23, 150))
-            superficie.blit(fondo, caja.inflate(10, 6))
-            superficie.blit(etiqueta, caja)
-            if local:
-                self.adornos.marcador_local(superficie, (caja.centerx, caja.top - 4), color, ahora_ms)
+            superficie.blit(fondo, caja)
+            superficie.blit(elemento["imagen"], elemento["imagen"].get_rect(center=caja.center))
+            if elemento["local"]:
+                self.adornos.marcador_local(superficie, (x, tope - 6), color, ahora_ms)
         if self.mostrar_hud:
             mundo = self.estado.get("mundo", {})
             privado = mundo.get("privado", {})
@@ -1102,6 +1140,10 @@ class VistaPartida:
             self._texto_pastilla(superficie, texto, self.fuente, midbottom=(480, 704))
         if not caso:
             return
+        if not self.panel.activo:
+            pendientes = (caso.get("expediente") or {}).get("pendientes", 0)
+            self.boton_expediente.texto = f"Casos ({pendientes}) · T" if pendientes else "Casos · T"
+            self.boton_expediente.dibujar(superficie, self.mouse)
         titulo, detalle = self._textos_objetivo(caso, privado, guia)
         self._texto_pastilla(superficie, titulo, self.fuente, (237, 185, 87), topleft=(22, 16))
         # Arriba a la derecha: estrellas, reloj y poder.
@@ -1180,20 +1222,32 @@ class VistaPartida:
 
     def _nombres_npc_cercanos(self, superficie):
         """Nombre y "E: hablar" sobre cada NPC que el jugador tiene a su alcance."""
-        if self.panel.activo:
+        self.etiquetas_npc_actuales = []
+        if self.panel.activo or not self.mostrar_nombres:
             return
         vista = self.vista_camara()
+        elementos = []
         for npc in self.estado.get("mundo", {}).get("caso", {}).get("npcs", []):
             if npc["dimension"] != self.dimension or not self.cerca(npc):
                 continue
             if npc["nombre"] not in self._etiquetas_npc:
-                self._etiquetas_npc[npc["nombre"]] = self.fuente.render(npc["nombre"] + " · E: hablar", True, (255, 243, 210))
+                texto_npc = "Archivo de Mira · E: consultar" if npc["nombre"] == "Mira" else npc["nombre"] + " · E: hablar"
+                self._etiquetas_npc[npc["nombre"]] = self.fuente.render(texto_npc, True, (255, 243, 210))
             texto = self._etiquetas_npc[npc["nombre"]]
             x, y = self.a_pantalla(npc["x"], npc["y"] - 62, vista)
-            caja = texto.get_rect(midbottom=(round(x), round(y)))
-            caja.clamp_ip(superficie.get_rect().inflate(-8, -8))
-            self._pastilla(superficie, caja.inflate(12, 6), 165)
-            superficie.blit(texto, caja)
+            if superficie.get_rect().collidepoint(x, y):
+                elementos.append(dict(id="npc:" + npc["id"], imagen=texto, ancla=(x, y),
+                                      local=False, bot=False, color=(255, 243, 210)))
+        reservas = [e["rect"] for e in self.etiquetas_jugadores]
+        if self.mostrar_hud:
+            reservas.append(self.boton_expediente.rect)
+            if self.mostrar_detalles:
+                reservas.extend((pygame.Rect(12, 48, 590, 112), pygame.Rect(13, 172, 226, 220)))
+        self.etiquetas_npc_actuales = colocar_etiquetas(elementos, pygame.Rect(8, 60, 944, 584), reservas)
+        for etiqueta in self.etiquetas_npc_actuales:
+            caja = etiqueta["rect"]
+            self._pastilla(superficie, caja, 165)
+            superficie.blit(etiqueta["imagen"], etiqueta["imagen"].get_rect(center=caja.center))
 
     def _dibujar_capas_superiores(self, superficie):
         self._nombres_npc_cercanos(superficie)

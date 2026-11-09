@@ -54,7 +54,7 @@ class MisionPuente:
             {"id": "caldero", "nombre": "Caldero · decisión del equipo", "tipo": "caldero", "x": 480, "y": 380},
             {"id": "archivo", "nombre": "Naira · archivo del consejo", "tipo": "fuente", "rol": "guardian", "x": 786, "y": 261},
             {"id": "testigo", "nombre": "Luma · testimonio", "tipo": "fuente", "rol": "habitante", "x": 808, "y": 562},
-            {"id": "propuesta", "nombre": "Mira · propuesta original", "tipo": "fuente", "rol": "aspirante", "x": 205, "y": 531},
+            {"id": "propuesta", "nombre": "Archivo de propuestas de Mira", "tipo": "fuente", "rol": "aspirante", "x": 205, "y": 531},
         ]
         patrones = {"naira": "archivo", "habitante mujer": "testigo", "aspirante mujer": "propuesta"}
         ecos = []

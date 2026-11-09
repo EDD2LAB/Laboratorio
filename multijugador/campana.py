@@ -324,12 +324,8 @@ class CampanaCopa(MisionPuente):
             rol = self.jugadores[identificador]["rol"]
             fuente = next(o for o in self.objetivos if o.get("rol") == rol)
             if solicitud.get("objetivo") == fuente["id"]:
-                evento = self.casos[self.ronda][0]
-                self.avisos_recientes[identificador]["pista_" + rol] = {
-                    "texto": AVISOS_RECIENTES[evento],
-                    "vence": self.reloj + self.sorteo.vigencia(evento, rol),
-                }
-                respuesta["mensaje"] += " Aviso temporal: " + AVISOS_RECIENTES[evento]
+                aviso = self._renovar_aviso(identificador)
+                respuesta["mensaje"] += " Aviso temporal: " + aviso["texto"]
         if accion == "entregar":
             pista = solicitud.get("pista")
             aviso = self.avisos_recientes[identificador].get(pista)
@@ -347,6 +343,16 @@ class CampanaCopa(MisionPuente):
             if metadatos:
                 respuesta["metadatos"] = dict(metadatos)
         return respuesta
+
+    def _renovar_aviso(self, identificador):
+        """Único registro para la fuente directa y su conversación validada."""
+        if not self.ronda or self.fase != "investigacion":
+            return None
+        evento = self.casos[self.ronda][0]
+        rol = self.jugadores[identificador]["rol"]
+        aviso = {"texto": AVISOS_RECIENTES[evento], "vence": self.reloj + self.sorteo.vigencia(evento, rol)}
+        self.avisos_recientes[identificador]["pista_" + rol] = aviso
+        return aviso
 
     def _siguiente(self):
         self.resumen.append({"caso": self.casos[self.ronda][1], **self.resultado})

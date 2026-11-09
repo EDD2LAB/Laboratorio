@@ -10,6 +10,7 @@
 !logica/
 !logica/__init__.py
 !logica/Arboles.py
+!logica/conversaciones.py
 !logica/expediente_avl.py
 !logica/sorteo_partida.py
 !datos/

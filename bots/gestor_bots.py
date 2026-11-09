@@ -70,6 +70,50 @@ class GestorBots:
             estado["caso"] = estado_publico
             bot.actualizar(ahora, segundos, estado, jugadores)
         NavegadorBot.rutas_disponibles = math.inf
+        self._separar_bots(segundos)
+
+    def _separar_bots(self, segundos):
+        """Los bots en reposo dejan espacio sin empujar humanos ni atravesar paredes."""
+        from multijugador.movimiento import VELOCIDAD
+        dt = max(0, min(segundos, .15))
+        if not dt:
+            return
+        puente = self.partida.mision.puente
+        for indice, bot in enumerate(self.bots.values()):
+            yo = bot.posicion
+            if (bot.reemplaza_humano or yo.get("animacion") != "reposo"
+                    or bot.identificador == puente.reparador):
+                continue
+            dimension = yo.get("dimension", "la_copa")
+            otros = [j for i, j in self.partida.jugadores.items() if i != bot.identificador
+                     and i in self.partida.conectados and j.get("dimension", "la_copa") == dimension]
+            if not otros:
+                continue
+            def espacio(x, y):
+                return min(math.hypot(x - j["x"], y - j["y"]) for j in otros)
+            actual = espacio(yo["x"], yo["y"])
+            separacion = 30 if dimension == "la_copa" else 14
+            if actual >= separacion:
+                continue
+            cercano = min(otros, key=lambda j: math.hypot(yo["x"] - j["x"], yo["y"] - j["y"]))
+            dx, dy = yo["x"] - cercano["x"], yo["y"] - cercano["y"]
+            angulo = math.atan2(dy, dx) if dx or dy else indice * math.tau / max(1, len(self.bots))
+            paso = min(20 * dt, separacion - actual)
+            colisiones = self.partida.colisiones_de(dimension)
+            mejor, margen = (yo["x"], yo["y"]), actual
+            destino = bot.objetivo_actual
+            radio = bot.radio_objetivo
+            alcance = max(radio or 0, math.hypot(yo["x"] - destino["x"], yo["y"] - destino["y"])) if destino else None
+            for giro in (0, 1, -1, 2, -2, 3, -3, 4):
+                direccion = angulo + giro * math.pi / 4
+                x, y = colisiones.mover(yo["x"], yo["y"], math.cos(direccion), math.sin(direccion), dt,
+                                        factor=paso / (VELOCIDAD * dt))
+                if destino and math.hypot(x - destino["x"], y - destino["y"]) > alcance + .001:
+                    continue
+                libre = espacio(x, y)
+                if libre > margen + .001:
+                    mejor, margen = (x, y), libre
+            yo["x"], yo["y"] = mejor
 
     def _asignar_ayuda(self, estados, jugadores):
         peticiones = list(self.memoria.solicitudes_ayuda.items())

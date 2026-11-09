@@ -55,3 +55,25 @@ Implementa el arte que ya existía en `Imagenes/` y aún no se usaba.
 
 Asignación de filas del caldero: 1 estable, 2 peligroso, 3 crítico, 4 campaña terminada.
 Barra de recarga: llena si se puede usar, media si falta la prueba propia, vacía si ya se usó.
+
+## Correcciones de claridad del multijugador — 2026-11-08
+
+- Etiquetas de jugadores y NPC distribuidas sin superponer fondos; los personajes
+  fuera de cámara dejan de generar nombres pegados a los bordes.
+- Botón Casos visible con detalles cerrados, contador de casos por ordenar,
+  cursor de mano y ayuda del atajo T. Respeta la opción de ocultar el HUD.
+- Los bots en reposo dejan espacio gradualmente, sin mover al jugador, atravesar
+  paredes o abandonar el alcance de una interacción. Animación de reposo al llegar.
+- La bot Aspirante es Mira y usa su apariencia femenina por defecto. Se conservan
+  las variantes elegidas por los jugadores. Kael es un NPC con diálogo propio;
+  las propuestas de Mira se consultan en un archivo señalizado en el mapa.
+- Integrado `e071830` del equipo: Timeless Glitch, diálogos, apariencias, farol,
+  accesibilidad y efectos. Las conversaciones de fuentes renuevan los avisos
+  temporales igual que las interacciones directas.
+- Corregida la exclusión de `logica/conversaciones.py` del contexto de Docker.
+  Verificada la importación del servidor desde ese contexto sin Pygame.
+- Protocolo 9; requiere actualizar el juego y el servicio en Render.
+- Validación: revisión global de 286 casos y repetición de 60 pruebas afectadas
+  (18 de finales, 22 de diálogos, 12 de AVL/sorteo y 8 de claridad), aprobadas.
+  Se actualizó la expectativa antigua que dibujaba a Mira como NPC fijo.
+  Revisada visualmente la vista integrada del mapa.

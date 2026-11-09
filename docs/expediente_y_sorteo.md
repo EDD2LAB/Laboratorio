@@ -50,7 +50,8 @@ son complementarios, para investigar con calma. Se usa el reloj del servidor.
 
 ## Despliegue
 
-Protocolo **8**: actualizar tanto los clientes como el servidor de Render.
+Protocolo **9**: actualizar tanto los clientes como el servidor de Render.
+Incluye las correcciones de identidad de Mira y la separación entre bots.
 El límite LAN pasa a 32 KiB para incluir los cuatro casos archivados;
 las pruebas verifican que el estado completo quede dentro de ese límite.
 El Dockerfile incluye los módulos de lógica y el catálogo JSON, sin Pygame.

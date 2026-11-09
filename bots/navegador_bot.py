@@ -93,6 +93,7 @@ class NavegadorBot:
         self._reintento_ms = max(0.0, self._reintento_ms - max(0, segundos) * 1000)
         if self._distancia(actual, destino) <= radio:
             self.ruta = []
+            jugador["animacion"] = "reposo"
             return True
         if self.destino != tuple(map(float, destino)):
             self.destino = None

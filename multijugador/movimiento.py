@@ -32,7 +32,7 @@ def normalizar(texto):
 def es_personaje_jugable(nombre):
     ruta = normalizar(nombre)
     return ("guardian" in ruta or "/mensajero/" in ruta or "habitante hombre" in ruta
-            or ("aspirante hombre" in ruta and "aspirante mujer" not in ruta
+            or ("aspirante mujer" in ruta
                 and "habitante" not in ruta and "mensajero" not in ruta))
 
 

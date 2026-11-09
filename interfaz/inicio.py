@@ -628,6 +628,8 @@ class MenuInicio:
                                 break
                 self.dibujar()
                 activo = any(b.rect.collidepoint(self.mouse) and not b.desactivado for b in self.botones.values())
+                if self.vista == "partida" and self.partida and not self.pausa.activo:
+                    activo = activo or self.partida.cursor_interactivo(self.mouse)
                 try:
                     pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if activo else pygame.SYSTEM_CURSOR_ARROW)
                 except pygame.error:

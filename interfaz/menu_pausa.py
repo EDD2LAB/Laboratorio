@@ -32,6 +32,7 @@ CONTROLES = (
     ("Tab", "Cambiar entre objetivos cercanos"),
     ("I", "Pistas"),
     ("M", "Tu tarea"),
+    ("T", "Libro de casos y expediente AVL"),
     ("Q", "Habilidad de tu rol"),
     ("J", "Detalles: tarea, indicadores y teclas"),
     ("H", "Ocultar o mostrar todo el HUD"),
@@ -56,6 +57,7 @@ PAGINAS_COMO_JUGAR = (
         "6. Después ayuden a la aldea: lleven los materiales al lugar marcado, hagan la actividad "
         "en pareja y confirmen en el caldero. En el primer caso también reparan el Puente 1: "
         "pulsa E tres veces en la zona verde.",
+        "Pulsa T o el botón Casos del mapa para consultar lo que descubrieron y ordenar el expediente.",
         "Son cuatro casos. Al terminar, la flecha dorada te lleva al portal.",
     )),
     ("Distrito Conecta", (
@@ -362,7 +364,7 @@ class MenuPausa:
             menu.texto(accion, 350, y, 18)
         menu.parrafo("Sigue el anillo y la flecha dorada hasta tu objetivo. Al terminar una dimensión, "
                      "la flecha te lleva al portal para elegir otra época.",
-                     pygame.Rect(190, 470 + 20, 580, 80), 16)
+                     pygame.Rect(190, 525, 580, 80), 16)
         self._boton("volver", "Volver", (480, 630), 220)
 
     def _dibujar_confirmar_salida(self):

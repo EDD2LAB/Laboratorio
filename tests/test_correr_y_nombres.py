@@ -74,8 +74,8 @@ class VistaTests(unittest.TestCase):
             for direccion in DIRECCIONES:
                 self.assertTrue(personajes[rol][("correr", direccion)])
                 self.assertTrue(personajes[rol][("caminar", direccion)])
-        # La Aspirante y el Mensajero tienen hojas de correr propias.
-        for rol in ("aspirante", "mensajero"):
+        # El Mensajero tiene hojas propias; Mira usa sus caminatas al correr.
+        for rol in ("mensajero",):
             self.assertIsNot(personajes[rol][("correr", "abajo")], personajes[rol][("caminar", "abajo")])
 
     def test_l_oculta_y_muestra_nombres(self):
