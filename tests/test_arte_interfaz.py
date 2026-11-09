@@ -316,7 +316,7 @@ class DistritoConecta(unittest.TestCase):
     def test_no_se_dibuja_el_npc_de_quien_ya_juega_ese_personaje(self):
         gemelos = self.vista._npcs_gemelos()
         self.assertIn("Ronaldo Vélez", gemelos)
-        self.assertNotIn("Darío Veraz", gemelos)
+        self.assertIn("Darío Veraz", gemelos)  # espera dentro del Centro de Verificación
 
     def test_el_portal_queda_centrado_con_las_escaleras(self):
         rect = self.vista.rect_portal()

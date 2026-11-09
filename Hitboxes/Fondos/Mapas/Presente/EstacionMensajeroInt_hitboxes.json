@@ -1,6 +1,9 @@
 {
   "image": "Imagenes/Fondos/Mapas/Presente/EstacionMensajeroInt.png",
-  "image_size": [344, 192],
+  "image_size": [
+    344,
+    192
+  ],
   "hitboxes": [
     {
       "id": "muro_estacion_fondo",
@@ -37,6 +40,36 @@
       "distancia": 58,
       "tecla": "E",
       "nombre_edificio": "Volver a la calle"
+    },
+    {
+      "id": "suelo_1",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.24,
+      "ry": 0.38,
+      "rw": 0.64,
+      "rh": 0.22,
+      "zona": "Suelo caminable"
+    },
+    {
+      "id": "suelo_2",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.13,
+      "ry": 0.58,
+      "rw": 0.73,
+      "rh": 0.32,
+      "zona": "Suelo caminable"
+    },
+    {
+      "id": "suelo_3",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.42,
+      "ry": 0.22,
+      "rw": 0.16,
+      "rh": 0.18,
+      "zona": "Suelo caminable"
     }
   ],
   "spawn": {

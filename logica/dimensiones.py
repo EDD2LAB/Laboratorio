@@ -16,7 +16,7 @@ EDIFICIOS_PRESENTE = {
         "interior": "Fondos/Mapas/Presente/CaféDigitalInt.png",
         "interior_hitboxes": "Fondos/Mapas/Presente/CaféDigitalInt_hitboxes.json",
         "mision": "investigacion_digital",
-        "spawn_exterior": (0.20, 0.275),
+        "spawn_exterior": (0.1604, 0.2126),
     },
     "alcaldia": {
         "nombre": "Alcaldía de Distrito Conecta",
@@ -25,7 +25,7 @@ EDIFICIOS_PRESENTE = {
         "interior": "Fondos/Mapas/Presente/SededelAspiranteInt.png",
         "interior_hitboxes": "Fondos/Mapas/Presente/SededelAspiranteInt_hitboxes.json",
         "mision": "campana_alcaldia",
-        "spawn_exterior": (0.88, 0.285),
+        "spawn_exterior": (0.8438, 0.2414),
     },
     "centro_verificacion": {
         "nombre": "Centro de Verificación Digital",
@@ -35,7 +35,7 @@ EDIFICIOS_PRESENTE = {
         "interior": "Fondos/Mapas/Presente/CentrodeVerifInt.png",
         "interior_hitboxes": "Fondos/Mapas/Presente/CentrodeVerifInt_hitboxes.json",
         "mision": "verificar_publicacion",
-        "spawn_exterior": (0.47, 0.865),
+        "spawn_exterior": (0.4354, 0.8324),
     },
     "centro_comunicaciones": {
         "nombre": "Centro de Comunicaciones",
@@ -45,7 +45,7 @@ EDIFICIOS_PRESENTE = {
         "interior": "Fondos/Mapas/Presente/EstacionMensajeroInt.png",
         "interior_hitboxes": "Fondos/Mapas/Presente/EstacionMensajeroInt_hitboxes.json",
         "mision": "rastrear_propagacion",
-        "spawn_exterior": (0.09, 0.51),
+        "spawn_exterior": (0.0979, 0.5081),
     },
     "estudio_lia": {
         "nombre": "Estudio de Lía Nova",
@@ -55,7 +55,7 @@ EDIFICIOS_PRESENTE = {
         "interior": "Fondos/Mapas/Presente/EstudioInfluencerInt.png",
         "interior_hitboxes": "Fondos/Mapas/Presente/EstudioInfluencerInt_hitboxes.json",
         "mision": "alcance_publicacion",
-        "spawn_exterior": (0.84, 0.59),
+        "spawn_exterior": (0.8896, 0.5441),
     },
     "centro_comunitario": {
         "nombre": "Centro Comunitario",
@@ -65,7 +65,7 @@ EDIFICIOS_PRESENTE = {
         "interior": "Fondos/Mapas/Presente/CaféDigitalInt.png",
         "interior_hitboxes": "Fondos/Mapas/Presente/CaféDigitalInt_hitboxes.json",
         "mision": "contrastar_testimonios",
-        "spawn_exterior": (0.08, 0.89),
+        "spawn_exterior": (0.0938, 0.8829),
     },
     "campana_ronaldo": {
         "nombre": "Sede de campaña de Ronaldo Vélez",
@@ -74,7 +74,7 @@ EDIFICIOS_PRESENTE = {
         "interior": "Fondos/Mapas/Presente/SededelAspiranteInt.png",
         "interior_hitboxes": "Fondos/Mapas/Presente/SededelAspiranteInt_hitboxes.json",
         "mision": "campana_alcaldia",
-        "spawn_exterior": (0.22, 0.93),
+        "spawn_exterior": (0.1688, 0.991),
     },
 }
 
@@ -99,12 +99,12 @@ DIMENSIONES = {
     },
     DIMENSION_FUTURO: {
         "nombre": "Ciudad Núcleo",
-        "mapa": None,
-        "hitboxes": None,
-        "spawn": None,
+        "mapa": "Futuro/generado/MapaFuturo.png",
+        "hitboxes": "Mapas/Futuro/MapaFuturo_hitboxes.json",
+        "spawn": (480, 620),
         "musica": "ambiente_futuro",
-        "mision_inicial": None,
-        "disponible": False,
+        "mision_inicial": "nucleo_control",
+        "disponible": True,
     },
 }
 

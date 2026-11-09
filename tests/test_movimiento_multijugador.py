@@ -24,6 +24,17 @@ class PruebasMovimiento(unittest.TestCase):
                 p.actualizar(i * .05)
             self.assertAlmostEqual(math.hypot(jugador["x"] - x, jugador["y"] - y), VELOCIDAD * .15)
 
+    def test_en_el_presente_se_camina_mas_despacio(self):
+        from multijugador.dimensiones_red import PRESENTE
+        from multijugador.movimiento import FACTOR_VELOCIDAD_PRESENTE
+        presente = PartidaMovimiento([{"id": "a", "nombre": "A", "rol": "guardian"}], 0).colisiones_de(PRESENTE)
+        self.assertEqual(presente.factor_velocidad, FACTOR_VELOCIDAD_PRESENTE)
+        copa = ColisionesMapa({"hitboxes": [], "decoracion": []})
+        lento = ColisionesMapa({"hitboxes": [], "decoracion": []})
+        lento.factor_velocidad = FACTOR_VELOCIDAD_PRESENTE
+        self.assertAlmostEqual(lento.mover(400, 400, 1, 0, .1)[0] - 400,
+                               (copa.mover(400, 400, 1, 0, .1)[0] - 400) * FACTOR_VELOCIDAD_PRESENTE)
+
     def test_sin_controles_se_detiene_y_no_acepta_teletransporte(self):
         p = self.partida(); j = p.jugadores["a"]; x = j["x"]
         p.recibir("a", {"dx": 1, "dy": 0, "seq": 1, "x": 999999}, 0)

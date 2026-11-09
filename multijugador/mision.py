@@ -86,7 +86,8 @@ class MisionPuente:
     def _cerca(self, identificador, objetivo, radio=68):
         jugador = self.jugadores[identificador]
         # Quien está en otra dimensión no puede interactuar con este mapa.
-        if jugador.get("dimension", "la_copa") != objetivo.get("dimension", "la_copa"):
+        if (jugador.get("dimension", "la_copa") != objetivo.get("dimension", "la_copa")
+                or jugador.get("interior") != objetivo.get("interior")):
             return False
         return math.hypot(jugador["x"] - objetivo["x"], jugador["y"] - objetivo["y"]) <= radio
 

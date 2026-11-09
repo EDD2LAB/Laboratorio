@@ -14,8 +14,10 @@ CATEGORIA_EVENTO = {
     # "Mira se quedó con la ayuda": acusación a una persona concreta difundida
     # por vecinos ("dicen que..."), por eso Entre Habitantes.
     "ayuda": ("Acusacion Personal", "Entre Habitantes"),
-    # Publicación de Distrito Conecta con imagen generada con IA.
-    "publicacion_presente": ("Contenido Digital", "Generado con IA"),
+    # Distrito Conecta: un video real editado, una voz clonada y una cara usurpada.
+    "presente_video": ("Contenido Digital", "Contenido manipulado"),
+    "presente_voz": ("Contenido Digital", "Suplantacion"),
+    "presente_foto": ("Contenido Digital", "Suplantacion"),
 }
 
 # Opciones de la trivia por dimensión: nombre visible -> nombre en el árbol.
@@ -27,6 +29,8 @@ OPCIONES = {
         "Aviso Comunitario": ("Aviso Comunitario",),
     },
     "presente": {
+        "Contenido manipulado": ("Contenido Digital", "Contenido manipulado"),
+        "Suplantación": ("Contenido Digital", "Suplantacion"),
         "Generado con IA": ("Contenido Digital", "Generado con IA"),
         "Contenido auténtico": ("Contenido Digital", "Contenido autentico"),
     },

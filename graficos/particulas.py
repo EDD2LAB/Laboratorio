@@ -98,6 +98,9 @@ class SistemaParticulas:
         if dimension == "presente":
             self.mostrar_luciernagas = False
             self.paleta = ((62, 210, 206), (99, 185, 241), (170, 239, 230))
+        elif dimension == "futuro":
+            self.mostrar_luciernagas = False
+            self.paleta = ((90, 230, 230), (170, 120, 255), (215, 245, 255))
         else:
             self.mostrar_luciernagas = True
             self.paleta = self.PALETA

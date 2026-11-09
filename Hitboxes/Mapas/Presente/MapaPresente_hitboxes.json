@@ -155,10 +155,10 @@
       "id": "entrada_distrito_conecta",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.155,
-      "ry": 0.218,
-      "rw": 0.067,
-      "rh": 0.043,
+      "rx": 0.1403,
+      "ry": 0.1701,
+      "rw": 0.0421,
+      "rh": 0.0382,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
       "edificio_id": "distrito_conecta",
@@ -167,7 +167,9 @@
       "activo": true,
       "distancia": 58,
       "zona": "Puerta del edificio superior izquierdo",
-      "target_image": ""
+      "target_image": "",
+      "frente_rx": 0.1604,
+      "frente_ry": 0.2126
     },
     {
       "id": "muro_comunicaciones_oeste",
@@ -183,10 +185,10 @@
       "id": "entrada_centro_comunicaciones",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.047,
-      "ry": 0.486,
-      "rw": 0.061,
-      "rh": 0.044,
+      "rx": 0.0842,
+      "ry": 0.4722,
+      "rw": 0.024,
+      "rh": 0.0347,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
       "edificio_id": "centro_comunicaciones",
@@ -195,7 +197,9 @@
       "activo": true,
       "distancia": 58,
       "zona": "Puerta del edificio izquierdo",
-      "target_image": ""
+      "target_image": "",
+      "frente_rx": 0.0979,
+      "frente_ry": 0.5081
     },
     {
       "id": "muro_alcaldia_norte",
@@ -231,10 +235,10 @@
       "id": "entrada_alcaldia",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.861,
-      "ry": 0.222,
-      "rw": 0.075,
-      "rh": 0.048,
+      "rx": 0.8357,
+      "ry": 0.1458,
+      "rw": 0.018,
+      "rh": 0.0486,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
       "edificio_id": "alcaldia",
@@ -243,7 +247,9 @@
       "activo": true,
       "distancia": 58,
       "zona": "Acceso al complejo político",
-      "target_image": ""
+      "target_image": "",
+      "frente_rx": 0.8438,
+      "frente_ry": 0.2414
     },
     {
       "id": "muro_estudio_lia_este",
@@ -259,10 +265,10 @@
       "id": "entrada_estudio_lia",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.824,
-      "ry": 0.555,
-      "rw": 0.129,
-      "rh": 0.049,
+      "rx": 0.8778,
+      "ry": 0.5069,
+      "rw": 0.02,
+      "rh": 0.0382,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
       "edificio_id": "estudio_lia",
@@ -271,7 +277,9 @@
       "activo": true,
       "distancia": 58,
       "zona": "Acceso del café/estudio derecho",
-      "target_image": ""
+      "target_image": "",
+      "frente_rx": 0.8896,
+      "frente_ry": 0.5441
     },
     {
       "id": "muro_comunitario_norte",
@@ -297,10 +305,10 @@
       "id": "entrada_centro_comunitario",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.061,
-      "ry": 0.895,
-      "rw": 0.052,
-      "rh": 0.051,
+      "rx": 0.0822,
+      "ry": 0.8472,
+      "rw": 0.02,
+      "rh": 0.0312,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
       "edificio_id": "centro_comunitario",
@@ -309,16 +317,18 @@
       "activo": true,
       "distancia": 58,
       "zona": "Puerta del edificio inferior izquierdo",
-      "target_image": ""
+      "target_image": "",
+      "frente_rx": 0.0938,
+      "frente_ry": 0.8829
     },
     {
       "id": "muro_campana_oeste",
       "role": "wall",
       "type": "rect",
-      "rx": 0.151,
+      "rx": 0.1667,
       "ry": 0.876,
-      "rw": 0.043,
-      "rh": 0.124,
+      "rw": 0.0271,
+      "rh": 0.0721,
       "zona": "Edificio inferior central izquierdo: pared oeste"
     },
     {
@@ -335,10 +345,10 @@
       "id": "entrada_campana_ronaldo",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.194,
-      "ry": 0.943,
-      "rw": 0.055,
-      "rh": 0.049,
+      "rx": 0.1884,
+      "ry": 0.9514,
+      "rw": 0.022,
+      "rh": 0.0417,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
       "edificio_id": "campana_ronaldo",
@@ -347,7 +357,9 @@
       "activo": true,
       "distancia": 58,
       "zona": "Sede compartida para evitar duplicar oficinas en el mapa",
-      "target_image": ""
+      "target_image": "",
+      "frente_rx": 0.1688,
+      "frente_ry": 0.991
     },
     {
       "id": "muro_verificacion_oeste",
@@ -363,10 +375,10 @@
       "id": "entrada_centro_verificacion",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.423,
-      "ry": 0.844,
-      "rw": 0.1,
-      "rh": 0.045,
+      "rx": 0.4208,
+      "ry": 0.7847,
+      "rw": 0.0301,
+      "rh": 0.0486,
       "action": "entrar_edificio",
       "tipo": "entrada_edificio",
       "edificio_id": "centro_verificacion",
@@ -375,7 +387,9 @@
       "activo": true,
       "distancia": 58,
       "zona": "Puerta del edificio central inferior",
-      "target_image": ""
+      "target_image": "",
+      "frente_rx": 0.4354,
+      "frente_ry": 0.8324
     },
     {
       "id": "jardin_noroeste_plaza",
@@ -1473,7 +1487,7 @@
       "type": "rect",
       "rx": 0.021170610211706103,
       "ry": 0.9568965517241379,
-      "rw": 0.14570361145703611,
+      "rw": 0.1292,
       "rh": 0.023706896551724137
     },
     {

@@ -1,6 +1,8 @@
 from collections import Counter
 import math
 
+from multijugador.nucleo import LLAVE, intento_bot as intento_nucleo
+from multijugador.presente import intento_bot
 from multijugador.reparacion import CONFIGURACION as CONFIG_PUENTE, angulo_objetivo
 
 RADIO_CALDERO = 68  # el servidor exige esta distancia para elegir
@@ -8,6 +10,7 @@ RADIO_EMISOR = 56  # junto a quien llamó, dentro del alcance de una entrega dir
 ESPERA_ORDEN = 12.0  # segundos que se queda donde lo llamaron si no hay más que hacer
 ESPERA_ALIADO = 25.0  # segundos que el Habitante espera compañero para su habilidad
 PASO_ACOMPANAR = 40  # solo recalcula la ruta cuando el humano cambia de casilla
+ACIERTO_MARCA = {"facil": .55, "normal": .75, "dificil": .9}  # probabilidad de señalar bien
 
 
 class PlanificadorBot:
@@ -64,7 +67,10 @@ class PlanificadorBot:
     def planificar(self, bot, estado, jugadores, memoria, dificultad):
         if bot.posicion.get("dimension", "la_copa") != "la_copa":
             bot.orden = None
-            return self._distrito(bot, estado, jugadores, memoria) or self._acompanar(bot, jugadores)
+            tarea_de_era = self._tareas_nucleo if bot.posicion.get("dimension") == "futuro" else self._analizar_distrito
+            return (self._distrito(bot, estado, jugadores, memoria)
+                    or tarea_de_era(bot, estado, jugadores, memoria, dificultad)
+                    or self._acompanar(bot, jugadores, estado))
         caso = estado["caso"]
         privado = estado["privado"]
         ronda = caso["ronda"]
@@ -267,33 +273,93 @@ class PlanificadorBot:
         """Los bots reúnen pistas y dejan una por persona, la más cercana a ella.
 
         La decisión y la clasificación siguen siendo de las personas."""
-        privado = estado["privado"].get("presente") or {}
         dimension = bot.posicion.get("dimension")
+        privado = estado["privado"].get(dimension) or {}
         humanos = [j for j in jugadores if j.get("controlador") != "bot"
                    and j.get("dimension") == dimension and j.get("conectado", True)]
         halladas = {p["id"] for p in privado.get("inventario", [])}
-        pendientes = [n for n in estado["caso"].get("npcs", []) if n.get("pista") and n["pista"] not in halladas]
+        pendientes = [n for n in estado["caso"].get("npcs", [])
+                      if n["dimension"] == dimension and n.get("pista") and n["pista"] not in halladas]
         if not humanos or not pendientes:
             return None
         # Una tarea reservada se termina, aunque la persona se haya movido.
         for objetivo in pendientes:
-            if memoria.reservas_preparacion.get("distrito:" + objetivo["id"]) == bot.identificador:
-                return self._tarea("INVESTIGANDO", objetivo, "hablar_npc", npc=objetivo["id"])
-        reservadas = sum("distrito:" + o["id"] in memoria.reservas_preparacion for o in pendientes)
+            if memoria.reservas_preparacion.get("distrito:" + objetivo["pista"]) == bot.identificador:
+                return self._hablar_con(bot, estado, objetivo)
+        reservadas =sum("distrito:" + o["pista"] in memoria.reservas_preparacion for o in pendientes)
         if len(pendientes) - reservadas <= len(humanos):
             return None
         cercania = lambda o: min(math.hypot(o["x"] - j["x"], o["y"] - j["y"]) for j in humanos)
         for objetivo in sorted(pendientes, key=cercania, reverse=True):
-            if memoria.reservar_preparacion(bot.identificador, "distrito:" + objetivo["id"]):
-                return self._tarea("INVESTIGANDO", objetivo, "hablar_npc", npc=objetivo["id"])
+            if memoria.reservar_preparacion(bot.identificador, "distrito:" + objetivo["pista"]):
+                return self._hablar_con(bot, estado, objetivo)
         return None
 
-    @staticmethod
-    def _acompanar(bot, jugadores):
-        """Fuera de La Copa los bots acompañan al humano más cercano."""
-        dimension = bot.posicion.get("dimension")
+    def _hablar_con(self, bot, estado, objetivo):
+        """Va hasta el personaje; si está en otro edificio, usa las puertas como cualquiera."""
+        edificios = (estado["caso"].get("presente") or {}).get("edificios", {})
+        destino, mio = objetivo.get("interior"), bot.posicion.get("interior")
+        if destino == mio:
+            return self._tarea("INVESTIGANDO", objetivo, "hablar_npc", npc=objetivo["id"])
+        if mio:
+            return self._tarea("INVESTIGANDO", edificios[mio]["salida"], "salir_edificio", radio=30)
+        return self._tarea("INVESTIGANDO", edificios[destino], "entrar_edificio", edificio=destino, radio=16)
+
+    def _tareas_nucleo(self, bot, estado, jugadores, memoria, dificultad):
+        """Recorren las terminales con los mismos mensajes y dejan una por persona."""
+        futuro = estado["caso"].get("futuro") or {}
+        inventario = {p["id"] for p in (estado["privado"].get("futuro") or {}).get("inventario", [])}
         humanos = [j for j in jugadores if j.get("controlador") != "bot"
-                   and j.get("dimension") == dimension and j.get("conectado", True)]
+                   and j.get("dimension") == "futuro" and j.get("conectado", True)]
+        pendientes = [o for o in futuro.get("objetivos", []) if o.get("tarea") and o["tarea"] not in futuro.get("tareas", [])
+                      and (o["tarea"] != "llave" or LLAVE in inventario)]
+        if not humanos or not pendientes:
+            bot.marca_planeada = None
+            return None
+        objetivo = next((o for o in pendientes if memoria.reservas_preparacion.get("nucleo:" + o["tarea"]) == bot.identificador), None)
+        if objetivo is None:
+            reservadas = sum("nucleo:" + o["tarea"] in memoria.reservas_preparacion for o in pendientes)
+            if len(pendientes) - reservadas <= len(humanos):
+                return None
+            objetivo = next((o for o in pendientes if memoria.reservar_preparacion(bot.identificador, "nucleo:" + o["tarea"])), None)
+            if objetivo is None:
+                return None
+        if bot.marca_planeada is None:
+            bot.marca_planeada = intento_nucleo(objetivo["tarea"], bot._random, ACIERTO_MARCA.get(dificultad, .75))
+        return self._tarea("INVESTIGANDO", objetivo, "futuro_resolver", terminal=objetivo["tarea"], **bot.marca_planeada)
+
+    def _analizar_distrito(self, bot, estado, jugadores, memoria, dificultad):
+        """Un bot ayuda a marcar, con los mismos mensajes, y deja la última marca a las personas."""
+        presente = estado["caso"].get("presente") or {}
+        privado = estado["privado"].get("presente") or {}
+        analisis = presente.get("analisis") or {}
+        evento = (presente.get("evento") or {}).get("id")
+        if (not analisis.get("disponible") or presente.get("completada")
+                or len(analisis.get("halladas", [])) >= analisis.get("minimo", 0) - 1):
+            bot.marca_planeada = None
+            return None
+        if not memoria.reservar_preparacion(bot.identificador, "analisis:" + evento):
+            return None
+        companero = self._acompanar(bot, jugadores)
+        if "destino" not in companero:
+            return None
+        companero.pop("esperar", None)
+        if not privado.get("analizando"):
+            return dict(companero, estado="ANALIZANDO_PRUEBAS", accion="presente_analizar", datos={})
+        if bot.marca_planeada is None:
+            encontradas = {m["id"] for m in analisis["halladas"]}
+            bot.marca_planeada = intento_bot(evento, encontradas, bot._random, ACIERTO_MARCA.get(dificultad, .75))
+        return dict(companero, estado="ANALIZANDO_PRUEBAS", accion="presente_marcar", datos=dict(bot.marca_planeada))
+
+    @staticmethod
+    def _acompanar(bot, jugadores, estado=None):
+        """Fuera de La Copa los bots acompañan al humano más cercano."""
+        dimension, interior = bot.posicion.get("dimension"), bot.posicion.get("interior")
+        humanos = [j for j in jugadores if j.get("controlador") != "bot" and j.get("dimension") == dimension
+                   and j.get("interior") == interior and j.get("conectado", True)]
+        if interior and not humanos and estado is not None:  # terminó aquí dentro: vuelve a la calle
+            salida = estado["caso"]["presente"]["edificios"][interior]["salida"]
+            return PlanificadorBot._tarea("ACOMPANANDO", salida, "salir_edificio", radio=30)
         if not humanos:
             return {"estado": "ESPERANDO_EQUIPO"}
         humano = min(humanos, key=lambda j: (j["x"] - bot.posicion["x"]) ** 2 + (j["y"] - bot.posicion["y"]) ** 2)

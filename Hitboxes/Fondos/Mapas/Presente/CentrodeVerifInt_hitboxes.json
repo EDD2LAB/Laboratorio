@@ -1,6 +1,9 @@
 {
   "image": "Imagenes/Fondos/Mapas/Presente/CentrodeVerifInt.png",
-  "image_size": [344, 192],
+  "image_size": [
+    344,
+    192
+  ],
   "hitboxes": [
     {
       "id": "muro_verificacion_norte",
@@ -47,6 +50,26 @@
       "distancia": 58,
       "tecla": "E",
       "nombre_edificio": "Volver a la calle"
+    },
+    {
+      "id": "suelo_1",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.12,
+      "ry": 0.33,
+      "rw": 0.8,
+      "rh": 0.47,
+      "zona": "Suelo caminable"
+    },
+    {
+      "id": "suelo_2",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.39,
+      "ry": 0.75,
+      "rw": 0.21,
+      "rh": 0.23,
+      "zona": "Suelo caminable"
     }
   ],
   "spawn": {

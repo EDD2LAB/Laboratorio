@@ -19,12 +19,22 @@ DIMENSIONES_RED = {
               "hitboxes": RAIZ / "Hitboxes" / "Mapas" / "Pr_MañanaLumi_hitboxes.json"},
     PRESENTE: {"nombre": "Distrito Conecta", "epoca": "Presente", "disponible": True,
                "hitboxes": RAIZ / "Hitboxes" / "Mapas" / "Presente" / "MapaPresente_hitboxes.json"},
-    # Ciudad Núcleo todavía no tiene mapa ni hitboxes en el repositorio
-    # (dimensiones.DIMENSIONES["futuro"]["disponible"] es False). Punto de
-    # integración: añadir aquí su JSON y poner disponible=True.
-    FUTURO: {"nombre": "Ciudad Núcleo", "epoca": "Futuro", "disponible": False, "hitboxes": None},
+    # Misma geometría que Distrito Conecta (ver docs/futuro.md).
+    FUTURO: {"nombre": "Ciudad Núcleo", "epoca": "Futuro", "disponible": True,
+             "hitboxes": RAIZ / "Hitboxes" / "Mapas" / "Futuro" / "MapaFuturo_hitboxes.json"},
 }
 ORDEN = (LA_COPA, PRESENTE, FUTURO)
+
+# Interiores de Distrito Conecta: edificio -> nombre del arte y de sus hitboxes.
+CARPETA_INTERIORES = RAIZ / "Hitboxes" / "Fondos" / "Mapas" / "Presente"
+INTERIORES = {
+    "distrito_conecta": "CaféDigitalInt", "centro_comunitario": "CaféDigitalInt",
+    "alcaldia": "SededelAspiranteInt", "campana_ronaldo": "SededelAspiranteInt",
+    "centro_verificacion": "CentrodeVerifInt", "centro_comunicaciones": "EstacionMensajeroInt",
+    "estudio_lia": "EstudioInfluencerInt",
+}
+RADIO_PUERTA = 40
+RADIO_SALIDA = 58
 
 # Portal de La Copa: decoración "Portales 4x4.png" del mapa (886,268,74,99).
 # Portal de Distrito Conecta: se dibuja sobre el spawn del JSON (spawn_presente).
@@ -62,12 +72,45 @@ def cargar_datos(dimension):
     if not config["disponible"]:
         raise ValueError(config["nombre"] + " todavía está en construcción.")
     datos = json.loads(Path(config["hitboxes"]).read_text(encoding="utf-8"))
-    if dimension == PRESENTE:
+    if dimension in (PRESENTE, FUTURO):
         rect = rect_mapa_presente(datos)
         datos = dict(datos, hitboxes=[mapear_hitbox(h, rect) for h in datos.get("hitboxes", [])
                                       if isinstance(h, dict)],
                      decoracion=[], rect_mapa=list(rect))
     return datos
+
+
+def cargar_interior(edificio):
+    """Hitboxes de un interior, en el lienzo 960x720 (mismo escalado que el mapa)."""
+    datos = json.loads((CARPETA_INTERIORES / (INTERIORES[edificio] + "_hitboxes.json")).read_text(encoding="utf-8"))
+    rect = rect_mapa_presente(datos)
+    return dict(datos, hitboxes=[mapear_hitbox(h, rect) for h in datos.get("hitboxes", [])], decoracion=[], rect_mapa=list(rect))
+
+
+def spawn_interior(datos):
+    x, y, w, h = datos["rect_mapa"]
+    spawn = datos["spawn"]["default"]
+    return x + (spawn["rx"] + spawn["rw"] / 2) * w, y + (spawn["ry"] + spawn["rh"]) * h
+
+
+def rect_salida(datos):
+    """Rectángulo (px del lienzo) de la puerta por la que se vuelve a la calle."""
+    salida = next(h for h in datos["hitboxes"] if h.get("action") == "salir_edificio")
+    return (round(salida["rx"] * ANCHO), round(salida["ry"] * ALTO), round(salida["rw"] * ANCHO), round(salida["rh"] * ALTO))
+
+
+def edificios_de(datos):
+    """Puertas del mapa: su rectángulo y el punto de la calle justo enfrente."""
+    x0, y0, ancho, alto = datos["rect_mapa"]
+    edificios = {}
+    for h in datos["hitboxes"]:
+        if h.get("action") == "entrar_edificio" and h.get("edificio_id") in INTERIORES:
+            edificios[h["edificio_id"]] = {
+                "id": h["edificio_id"], "nombre": h.get("nombre_edificio", "Edificio"),
+                "rect": [round(h["rx"] * ANCHO), round(h["ry"] * ALTO), round(h["rw"] * ANCHO), round(h["rh"] * ALTO)],
+                "x": round(x0 + h["frente_rx"] * ancho), "y": round(y0 + h["frente_ry"] * alto),
+            }
+    return edificios
 
 
 def spawn_presente(datos):
@@ -102,6 +145,6 @@ def destinos(origen):
              "disponible": DIMENSIONES_RED[d]["disponible"]} for d in ORDEN if d != origen]
 
 
-def jugadores_visibles(jugadores, dimension):
-    """Solo se dibujan los jugadores de la misma dimensión."""
-    return [j for j in jugadores if j.get("dimension", LA_COPA) == dimension]
+def jugadores_visibles(jugadores, dimension, interior=None):
+    """Solo se dibujan los jugadores de la misma dimensión y del mismo edificio."""
+    return [j for j in jugadores if j.get("dimension", LA_COPA) == dimension and j.get("interior") == interior]

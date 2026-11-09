@@ -310,6 +310,8 @@ def construir_arbol_categorias_multijugador():
     contenido = NodoCategoria("Contenido Digital")
     contenido.agregar_subcategoria(NodoCategoria("Generado con IA"))
     contenido.agregar_subcategoria(NodoCategoria("Contenido autentico"))
+    contenido.agregar_subcategoria(NodoCategoria("Contenido manipulado"))
+    contenido.agregar_subcategoria(NodoCategoria("Suplantacion"))
 
     raiz.agregar_subcategoria(aviso)
     raiz.agregar_subcategoria(contenido)

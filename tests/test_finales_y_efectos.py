@@ -33,8 +33,11 @@ class ConPartida(unittest.TestCase):
 
 
 class FinalDelEquipo(ConPartida):
-    def test_aparece_una_vez_al_completar_las_dos_dimensiones(self):
-        self.caso().update(fase="final", presente={"completada": True}, indicadores=dict(sabiduria=90, confianza=90, armonia=90))
+    def test_aparece_una_vez_al_completar_las_tres_eras(self):
+        self.caso().update(fase="final", presente={"completada": True, "fin": True}, indicadores=dict(sabiduria=90, confianza=90, armonia=90))
+        self.vista._revisar_final()
+        self.assertIsNone(self.vista.pantalla_final)  # falta Ciudad Núcleo
+        self.caso()["futuro"] = {"completada": True, "fin": True}
         self.vista._revisar_final()
         final = self.vista.pantalla_final
         self.assertIsNotNone(final)
@@ -135,6 +138,13 @@ class Reposo(ConPartida):
         for objeto in self.vista.decoraciones_zoom:
             if objeto.get("cuadros_reposo"):
                 self.assertEqual(len(objeto["cuadros_reposo"]), 8)
+
+    def test_mira_y_luma_no_se_deslizan_en_reposo(self):
+        from mundo.personajes import _centro_pies, cuadros_reposo_de
+        for sprite in ("NPCS/Aspirante mujer/MujerAspirante Fila 1 - 1.png", "NPCS/Habitante mujer/x.png"):
+            for orientacion in ("abajo", "derecha", "arriba", "izquierda"):
+                centros = [_centro_pies(c) for c in cuadros_reposo_de(sprite, orientacion)]
+                self.assertLessEqual(max(centros) - min(centros), 1, (sprite, orientacion))
 
     def test_las_hojas_se_encuentran_con_cualquier_nombre(self):
         from mundo.personajes import archivos_reposo_de

@@ -53,6 +53,7 @@ ORIENTACIONES_SPRITE = (
     "abajo_izquierda",
 )
 
+ALTO_TIRA_PIES = 8  # filas inferiores de un cuadro que cuentan como pies
 TAMANO_JUGADOR = (36, 50)
 ESCALA_PERSONAJE_PRESENTE = 0.6
 ESCALA_NPC_PRESENTE = 0.5
@@ -318,6 +319,13 @@ PERSONAJES_DISTRITO = {
     "habitante": ("Tomás Red", "NPCS/Habitante Conectada/Habitante_conectada-Fila{fila}.png", 9),
     "aspirante": ("Ronaldo Vélez", "NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila{fila}.png", 9),
 }
+_NPCS_FUTURO = "Futuro/generado/NPCS/"
+PERSONAJES_FUTURO = {
+    "guardian": ("Archivista", _NPCS_FUTURO + "Archivista/Agente_de_verificacion-Fila{fila}.png", 9),
+    "mensajero": ("Corredor de Datos", _NPCS_FUTURO + "Corredor de Datos/Mensajero_urbano-Fila{fila}.png", 9),
+    "habitante": ("Ciudadano Conectado", _NPCS_FUTURO + "Ciudadano Conectado/Habitante_conectada-Fila{fila}.png", 9),
+    "aspirante": ("Representante Humano", _NPCS_FUTURO + "Representante Humano/Aspirante_contemporaneo-Fila{fila}.png", 9),
+}
 FILAS_CAMINAR = {
     "abajo": 2, "derecha": 3, "arriba": 4, "izquierda": 5,
     "abajo_derecha": 6, "arriba_derecha": 7, "arriba_izquierda": 8, "abajo_izquierda": 9,
@@ -336,13 +344,41 @@ def _recortar_juntos(frames):
     return [frame.subsurface(limites).copy() for frame in frames]
 
 
+def _centro_pies(frame):
+    limites = frame.get_bounding_rect()
+    if not limites.height:
+        return frame.get_width() // 2
+    alto = min(ALTO_TIRA_PIES, limites.height)
+    tira = frame.subsurface((0, limites.bottom - alto, frame.get_width(), alto))
+    return tira.get_bounding_rect().centerx
+
+
+def alinear_por_pies(frames):
+    """Pone los pies de todos los cuadros en la misma columna.
+
+    Algunas hojas de reposo no reparten la figura en celdas iguales: sin esto,
+    el personaje se desliza de lado aunque esté quieto. Se usan los pies porque
+    capas y plumas cambian de ancho entre cuadros."""
+    centros = [_centro_pies(frame) for frame in frames]
+    limites = [frame.get_bounding_rect() for frame in frames]
+    izquierda = max(c - l.left for c, l in zip(centros, limites))
+    derecha = max(l.right - c for c, l in zip(centros, limites))
+    alineados = []
+    for frame, centro, limite in zip(frames, centros, limites):
+        lienzo = pygame.Surface((izquierda + derecha, frame.get_height()), pygame.SRCALPHA)
+        lienzo.blit(frame, (izquierda - centro, 0))
+        alineados.append(lienzo)
+    return alineados
+
+
 def archivos_reposo_de(nombre_sprite):
     """Hojas de reposo (una por fila) de la carpeta del personaje; [] si no tiene."""
     carpeta = os.path.dirname(str(nombre_sprite).replace("\\", "/"))
-    if not carpeta.lower().startswith("npcs/"):
+    if carpeta.lower().startswith("npcs/"):
+        # El mapa guarda algunas rutas anidadas ("NPCS/Aspirante hombre/Habitante mujer").
+        carpeta = "NPCS/" + carpeta.rsplit("/", 1)[-1]
+    elif not carpeta.startswith(_NPCS_FUTURO):
         return []
-    # El mapa guarda algunas rutas anidadas ("NPCS/Aspirante hombre/Habitante mujer").
-    carpeta = "NPCS/" + carpeta.rsplit("/", 1)[-1]
     base = os.path.join(str(RAIZ), "Imagenes", *carpeta.split("/"))
     encontrados = []
     for relativa in ("", "Reposo"):
@@ -359,7 +395,7 @@ def cuadros_reposo_de(nombre_sprite, orientacion):
     archivos = archivos_reposo_de(nombre_sprite)
     if not archivos:
         return []
-    return _recortar_juntos(cargar_spritesheet_frames(archivos[DIRECCION_A_FILA_REPOSO[orientacion] - 1], 8))
+    return _recortar_juntos(alinear_por_pies(cargar_spritesheet_frames(archivos[DIRECCION_A_FILA_REPOSO[orientacion] - 1], 8)))
 
 
 def preparar_hablando(objeto):
@@ -394,10 +430,10 @@ def preparar_reposo(objeto):
     objeto["ancla_reposo"] = (objeto["rect"].x + limites.centerx, objeto["rect"].y + limites.bottom)
 
 
-def cargar_personajes_distrito(altura):
-    """Clips de los equivalentes de Distrito Conecta, a ``altura`` píxeles (una sola vez)."""
+def cargar_personajes_distrito(altura, tabla=None):
+    """Clips de los equivalentes de cada era, a ``altura`` píxeles (una sola vez)."""
     personajes = {}
-    for rol, (_, plantilla, ultima_fila) in PERSONAJES_DISTRITO.items():
+    for rol, (_, plantilla, ultima_fila) in (tabla or PERSONAJES_DISTRITO).items():
         reposo = cargar_spritesheet_frames(plantilla.format(fila=1), len(ORIENTACIONES_SPRITE))
         clips = {("reposo", orientacion): (cuadros_reposo_de(plantilla, orientacion) or _recortar_juntos([frame]))
                  for orientacion, frame in zip(ORIENTACIONES_SPRITE, reposo)}

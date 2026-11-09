@@ -49,12 +49,12 @@ REACCIONES = {
 
 TESTIMONIOS_PRESENTE = {
     "Darío Veraz": (
-        "Heredé de Odran el deber de separar los hechos de los ecos. No encontramos el archivo original; hay patrones compatibles con IA.",
-        "Sin el archivo fuente no se certifica el origen. El método de Odran exige contrastar también el testimonio y el contexto.",
+        "Heredé de Odran el deber de separar los hechos de los ecos. Encontré el video original: compáralo con el que circula.",
+        "Compara cuadro por cuadro. El método de Odran exige contrastar también el testimonio y el contexto.",
     ),
     "Ronaldo Vélez": (
-        "Soy descendiente de Kael y aspiro a la Alcaldía. Mi agenda me sitúa en un debate, no en el lugar de la imagen.",
-        "La publicación no demuestra culpabilidad. Mi agenda contradice el contexto que presenta la imagen.",
+        "Soy descendiente de Kael y aspiro a la Alcaldía. Ese día hice una donación pública; mi agenda lo confirma.",
+        "Lo que circula no demuestra culpabilidad. Compárenlo con el material original antes de creerlo.",
     ),
     "Tomás Red": (
         "Como Tarek, estoy conectado a lo que comparte la comunidad. Vi la publicación, pero no el hecho ni su archivo original.",
@@ -67,6 +67,18 @@ TESTIMONIOS_PRESENTE = {
     "Mateo Ríos": (
         "Como el Mensajero de antes, conecto a la gente por la ciudad. Puedo llevar una corrección con datos confirmados.",
         "Una corrección clara debe enlazar la fuente y explicar qué parte del mensaje era dudosa.",
+    ),
+    "Elías Vega": (
+        "Como periodista cuido lo que se publica. Una foto dice más cuando sabes de dónde salió.",
+        "Antes de creer en una imagen, busca la original y compárala.",
+    ),
+    "Corredor de Datos": (
+        "Antes de que NÚCLEO bloqueara los sectores saqué la llave de supervisión. Llévala a la terminal del Centro de Verificación.",
+        "La llave no apaga a NÚCLEO: solo hace que las personas vuelvan a revisar lo que decide.",
+    ),
+    "Ciudadano Conectado": (
+        "Protesté porque nadie autorizó a NÚCLEO, y sus cuentas automáticas empezaron a atacarme.",
+        "No quiero destruirlo. Quiero que alguien pueda revisar sus decisiones.",
     ),
 }
 

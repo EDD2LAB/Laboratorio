@@ -1,6 +1,9 @@
 {
   "image": "Imagenes/Fondos/Mapas/Presente/EstudioInfluencerInt.png",
-  "image_size": [344, 192],
+  "image_size": [
+    344,
+    192
+  ],
   "hitboxes": [
     {
       "id": "muro_estudio_fondo",
@@ -36,10 +39,10 @@
       "id": "salida_estudio",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.92,
-      "ry": 0.52,
-      "rw": 0.075,
-      "rh": 0.23,
+      "rx": 0.86,
+      "ry": 0.4,
+      "rw": 0.135,
+      "rh": 0.3,
       "action": "salir_edificio",
       "tipo": "salida_edificio",
       "dimension": "presente",
@@ -47,12 +50,22 @@
       "distancia": 58,
       "tecla": "E",
       "nombre_edificio": "Volver a la calle"
+    },
+    {
+      "id": "suelo_1",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.05,
+      "ry": 0.44,
+      "rw": 0.88,
+      "rh": 0.49,
+      "zona": "Suelo caminable"
     }
   ],
   "spawn": {
     "default": {
-      "rx": 0.89,
-      "ry": 0.48,
+      "rx": 0.85,
+      "ry": 0.4,
       "rw": 0.035,
       "rh": 0.06
     }

@@ -95,6 +95,9 @@ SEMANTICA_PRUEBAS = {
 }
 
 
+ACCIONES_ANALISIS = ("presente_analizar", "presente_marcar", "presente_siguiente")
+
+
 class CampanaCopa(MisionPuente):
     def __init__(self, jugadores, datos_mapa, semilla=None):
         super().__init__(jugadores, datos_mapa)
@@ -130,6 +133,8 @@ class CampanaCopa(MisionPuente):
         self.cancelar_viaje = None
         self.presente = None
         self.presentes_presente = set()
+        self.futuro = None
+        self.presentes_futuro = set()
 
     def _objetivo_puente(self, datos_mapa):
         from .movimiento import ColisionesMapa
@@ -146,20 +151,34 @@ class CampanaCopa(MisionPuente):
 
     def _cerca_presente(self, jugador, objetivo, radio=68):
         import math
-        return (jugador.get("dimension") == "presente"
+        return (jugador.get("dimension") == objetivo["dimension"] and jugador.get("interior") == objetivo.get("interior")
                 and math.hypot(jugador["x"] - objetivo["x"], jugador["y"] - objetivo["y"]) <= radio)
 
     def _ejecutar_presente(self, identificador, solicitud):
-        if self.presente is None:
-            raise ValueError("Distrito Conecta no está disponible.")
         accion = solicitud.get("accion")
         jugador = self.jugadores[identificador]
+        en_futuro = jugador.get("dimension") == "futuro"
+        if accion == "futuro_resolver" or (accion == "interactuar" and solicitud.get("objetivo", "").startswith("futuro:")):
+            en_futuro = True
+        mision, presentes = (self.futuro, self.presentes_futuro) if en_futuro else (self.presente, self.presentes_presente)
+        if mision is None:
+            raise ValueError("Esa dimensión no está disponible.")
         if accion == "interactuar":
-            return self.presente.interactuar(identificador, jugador, solicitud.get("objetivo"), self._cerca_presente)
+            return mision.interactuar(identificador, jugador, solicitud.get("objetivo"), self._cerca_presente)
+        if accion == "futuro_resolver":
+            return mision.resolver_tarea(identificador, jugador, solicitud, self._cerca_presente)
         if accion == "presente_votar":
-            return self.presente.votar(identificador, jugador, solicitud.get("opcion"), self.presentes_presente, self._cerca_presente)
+            return mision.votar(identificador, jugador, solicitud.get("opcion"), presentes, self._cerca_presente)
         if accion == "presente_clasificar":
-            return self.presente.clasificar(identificador, solicitud.get("categoria"))
+            return mision.clasificar(identificador, solicitud.get("categoria"))
+        if accion in ACCIONES_ANALISIS and jugador.get("dimension") != "presente":
+            raise ValueError("Esa acción es de Distrito Conecta.")
+        if accion == "presente_analizar":
+            return self.presente.analizar(identificador)
+        if accion == "presente_marcar":
+            return self.presente.marcar(identificador, solicitud)
+        if accion == "presente_siguiente":
+            return self.presente.siguiente(identificador, self.presentes_presente)
         raise ValueError("Acción desconocida.")
 
     def _clasificar(self, identificador, opcion):
@@ -222,11 +241,15 @@ class CampanaCopa(MisionPuente):
             if self.cancelar_viaje is None:
                 raise ValueError("El portal no está disponible.")
             return self.cancelar_viaje(identificador)
+        if accion == "entrar_edificio":
+            return self.entrar_edificio(identificador, solicitud.get("edificio"))
+        if accion == "salir_edificio":
+            return self.salir_edificio(identificador)
         if accion in ("hablar_npc", "responder_npc"):
             return self.dialogos.ejecutar(identificador, solicitud)
         objetivo_pedido = solicitud.get("objetivo")
-        if accion in ("presente_votar", "presente_clasificar") or (
-                accion == "interactuar" and isinstance(objetivo_pedido, str) and objetivo_pedido.startswith("presente:")):
+        if accion in ("presente_votar", "presente_clasificar", "futuro_resolver") + ACCIONES_ANALISIS or (
+                accion == "interactuar" and isinstance(objetivo_pedido, str) and objetivo_pedido.startswith(("presente:", "futuro:"))):
             return self._ejecutar_presente(identificador, solicitud)
         if solicitud.get("ronda", 0) != self.ronda:
             raise ValueError("La acción pertenece a otro caso. Revisa el objetivo actual.")
@@ -418,6 +441,8 @@ class CampanaCopa(MisionPuente):
                 self._premiar_encargo(presentes)
         if self.presente is not None:
             self.presente.resolver(self.presentes_presente)
+        if self.futuro is not None:
+            self.futuro.resolver(self.presentes_futuro)
         self.acompanante.actualizar(self)
         if self.encargo:
             self.encargo.revisar_ayudante(presentes, self.jugadores)
@@ -471,6 +496,7 @@ class CampanaCopa(MisionPuente):
                       clasificacion_opciones=list(clasificacion.OPCIONES["la_copa"]),
                       puente=self.puente.publico(), dimension_completa=self.fase == "final",
                       presente=self.presente.publico(self.presentes_presente) if self.presente else None,
+                      futuro=self.futuro.publico(self.presentes_futuro) if self.futuro else None,
                       expediente=self.expediente.publico())
         return estado
 
@@ -493,6 +519,8 @@ class CampanaCopa(MisionPuente):
         estado["clasificacion"] = self.clasificaciones.get(identificador)
         if self.presente is not None:
             estado["presente"] = self.presente.privado(identificador)
+        if self.futuro is not None:
+            estado["futuro"] = self.futuro.privado(identificador)
         if self.fase == "preparacion" and self.encargo.materiales_colocados and not self.encargo.completo:
             estado["objetivo"] = dict(self.objetivo_puente)
             reparador = self.puente.reparador

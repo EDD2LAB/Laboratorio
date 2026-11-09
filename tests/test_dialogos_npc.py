@@ -32,7 +32,7 @@ class ConPartida(unittest.TestCase):
         return next(n for n in self.m.dialogos.publico() if n["nombre"] == nombre)
 
     def junto_a(self, jugador, npc):
-        self.p.jugadores[jugador].update(x=npc["x"], y=npc["y"] + 10, dimension=npc["dimension"])
+        self.p.jugadores[jugador].update(interior=npc.get("interior"), x=npc["x"], y=npc["y"] + 10, dimension=npc["dimension"])
 
     def hablar(self, jugador, nombre):
         npc = self.npc(nombre)

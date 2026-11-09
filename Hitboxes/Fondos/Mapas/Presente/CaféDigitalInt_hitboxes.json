@@ -1,6 +1,9 @@
 {
   "image": "Imagenes/Fondos/Mapas/Presente/CaféDigitalInt.png",
-  "image_size": [344, 192],
+  "image_size": [
+    344,
+    192
+  ],
   "hitboxes": [
     {
       "id": "muro_cafe_fondo",
@@ -35,10 +38,10 @@
       "id": "salida_cafe",
       "role": "interactable",
       "type": "rect",
-      "rx": 0.07,
-      "ry": 0.51,
-      "rw": 0.15,
-      "rh": 0.18,
+      "rx": 0.17,
+      "ry": 0.3,
+      "rw": 0.12,
+      "rh": 0.2,
       "action": "salir_edificio",
       "tipo": "salida_edificio",
       "dimension": "presente",
@@ -46,12 +49,42 @@
       "distancia": 58,
       "tecla": "E",
       "nombre_edificio": "Volver a la calle"
+    },
+    {
+      "id": "suelo_1",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.27,
+      "ry": 0.4,
+      "rw": 0.39,
+      "rh": 0.53,
+      "zona": "Suelo caminable"
+    },
+    {
+      "id": "suelo_2",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.16,
+      "ry": 0.44,
+      "rw": 0.24,
+      "rh": 0.26,
+      "zona": "Suelo caminable"
+    },
+    {
+      "id": "suelo_3",
+      "role": "walkable",
+      "type": "rect",
+      "rx": 0.6,
+      "ry": 0.62,
+      "rw": 0.34,
+      "rh": 0.31,
+      "zona": "Suelo caminable"
     }
   ],
   "spawn": {
     "default": {
       "rx": 0.22,
-      "ry": 0.56,
+      "ry": 0.46,
       "rw": 0.035,
       "rh": 0.06
     }
