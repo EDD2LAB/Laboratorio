@@ -12,8 +12,8 @@ PREDETERMINADAS = {"modo_pantalla": "maximizada"}
 # Volúmenes (0..1) del multijugador y la campaña con bots.
 VOLUMENES = {"volumen_general": 1.0, "volumen_musica": 0.45, "volumen_ambiente": 0.45, "volumen_efectos": 0.70}
 PREDETERMINADAS.update(VOLUMENES)
-# Interruptores de ambiente y accesibilidad.
-INTERRUPTORES = {"niebla": True, "alto_contraste": False, "narracion": False}
+# Interruptores de accesibilidad.
+INTERRUPTORES = {"alto_contraste": False, "narracion": False}
 PREDETERMINADAS.update(INTERRUPTORES)
 # Variante del personaje por rol (solo estos roles tienen las dos).
 APARIENCIAS = {"apariencia_aspirante": "hombre", "apariencia_habitante": "hombre"}

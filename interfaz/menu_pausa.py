@@ -193,11 +193,6 @@ class MenuPausa:
             self.cambiar_modo(clave.split(":", 1)[1])
         elif clave == "hud" and self.en_partida:
             self.menu.partida.mostrar_hud = not self.menu.partida.mostrar_hud
-        elif clave == "niebla":
-            self.preferencias["niebla"] = not self.preferencias["niebla"]
-            preferencias.guardar(self.preferencias)
-            if self.en_partida:
-                self.menu.partida.niebla_activa = self.preferencias["niebla"]
         elif clave.startswith("volumen:"):
             _, canal, signo = clave.split(":")
             self.cambiar_volumen(canal, .1 if signo == "+" else -.1)
@@ -246,9 +241,7 @@ class MenuPausa:
         y = 278
         if self.en_partida:
             visible = menu.partida.mostrar_hud
-            self._boton("hud", "HUD: visible (H)" if visible else "HUD: oculto (H)", (400, y + 22), 200,
-                        alto=38, tamano_fuente=18)
-            self._boton("niebla", "Niebla: activada" if self.preferencias["niebla"] else "Niebla: apagada", (610, y + 22), 200,
+            self._boton("hud", "HUD: visible (H)" if visible else "HUD: oculto (H)", (480, y + 22), 340,
                         alto=38, tamano_fuente=18)
             y += 52
         menu.texto("Sonido", 480, y + 8, 20, ORO, True)

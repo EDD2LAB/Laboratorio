@@ -181,7 +181,6 @@ class MenuInicio:
         if self.partida is None:
             return
         p = self.pausa.preferencias
-        self.partida.niebla_activa = p["niebla"]
         self.partida.hud.alto_contraste = p["alto_contraste"]
         self.partida.narrador.activo = p["narracion"]
 

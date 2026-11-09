@@ -17,7 +17,6 @@ COLORES = ((83, 222, 212), (241, 199, 86), (183, 137, 246), (247, 140, 120))
 # Boca del caldero en el lienzo 960x720 (el objetivo "caldero" está en su base, 480,380).
 BOCA_CALDERO = (480, 336)
 FILAS_CALDERO = {"estable": 1, "peligroso": 2, "critico": 3}
-ALFA_NIEBLA = 70
 COLORES_CALDERO = {
     "estable": ((93, 218, 205), (111, 219, 150), (190, 245, 255)),
     "peligroso": ((238, 201, 92), (255, 150, 70), (200, 130, 255)),
@@ -216,8 +215,6 @@ class VistaPartida:
         self.variantes_eco = cargar_variantes_tronco_eco()
         self._frames_tronco_escalados = {}
         self.rect_caldero, self.cuadros_caldero = self._cargar_caldero()
-        self.cuadros_niebla = self._cargar_niebla()
-        self.niebla_activa = True  # el menú de ajustes la apaga
         from audio.narracion import Narrador
         self.narrador = Narrador()
         self.celular = None  # se carga al llegar a Distrito Conecta
@@ -780,26 +777,17 @@ class VistaPartida:
         for fila in range(1, 5):
             originales = cargar_spritesheet_frames(f"Caldero/Caldero-ecos-fila{fila}.png", 4)
             for zoom in (1, ZOOM_COPA):
-                cuadros[(zoom, fila)] = [pygame.transform.scale(c, (rect.w * zoom, rect.h * zoom)) for c in originales]
+                cuadros[(zoom, fila)] = [self._caldero_con_sombra(c, (rect.w * zoom, rect.h * zoom)) for c in originales]
         return rect, cuadros
 
-    def _cargar_niebla(self):
-        from nucleo.recursos import cargar_spritesheet_frames
-        cuadros = []
-        for cuadro in cargar_spritesheet_frames("Fondos/Mapas/Pr28Niebla.png", 8):
-            cuadro = pygame.transform.scale(cuadro, (960, 360))
-            cuadro.set_alpha(ALFA_NIEBLA)
-            cuadros.append(cuadro)
-        return cuadros
-
-    def _dibujar_niebla(self, pantalla, ahora_ms):
-        """Capa delante del mundo que se desplaza despacio y se repite sin corte."""
-        if not self.cuadros_niebla:
-            return
-        cuadro = self.cuadros_niebla[(ahora_ms // 260) % len(self.cuadros_niebla)]
-        x = -(ahora_ms // 90) % 960
-        pantalla.blit(cuadro, (x, 300))
-        pantalla.blit(cuadro, (x - 960, 300))
+    @staticmethod
+    def _caldero_con_sombra(cuadro, tamano):
+        """La sombra de contacto tapa, entre las patas, la base del caldero pintado."""
+        lienzo = pygame.Surface(tamano, pygame.SRCALPHA)
+        ancho, alto = tamano
+        pygame.draw.ellipse(lienzo, (47, 35, 24), (ancho * 22 // 100, alto * 76 // 100, ancho * 56 // 100, alto * 18 // 100))
+        lienzo.blit(pygame.transform.scale(cuadro, tamano), (0, 0))
+        return lienzo
 
     def _dibujar_caldero(self, superficie, ahora_ms, zoom, area):
         if self.rect_caldero is None:
@@ -958,8 +946,6 @@ class VistaPartida:
             pantalla.blit(frame, rect)
         if self.dimension == LA_COPA:
             self.efectos_mapa.dibujar(pantalla, vista)
-            if self.niebla_activa:
-                self._dibujar_niebla(pantalla, ahora_ms)
         self.particulas.dibujar(pantalla, camara=(vista.x, vista.y, zoom))
         return anclas
 
