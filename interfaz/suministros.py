@@ -2,13 +2,17 @@
 
 Tablas, cuerda y canasta de herramientas usan el arte real
 (Herramientas/HerramientasReparación.png, recortado una vez por
-SistemaReparacionPuente.recortar_spritesheet_materiales). Los materiales sin
-arte en el repositorio conservan su icono de píxeles.
+SistemaReparacionPuente.recortar_spritesheet_materiales); agua, provisiones,
+pergaminos y tinta, Assets eventos/. El farol no tiene arte: conserva su icono.
 """
 import pygame
 
+from nucleo.recursos import cargar_imagen
+
 # id de material en red -> clave del recorte del spritesheet.
 CLAVES_SPRITE = {"tablas": "tablas", "cuerdas": "cuerda", "herramientas": "herramientas"}
+RUTAS_EVENTOS = {"agua": "Assets eventos/agua.png", "provisiones": "Assets eventos/proviciones.png",
+                 "pergaminos": "Assets eventos/pergaminon.png", "tinta": "Assets eventos/tinta.png"}
 _sprites = {}
 
 
@@ -20,8 +24,14 @@ def clave_cesto(encargo):
 def configurar_sprites(materiales):
     """Escala una vez cada material a los dos tamaños que se dibujan."""
     _sprites.clear()
-    for material, clave in CLAVES_SPRITE.items():
-        imagen = (materiales or {}).get(clave)
+    imagenes = {material: (materiales or {}).get(clave) for material, clave in CLAVES_SPRITE.items()}
+    for material, ruta in RUTAS_EVENTOS.items():
+        imagen = cargar_imagen(ruta, requerido=False)
+        if imagen is None:
+            print("[Arte] Falta la imagen:", ruta)
+        else:
+            imagenes[material] = imagen.subsurface(imagen.get_bounding_rect())
+    for material, imagen in imagenes.items():
         if imagen is None:
             continue
         for tamano in (26, 34):

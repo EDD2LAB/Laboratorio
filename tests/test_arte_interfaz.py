@@ -109,6 +109,13 @@ class ArteEnPartida(unittest.TestCase):
         self.assertEqual(suministros.clave_cesto(encargo), "vacio")
         self.assertEqual(suministros.clave_cesto(None), "vacio")
 
+    def test_los_materiales_de_los_encargos_tienen_su_imagen(self):
+        for material in ("tablas", "cuerdas", "herramientas", "agua", "provisiones", "pergaminos", "tinta"):
+            for tamano in (26, 34):
+                self.assertIn((material, tamano), suministros._sprites)
+                self.assertLessEqual(max(suministros._sprites[(material, tamano)].get_size()), tamano)
+        self.assertNotIn(("farol", 26), suministros._sprites)  # no tiene arte
+
     def test_el_tronco_central_se_dibuja_como_cesto(self):
         marcados = [o for o in self.vista.decoraciones_zoom if o.get("cesto")]
         self.assertEqual(len(marcados), 1)
