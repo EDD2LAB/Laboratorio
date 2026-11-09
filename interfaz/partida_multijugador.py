@@ -77,6 +77,7 @@ def separar_frames(imagen, cantidad=8):
 
 def cargar_clips_personajes():
     """Cuadros originales de cada rol, sin escalar."""
+    from mundo.personajes import RECTA_EQUIVALENTE
     from nucleo.recursos import cargar_imagen
     carpetas = ("Guardian", "mensajero", "Habitante hombre", "Aspirante hombre")
     caminar = (
@@ -119,7 +120,8 @@ def cargar_clips_personajes():
             imagen = cargar_imagen(os.path.join("NPCS", carpetas[indice], diagonales[indice].format(fila)))
             frames = separar_frames(imagen)
             clips[("caminar", orientacion)] = clips[("correr", orientacion)] = frames
-            clips[("reposo", orientacion)] = frames[:1]  # el primer cuadro es su pose quieta
+            # Las diagonales no tienen hoja de reposo: usan la de la dirección recta.
+            clips[("reposo", orientacion)] = clips[("reposo", RECTA_EQUIVALENTE[orientacion])]
         por_rol[rol] = clips
     return por_rol
 
@@ -171,7 +173,7 @@ def caso_jugadores(estado):
 class VistaPartida:
     def __init__(self, identificador, estado, audio=None):
         from mundo.mapas import cargar_fondo_unificado, cargar_mapa_principal, decoraciones_ampliadas, suavizar_cascada
-        from mundo.personajes import cargar_variantes_tronco_eco
+        from mundo.personajes import cargar_variantes_tronco_eco, preparar_reposo
         from nucleo.recursos import cargar_fuente, cargar_imagen
         from interfaz.arte import ArtePartida
         from interfaz.efectos_visuales import AdornosMapa, FlechaGuia
@@ -198,6 +200,9 @@ class VistaPartida:
                 suavizar_cascada(objeto)
         self._marcar_cesto(estado)
         self.decoraciones_zoom = decoraciones_ampliadas(self.decoraciones, ZOOM_COPA)
+        for objeto in self.decoraciones + self.decoraciones_zoom:
+            if objeto.get("personaje"):
+                preparar_reposo(objeto)
         self.fondo_zoom = cargar_fondo_unificado(ZOOM_COPA)
         self.escenas_zoom = {LA_COPA: {
             "zoom": ZOOM_COPA, "origen": (0, 0), "fondo": self.fondo_zoom,
@@ -831,6 +836,11 @@ class VistaPartida:
                 # Roto hasta que estén los materiales; deteriorado mientras se repara.
                 listo = puente.get("estado") in ("READY_TO_REPAIR", "REPAIR_MINIGAME", "REPAIR_ANIMATION")
                 superficie.blit((puente_det if listo else None) or puente_roto or objeto["imagen"], objeto["rect"])
+                continue
+            if objeto.get("cuadros_reposo"):  # NPC con su animación de reposo
+                cuadros = objeto["cuadros_reposo"]
+                cuadro = cuadros[(ahora_ms // 180) % len(cuadros)]
+                superficie.blit(cuadro, cuadro.get_rect(midbottom=objeto["ancla_reposo"]))
                 continue
             if es_hoja_portales(objeto.get("nombre", "")) and self.adornos.portal:
                 continue  # se dibuja el portal animado

@@ -75,7 +75,7 @@ def dibujar_icono(superficie, imagen, centro):
         superficie.blit(imagen, imagen.get_rect(center=centro))
 
 
-LADO_CESTO = 44
+LADO_CESTO = 58
 
 
 class ArtePartida:

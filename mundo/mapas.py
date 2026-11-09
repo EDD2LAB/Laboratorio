@@ -57,7 +57,7 @@ def cargar_fondo_presente(configuracion, rect_mapa, zoom):
 
 def npcs_presente_ampliados(decoraciones, zoom, origen):
     """NPC de Distrito Conecta a ``zoom`` veces, en coordenadas de la capa ampliada."""
-    from mundo.personajes import _cargar_sprite_direccional as cargar_idle
+    from mundo.personajes import _cargar_sprite_direccional as cargar_idle, preparar_reposo
     ampliados = []
     for objeto in decoraciones:
         r = objeto["rect"]
@@ -65,6 +65,7 @@ def npcs_presente_ampliados(decoraciones, zoom, origen):
         idle = cargar_idle(objeto["nombre"], rect.size)
         ampliados.append(dict(objeto, rect=rect, hitbox=rect,
                               imagen=idle.get(objeto["direccion"]) or idle.get("abajo") or objeto["imagen"]))
+        preparar_reposo(ampliados[-1])
     return ampliados
 
 

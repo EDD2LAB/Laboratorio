@@ -308,7 +308,8 @@ class DistritoConecta(unittest.TestCase):
         for rol in ROLES:
             for orientacion in ORIENTACIONES_SPRITE:
                 self.assertEqual(len(personajes[rol][("caminar", orientacion)]), 8, (rol, orientacion))
-                self.assertEqual(len(personajes[rol][("reposo", orientacion)]), 1, (rol, orientacion))
+                # Ocho cuadros si tiene hojas de reposo; Elías Vega (Guardián) solo tiene su pose.
+                self.assertEqual(len(personajes[rol][("reposo", orientacion)]), 1 if rol == "guardian" else 8, (rol, orientacion))
         # Las diagonales usan sus propias filas donde el arte las tiene.
         mensajero = personajes["mensajero"]
         self.assertIsNot(mensajero[("caminar", "abajo_derecha")], mensajero[("caminar", "derecha")])

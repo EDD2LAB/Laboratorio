@@ -86,7 +86,7 @@ def dibujar_encargos(superficie, caso, fuente):
         if not encargo.get("materiales_listos"):
             for i, material in enumerate(colocados):
                 # Lo que ya entró asoma sobre el cesto hasta que se llena.
-                dibujar_carga(superficie, material["id"], (d["x"] - (len(colocados) - 1) * 14 + i * 28, d["y"] - 46))
+                dibujar_carga(superficie, material["id"], (d["x"] - (len(colocados) - 1) * 14 + i * 28, d["y"] - 60))
         for material in encargo["materiales"]:
             if material["entregado"] or material["id"] in llevados:
                 continue  # El objeto ya no está en su punto de recogida.
@@ -103,7 +103,7 @@ def dibujar_encargos(superficie, caso, fuente):
         progreso = encargo.get("actividad", {}).get("progreso", 0)
         if encargo.get("materiales_listos"):
             for i in range(3):
-                x, y = d["x"]-27+i*19, d["y"]-56
+                x, y = d["x"]-27+i*19, d["y"]-72
                 color = (246, 202, 105) if i < progreso else (48, 74, 51)
                 pygame.draw.rect(superficie, color, (x, y, 15, 8), border_radius=2)
         etiqueta = fuente.render("¡GRACIAS, EQUIPO!" if encargo["completo"] else "AHORA: REPARAR EL PUENTE 1" if encargo.get("materiales_colocados")

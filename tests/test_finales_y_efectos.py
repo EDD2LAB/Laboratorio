@@ -127,5 +127,33 @@ class MapaDeLaCopa(ConPartida):
         self.assertIn("inventario", self.vista.panel.botones)
 
 
+class Reposo(ConPartida):
+    def test_los_npc_con_hojas_de_reposo_se_animan(self):
+        animados = {o["personaje"] for o in self.vista.decoraciones_zoom if o.get("cuadros_reposo")}
+        self.assertLessEqual({"Naira", "Darek", "Luma", "Mira"}, animados)
+        for objeto in self.vista.decoraciones_zoom:
+            if objeto.get("cuadros_reposo"):
+                self.assertEqual(len(objeto["cuadros_reposo"]), 8)
+
+    def test_las_hojas_se_encuentran_con_cualquier_nombre(self):
+        from mundo.personajes import archivos_reposo_de
+        for sprite in ("NPCS/Naira/Naira_fila1-1.png", "NPCS/Mensajero urbano/Mensajero_urbano-Fila1.png",
+                       "NPCS/Aspirante mujer/MujerAspirante Fila 1 - 1.png"):
+            self.assertEqual(len(archivos_reposo_de(sprite)), 4, sprite)
+        self.assertEqual(archivos_reposo_de("NPCS/Arel/Arel.png"), [])  # no tiene
+        self.assertEqual(archivos_reposo_de("Animales/Pajaro.png"), [])
+
+    def test_quieto_en_diagonal_sigue_animado(self):
+        for rol, hojas in self.vista.personajes_zoom.items():
+            self.assertGreater(len(hojas[("reposo", "arriba_derecha")]), 1, rol)
+
+    def test_en_distrito_conecta_reposan_animados(self):
+        from multijugador.dimensiones_red import PRESENTE
+        self.vista._cargar_dimension(PRESENTE)
+        escena = self.vista.escenas_zoom[PRESENTE]
+        self.assertGreater(len(escena["personajes"]["mensajero"][("reposo", "abajo")]), 1)
+        self.assertTrue(any(o.get("cuadros_reposo") for o in escena["decoraciones"]))
+
+
 if __name__ == "__main__":
     unittest.main()
