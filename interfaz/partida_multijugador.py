@@ -336,7 +336,9 @@ class VistaPartida:
         # Lo que estaba ocurriendo en el mapa anterior termina al viajar.
         self.animacion_pocion = None
         self.inicio_reparacion = None
-        self.transicion = Transicion(DIMENSIONES_RED[dimension]["nombre"], self.arte.emblemas_viaje.get(dimension))
+        from logica.dimensiones import DIMENSIONES
+        from multijugador.presentacion import titulo_era
+        self.transicion = Transicion(titulo_era(dimension, DIMENSIONES[dimension]["nombre"]), self.arte.emblemas_viaje.get(dimension))
         self.sonido_musica()
 
     def yo(self):

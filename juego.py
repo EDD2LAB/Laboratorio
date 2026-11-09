@@ -1,4 +1,4 @@
-"""La Copa: Voces en las Alturas — punto de entrada.
+"""Timeless Glitch — punto de entrada.
 
 Ejecutar desde la raíz del proyecto:  python juego.py
 El código del juego vive en los paquetes (ver CLAUDE.md).

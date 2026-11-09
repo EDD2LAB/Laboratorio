@@ -359,7 +359,7 @@ class Transicion:
             if radio > 0:
                 pygame.draw.circle(superficie, (69, 220, 210), (480, 360), radio, 2)
         if t > .6:
-            titulo = fuente.render(self.nombre.upper(), True, (231, 255, 247))
+            titulo = fuente.render(self.nombre, True, (231, 255, 247))
             opacidad = round(255 * min(1, (t - .6) / .4) * min(1, (self.DURACION - t) / .5))
             titulo.set_alpha(opacidad)
             superficie.blit(titulo, titulo.get_rect(center=(480, 108)))

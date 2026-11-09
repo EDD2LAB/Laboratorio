@@ -9,6 +9,14 @@ El servidor usa estos datos para publicar ``tipo_pocion`` y aplicar efectos;
 el cliente solo los lee para dibujar.
 """
 
+# Número de era de cada dimensión (el nombre sale de logica/dimensiones.py).
+ERAS = {"la_copa": "Era I", "presente": "Era II", "futuro": "Era III"}
+
+
+def titulo_era(dimension, nombre):
+    return f"{ERAS[dimension]}: {nombre}"
+
+
 TIPOS_POCION = ("colgar", "consultar", "quemar", "ignorar")
 
 # Clasificación de cada opción concreta en uno de los 4 tipos del modo de un

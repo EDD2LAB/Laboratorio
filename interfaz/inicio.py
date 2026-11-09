@@ -34,7 +34,7 @@ class MenuInicio:
         self.audio = self._crear_audio()
         self._musica_menu()
         self.pantalla = self.pausa.crear_pantalla()  # maximizada por defecto
-        pygame.display.set_caption("La Copa — Consejo de los Ecos")
+        pygame.display.set_caption("Timeless Glitch")
         self.lienzo = pygame.Surface((960, 720))
         self.fuentes = {n: pygame.font.Font(os.path.join(BASE, "Fuentes", "determination.ttf"), n)
                         for n in (14, 16, 18, 20, 24, 32, 44)}
@@ -363,8 +363,9 @@ class MenuInicio:
         if self.vista == "principal":
             self.panel(pygame.Rect(240, 70, 480, 590))
             arte.dibujar_icono(self.lienzo, self.emblema, (480, 110))
-            self.texto("LA COPA", 480, 145, 44, ORO, True)
-            self.texto("Consejo de los Ecos", 480, 207, 24, centro=True)
+            self.texto("TIMELESS GLITCH", 480, 145, 44, ORO, True)
+            self.texto("Era I: La Copa · Era II: Distrito Conecta", 480, 207, 18, centro=True)
+            self.texto("Era III: Ciudad Núcleo", 480, 233, 18, centro=True)
             self.boton("campana_local", "Campaña con bots", (480, 315))
             self.boton("multi", "Multijugador", (480, 395))
             self.boton("ajustes", "Ajustes", (480, 475))

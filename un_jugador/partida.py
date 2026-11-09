@@ -123,7 +123,7 @@ def main():
     pantalla_completa = True
     ventana_maximizada = False
     pantalla = crear_ventana(pantalla_completa, ventana_maximizada)
-    pygame.display.set_caption("La Copa: Voces en las Alturas")
+    pygame.display.set_caption("Timeless Glitch")
     reloj = pygame.time.Clock()
     lienzo = pygame.Surface((ANCHO, ALTO))
 

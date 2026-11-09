@@ -1,7 +1,8 @@
-# La Copa: Voces en las Alturas
+# Timeless Glitch
 
-Juego académico 2D en Python + pygame-ce (adaptación del laboratorio "Alcalde
-Digital", equipo "Los Guardianes de la Memoria").
+Juego académico 2D en Python + pygame-ce, adaptación del laboratorio "Alcalde
+Digital" del equipo "Los Guardianes de la Memoria".
+La primera dimensión sigue llamándose La Copa (Era I).
 
 ## Cómo ejecutar
 
