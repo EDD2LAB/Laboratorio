@@ -1,0 +1,791 @@
+---
+title: "Análisis estadístico de la encuesta de *Timeless Glitch*"
+author: "Sebastián Ariza, Fernando Cabrera, Keisy Polo y Jimara Urzola"
+date: "`r format(Sys.Date(), '%d de %B de %Y')`"
+output:
+  html_document:
+    theme: flatly
+    highlight: tango
+    toc: true
+    toc_float:
+      collapsed: false
+    toc_depth: 3
+    number_sections: true
+    code_folding: hide
+    fig_width: 9
+    fig_height: 5
+  pdf_document:
+    toc: true
+    toc_depth: '3'
+subtitle: Evaluación del videojuego sobre uso responsable de redes sociales
+---
+
+```{css, echo = FALSE}
+h1, h2, h3 { color: #006D6D; }
+h1.title { color: #004F4F; font-weight: 700; }
+.resumen {
+  background: #E8F6F6; border-left: 5px solid #008B8B;
+  padding: 14px 18px; border-radius: 6px; margin: 12px 0 20px 0;
+}
+.nota {
+  background: #FFF8E6; border-left: 5px solid #E0A526;
+  padding: 12px 16px; border-radius: 6px; margin: 12px 0;
+}
+```
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE, message = FALSE, warning = FALSE,
+  fig.align = "center", out.width = "95%", dpi = 150
+)
+options(knitr.kable.NA = "")
+```
+
+# Introducción y objetivo
+
+*Timeless Glitch* es un videojuego educativo sobre el uso responsable de las redes sociales: la propagación de rumores, el contenido generado o manipulado con inteligencia artificial (IA) y la importancia de verificar antes de compartir. Después de la sesión de juego se aplicó una encuesta con **cinco preguntas en escala Likert de 1 a 5** y una pregunta abierta de comentarios.
+
+**Objetivo general:** evaluar estadísticamente la percepción de los participantes sobre la experiencia y sobre el aprendizaje que transmitió el juego.
+
+**Objetivos específicos:**
+
+1. Describir la distribución de las respuestas de cada pregunta (análisis exploratorio).
+2. Determinar si las respuestas se ubican significativamente por encima del punto neutral de la escala.
+3. Comparar las preguntas entre sí para identificar fortalezas y debilidades relativas del juego.
+4. Medir la asociación entre la experiencia, el aprendizaje percibido y la intención de verificar información.
+5. Modelar la intención de verificar a partir del aprendizaje percibido mediante regresión lineal simple.
+
+Se trabaja con un nivel de significancia de $\alpha = 0.05$, es decir, con una **confianza del 95 %**.
+
+## Paquetes utilizados
+
+```{r paquetes}
+library(tidyverse)   # manipulación de datos y gráficos (ggplot2, dplyr, tidyr...)
+library(rstatix)     # pruebas de Wilcoxon, Shapiro-Wilk y tamaños del efecto
+library(nortest)     # prueba de Lilliefors
+library(car)         # Durbin-Watson y prueba de varianza constante
+library(patchwork)   # combinar gráficos
+library(knitr)       # tablas
+library(kableExtra)  # estilo de tablas
+library(scales)      # formato de porcentajes
+
+# Paleta del informe (de "más bajo" a "más alto")
+pal_likert <- c("1" = "#C0392B", "2" = "#E59866", "3" = "#D5D8DC",
+                "4" = "#76C7C0", "5" = "#008B8B")
+color_principal <- "#008B8B"
+
+tabla_bonita <- function(df, caption = NULL) {
+  kable(df, caption = caption, align = "c") %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed"),
+                  full_width = FALSE, position = "center")
+}
+```
+
+# Extracción, transformación y carga (ETL)
+
+El archivo exportado de Microsoft Forms viene separado por punto y coma y con codificación Windows-1252 (por las tildes y la ñ).
+
+```{r carga}
+crudo <- read.csv("Timeless Glitch(Sheet1).csv",
+                  sep = ";", fileEncoding = "CP1252",
+                  check.names = FALSE, stringsAsFactors = FALSE)
+dim(crudo)
+```
+
+Para proteger la privacidad de los participantes **se eliminan los nombres y correos**. Las preguntas se renombran con etiquetas cortas. La pregunta abierta se separa del análisis cuantitativo (ver la sección [Comentarios de los participantes]).
+
+```{r etl}
+items <- c("Satisfacción", "Rumores", "Contenido IA", "Riesgo IA", "Verificar")
+
+datos <- crudo %>%
+  select(1, 6:10) %>%
+  set_names(c("id", items)) %>%
+  mutate(across(all_of(items), as.integer))
+
+comentarios <- crudo[[11]]
+
+# Formato largo para gráficos y pruebas por pregunta
+datos_long <- datos %>%
+  pivot_longer(-id, names_to = "pregunta", values_to = "valor") %>%
+  mutate(pregunta = factor(pregunta, levels = items))
+
+# Datos faltantes
+datos %>% summarise(across(everything(), ~ sum(is.na(.x))))
+```
+
+```{r diccionario}
+diccionario <- tibble(
+  Etiqueta = items,
+  Pregunta = c(
+    "¿Qué tan satisfactoria fue tu experiencia jugando u observando el juego?",
+    "¿Qué tan bien te ayudó el juego a entender cómo se propagan los rumores y cómo afectan a una comunidad?",
+    "¿Qué tan bien te ayudó el juego a reconocer que imágenes, videos o testimonios pueden ser generados o manipulados con IA?",
+    "¿Qué tan bien transmitió el juego el riesgo de aceptar lo que dice la IA sin analizarlo ni verificarlo?",
+    "Después de jugar, ¿qué tan probable es que verifiques una publicación antes de compartirla en redes sociales?"
+  ),
+  Escala = c("1 Nada satisfactoria – 5 Muy satisfactoria",
+             "1 Nada – 5 Muy bien", "1 Nada – 5 Muy bien",
+             "1 Nada – 5 Muy bien", "1 Nada probable – 5 Muy probable")
+)
+tabla_bonita(diccionario, "Diccionario de variables")
+```
+
+La base final tiene **`r nrow(datos)` participantes**, **`r length(items)` variables ordinales** y no presenta datos faltantes. Las respuestas son **variables cualitativas ordinales** codificadas de 1 a 5. Por eso, a lo largo del informe se prioriza la **mediana** y los **métodos no paramétricos**, y la media se reporta solo como referencia.
+
+```{r atipico}
+# Identificación del participante que respondió 1 en todas las preguntas
+id_atipico <- datos %>%
+  filter(if_all(all_of(items), ~ .x == 1)) %>%
+  pull(id)
+datos_sin <- datos %>% filter(!id %in% id_atipico)
+```
+
+# Análisis exploratorio de datos (EDA)
+
+## Distribución de frecuencias
+
+```{r frecuencias}
+tabla_frec <- datos_long %>%
+  count(pregunta, valor) %>%
+  complete(pregunta, valor = 1:5, fill = list(n = 0)) %>%
+  group_by(pregunta) %>%
+  mutate(Etiqueta = paste0(n, " (", round(n / sum(n) * 100, 1), "%)")) %>%
+  ungroup() %>%
+  select(-n) %>%
+  pivot_wider(names_from = valor, values_from = Etiqueta) %>%
+  rename(Pregunta = pregunta)
+
+tabla_bonita(tabla_frec, "Frecuencia absoluta y relativa por nivel de la escala")
+```
+
+```{r grafico-likert, fig.height = 4.2, fig.cap = "Figura 1. Distribución de las respuestas por pregunta"}
+likert_df <- datos_long %>%
+  count(pregunta, valor) %>%
+  complete(pregunta, valor = 1:5, fill = list(n = 0)) %>%
+  group_by(pregunta) %>%
+  mutate(pct = n / sum(n)) %>%
+  ungroup() %>%
+  mutate(nivel = factor(valor, levels = 5:1))
+
+ggplot(likert_df, aes(x = pct, y = fct_rev(pregunta), fill = nivel)) +
+  geom_col(width = 0.65, color = "white") +
+  geom_text(aes(label = ifelse(pct >= 0.07, percent(pct, accuracy = 1), ""),
+                group = nivel),
+            position = position_stack(vjust = 0.5),
+            color = "white", fontface = "bold", size = 3.8) +
+  scale_fill_manual(values = pal_likert,
+                    labels = c("5" = "5 (más alto)", "4" = "4", "3" = "3 (neutral)",
+                               "2" = "2", "1" = "1 (más bajo)"),
+                    name = "Respuesta") +
+  scale_x_continuous(labels = percent, expand = c(0, 0)) +
+  guides(fill = guide_legend(reverse = TRUE, nrow = 1)) +
+  facet_wrap(~ "Distribución porcentual de las respuestas (escala Likert 1–5)") +
+  labs(x = NULL, y = NULL) +
+  theme_bw(base_size = 12) +
+  theme(legend.position = "bottom",
+        panel.grid = element_blank(),
+        strip.background = element_rect(fill = "#E8F6F6"),
+        strip.text = element_text(face = "bold"))
+```
+
+Las respuestas se concentran en los niveles 4 y 5 en todas las preguntas. La pregunta con mayor proporción en el nivel máximo es **Verificar**, y la de menor proporción es **Satisfacción**, que además acumula la mayor cantidad de respuestas neutrales (3). Solo aparece una respuesta de nivel 1 por pregunta, y todas provienen del mismo participante. Ningún participante eligió el nivel 2.
+
+## Medidas descriptivas
+
+```{r descriptivos}
+moda <- function(x) as.numeric(names(which.max(table(x))))
+
+descriptivos <- datos_long %>%
+  group_by(Pregunta = pregunta) %>%
+  summarise(
+    n        = n(),
+    Media    = round(mean(valor), 2),
+    DE       = round(sd(valor), 2),
+    Mediana  = median(valor),
+    Moda     = moda(valor),
+    Q1       = quantile(valor, 0.25),
+    Q3       = quantile(valor, 0.75),
+    RIC      = IQR(valor),
+    `Mín`    = min(valor),
+    `Máx`    = max(valor),
+    `% favorable (4–5)` = percent(mean(valor >= 4), accuracy = 0.1)
+  )
+tabla_bonita(descriptivos, "Medidas de tendencia central, dispersión y posición")
+```
+
+```{r boxplot, fig.height = 4.8, fig.cap = "Figura 2. Diagramas de caja con puntos individuales"}
+ggplot(datos_long, aes(x = pregunta, y = valor)) +
+  geom_boxplot(fill = "#E8F6F6", color = color_principal,
+               outlier.shape = NA, width = 0.55) +
+  geom_jitter(aes(color = id %in% id_atipico), width = 0.15, height = 0.12,
+              size = 2.3, alpha = 0.8) +
+  stat_summary(fun = mean, geom = "point", shape = 23, size = 3.5,
+               fill = "#E0A526", color = "black") +
+  scale_color_manual(values = c("FALSE" = "#2C3E50", "TRUE" = "#C0392B"),
+                     labels = c("Resto de participantes", "Participante atípico"),
+                     name = NULL) +
+  scale_y_continuous(breaks = 1:5, limits = c(0.7, 5.4)) +
+    facet_wrap(~ "Distribución de las respuestas por pregunta (rombo = media)") +
+  labs(x = NULL, y = "Respuesta (1–5)") +
+  theme_bw(base_size = 12) +
+  theme(legend.position = "bottom",
+        panel.grid.minor = element_blank(),
+        strip.background = element_rect(fill = "#E8F6F6"),
+        strip.text = element_text(face = "bold"))
+```
+
+Las medianas son 4 o 5 y el rango intercuartílico va de 4 a 5 en todos los casos, así que la mitad central de las respuestas está en la zona favorable. La media queda por debajo de la mediana porque la arrastra el participante atípico, marcado en rojo. Esto muestra que la distribución tiene **asimetría negativa** (cola a la izquierda).
+
+## Perfil de respuesta por participante
+
+```{r heatmap, fig.height = 6.5, fig.cap = "Figura 3. Mapa de calor de las respuestas de cada participante"}
+ggplot(datos_long, aes(x = pregunta, y = factor(id, levels = rev(sort(unique(id)))),
+                       fill = factor(valor, levels = 1:5))) +
+  geom_tile(color = "white", linewidth = 0.8) +
+  geom_text(aes(label = valor), color = "white", fontface = "bold", size = 3.6) +
+  scale_fill_manual(values = pal_likert, drop = FALSE, name = "Respuesta") +
+  facet_wrap(~ "Respuestas de cada participante") +
+  labs(x = NULL, y = "Participante (ID)") +
+  theme_bw(base_size = 11) +
+  theme(panel.grid = element_blank(),
+        legend.position = "bottom",
+        strip.background = element_rect(fill = "#E8F6F6"),
+        strip.text = element_text(face = "bold"))
+```
+
+El mapa de calor confirma que el participante **`r id_atipico`** es un caso atípico: respondió 1 en todas las preguntas, mientras que el resto se movió entre 3 y 5. Su comentario indica que no comprendió el juego por la cantidad de texto, así que su respuesta no es un error de digitación sino una experiencia real negativa. Por eso **no se elimina**. En cambio, se hace un análisis de sensibilidad para ver cuánto influye en los resultados (sección [Análisis de sensibilidad]).
+
+# Consistencia interna de la escala
+
+Como análisis complementario, se calcula el **alfa de Cronbach** para saber si las cinco preguntas miden de forma coherente una misma percepción general del juego:
+
+$$
+\alpha = \frac{k}{k-1}\left(1 - \frac{\sum_{j=1}^{k} s_j^2}{s_T^2}\right)
+$$
+
+donde $k$ es el número de preguntas, $s_j^2$ la varianza de cada pregunta y $s_T^2$ la varianza del puntaje total.
+
+```{r cronbach}
+alfa_cronbach <- function(df) {
+  k <- ncol(df)
+  k / (k - 1) * (1 - sum(apply(df, 2, var)) / var(rowSums(df)))
+}
+
+tabla_alfa <- tibble(
+  Muestra = c("Todos los participantes", "Sin el participante atípico"),
+  n       = c(nrow(datos), nrow(datos_sin)),
+  `Alfa de Cronbach` = round(c(alfa_cronbach(datos[, items]),
+                               alfa_cronbach(datos_sin[, items])), 3)
+)
+tabla_bonita(tabla_alfa, "Alfa de Cronbach")
+```
+
+Valores de $\alpha \geq 0.80$ se consideran buenos. Con todos los datos el alfa es muy alto, pero está inflado por el participante atípico, cuyas respuestas extremas generan una covarianza artificial entre las preguntas. Aun sin ese caso, el alfa se mantiene por encima de 0.80, lo que indica que **la escala es consistente** y permite resumir las preguntas de aprendizaje en un índice, como se hace en la sección de regresión.
+
+# Verificación de normalidad
+
+Antes de elegir entre pruebas paramétricas y no paramétricas, se verifica la normalidad de cada pregunta con las pruebas de **Shapiro-Wilk** y **Lilliefors**:
+
+$$
+H_0: \text{los datos provienen de una distribución normal} \qquad
+H_1: \text{los datos no provienen de una distribución normal}
+$$
+
+```{r normalidad}
+normalidad <- datos_long %>%
+  group_by(Pregunta = pregunta) %>%
+  summarise(
+    `W (Shapiro-Wilk)`   = round(shapiro.test(valor)$statistic, 3),
+    `p-valor S-W`        = pvalue(shapiro.test(valor)$p.value, accuracy = 0.001),
+    `D (Lilliefors)`     = round(lillie.test(valor)$statistic, 3),
+    `p-valor Lilliefors` = pvalue(lillie.test(valor)$p.value, accuracy = 0.001)
+  )
+tabla_bonita(normalidad, "Pruebas de normalidad por pregunta")
+```
+
+```{r qqplots, fig.height = 3.8, fig.cap = "Figura 4. Gráficos Q-Q normales por pregunta"}
+ggplot(datos_long, aes(sample = valor)) +
+  stat_qq(color = color_principal, size = 2) +
+  stat_qq_line(color = "#C0392B", linetype = "dashed") +
+  facet_wrap(~ pregunta, nrow = 1) +
+  labs(x = "Cuantiles teóricos", y = "Cuantiles muestrales") +
+  theme_bw(base_size = 11) +
+  theme(strip.background = element_rect(fill = "#E8F6F6"),
+        strip.text = element_text(face = "bold"))
+```
+
+Con una confianza del 95 %, **se rechaza la normalidad en todas las preguntas** (p-valor < 0.05). Los gráficos Q-Q muestran los escalones típicos de una variable discreta y la desviación del punto atípico. Esto, junto con la naturaleza ordinal de los datos y el tamaño de muestra pequeño ($n = `r nrow(datos)`$), justifica el uso de **pruebas no paramétricas**.
+
+# ¿Las respuestas superan el punto neutral?
+
+## Prueba de Wilcoxon de rangos con signo (una muestra)
+
+Para cada pregunta se contrasta si la mediana de las respuestas es mayor que 3, el punto neutral de la escala. Es la versión de una muestra de la prueba de Wilcoxon vista en clase: equivale a una prueba pareada en la que cada respuesta se compara con el valor fijo 3.
+
+$$
+H_0: Me = 3 \qquad H_1: Me > 3
+$$
+
+El tamaño del efecto se mide con $r = Z/\sqrt{n}$ (`wilcox_effsize`), con la clasificación de `rstatix`: pequeño (0.10 a < 0.30), moderado (0.30 a < 0.50) y grande (≥ 0.50).
+
+```{r wilcoxon-una-muestra}
+wilcox_1m <- datos_long %>%
+  group_by(pregunta) %>%
+  wilcox_test(valor ~ 1, mu = 3, alternative = "greater")
+
+efecto_1m <- datos_long %>%
+  group_by(pregunta) %>%
+  wilcox_effsize(valor ~ 1, mu = 3)
+
+resultado_1m <- wilcox_1m %>%
+  left_join(efecto_1m %>% select(pregunta, effsize, magnitude), by = "pregunta") %>%
+  transmute(
+    Pregunta = pregunta,
+    n,
+    `V (estadístico)` = statistic,
+    `p-valor` = pvalue(p, accuracy = 0.001),
+    `Tamaño del efecto r` = round(effsize, 2),
+        Magnitud = case_when(as.character(magnitude) == "small"    ~ "Pequeño",
+                         as.character(magnitude) == "moderate" ~ "Moderado",
+                         as.character(magnitude) == "large"    ~ "Grande",
+                         TRUE ~ as.character(magnitude)),
+    Decisión = ifelse(p < 0.05, "Se rechaza H0", "No se rechaza H0")
+  )
+tabla_bonita(resultado_1m, "Prueba de Wilcoxon de una muestra (H1: Me > 3)")
+```
+
+Con una confianza del 95 %, **en las cinco preguntas la mediana de las respuestas es significativamente mayor que el punto neutral** (todos los p-valores < 0.01), con tamaños del efecto **grandes**. En términos prácticos, los participantes calificaron de forma claramente favorable tanto la experiencia como el aprendizaje sobre rumores, contenido generado con IA, el riesgo de confiar en la IA sin verificar y su intención de verificar publicaciones.
+
+## Proporción de respuestas favorables
+
+Para complementar, se estima la proporción de participantes que respondieron 4 o 5, con su intervalo de confianza exacto (Clopper-Pearson) del 95 %.
+
+```{r proporciones, fig.height = 4, fig.cap = "Figura 5. Proporción de respuestas favorables (4–5) con IC 95 %"}
+prop_fav <- datos_long %>%
+  group_by(pregunta) %>%
+  summarise(
+    favorables = sum(valor >= 4),
+    n = n(),
+    prop = favorables / n,
+    li = binom.test(favorables, n)$conf.int[1],
+    ls = binom.test(favorables, n)$conf.int[2]
+  )
+
+ggplot(prop_fav, aes(x = prop, y = fct_rev(pregunta))) +
+  geom_errorbar(aes(xmin = li, xmax = ls), width = 0.25,
+                 color = color_principal, linewidth = 0.9) +
+  geom_point(size = 4, color = color_principal) +
+  geom_text(aes(label = percent(prop, accuracy = 1)), vjust = -1.1, size = 3.8,
+            fontface = "bold") +
+  geom_vline(xintercept = 0.5, linetype = "dashed", color = "grey50") +
+  scale_x_continuous(labels = percent, limits = c(0.4, 1)) +
+  facet_wrap(~ "Porcentaje de respuestas 4 o 5 (IC 95 % exacto)") +
+  labs(x = NULL, y = NULL) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid.minor = element_blank(),
+        strip.background = element_rect(fill = "#E8F6F6"),
+        strip.text = element_text(face = "bold"))
+```
+
+```{r tabla-proporciones}
+prop_fav %>%
+  transmute(Pregunta = pregunta,
+            `Favorables / n` = paste0(favorables, " / ", n),
+            `Proporción` = percent(prop, accuracy = 0.1),
+            `IC 95 %` = paste0("[", percent(li, accuracy = 0.1), " ; ",
+                               percent(ls, accuracy = 0.1), "]")) %>%
+  tabla_bonita("Proporción de respuestas favorables")
+```
+
+Ningún intervalo incluye el 50 %, así que en todas las preguntas **la mayoría de la población de participantes respondería de forma favorable**. Los intervalos son amplios por el tamaño de muestra, por lo que estas estimaciones deben tomarse con cautela.
+
+# Comparación entre preguntas
+
+Para saber si alguna pregunta fue calificada significativamente mejor o peor que otra, se aplica la **prueba de Wilcoxon para muestras pareadas** entre cada par de preguntas, ya que las respondieron las mismas personas. Como se realizan 10 comparaciones, los p-valores se ajustan con el método de **Holm** para controlar el error tipo I, igual que en las comparaciones post-hoc vistas en clase.
+
+$$
+H_0: Me_d = 0 \qquad H_1: Me_d \neq 0
+$$
+
+donde $Me_d$ es la mediana de las diferencias entre las dos preguntas comparadas.
+
+```{r wilcoxon-pareado}
+pareadas <- datos_long %>%
+  arrange(pregunta, id) %>%
+  wilcox_test(valor ~ pregunta, paired = TRUE, p.adjust.method = "holm")
+
+pareadas %>%
+  transmute(`Pregunta A` = group1, `Pregunta B` = group2,
+            `V` = statistic,
+            `p-valor` = pvalue(p, accuracy = 0.001),
+            `p-valor ajustado (Holm)` = pvalue(p.adj, accuracy = 0.001),
+            Decisión = ifelse(p.adj < 0.05, "Diferencia significativa",
+                              "Sin diferencia")) %>%
+  tabla_bonita("Comparaciones pareadas de Wilcoxon con ajuste de Holm")
+```
+
+```{r medianas-comparacion, fig.height = 3.8, fig.cap = "Figura 6. Media y mediana por pregunta"}
+datos_long %>%
+  group_by(pregunta) %>%
+  summarise(Media = mean(valor), Mediana = median(valor)) %>%
+  pivot_longer(-pregunta, names_to = "Medida", values_to = "Valor") %>%
+  ggplot(aes(x = pregunta, y = Valor, fill = Medida)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = round(Valor, 2)), position = position_dodge(width = 0.7),
+            vjust = -0.4, size = 3.6) +
+  scale_fill_manual(values = c("Media" = "#76C7C0", "Mediana" = color_principal)) +
+  scale_y_continuous(limits = c(0, 5.5), breaks = 0:5) +
+  facet_wrap(~ "Comparación de media y mediana por pregunta") +
+  labs(x = NULL, y = "Puntaje") +
+  theme_bw(base_size = 12) +
+  theme(legend.position = "bottom",
+        panel.grid.major.x = element_blank(),
+        strip.background = element_rect(fill = "#E8F6F6"),
+        strip.text = element_text(face = "bold"))
+```
+
+Con una confianza del 95 % y tras el ajuste de Holm, **ninguna comparación resultó significativa**: no hay evidencia de que alguna pregunta haya sido calificada distinto de las demás, así que el juego tuvo una valoración homogénea en todos los aspectos. La diferencia más cercana a la significancia, antes del ajuste, fue entre *Satisfacción* y *Verificar*. En términos descriptivos, **Satisfacción** es la pregunta con menor media y más respuestas neutrales, mientras que **Verificar** es la más alta. Esto sugiere que el mensaje educativo llegó incluso a quienes no disfrutaron tanto la experiencia de juego, y que el principal margen de mejora está en la jugabilidad.
+
+# Tabla de contingencia: ¿se puede aplicar la prueba chi-cuadrado?
+
+Una pregunta natural es si la satisfacción con el juego es independiente de la intención de verificar. Se dicotomizan ambas variables en "favorable" (4–5) y "no favorable" (1–3) y se construye la tabla de contingencia.
+
+$$
+H_0: p_{ij} = p_{i\cdot}\,p_{\cdot j}\ \ \forall\, i,j \qquad
+H_1: \text{existe al menos un } (i,j) \text{ con } p_{ij} \neq p_{i\cdot}\,p_{\cdot j}
+$$
+
+```{r contingencia}
+fav <- function(x) factor(ifelse(x >= 4, "Favorable", "No favorable"),
+                          levels = c("Favorable", "No favorable"))
+
+observados <- table(Satisfacción = fav(datos$Satisfacción),
+                    Verificar    = fav(datos$Verificar))
+
+fila_totales <- rowSums(observados)
+col_totales  <- colSums(observados)
+n_total      <- sum(observados)
+esperados    <- outer(fila_totales, col_totales) / n_total
+
+tabla_bonita(as.data.frame.matrix(observados) %>% rownames_to_column("Satisfacción / Verificar"),
+             "Frecuencias observadas")
+tabla_bonita(as.data.frame.matrix(round(esperados, 2)) %>% rownames_to_column("Satisfacción / Verificar"),
+             "Frecuencias esperadas bajo H0")
+```
+
+La condición para aplicar la prueba chi-cuadrado es que **todas las frecuencias esperadas sean $\geq 5$**. En este caso, `r sum(esperados < 5)` de las 4 celdas tienen frecuencia esperada menor que 5, así que **la prueba chi-cuadrado no es válida con estos datos**. Esto se debe a que casi todos los participantes respondieron de forma favorable y hay muy pocas observaciones en la categoría "no favorable". Para estudiar la relación entre las preguntas se usa entonces la **correlación de Spearman**, que aprovecha toda la escala ordinal sin dicotomizar.
+
+# Correlación entre preguntas
+
+Como las variables son ordinales y no normales, se usa el **coeficiente de correlación de Spearman** ($\rho_s$), que mide asociaciones monótonas.
+
+$$
+H_0: \rho_s = 0 \qquad H_1: \rho_s \neq 0
+$$
+
+La interpretación sigue la escala vista en clase: de 0.25 a 0.50 débil, de 0.50 a 0.75 moderada y de 0.75 a 1.00 muy fuerte.
+
+```{r correlacion-matriz, fig.height = 5.5, fig.width = 7, fig.cap = "Figura 7. Matriz de correlaciones de Spearman"}
+cor_mat <- cor(datos[, items], method = "spearman")
+
+as.data.frame(as.table(cor_mat)) %>%
+  mutate(Var1 = factor(Var1, levels = items),
+         Var2 = factor(Var2, levels = rev(items))) %>%
+  ggplot(aes(x = Var1, y = Var2, fill = Freq)) +
+  geom_tile(color = "white", linewidth = 1) +
+  geom_text(aes(label = sprintf("%.2f", Freq),
+                color = Freq > 0.6), fontface = "bold", size = 4.5) +
+  scale_fill_gradient2(low = "#C0392B", mid = "white", high = color_principal,
+                       midpoint = 0, limits = c(-1, 1), name = expression(rho[s])) +
+  scale_color_manual(values = c("TRUE" = "white", "FALSE" = "black"), guide = "none") +
+  facet_wrap(~ "Correlación de Spearman entre preguntas") +
+  labs(x = NULL, y = NULL) +
+  theme_bw(base_size = 12) +
+  theme(panel.grid = element_blank(),
+        axis.text.x = element_text(angle = 30, hjust = 1),
+        strip.background = element_rect(fill = "#E8F6F6"),
+        strip.text = element_text(face = "bold"))
+```
+
+```{r correlacion-pruebas}
+interpretar_r <- function(r) {
+  cut(r, breaks = c(-1, -0.75, -0.5, -0.25, 0.25, 0.5, 0.75, 1),
+      labels = c("Negativa muy fuerte", "Negativa moderada", "Negativa débil",
+                 "Sin correlación o muy débil", "Positiva débil",
+                 "Positiva moderada", "Positiva muy fuerte"),
+      include.lowest = TRUE)
+}
+
+pares <- combn(items, 2, simplify = FALSE)
+
+pruebas_cor <- map_dfr(pares, function(p) {
+  prueba <- cor.test(datos[[p[1]]], datos[[p[2]]], method = "spearman", exact = FALSE)
+  prueba_sin <- cor.test(datos_sin[[p[1]]], datos_sin[[p[2]]], method = "spearman", exact = FALSE)
+  tibble(`Variable 1` = p[1], `Variable 2` = p[2],
+         rho = unname(prueba$estimate), p = prueba$p.value,
+         rho_sin = unname(prueba_sin$estimate), p_sin = prueba_sin$p.value)
+})
+
+pruebas_cor %>%
+  transmute(`Variable 1`, `Variable 2`,
+            `ρs` = round(rho, 2),
+            `p-valor` = pvalue(p, accuracy = 0.001),
+            Interpretación = interpretar_r(rho),
+            `ρs sin atípico` = round(rho_sin, 2),
+            `p-valor sin atípico` = pvalue(p_sin, accuracy = 0.001)) %>%
+  tabla_bonita("Pruebas de correlación de Spearman (con y sin el participante atípico)")
+```
+
+Con una confianza del 95 %, **todas las correlaciones son positivas y estadísticamente significativas** con la muestra completa. Las asociaciones más fuertes se dan entre **Verificar** y las preguntas **Riesgo IA** y **Rumores**: quienes sintieron que el juego les transmitió mejor estos temas son también quienes reportan mayor intención de verificar antes de compartir. La pregunta **Contenido IA** es la menos asociada con las demás.
+
+Al excluir al participante atípico, las correlaciones bajan, como era de esperarse, pero las relaciones de **Verificar** con **Riesgo IA** y **Rumores** se mantienen moderadas y significativas. Esto indica que la asociación no depende únicamente del caso extremo.
+
+```{r dispersion, fig.height = 4.2, fig.cap = "Figura 8. Relación entre Riesgo IA, Rumores e intención de verificar"}
+g1 <- ggplot(datos, aes(x = `Riesgo IA`, y = Verificar)) +
+  geom_count(color = color_principal, alpha = 0.8) +
+  scale_size_area(max_size = 10, name = "n") +
+  scale_x_continuous(breaks = 1:5, limits = c(0.5, 5.5)) +
+  scale_y_continuous(breaks = 1:5, limits = c(0.5, 5.5)) +
+  labs(title = "Riesgo IA vs Verificar") +
+  theme_bw(base_size = 11)
+
+g2 <- ggplot(datos, aes(x = Rumores, y = Verificar)) +
+  geom_count(color = color_principal, alpha = 0.8) +
+  scale_size_area(max_size = 10, name = "n") +
+  scale_x_continuous(breaks = 1:5, limits = c(0.5, 5.5)) +
+  scale_y_continuous(breaks = 1:5, limits = c(0.5, 5.5)) +
+  labs(title = "Rumores vs Verificar") +
+  theme_bw(base_size = 11)
+
+g1 + g2 + plot_layout(guides = "collect")
+```
+
+# Regresión lineal simple: aprendizaje percibido e intención de verificar
+
+## Planteamiento del modelo
+
+Se construye un **índice de aprendizaje percibido**, igual al promedio de las tres preguntas sobre el contenido educativo (*Rumores*, *Contenido IA* y *Riesgo IA*). Este índice se usa para explicar la **intención de verificar**:
+
+$$
+Y_i = \beta_0 + \beta_1 X_i + \varepsilon_i, \qquad \varepsilon_i \sim N(0, \sigma^2)
+$$
+
+donde $Y_i$ es la respuesta a *Verificar* y $X_i$ el índice de aprendizaje del participante $i$.
+
+<div class="nota">
+**Nota metodológica:** la variable respuesta es ordinal, toma pocos valores y tiene efecto techo (muchas respuestas en 5), así que el modelo se usa con fines **exploratorios** e ilustrativos. Por eso es clave revisar los supuestos y la influencia del participante atípico.
+</div>
+
+```{r rls-ajuste}
+datos <- datos %>%
+  mutate(Aprendizaje = rowMeans(across(c(Rumores, `Contenido IA`, `Riesgo IA`))))
+datos_sin <- datos %>% filter(!id %in% id_atipico)
+
+modelo <- lm(Verificar ~ Aprendizaje, data = datos)
+summary(modelo)
+```
+
+```{r rls-tabla}
+coefs <- summary(modelo)$coefficients
+ic    <- confint(modelo, level = 0.95)
+
+tibble(Parámetro = c("β0 (intercepto)", "β1 (pendiente)"),
+       Estimación = round(coefs[, 1], 3),
+       `Error estándar` = round(coefs[, 2], 3),
+       t = round(coefs[, 3], 3),
+       `p-valor` = pvalue(coefs[, 4], accuracy = 0.001),
+       `IC 95 %` = paste0("[", round(ic[, 1], 3), " ; ", round(ic[, 2], 3), "]")) %>%
+  tabla_bonita("Estimación de los coeficientes del modelo")
+
+anova(modelo) %>%
+  as.data.frame() %>%
+  rownames_to_column("Fuente") %>%
+  mutate(across(where(is.numeric), ~ round(.x, 4))) %>%
+  tabla_bonita("Tabla ANOVA de la regresión")
+```
+
+El modelo ajustado es:
+
+$$
+\hat{Y} = `r round(coef(modelo)[1], 3)` + `r round(coef(modelo)[2], 3)`\,X
+$$
+
+**Prueba de significancia de la pendiente** ($H_0: \beta_1 = 0$ vs $H_1: \beta_1 \neq 0$): con una confianza del 95 %, se rechaza $H_0$ ($t = `r round(coefs[2, 3], 3)`$, $p$-valor $`r ifelse(coefs[2, 4] < 0.001, "< 0.001", paste("=", round(coefs[2, 4], 4)))`$). Esto indica una relación lineal significativa entre el aprendizaje percibido y la intención de verificar. Por cada punto adicional en el índice de aprendizaje, la intención de verificar aumenta en promedio **`r round(coef(modelo)[2], 2)` puntos**. El coeficiente de determinación es $R^2 = `r round(summary(modelo)$r.squared, 3)`$, es decir, el índice explica el **`r round(summary(modelo)$r.squared * 100, 1)` %** de la variabilidad de *Verificar*.
+
+## Análisis de residuales
+
+```{r residuales, fig.height = 6.5, fig.cap = "Figura 9. Diagnóstico de residuales del modelo"}
+diag_df <- tibble(
+  id        = datos$id,
+  ajustados = fitted(modelo),
+  residuos  = residuals(modelo),
+  estudent  = rstudent(modelo),
+  cook      = cooks.distance(modelo),
+  atipico   = datos$id %in% id_atipico
+)
+
+r1 <- ggplot(diag_df, aes(ajustados, residuos)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_point(aes(color = atipico), size = 2.5) +
+  labs(title = "Residuos vs valores ajustados", x = "Ajustados", y = "Residuos")
+
+r2 <- ggplot(diag_df, aes(sample = estudent)) +
+  stat_qq(color = color_principal, size = 2.3) +
+  stat_qq_line(color = "#C0392B", linetype = "dashed") +
+  labs(title = "Q-Q normal de residuos estudentizados",
+       x = "Cuantiles teóricos", y = "Cuantiles muestrales")
+
+r3 <- ggplot(diag_df, aes(id, residuos)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey50") +
+  geom_line(color = "grey60") +
+  geom_point(aes(color = atipico), size = 2.3) +
+  labs(title = "Residuos según el orden de respuesta", x = "ID", y = "Residuos")
+
+r4 <- ggplot(diag_df, aes(id, cook)) +
+  geom_col(aes(fill = atipico), width = 0.6) +
+  geom_hline(yintercept = 4 / nrow(datos), linetype = "dashed", color = "#C0392B") +
+  labs(title = "Distancia de Cook (línea: 4/n)", x = "ID", y = "Distancia de Cook")
+
+(r1 + r2) / (r3 + r4) &
+  scale_color_manual(values = c("FALSE" = color_principal, "TRUE" = "#C0392B"), guide = "none") &
+  scale_fill_manual(values = c("FALSE" = color_principal, "TRUE" = "#C0392B"), guide = "none") &
+  theme_bw(base_size = 10)
+```
+
+```{r supuestos}
+set.seed(2026)
+sw  <- shapiro.test(residuals(modelo))
+dw  <- durbinWatsonTest(modelo)
+ncv <- ncvTest(modelo)
+tt  <- t.test(residuals(modelo), mu = 0)
+
+tibble(
+  Supuesto = c("Normalidad de los errores", "Independencia de los errores",
+               "Varianza constante", "Media cero de los errores"),
+  Prueba   = c("Shapiro-Wilk", "Durbin-Watson", "Breusch-Pagan (ncvTest)", "t de una muestra"),
+  Estadístico = round(c(sw$statistic, dw$dw, ncv$ChiSquare, tt$statistic), 3),
+  `p-valor` = pvalue(c(sw$p.value, dw$p, ncv$p, tt$p.value), accuracy = 0.001)
+) %>%
+  mutate(Conclusión = ifelse(c(sw$p.value, dw$p, ncv$p, tt$p.value) < 0.05,
+                             "Se rechaza H0: no se cumple", "No se rechaza H0: se cumple")) %>%
+  tabla_bonita("Validación de supuestos del modelo")
+```
+
+En el análisis de residuales se observa que:
+
+- **Media cero:** se cumple por construcción del método de mínimos cuadrados.
+- **Independencia:** se evalúa con Durbin-Watson según el orden de respuesta. Como los participantes respondieron de forma individual, no se espera dependencia.
+- **Normalidad y varianza constante:** deben leerse con cuidado, porque la variable respuesta es discreta (solo toma los valores 1, 4 y 5). Por eso los residuos forman bandas paralelas en el gráfico de residuos vs ajustados.
+- **Observaciones influyentes:** el participante **`r id_atipico`** tiene una distancia de Cook de **`r round(max(diag_df$cook), 2)`**, muy por encima del umbral $4/n = `r round(4 / nrow(datos), 2)`$. Es decir, **una sola observación influye fuertemente en la recta ajustada**.
+
+## Modelo sin la observación influyente
+
+```{r rls-sin-atipico}
+modelo_sin <- lm(Verificar ~ Aprendizaje, data = datos_sin)
+coefs_sin  <- summary(modelo_sin)$coefficients
+
+tibble(
+  Modelo = c("Con todos los datos", "Sin el participante atípico"),
+  n  = c(nrow(datos), nrow(datos_sin)),
+  `β0` = round(c(coef(modelo)[1], coef(modelo_sin)[1]), 3),
+  `β1` = round(c(coef(modelo)[2], coef(modelo_sin)[2]), 3),
+  `p-valor β1` = pvalue(c(coefs[2, 4], coefs_sin[2, 4]), accuracy = 0.001),
+  `R²` = round(c(summary(modelo)$r.squared, summary(modelo_sin)$r.squared), 3),
+  `Shapiro-Wilk residuos (p)` = pvalue(c(shapiro.test(residuals(modelo))$p.value,
+                                         shapiro.test(residuals(modelo_sin))$p.value),
+                                       accuracy = 0.001)
+) %>%
+  tabla_bonita("Comparación de los modelos con y sin la observación influyente")
+```
+
+```{r rls-grafico, fig.height = 4.8, fig.cap = "Figura 10. Recta de regresión con y sin la observación influyente"}
+ggplot(datos, aes(x = Aprendizaje, y = Verificar)) +
+  geom_jitter(aes(color = id %in% id_atipico), width = 0.04, height = 0.06,
+              size = 2.8, alpha = 0.85) +
+  geom_smooth(method = "lm", se = TRUE, color = "#2C3E50", fill = "grey80",
+              formula = y ~ x, aes(linetype = "Con todos los datos")) +
+  geom_smooth(data = datos_sin, method = "lm", se = TRUE, color = color_principal,
+              fill = "#B2DFDB", formula = y ~ x,
+              aes(linetype = "Sin el participante atípico")) +
+  scale_color_manual(values = c("FALSE" = color_principal, "TRUE" = "#C0392B"),
+                     labels = c("Participantes", "Participante atípico"), name = NULL) +
+  scale_linetype_manual(values = c("Con todos los datos" = "dashed",
+                                   "Sin el participante atípico" = "solid"),
+                        name = "Recta ajustada") +
+  scale_x_continuous(breaks = 1:5) +
+  scale_y_continuous(breaks = 1:5) +
+  facet_wrap(~ "Intención de verificar en función del aprendizaje percibido") +
+  labs(x = "Índice de aprendizaje percibido (promedio de 3 preguntas)",
+       y = "Intención de verificar") +
+  theme_bw(base_size = 12) +
+  theme(legend.position = "bottom", legend.box = "vertical",
+        strip.background = element_rect(fill = "#E8F6F6"),
+        strip.text = element_text(face = "bold"))
+```
+
+Al excluir la observación influyente, la pendiente y el $R^2$ disminuyen, pero **la relación sigue siendo positiva y estadísticamente significativa** con una confianza del 95 %. La conclusión de fondo se mantiene: **a mayor aprendizaje percibido, mayor intención de verificar la información antes de compartirla**. Con todos los datos, el modelo sobreestima la fuerza de la relación por el efecto de palanca del caso extremo.
+
+# Análisis de sensibilidad
+
+```{r sensibilidad}
+resumen_muestra <- function(df, etiqueta) {
+  df %>%
+    pivot_longer(all_of(items), names_to = "pregunta", values_to = "valor") %>%
+    group_by(pregunta) %>%
+    summarise(valor = paste0(round(mean(valor), 2), " / ", median(valor),
+                             " / ", percent(mean(valor >= 4), accuracy = 1))) %>%
+    mutate(Muestra = etiqueta)
+}
+
+bind_rows(resumen_muestra(datos, "Con todos (n = 21)"),
+          resumen_muestra(datos_sin, "Sin atípico (n = 20)")) %>%
+  mutate(pregunta = factor(pregunta, levels = items)) %>%
+  arrange(pregunta) %>%
+  pivot_wider(names_from = Muestra, values_from = valor) %>%
+  rename(Pregunta = pregunta) %>%
+  tabla_bonita("Media / mediana / % favorable, con y sin el participante atípico")
+```
+
+Al quitar el caso atípico, las medias suben levemente, las medianas no cambian y las conclusiones de las pruebas de hipótesis se mantienen. **Los resultados son robustos**: la valoración favorable del juego no depende de un solo participante. Sin embargo, ese caso no debe ignorarse, porque representa a un tipo de jugador para el que el juego no funcionó y su experiencia coincide con varias de las sugerencias recibidas.
+
+# Comentarios de los participantes
+
+La encuesta incluyó una pregunta abierta de recomendaciones y comentarios. Estas respuestas **no forman parte del análisis estadístico**, ya que son de naturaleza cualitativa, pero **se usarán como insumo para mejorar el juego** en próximas versiones.
+
+```{r conteo-comentarios}
+es_vacio <- is.na(comentarios) | str_detect(str_trim(comentarios), regex("^na\\.?$", ignore_case = TRUE))
+n_con_texto <- sum(!es_vacio)
+```
+
+De los `r length(comentarios)` participantes, **`r n_con_texto` escribieron un comentario**. La mayoría son recomendaciones concretas y el resto son expresiones de agrado general. Los temas mencionados fueron:
+
+- **Jugabilidad:** agregar dinamismo y reducir la cantidad de texto.
+- **Claridad:** que el juego se explique por sí solo y que la explicación inicial sea más breve.
+- **Aspectos técnicos:** ajustar las *hitboxes* (especialmente del puente) y las físicas.
+- **Contenido:** enfocar mejor el mensaje, ya que se percibió que se abarcaban muchos temas.
+- **Identidad:** revisar la relación del título con el tema del uso responsable de redes sociales.
+- **Estética:** cambiar la tipografía según la época (pasado, presente, futuro).
+
+Estos comentarios son coherentes con los hallazgos cuantitativos: *Satisfacción* fue la pregunta con menor puntaje relativo, y el participante atípico atribuyó su experiencia negativa al exceso de texto.
+
+# Conclusiones
+
+<div class="resumen">
+
+1. **Valoración general muy favorable.** En las cinco preguntas, la mediana fue de 4 o 5 y la mayoría de los participantes respondió en los niveles 4 o 5.
+
+2. **Significativamente por encima del punto neutral.** Con una confianza del 95 %, la prueba de Wilcoxon de una muestra mostró que todas las preguntas tienen una mediana mayor que 3, con tamaños del efecto grandes.
+
+3. **Valoración homogénea.** Las comparaciones pareadas de Wilcoxon con ajuste de Holm no mostraron diferencias significativas entre preguntas. Descriptivamente, *Verificar* fue la más alta y *Satisfacción* la más baja.
+
+4. **El aprendizaje se asocia con la intención de verificar.** Todas las correlaciones de Spearman fueron positivas y significativas. Las más fuertes fueron las de *Verificar* con *Riesgo IA* y *Rumores*.
+
+5. **Modelo de regresión.** El índice de aprendizaje percibido explica una parte importante de la intención de verificar, y la relación se mantiene significativa aun sin la observación influyente.
+
+6. **Escala consistente.** El alfa de Cronbach indica buena consistencia interna de las cinco preguntas.
+
+7. **Limitaciones.** La muestra es pequeña ($n = 21$) y por conveniencia, las respuestas tienen efecto techo y la prueba chi-cuadrado no fue aplicable porque las frecuencias esperadas eran menores que 5. Los resultados describen a este grupo de participantes y no se pueden generalizar sin una muestra más amplia.
+
+8. **Próximos pasos.** El principal margen de mejora está en la **experiencia de juego** (dinamismo, menos texto, instrucciones más claras y ajustes técnicos), que es justo lo que señalan los comentarios de los participantes.
+
+</div>
