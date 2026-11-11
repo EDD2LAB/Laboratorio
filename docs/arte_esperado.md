@@ -119,6 +119,7 @@ La columna respaldo describe la alternativa actual o la prevista si dice por imp
   Nuevos retratos individuales abajo: no asumir cuatro expresiones ni identidad para NPC2.
 - Elia y Arel tienen sprites, pero falta agregarlos al mapa y al diálogo.
 - Teclas: faltan los recursos `Imagenes/Indicadores/tecla_<X>.png` del plan.
+  `tecla_E.png` ya se usa junto al objetivo resaltado (1 o 2 cuadros, se escala a 24 px de alto); mientras falte, se dibuja por código.
 - Icono animado: falta `Imagenes/Iconos/icono_animado_<N>f.png`; existe brillo por código.
 - Balanceo: las tiras existentes deben compararse contra el tamaño de cada puente antes de conectarlas.
 - `herramientas/componer_pantallas.py` no existe en esta revisión.
