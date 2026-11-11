@@ -3,18 +3,11 @@
 import math
 import pygame
 from nucleo.config import ALTO, ANCHO
+from logica.movimiento_suave import linea_toca_rect, rect_en_union, permite_salir_bloqueos
 
 
 def _rect_hits_line(rect, x1, y1, x2, y2, grosor):
-    dx, dy = x2 - x1, y2 - y1
-    longitud_cuadrada = dx * dx + dy * dy
-    if longitud_cuadrada == 0:
-        px, py = x1, y1
-    else:
-        t = max(0, min(1, ((rect.centerx - x1) * dx + (rect.centery - y1) * dy) / longitud_cuadrada))
-        px, py = x1 + t * dx, y1 + t * dy
-    radio = math.hypot(rect.width, rect.height) / 2 + grosor / 2
-    return (rect.centerx - px) ** 2 + (rect.centery - py) ** 2 <= radio * radio
+    return linea_toca_rect(tuple(rect), x1, y1, x2, y2, grosor)
 
 
 def colision_hitbox_mapa(rect, hitbox):
@@ -63,7 +56,7 @@ def contiene_zona_caminable(rect, hitbox):
     return False
 
 
-def jugador_bloqueado(rect, mundo):
+def jugador_bloqueado(rect, mundo, ignorar_puente=False):
     if not pygame.Rect(0, 0, ANCHO, ALTO).contains(rect):
         return True
     limites_mapa = mundo.get("rect_mapa")
@@ -72,6 +65,7 @@ def jugador_bloqueado(rect, mundo):
     reparacion = mundo.get("reparacion_puentes")
     if (
         reparacion
+        and not ignorar_puente
         and reparacion.bloquea_paso
         and rect.colliderect(reparacion.hitbox_puente)
     ):
@@ -88,7 +82,23 @@ def jugador_bloqueado(rect, mundo):
     if zonas_caminables and not any(
         contiene_zona_caminable(rect, zona) for zona in zonas_caminables
     ):
-        return True
+        zonas = []
+        for zona in zonas_caminables:
+            if zona.get("type", "rect") == "rect":
+                zonas.append(("rect", round(zona.get("rx", 0) * ANCHO), round(zona.get("ry", 0) * ALTO),
+                              max(1, round(zona.get("rw", 0) * ANCHO)), max(1, round(zona.get("rh", 0) * ALTO))))
+            elif zona.get("type") == "circle":
+                zonas.append(("circle", zona.get("cx", 0) * ANCHO, zona.get("cy", 0) * ALTO, zona.get("r", 0) * ANCHO))
+        if not rect_en_union(tuple(rect), zonas):
+            return True
     return any(
         personaje["rect"].colliderect(rect) for personaje in mundo["personajes"]
     )
+
+
+def puede_mover_pies(origen, destino, mundo):
+    if jugador_bloqueado(destino, mundo, ignorar_puente=True):
+        return False
+    reparacion = mundo.get("reparacion_puentes")
+    bloqueos = [tuple(reparacion.hitbox_puente)] if reparacion and reparacion.bloquea_paso else []
+    return permite_salir_bloqueos(tuple(origen), tuple(destino), bloqueos)

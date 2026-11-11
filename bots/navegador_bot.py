@@ -15,6 +15,7 @@ class NavegadorBot:
         self.destino = None
         self.error = ""
         self._reintento_ms = 0.0
+        self._salida_bloqueo = None
 
     @classmethod
     def _celda(cls, posicion):
@@ -30,12 +31,20 @@ class NavegadorBot:
 
     def buscar_ruta(self, origen, destino, radio=None):
         radio = self.RADIO_INTERACCION if radio is None else radio
-        inicio = self._celda(origen)
+        centro = self._celda(origen)
         objetivo = tuple(map(float, destino))
-        pendientes = [(0.0, inicio)]
-        anterior = {inicio: None}
-        costo = {inicio: 0.0}
+        # La celda redondeada puede caer dentro de una pared. Conectar solo
+        # puntos de la cuadrícula alcanzables desde la posición real.
+        inicios = [(centro[0] + dx, centro[1] + dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]
+        inicios = [c for c in inicios if not self.colisiones.bloqueado(*self._posicion(c))
+                   and self.colisiones.trayecto_libre(origen, self._posicion(c))]
+        costo = {c: self._distancia(origen, self._posicion(c)) / self.PASO for c in inicios}
+        pendientes = [(valor + max(0, self._distancia(self._posicion(c), objetivo) - radio) / self.PASO, c)
+                      for c, valor in costo.items()]
+        heapq.heapify(pendientes)
+        anterior = {c: None for c in inicios}
         encontrado = None
+        enlace_final = False
         movimientos = (
             (-1, 0, 1), (1, 0, 1), (0, -1, 1), (0, 1, 1),
             (-1, -1, 1.4142), (-1, 1, 1.4142),
@@ -47,6 +56,11 @@ class NavegadorBot:
             posicion = self._posicion(actual)
             if self._distancia(posicion, objetivo) <= radio:
                 encontrado = actual
+                break
+            if (radio < self.PASO and self._distancia(posicion, objetivo) <= self.PASO
+                    and not self.colisiones.bloqueado(*objetivo)
+                    and self.colisiones.trayecto_libre(posicion, objetivo)):
+                encontrado, enlace_final = actual, True
                 break
             for dx, dy, paso in movimientos:
                 vecino = actual[0] + dx, actual[1] + dy
@@ -81,7 +95,9 @@ class NavegadorBot:
         while paso is not None:
             camino.append(self._posicion(paso))
             paso = anterior[paso]
-        self.ruta = list(reversed(camino))[1:]
+        self.ruta = list(reversed(camino))
+        if enlace_final:
+            self.ruta.append(objetivo)
         self.destino = objetivo
         self.error = ""
         self._reintento_ms = 0
@@ -91,6 +107,20 @@ class NavegadorBot:
         radio = self.RADIO_INTERACCION if radio is None else radio
         actual = (jugador["x"], jugador["y"])
         self._reintento_ms = max(0.0, self._reintento_ms - max(0, segundos) * 1000)
+        if self.colisiones.bloqueado(*actual):
+            salida = self._salida_bloqueo
+            if salida is None or self.colisiones.bloqueado(*salida):
+                salida = self.colisiones.salida_bloqueo(*actual)
+            self._salida_bloqueo = salida
+            self.ruta, self.destino = [], None
+            if salida is None:
+                self.error = "El bot espera una salida transitable."
+                jugador["animacion"] = "reposo"
+                return False
+            self.error = ""
+            self._mover_hacia(jugador, salida, segundos)
+            return False
+        self._salida_bloqueo = None
         if self._distancia(actual, destino) <= radio:
             self.ruta = []
             jugador["animacion"] = "reposo"
@@ -108,16 +138,31 @@ class NavegadorBot:
             radio_ruta = max(0, radio - self.PASO)
             if self.buscar_ruta(actual, destino, radio_ruta) is None:
                 return False
-        while self.ruta and self._distancia(actual, self.ruta[0]) <= 8:
-            self.ruta.pop(0)
-        if not self.ruta:
-            return self._distancia(actual, destino) <= radio
+        restante = max(0.0, min(segundos, .15))
+        while self.ruta and restante > 1e-8:
+            actual = jugador["x"], jugador["y"]
+            if self._distancia(actual, destino) <= radio:
+                return True
+            if self._distancia(actual, self.ruta[0]) <= 1e-5:
+                self.ruta.pop(0)
+                continue
+            siguiente = self.ruta[0]
+            dt = min(restante, self._distancia(actual, siguiente) / (VELOCIDAD * self.colisiones.factor_velocidad))
+            if not self._mover_hacia(jugador, siguiente, dt):
+                return False
+            restante -= dt
+        return self._distancia((jugador["x"], jugador["y"]), destino) <= radio
 
-        siguiente = self.ruta[0]
+    def _mover_hacia(self, jugador, siguiente, segundos):
+        actual = jugador["x"], jugador["y"]
         dx, dy = siguiente[0] - actual[0], siguiente[1] - actual[1]
-        tiempo_hasta_siguiente = self._distancia(actual, siguiente) / (VELOCIDAD * self.colisiones.factor_velocidad)
+        distancia = self._distancia(actual, siguiente)
+        if distancia < 1e-8:
+            jugador["animacion"] = "reposo"
+            return True
+        tiempo_hasta_siguiente = distancia / (VELOCIDAD * self.colisiones.factor_velocidad)
         x, y = self.colisiones.mover(
-            *actual, dx, dy, min(max(0.0, segundos), tiempo_hasta_siguiente)
+            *actual, dx / distancia, dy / distancia, min(max(0.0, segundos), tiempo_hasta_siguiente)
         )
         if math.hypot(x - actual[0], y - actual[1]) < 0.01:
             self.ruta = []
@@ -130,4 +175,4 @@ class NavegadorBot:
         else:
             jugador["direccion"] = "abajo" if dy > 0 else "arriba"
         jugador["animacion"] = "caminar"
-        return self._distancia((x, y), destino) <= radio
+        return True

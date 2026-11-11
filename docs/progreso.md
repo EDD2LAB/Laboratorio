@@ -198,3 +198,34 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
 - Documentación: docs/claridad_etapa3.md. Siguiente etapa: atascos y movimiento.
 
 ---
+# Etapa 4 - movimiento y atascos (2026-11-11)
+
+- Reproducidos seis fallos en los once casos iniciales: unión de zonas
+  caminables, líneas con margen excesivo, roce con objetos pequeños, escape
+  de un bloqueo de puente y paridad del motor local.
+- Geometría y desplazamiento comunes en logica/movimiento_suave.py, sin Pygame.
+  Cobertura por unión de zonas; colisión real segmento/rectángulo para líneas;
+  subpasos de hasta 1 px, deslizamiento y ayuda lateral limitada a 3 px que
+  consume el mismo presupuesto de movimiento. Se evitan cortes de esquina.
+- El bloqueo original del puente permite salir a quien ya está dentro, sin
+  profundizar ni atravesar paredes. Sigue impidiendo entrar desde fuera.
+- Bots: anclajes alcanzables desde su posición real, giros sin saltar vértices,
+  tramos finales para radios pequeños y consumo del tiempo entre nodos sin
+  reducir su velocidad. Escape de bloqueo temporal a pie y posterior recálculo.
+- Las 16 regresiones finales de movimiento pasan, junto con la suite completa:
+  **482 pruebas aprobadas en 298,030 s**. Las campañas con bots, reparación,
+  desplazamiento por red y arranque quedan cubiertos por esa suite.
+- Comprobación adicional con semilla 42: 960 posiciones en las tres eras y
+  cinco interiores coincidieron entre motor local y autoritativo (sin NPC);
+  353 movimientos desde posiciones libres conservaron colisión y velocidad.
+- Empaquetado simulado: 61 archivos, servidor sin Pygame, 2 humanos + 2 bots,
+  200 ticks y estado dentro de MAX_MENSAJE; validacion_docker_etapa4.json.
+- Benchmark headless local, cuatro clientes, 15 s: 33,4 FPS, trabajo medio de
+  frame 6,55 ms / p95 8,69 ms, unos 3,7 KB/s por cliente. Comparable al registro
+  actual de etapa 3 (33,4 FPS); no es una medición de Render ni garantiza un
+  rendimiento concreto en otras PC.
+- Protocolo 13 conservado; controles y estados mantienen sus formatos.
+  Ningún archivo de Hitboxes cambió. Sin push ni despliegue de las etapas 3 y 4.
+- Documentación: docs/movimiento_etapa4.md. Sigue presentación, arte y audio.
+
+---

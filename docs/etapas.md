@@ -21,7 +21,8 @@ La etapa 2 está implementada localmente con protocolo 13; ver
 publicación y despliegue antes de usarla con el servidor de Render.
 
 Las etapas 1 y 2 se publicaron y desplegaron en Render en `be2f6df`.
-La etapa 3 se desarrolla localmente: ver `docs/claridad_etapa3.md`.
+La etapa 3 está implementada localmente en `58cc8c0`: ver `docs/claridad_etapa3.md`.
+La etapa 4 corrige movimiento y atascos: ver `docs/movimiento_etapa4.md`.
 
 | Etapa | Alcance | Criterio de cierre |
 | --- | --- | --- |
