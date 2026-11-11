@@ -232,6 +232,8 @@ class VistaPartida:
         self.datos_red = {"fps": 0, "kb_s": 0, "ping_ms": None}
         self._muestra_red = (self.ultimo_paquete, 0)
         self.aviso_red = ""
+        from interfaz.orientacion import OrientacionMapa
+        self.orientacion = OrientacionMapa()
         self.estado = estado
         self.variantes_eco = cargar_variantes_tronco_eco()
         self._frames_tronco_escalados = {}
@@ -824,9 +826,8 @@ class VistaPartida:
         if rect and self.dimension_completa() and int(time.monotonic() * 2) != int((time.monotonic() - segundos) * 2):
             self.particulas.emitir(rect.centerx, rect.centery, 2)
         mundo = self.estado.get("mundo", {})
-        destino = mundo.get("privado", {}).get("guia", {}).get("objetivo") if self.dimension == LA_COPA else None
-        if self.dimension != LA_COPA:
-            destino = self._objetivo_presente()
+        from interfaz.orientacion import tarea_actual
+        destino = tarea_actual(self).get("objetivo")
         yo = self.yo()
         if destino and yo:
             clave = (destino["id"], round(yo["x"]/24), round(yo["y"]/24))
@@ -892,10 +893,8 @@ class VistaPartida:
         yo = self.yo() or {"x": 480, "y": 620}
         if self.dimension == PRESENTE:
             return self._guia_distrito(presente, conocidas, yo)
-        pendientes = [o for o in presente.get("objetivos", []) if o.get("pista") and o["pista"] not in conocidas]
-        if pendientes:
-            return min(pendientes, key=lambda o: math.hypot(o["x"] - yo["x"], o["y"] - yo["y"]))
-        return next((o for o in presente.get("objetivos", []) if o["id"] == self.dimension + ":pantalla"), None)
+        from interfaz.orientacion import objetivo_nucleo
+        return objetivo_nucleo(presente, conocidas, self.estado.get("mundo", {}).get("caso", {}).get("npcs", []))
 
     def _guia_distrito(self, presente, conocidas, yo):
         """Hasta el personaje con la pista, pasando por las puertas que hagan falta."""
@@ -911,7 +910,9 @@ class VistaPartida:
             return {"id": "salir", "x": salida.centerx, "y": salida.centery}
         if pendientes:
             edificios = presente.get("edificios", {})
-            return cerca_de([edificios[n["interior"]] for n in pendientes if n.get("interior") in edificios])
+            puertas = [dict(edificios[n["interior"]], pista=n["pista"], puerta=True)
+                       for n in pendientes if n.get("interior") in edificios]
+            return cerca_de(puertas) if puertas else None
         return next((o for o in presente.get("objetivos", []) if o["id"] == "presente:pantalla"), None)
 
     def _frames_tronco(self, tamano, variante=1):
@@ -1218,12 +1219,10 @@ class VistaPartida:
 
     def _destino_flecha(self, vista):
         """A dónde señala la flecha: el portal al terminar, o un objetivo fuera de cámara."""
-        rect = self.rect_portal()
-        if self.dimension_completa() and rect:
-            return rect.center
-        mundo = self.estado.get("mundo", {})
-        objetivo = (mundo.get("privado", {}).get("guia", {}).get("objetivo") if self.dimension == LA_COPA
-                    else self._objetivo_presente())
+        from interfaz.orientacion import tarea_actual
+        objetivo = tarea_actual(self).get("objetivo")
+        if objetivo and objetivo.get("id") == "portal":
+            return objetivo["x"], objetivo["y"]
         if objetivo and vista is not None and not vista.inflate(-60, -60).collidepoint(objetivo["x"], objetivo["y"]):
             return objetivo["x"], objetivo["y"]
         return None
@@ -1283,6 +1282,7 @@ class VistaPartida:
             mundo = self.estado.get("mundo", {})
             privado = mundo.get("privado", {})
             self._dibujar_hud(superficie, codigo, mundo.get("caso", {}), privado, privado.get("guia", {}))
+        self.orientacion.dibujar(self, superficie)
         self._dibujar_capas_superiores(superficie)
 
     @staticmethod
@@ -1337,7 +1337,9 @@ class VistaPartida:
             pendientes = (caso.get("expediente") or {}).get("pendientes", 0)
             self.boton_expediente.texto = f"Casos ({pendientes}) · T" if pendientes else "Casos · T"
             self.boton_expediente.dibujar(superficie, self.mouse)
-        titulo, detalle = self._textos_objetivo(caso, privado, guia)
+        from interfaz.orientacion import tarea_actual
+        tarea = tarea_actual(self)
+        titulo, detalle = tarea["titulo"], tarea["detalle"]
         self._texto_pastilla(superficie, titulo, self.fuente, (237, 185, 87), topleft=(22, 16))
         # Arriba a la derecha: estrellas, reloj y poder.
         self._pastilla(superficie, pygame.Rect(762, 10, 186, 38))
@@ -1361,8 +1363,8 @@ class VistaPartida:
         if not self.mostrar_detalles:
             if not self.panel.activo:
                 self.hud.dibujar_avisos(superficie, 22, 70)
-                pista = self.hud.fuente.render("J: detalles · Esc: menú", True, (205, 214, 190))
-                caja = pista.get_rect(bottomright=(946, 710))
+                pista = self.hud.fuente.render("F1: controles · J: detalles · Esc: menú", True, (205, 214, 190))
+                caja = pista.get_rect(bottomright=(946, 680))
                 self._pastilla(superficie, caja.inflate(12, 6), 90)
                 superficie.blit(pista, caja)
             return

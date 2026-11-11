@@ -20,6 +20,9 @@ La etapa 2 está implementada localmente con protocolo 13; ver
 `docs/red_estabilidad.md` y los resultados en `docs/progreso.md`. Requiere
 publicación y despliegue antes de usarla con el servidor de Render.
 
+Las etapas 1 y 2 se publicaron y desplegaron en Render en `be2f6df`.
+La etapa 3 se desarrolla localmente: ver `docs/claridad_etapa3.md`.
+
 | Etapa | Alcance | Criterio de cierre |
 | --- | --- | --- |
 | 2. Red | Ping, límites por sesión, recuperación y Docker | Varias salas con IP compartida, contenedor y reconexión comprobados |

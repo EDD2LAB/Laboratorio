@@ -187,8 +187,13 @@ class TransporteWS(unittest.IsolatedAsyncioTestCase):
                 async with cliente.ws_connect(servidor.make_url("/v1/juego"),
                                               headers={"Authorization": "Bearer " + host["token"]}) as ws:
                     await ws.send_json({"tipo": "ping", "t": "no-numerico"})
-                    error = await asyncio.wait_for(ws.receive_json(), 2)
-                    self.assertEqual(error["tipo"], "error")
+                    # El snapshot inicial puede adelantarse al error bajo carga.
+                    for _ in range(20):
+                        error = await asyncio.wait_for(ws.receive_json(), 2)
+                        if error.get("tipo") == "error":
+                            break
+                    else:
+                        self.fail("No llegó el rechazo del ping inválido.")
                     # El ping inválido consume un control; los válidos tienen su propia cuota.
                     await ws.send_json({"tipo": "ping", "t": 42.25})
                     for seq in range(59):

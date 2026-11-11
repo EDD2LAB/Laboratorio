@@ -325,7 +325,8 @@ class PanelCooperativo:
         if self.modo == "caldero":
             opciones = contexto.get("opciones", {})
             falta = self.falta_para_elegir()
-            mensaje = falta or ("Eligieron distinto. Hablen y prueben otra vez." if self.caso.get("empate") else "Lee tus pistas. ¿Qué poción usamos?")
+            from interfaz.orientacion import datos_votacion
+            mensaje = falta or datos_votacion(contexto, self.vista.estado.get("mundo", {}).get("jugadores", []), self.vista.identificador)
             votos = f"Tus pistas: {self.cantidad_pruebas()} · Ya eligieron {contexto.get('votos_emitidos', 0)} de {contexto.get('votantes', 0)}"
             voto = self.privado_voto(contexto)
             if voto:

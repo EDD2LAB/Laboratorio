@@ -63,7 +63,7 @@ def esperados():
     for nombre in ("ficha_vacio", "ficha_logrado", "aguja"):
         agregar(f"Imagenes/Indicadores Puente/{nombre}.png", "Minijuego puente", "Dibujo actual")
     for nombre in ("exclamacion", "interrogacion", "check"):
-        agregar(f"Imagenes/Indicadores/{nombre}_4f.png", "Objetivo visual", "Indicador por código por implementar")
+        agregar(f"Imagenes/Indicadores/{nombre}_4f.png", "Objetivo visual", "Indicador por código implementado")
     for nombre in ("pista", "compartir", "pedir_pruebas", "verificar", "votar", "entregar", "rumor", "aclaracion", "eco"):
         agregar(f"Imagenes/Iconos/Acciones/{nombre}.png", "Acciones", "Texto actual")
     for nombre in ("PixelifySans", "Nunito", "ShareTechMono"):
@@ -108,7 +108,7 @@ def main():
                "  Kael y Tarek están registrados como aspirante y habitante; falta conectar sus diálogos.",
                "  Nuevos retratos individuales abajo: no asumir cuatro expresiones ni identidad para NPC2.",
                "- Elia y Arel tienen sprites, pero falta agregarlos al mapa y al diálogo.",
-               "- Teclas: faltan los recursos `Imagenes/Indicadores/tecla_<X>.png` del plan.",
+               "- Teclas: faltan los recursos `Imagenes/Indicadores/tecla_<X>.png`; respaldo por código ya conectado en mapa y F1.",
                "- Icono animado: falta `Imagenes/Iconos/icono_animado_<N>f.png`; existe brillo por código.",
                "- Balanceo: las tiras existentes deben compararse contra el tamaño de cada puente antes de conectarlas.",
                "- `herramientas/componer_pantallas.py` no existe en esta revisión.",

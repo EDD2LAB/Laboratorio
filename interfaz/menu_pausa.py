@@ -39,7 +39,8 @@ CONTROLES = (
     ("L", "Ocultar o mostrar los nombres"),
     ("F11", "Alternar pantalla completa"),
     ("Esc", "Cerrar ventanas / abrir este menú"),
-    ("F3", "Depuración de bots"),
+    ("C", "Celular en Presente y Futuro"),
+    ("F3", "FPS, conexión y bots"),
 )
 
 # Una pestaña por dimensión en la Ayuda de Ajustes: (nombre, párrafos).
@@ -74,7 +75,11 @@ PAGINAS_COMO_JUGAR = (
     )),
     ("Ciudad Núcleo", (
         "Ciudad Núcleo es la época del futuro.",
-        "Todavía está en construcción: aparece en el portal, pero aún no se puede viajar a ella.",
+        "1. Restaura las conexiones en la terminal marcada.",
+        "2. Habla con el Archivista y revisa las firmas de los registros.",
+        "3. Lleva la llave del Corredor de Datos al Centro de Verificación.",
+        "4. Ayuda al Ciudadano Conectado a investigar las cuentas.",
+        "5. Habla con el Representante Humano. Decidan en la pantalla central.",
     )),
 )
 
@@ -106,7 +111,8 @@ class MenuPausa:
         self.menu = menu
         self.vista = None
         self.pagina_ayuda = 0
-        self.pestana_ayuda = "reglas"
+        self.pestana_ayuda = "controles"
+        self.arte_controles = None
         self.preferencias = preferencias.cargar()
 
     @property
@@ -310,14 +316,13 @@ class MenuPausa:
         menu = self.menu
         menu.panel(pygame.Rect(100, 20, 760, 680))
         menu.texto("AYUDA", 480, 34, 32, ORO, True)
-        for indice, (clave, nombre, icono) in enumerate((("reglas", "Reglas", "libro"), ("clasificacion", "Clasificación", "arbol"), ("avl", "Árbol AVL", "arbol"))):
-            centro = (260 + indice * 220, 104)
+        for indice, (clave, nombre, icono) in enumerate((("controles", "Controles", ""), ("reglas", "Reglas", "libro"), ("clasificacion", "Clasificación", "arbol"), ("avl", "Árbol AVL", "arbol"))):
+            centro = (195 + indice * 190, 104)
             activa = clave == self.pestana_ayuda
-            self._boton("pestana:" + clave, f"» {nombre} «" if activa else nombre, centro, 200, alto=38, tamano_fuente=18)
-            imagen = menu.iconos_ajustes.get(icono)
-            if imagen is not None:
-                menu.lienzo.blit(imagen, imagen.get_rect(midright=(centro[0] - 104, centro[1])))
-        if self.pestana_ayuda == "clasificacion":
+            self._boton("pestana:" + clave, f"» {nombre} «" if activa else nombre, centro, 180, alto=38, tamano_fuente=16)
+        if self.pestana_ayuda == "controles":
+            self._controles_visuales()
+        elif self.pestana_ayuda == "clasificacion":
             if menu.arbol_clasificacion is None:
                 menu.arbol_clasificacion = menu.imagen("Clasificación/CLasificaciónCompl.png", (720, 500))
             menu.lienzo.blit(menu.arbol_clasificacion, menu.arbol_clasificacion.get_rect(center=(480, 380)))
@@ -393,16 +398,31 @@ class MenuPausa:
 
     def _dibujar_ayuda(self):
         menu = self.menu
-        menu.panel(pygame.Rect(150, 40, 660, 640))
+        menu.panel(pygame.Rect(100, 20, 760, 680))
         menu.texto("AYUDA Y CONTROLES", 480, 65, 32, ORO, True)
-        for indice, (tecla, accion) in enumerate(CONTROLES):
-            y = 116 + indice * 31
-            menu.texto(tecla, 190, y, 18, ORO)
-            menu.texto(accion, 350, y, 18)
-        menu.parrafo("Sigue el anillo y la flecha dorada hasta tu objetivo. Al terminar una dimensión, "
-                     "la flecha te lleva al portal para elegir otra época.",
-                     pygame.Rect(190, 525, 580, 80), 16)
-        self._boton("volver", "Volver", (480, 630), 220)
+        self._controles_visuales()
+        self._boton("volver", "Volver", (480, 668), 220, alto=38)
+
+    def _controles_visuales(self):
+        from interfaz.orientacion import ArteOrientacion
+        if self.arte_controles is None:
+            self.arte_controles = ArteOrientacion()
+        menu = self.menu
+        tarjetas = (("WASD", "Caminar", "Flechas también"), ("E", "Hablar / usar", "Junto a la señal"),
+                    ("SHIFT", "Correr", "Mientras caminas"), ("I", "Leer y compartir", "Tus pistas"),
+                    ("C", "Abrir el celular", "Presente y Futuro"), ("Q", "Usar tu poder", "Según tu rol"),
+                    ("T", "Libro de casos", "Lo que descubrieron"), ("ESC", "Cerrar / pausa", "F1: esta ayuda"))
+        for i, (tecla, nombre, detalle) in enumerate(tarjetas):
+            rect = pygame.Rect(125 + i % 2 * 365, 165 + i // 2 * 96, 345, 84)
+            pygame.draw.rect(menu.lienzo, (23, 50, 38), rect, border_radius=9)
+            self.arte_controles.tecla(menu.lienzo, tecla, (rect.x + 49, rect.centery), (76, 36))
+            menu.texto(nombre, rect.x + 100, rect.y + 18, 18, CREMA)
+            menu.texto(detalle, rect.x + 100, rect.y + 46, 14, ORO)
+        for i, (icono, texto) in enumerate((("exclamacion", "Tu tarea"), ("interrogacion", "Hay una pista"), ("check", "¡Completado!"))):
+            x = 165 + i * 235
+            self.arte_controles.indicador(menu.lienzo, icono, (x, 585))
+            menu.texto(texto, x + 24, 574, 16)
+        menu.texto("Tab: cambiar objetivo · M: tarea · J: detalles · H: HUD · L: nombres · F11: pantalla", 480, 625, 14, CREMA, True)
 
     def _dibujar_confirmar_salida(self):
         menu = self.menu

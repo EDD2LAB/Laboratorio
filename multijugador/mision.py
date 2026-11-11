@@ -4,7 +4,7 @@ import math
 import re
 import unicodedata
 
-from .presentacion import INDICADORES_INICIALES, aplicar_efectos, tipo_pocion
+from .presentacion import INDICADORES_INICIALES, aplicar_efectos, tipo_pocion, estado_votacion
 
 ROLES = ("guardian", "mensajero", "habitante", "aspirante")
 OPCIONES = {
@@ -268,14 +268,14 @@ class MisionPuente:
 
     def publico(self, presentes):
         participantes = set(presentes) & self.jugadores.keys()
-        empate = bool(participantes) and participantes.issubset(self.votos) and self.resultado is None
         return {
             "id": "puente_norte", "titulo": "¿Quién rompió el puente norte?",
             "noticia": "Alguien dice que Kael rompió el puente por descuido y por eso lo cerraron. ¿Será verdad?",
             "objetivos": [dict(o) for o in self.objetivos], "pruebas_halladas": len(self.halladas),
             "investigadores": len(set(self.halladas.values())), "entregas": len(self.entregas),
             "votos_emitidos": sum(i in self.votos for i in participantes), "votantes": len(participantes),
-            "empate": empate, "resultado": self.resultado, "rectificacion": self.rectificacion,
+            **estado_votacion(self.votos, participantes, self.resultado),
+            "resultado": self.resultado, "rectificacion": self.rectificacion,
             "indicadores": dict(self.indicadores), "estado_puente": self.estado_puente,
             "historial": list(self.historial), "opciones": dict(self.opciones), "mensajes_eco": list(MENSAJES),
         }

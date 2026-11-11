@@ -62,9 +62,9 @@ La columna respaldo describe la alternativa actual o la prevista si dice por imp
 | `Imagenes/Indicadores Puente/ficha_vacio.png` | Falta en ruta esperada | Minijuego puente | Dibujo actual |
 | `Imagenes/Indicadores Puente/ficha_logrado.png` | Falta en ruta esperada | Minijuego puente | Dibujo actual |
 | `Imagenes/Indicadores Puente/aguja.png` | Falta en ruta esperada | Minijuego puente | Dibujo actual |
-| `Imagenes/Indicadores/exclamacion_4f.png` | Falta en ruta esperada | Objetivo visual | Indicador por código por implementar |
-| `Imagenes/Indicadores/interrogacion_4f.png` | Falta en ruta esperada | Objetivo visual | Indicador por código por implementar |
-| `Imagenes/Indicadores/check_4f.png` | Falta en ruta esperada | Objetivo visual | Indicador por código por implementar |
+| `Imagenes/Indicadores/exclamacion_4f.png` | Falta en ruta esperada | Objetivo visual | Indicador por código implementado |
+| `Imagenes/Indicadores/interrogacion_4f.png` | Falta en ruta esperada | Objetivo visual | Indicador por código implementado |
+| `Imagenes/Indicadores/check_4f.png` | Falta en ruta esperada | Objetivo visual | Indicador por código implementado |
 | `Imagenes/Iconos/Acciones/pista.png` | Falta en ruta esperada | Acciones | Texto actual |
 | `Imagenes/Iconos/Acciones/compartir.png` | Falta en ruta esperada | Acciones | Texto actual |
 | `Imagenes/Iconos/Acciones/pedir_pruebas.png` | Falta en ruta esperada | Acciones | Texto actual |
@@ -118,7 +118,7 @@ La columna respaldo describe la alternativa actual o la prevista si dice por imp
   Kael y Tarek están registrados como aspirante y habitante; falta conectar sus diálogos.
   Nuevos retratos individuales abajo: no asumir cuatro expresiones ni identidad para NPC2.
 - Elia y Arel tienen sprites, pero falta agregarlos al mapa y al diálogo.
-- Teclas: faltan los recursos `Imagenes/Indicadores/tecla_<X>.png` del plan.
+- Teclas: faltan los recursos `Imagenes/Indicadores/tecla_<X>.png`; respaldo por código ya conectado en mapa y F1.
 - Icono animado: falta `Imagenes/Iconos/icono_animado_<N>f.png`; existe brillo por código.
 - Balanceo: las tiras existentes deben compararse contra el tamaño de cada puente antes de conectarlas.
 - `herramientas/componer_pantallas.py` no existe en esta revisión.

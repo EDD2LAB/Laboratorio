@@ -11,7 +11,7 @@ from pathlib import Path
 from . import clasificacion
 from .dialogos import identificador_npc
 from .dimensiones_red import spawn_interior
-from .presentacion import aplicar_efectos, tipo_pocion
+from .presentacion import aplicar_efectos, tipo_pocion, estado_votacion
 from .expediente import campos_legales, ficha_resuelta
 
 MARCAS = json.loads((Path(__file__).resolve().parents[1] / "datos" / "marcas_manipulacion.json").read_text(encoding="utf-8"))
@@ -370,6 +370,7 @@ class MisionPresente:
                 "casos_resueltos": [dict(r) for r in self.resueltos], "fin": self.fin,
                 "opciones": dict(OPCIONES), "tipos_pocion": {o: tipo_pocion(o) for o in OPCIONES},
                 "votos_emitidos": sum(i in self.votos for i in presentes), "votantes": len(presentes),
+                **estado_votacion(self.votos, presentes, self.resultado),
                 "resultado": dict(self.resultado) if self.resultado else None, "completada": self.completada,
                 "listos": sum(i in self.listos for i in presentes),
                 "clasificacion_opciones": list(clasificacion.OPCIONES["presente"])}

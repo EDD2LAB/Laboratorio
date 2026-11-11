@@ -158,3 +158,43 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   Ver `docs/red_estabilidad.md` para límites, recuperación y pruebas.
 
 ---
+# Etapa 3 - orientación infantil (2026-11-11)
+
+- Tarea concreta siempre visible, con fuente, puerta o persona. La flecha y el
+  camino de luces comparten ese objetivo; durante el análisis se indica C y se
+  deja de enviar al jugador hacia la pantalla para votar.
+- Indicadores !, ?, check y tecla de interacción con respaldo por código,
+  caché de imágenes/teclas y filtro por escena. Los logros no saltan entre eras
+  o interiores. En Núcleo se guían los prerrequisitos de conexiones, archivos,
+  llave y firma sin revelar soluciones de los minijuegos.
+- F1 abre controles visuales con ocho tarjetas y leyenda de señales. Conserva
+  las pestañas anteriores y corrige la ayuda obsoleta de Ciudad Núcleo.
+- El celular avisa cuántas marcas faltan analizar antes de elegir, sin bloquear
+  decisiones ni cambiar sus consecuencias. Las tres eras muestran pendientes
+  de voto y empate sin publicar elecciones privadas de otras personas.
+- Protocolo 13 conservado: campos opcionales aditivos de presentación, sin
+  acciones nuevas ni cambios en validación de decisiones. El cliente conserva
+  el contador como respaldo si aún no recibe ids pendientes del servidor.
+- Auditoría estática: 1081 candidatos textuales, 12 con más de 20 palabras;
+  CSV completo y siete propuestas cortas en docs/textos.md. No se aplican esas
+  propuestas a testimonios, pistas ni normas. Sus límites de análisis estático
+  están documentados: no equivale a capturar todas las pantallas dinámicas.
+- Revisión completa: 466 pruebas, 465 aprobadas y una dependencia de orden en
+  la prueba del ping (podía llegar el snapshot antes del error). Corregida para
+  esperar el evento correcto. Repetición final de 54 pruebas de red, guía,
+  accesibilidad y Presente: todas aprobadas. Otras 8 de orientación aprobadas
+  tras el ajuste final del seguimiento por escena.
+- Revisadas capturas de tarea/tecla en La Copa, controles F1 y aviso de análisis
+  en celular; comprobado con estado real que la guía busca al Corredor de Datos.
+- Rendimiento actual: 33,4 FPS / 8,13 ms de trabajo medio de frame en 15 s con
+  cuatro clientes. Se investigó la diferencia respecto al registro anterior de
+  60 FPS: la base aislada be2f6df también dio 33,1 FPS / 10,66 ms en 10 s, con
+  el mismo intérprete y PC. Comparación corta, sin caída adicional observada de
+  esta etapa; no permite atribuir la variación general a una causa concreta.
+- Empaquetado simulado: servidor sin Pygame, dos humanos más dos bots y 200
+  ticks aprobados. No se hizo una construcción real de Docker.
+- No cambiaron paredes, arte ni el catálogo legal. Sin push ni Render para
+  esta etapa; las etapas 1 y 2 sí están publicadas en be2f6df.
+- Documentación: docs/claridad_etapa3.md. Siguiente etapa: atascos y movimiento.
+
+---

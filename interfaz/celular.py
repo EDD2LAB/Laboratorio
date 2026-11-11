@@ -296,7 +296,11 @@ def _pistas(panel, superficie, contexto, arte):
     equipo = ", ".join(equipo_distrito(panel))
     _comentarios(panel, superficie, "También la ven: " + equipo if equipo else "")
     completas = contexto.get("pistas", 0) >= contexto.get("total_pistas", 3)
-    _boton(panel, superficie, "caldero", "Decidir qué hacer", (338, ACCIONES_Y), activo=completas)
+    from interfaz.orientacion import aviso_analisis
+    aviso = aviso_analisis(contexto)
+    if aviso and completas:
+        _comentarios(panel, superficie, aviso)
+    _boton(panel, superficie, "caldero", "Revisar antes de decidir" if aviso else "Decidir qué hacer", (338, ACCIONES_Y), activo=completas)
 
 
 def falta_para_decidir(panel, contexto):
@@ -334,8 +338,11 @@ def _decidir(panel, superficie, contexto, arte):
             superficie.blit(velo, zona)
         if voto == clave:
             pygame.draw.rect(superficie, ORO, zona.inflate(6, 6), 3, border_radius=13)
-    _comentarios(panel, superficie, apuntada or falta or "Elijan juntos qué hacer con esta publicación.",
-                 "Tu elección: " + nombre_opcion(voto) if voto else "")
+    from interfaz.orientacion import aviso_analisis, datos_votacion
+    aviso = aviso_analisis(contexto)
+    estado_votos = datos_votacion(contexto, panel.vista.estado.get("mundo", {}).get("jugadores", []), panel.vista.identificador)
+    _comentarios(panel, superficie, aviso or apuntada or falta or estado_votos,
+                 (apuntada or falta or estado_votos) if aviso else ("Tu elección: " + nombre_opcion(voto) if voto else estado_votos))
 
 
 def _resultado(panel, superficie, contexto, arte):
