@@ -16,6 +16,17 @@ class PruebasServicio(unittest.TestCase):
     def crear(self, nombre="Host"):
         return self.servicio.ejecutar("POST", "/v1/crear", {"nombre": nombre, "version": VERSION})
 
+    def test_health_describe_la_campana_completa_sin_crear_salas(self):
+        from multijugador.campana import CASOS
+        from multijugador.presente import EVENTOS
+        estado = self.servicio.ejecutar("GET", "/health", {})
+        self.assertTrue(estado["ok"])
+        self.assertEqual(estado["protocolo"], VERSION)
+        self.assertEqual(estado["casos"], len(CASOS) + len(EVENTOS) + 1)
+        self.assertEqual([e["id"] for e in estado["eras"]], ["la_copa", "presente", "futuro"])
+        self.assertEqual(sum(e["casos"] for e in estado["eras"]), estado["casos"])
+        self.assertFalse(self.servicio.salas)
+
     def unir(self, codigo, nombre):
         return self.servicio.ejecutar("POST", "/v1/unirse", {"nombre": nombre, "version": VERSION, "codigo": codigo})
 

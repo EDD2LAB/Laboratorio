@@ -1,14 +1,19 @@
 # Ciudad Núcleo (Era III)
 
-El proyecto no tiene arte propio del futuro. `herramientas/generar_futuro.py`
-genera una versión provisional a partir del Presente; se ejecuta una vez y la
-salida se versiona. Al llegar el arte definitivo se reemplaza el archivo con el
-mismo nombre y no hay que tocar el código.
+El juego sigue usando el arte provisional generado a partir del Presente.
+En `eb1318b` llegaron un mapa e interiores en `Imagenes/Fondos/Mapas/Futuro/`,
+y animaciones en `Imagenes/NPCS/Nucleo/`. Están integrados en Git, pendientes
+de conectar al juego. Consultar `docs/arte_esperado.md` para los tamaños reales.
+
+El mapa nuevo mide 1048 x 577 y el provisional 998 x 576: comprobar geometría,
+puertas y puntos caminables antes de sustituirlo. Las paredes de los JSON se
+editan a mano; esta etapa no las modifica. No ejecutar el generador sobre arte
+definitivo: su protección contra sobrescritura todavía está pendiente.
 
 | Qué | Archivo a reemplazar | Nota |
 | --- | --- | --- |
 | Mapa | `Imagenes/Futuro/generado/MapaFuturo.png` | Misma resolución que `MapaPresente.png`. Si cambia la geometría, actualizar también las colisiones |
-| Colisiones | `Hitboxes/Mapas/Futuro/MapaFuturo_hitboxes.json` | Copia de las del Presente |
+| Colisiones | `Hitboxes/Mapas/Futuro/MapaFuturo_hitboxes.json` | Geometría del provisional; revisión manual antes de cambiar mapa |
 | Archivista | `Imagenes/Futuro/generado/NPCS/Archivista/` | Derivado del Agente de verificación |
 | Corredor de Datos | `Imagenes/Futuro/generado/NPCS/Corredor de Datos/` | Derivado del Mensajero urbano |
 | Ciudadano Conectado | `Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/` | Derivado de la Habitante conectada |
@@ -20,8 +25,8 @@ el celular).
 
 ## Misión `nucleo_control`
 
-Se llega desde la pantalla pública del Presente al resolver sus tres casos. Los
-puntos usan ids de hitboxes existentes:
+Se puede viajar desde los portales por aceptación del equipo, también antes
+de completar los casos del Presente. Los puntos usan ids de hitboxes existentes:
 
 - `entrada_estacion_mensajero`: restaurar conexiones (grafo validado con BFS).
 - `entrada_sede_aspirante`: encontrar el registro alterado.
@@ -36,4 +41,5 @@ puntos usan ids de hitboxes existentes:
   tiene interiores propios.
 - `pantalla_publica_presente`: decisión final y regreso a Distrito Conecta.
 
-El caso entra al expediente con ley y sanción vacías, como los demás.
+El caso entra al expediente con la ficha de `datos/casos_expediente.json`,
+incluidos los campos legales incorporados en el protocolo 12.

@@ -1,0 +1,3 @@
+# Opcional: habilita la narración con las voces instaladas en el sistema.
+-r requirements.txt
+pyttsx3==2.99

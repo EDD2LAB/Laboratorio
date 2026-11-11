@@ -1,0 +1,742 @@
+﻿archivo,bytes,ancho,alto
+Imagenes/Animaciones/Cascada_animación.png,19421,2048,256
+Imagenes/Animaciones/CascadaAnsinEspacio.png,677176,2170,725
+Imagenes/Animaciones/Destello.png,43432,2048,256
+Imagenes/Animaciones/DestelloMorado.png,42510,2048,256
+Imagenes/Animaciones/DestelloVerde.png,43579,2048,256
+Imagenes/Animaciones/Efectos/ActivarPoderEfecto.png,496870,2128,293
+Imagenes/Animaciones/Efectos/EfectLlegadaCorreccion.png,14535,1536,256
+Imagenes/Animaciones/Efectos/EfectoLlegadaRumor.png,11756,1536,256
+Imagenes/Animaciones/Efectos/EfectoReparacion.png,30205,768,64
+Imagenes/Animaciones/Energia_puente.png,355798,1769,170
+Imagenes/Animaciones/HojitasAn1.png,460622,2172,724
+Imagenes/Animaciones/HojitasAn2.png,1227877,1774,887
+Imagenes/Animaciones/HojitasAn3.png,784519,1774,887
+Imagenes/Animaciones/HojitasAn4.png,681245,1774,887
+Imagenes/Animaciones/HojitasAn5.png,1021061,1774,887
+Imagenes/Animaciones/Portales 4x4.png,80036,256,256
+Imagenes/Animaciones/Propagacion_puente.png,9125,768,32
+Imagenes/Animaciones/Puente1_balanceo.png,135082,2048,256
+Imagenes/Animaciones/Puente2_balanceo.png,105194,2048,256
+Imagenes/Animaciones/Puente3_balanceo.png,85730,2048,256
+Imagenes/Animaciones/Puente4_balanceo.png,74898,2048,256
+Imagenes/Animaciones/Puente5_balanceo.png,69102,2048,256
+Imagenes/Animaciones/Puente6_balanceo.png,112056,2048,256
+Imagenes/Animaciones/Puente7_balanceo.png,133111,2048,256
+Imagenes/Animaciones/Puente8_balanceo.png,76341,2048,256
+Imagenes/Animaciones/Vegetación_animacion.png,53938,2048,256
+Imagenes/Animales/Lagarto.png,36409,582,59
+Imagenes/Animales/Luciernaga.png,29932,591,51
+Imagenes/Animales/Mariposa.png,44146,592,61
+Imagenes/Animales/Pajaro.png,43312,592,70
+Imagenes/Animales/Sapo.png,42570,586,55
+Imagenes/Assets eventos/agua.png,113851,438,438
+Imagenes/Assets eventos/farol.png,114763,438,438
+Imagenes/Assets eventos/pergaminon.png,78736,438,438
+Imagenes/Assets eventos/proviciones.png,125510,438,438
+Imagenes/Assets eventos/tinta.png,67554,438,438
+Imagenes/Barras/Barra_armonía.png,1820220,2048,768
+Imagenes/Barras/Barra_confianza.png,1634035,2048,768
+Imagenes/Barras/Barra_desinformación.png,243748,1040,191
+Imagenes/Barras/Barra_sabiduría.png,252736,816,306
+Imagenes/Barras/Barra_susurros_falsos.png,1755328,2048,768
+Imagenes/Barras/BarraRecargaEmpty.png,318506,1680,417
+Imagenes/Barras/BarraRecargaLlena.png,731463,1680,417
+Imagenes/Barras/BarraRecargaMitad.png,512087,1680,417
+Imagenes/Caldero/Caldero-ecos-fila1.png,24027,256,64
+Imagenes/Caldero/Caldero-ecos-fila2.png,24274,253,61
+Imagenes/Caldero/Caldero-ecos-fila3.png,24004,256,62
+Imagenes/Caldero/Caldero-ecos-fila4.png,24139,255,65
+Imagenes/Clasificación/Acusacion_personal.png,157803,323,360
+Imagenes/Clasificación/aviso_comunitario.png,323887,379,438
+Imagenes/Clasificación/Cartel_decision.png,2156725,2048,768
+Imagenes/Clasificación/CLasificaciónCompl.png,1583353,1637,961
+Imagenes/Clasificación/Contenido_autentico.png,1446665,1166,1349
+Imagenes/Clasificación/Contenido_manipulado.png,319712,379,438
+Imagenes/Clasificación/Control_autonomo.png,1730549,1166,1349
+Imagenes/Clasificación/FondoClasificacion.png,1096360,1600,939
+Imagenes/Clasificación/Generado_con_IA.png,303094,379,438
+Imagenes/Clasificación/Rumor_politico.png,155626,324,328
+Imagenes/Clasificación/Suceso_natural.png,176435,324,375
+Imagenes/Clasificación/suplantación.png,1504335,1166,1349
+Imagenes/Decisiones tablilla/Colgar.png,260522,1536,1024
+Imagenes/Decisiones tablilla/Colgar_tablilla.png,1381556,2172,724
+Imagenes/Decisiones tablilla/Consultar.png,278057,1536,1024
+Imagenes/Decisiones tablilla/Consultar_tablilla.png,1485005,2172,724
+Imagenes/Decisiones tablilla/Ignorar.png,1183873,1536,1024
+Imagenes/Decisiones tablilla/Ignorar_tablilla.png,991026,2172,724
+Imagenes/Decisiones tablilla/Quemar.png,300759,1536,1024
+Imagenes/Decisiones tablilla/Quemar_tablilla.png,869255,2172,724
+Imagenes/Decisiones tablilla/Tablilla.png,301440,500,500
+Imagenes/Dialogo/Marco_dialogo.png,1373963,1672,941
+Imagenes/Elementos presente/ComparadordeVideos.png,112381,,
+Imagenes/Elementos presente/PanelAnaliDeContenido.png,128479,,
+Imagenes/Elementos presente/Verificaciones/ContenidoManipulado_spritesheet.png,10403,512,128
+Imagenes/Elementos presente/Verificaciones/VerificaciónCorrecta_spritesheet.png,20987,512,128
+Imagenes/Estados/estado_contenido_ia.png,102932,290,323
+Imagenes/Estados/estado_contenido_manipulado.png,112778,318,323
+Imagenes/Estados/estado_fuente_verificada.png,101512,292,323
+Imagenes/Estados/estado_sin_fuente.png,65662,291,323
+Imagenes/Estados/fx_alcance_ondas_8f_1024x128.png,10994,1024,128
+Imagenes/Estados/fx_campana_8f_1024x128.png,7525,1024,128
+Imagenes/Estados/fx_comentario_8f_1024x128.png,7297,1024,128
+Imagenes/Estados/fx_fuego_viral_8f_1024x128.png,8259,1024,128
+Imagenes/Estados/fx_likes_8f_1024x128.png,8906,1024,128
+Imagenes/Estados/fx_propagacion_tarjeta_8f_1024x128.png,10081,1024,128
+Imagenes/Estados/fx_publicar_avion_8f_1024x128.png,7579,1024,128
+Imagenes/Estados/Suplantacióndetectada.png,8768,1024,128
+Imagenes/Finales/Final_positivo.jpeg,652515,,
+Imagenes/Finales/Game_over.jpeg,473267,,
+Imagenes/Fondos/Mapas/Central.png,164375,688,384
+Imagenes/Fondos/Mapas/Fondo_pausa.png,254558,,
+Imagenes/Fondos/Mapas/fondoMenuInicio.png,172736,1064,576
+Imagenes/Fondos/Mapas/Futuro/CafefuturoInt.png,106727,344,192
+Imagenes/Fondos/Mapas/Futuro/Centro-Verif-FuturoInt.png,95842,344,192
+Imagenes/Fondos/Mapas/Futuro/EstacióndeMensajeriaInt.png,86640,344,192
+Imagenes/Fondos/Mapas/Futuro/estudioInflu-Futuroint.png,89889,344,192
+Imagenes/Fondos/Mapas/Futuro/MapaFuturo.png,1057009,1048,577
+Imagenes/Fondos/Mapas/Futuro/Sede-Aspirante-FuturoInt.png,84854,344,192
+Imagenes/Fondos/Mapas/Mapa.png,207897,512,512
+Imagenes/Fondos/Mapas/Mapa_principal.png,188927,688,384
+Imagenes/Fondos/Mapas/MapasinFondo.png,568553,786,438
+Imagenes/Fondos/Mapas/Mapaunificado.png,3907960,2700,1650
+Imagenes/Fondos/Mapas/Pasadonoche.png,1031690,2700,1650
+Imagenes/Fondos/Mapas/pasadotarde.png,924573,900,550
+Imagenes/Fondos/Mapas/Pr1SinP(Espacio).png,181166,688,384
+Imagenes/Fondos/Mapas/Pr1Sinpuentes.png,202628,688,384
+Imagenes/Fondos/Mapas/Pr25Cascada.png,154904,2048,256
+Imagenes/Fondos/Mapas/pr26.png,168399,2048,256
+Imagenes/Fondos/Mapas/Pr28Niebla.png,99131,2048,128
+Imagenes/Fondos/Mapas/Pr29PuentesBalanceo.png,220717,2048,256
+Imagenes/Fondos/Mapas/Pr_Atardecer.png,2501162,1679,937
+Imagenes/Fondos/Mapas/Pr_MañanaLumi.png,2473184,1679,937
+Imagenes/Fondos/Mapas/Pr_Noche.png,2540837,1679,937
+Imagenes/Fondos/Mapas/Presente/CaféDigitalInt.png,82415,344,192
+Imagenes/Fondos/Mapas/Presente/CentrodeVerifInt.png,78374,344,192
+Imagenes/Fondos/Mapas/Presente/EstacionMensajeroInt.png,65370,344,192
+Imagenes/Fondos/Mapas/Presente/EstudioInfluencerInt.png,76336,344,192
+Imagenes/Fondos/Mapas/Presente/MapaPresente.png,906198,998,576
+Imagenes/Fondos/Mapas/Presente/SededelAspiranteInt.png,70529,344,192
+Imagenes/Fondos/Mapas/tunel.png,73732,320,184
+Imagenes/Fondos/Multijugador/FondoFernado.png,189890,632,424
+Imagenes/Futuro/generado/MapaFuturo.png,806779,998,576
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Fila1.png,25280,673,67
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Fila2.png,22257,673,68
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Fila3.png,17454,674,73
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Fila4.png,14874,679,73
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Fila5.png,18789,679,81
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Fila6.png,20407,704,88
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Fila7.png,14685,704,88
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Fila8.png,19684,704,88
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Fila9.png,18225,704,88
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Hablando.png,19550,683,75
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-LeyendoInfo.png,17128,681,75
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Reposo 1.png,12160,704,88
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Reposo 2.png,7628,704,88
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Reposo 3.png,7588,704,88
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-Reposo 4.png,8590,704,88
+Imagenes/Futuro/generado/NPCS/Archivista/Agente_de_verificacion-UsandoDispositivo.png,13098,676,78
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Fila1.png,18212,648,72
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Fila2.png,12790,640,69
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Fila3.png,14282,648,70
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Fila4.png,12096,630,63
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Fila5.png,12408,645,76
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Fila6.png,10942,672,84
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Fila7.png,10401,672,84
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Fila8.png,9465,672,84
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Fila9.png,14372,672,84
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Hablando.png,11333,637,75
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-LeyendoPubli.png,10829,648,70
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Reaccionando.png,16561,656,70
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-RecibiendoMensaje.png,10579,634,68
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Reposo 1.png,7428,672,84
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Reposo 2.png,6254,672,84
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Reposo 3.png,5932,672,84
+Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/Habitante_conectada-Reposo 4.png,6224,672,84
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Corriendo.png,18966,651,64
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-EntregandoMensaje.png,17813,640,77
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Fila1.png,22577,655,67
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Fila2.png,21151,657,68
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Fila3.png,17627,640,67
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Fila4.png,12472,642,66
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Fila5.png,16029,653,67
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Fila6.png,20366,704,88
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Fila7.png,13229,704,88
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Fila8.png,15028,704,88
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Fila9.png,20062,704,88
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Hablando.png,13784,655,70
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-RecibiendoMensaje.png,21704,723,66
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Reposo 1.png,10595,672,84
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Reposo 2.png,8030,672,84
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Reposo 3.png,6820,672,84
+Imagenes/Futuro/generado/NPCS/Corredor de Datos/Mensajero_urbano-Reposo 4.png,8884,672,84
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Fila1.png,21567,670,73
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Fila2.png,17268,678,71
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Fila3.png,15334,670,73
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Fila4.png,12147,676,75
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Fila5.png,13427,671,71
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Fila6.png,17340,704,88
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Fila7.png,13956,704,88
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Fila8.png,15329,704,88
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Fila9.png,19760,704,88
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Hablando.png,15288,677,80
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Reaccionando.png,18687,672,74
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Reposo 1.png,10505,704,88
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Reposo 2.png,6439,704,88
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Reposo 3.png,8588,704,88
+Imagenes/Futuro/generado/NPCS/Representante Humano/Aspirante_contemporaneo-Reposo 4.png,6823,704,88
+Imagenes/Herramientas/HerramientasReparación.png,3135,125,68
+Imagenes/Iconos/Habilidad/ComunicadoPubActive.png,985834,1024,1024
+Imagenes/Iconos/Habilidad/ImpulsoVientRecarg.png,284038,438,438
+Imagenes/Iconos/Habilidad/VozComuActive.png,649933,1024,559
+Imagenes/Iconos/Icono_juego.png,433767,612,408
+Imagenes/Iconos/Icono_pequeño.png,195513,500,500
+Imagenes/Iconos/Multijugador/AnilloCoral.png,193671,888,438
+Imagenes/Iconos/Multijugador/AnilloDorado.png,196256,888,438
+Imagenes/Iconos/Multijugador/AnilloTurquesa.png,193078,888,438
+Imagenes/Iconos/Multijugador/AnilloVioleta.png,187453,888,438
+Imagenes/Iconos/Multijugador/ComunicadoPubAspirante.png,250876,438,438
+Imagenes/Iconos/Multijugador/ComunicadoPubRecarg.png,231626,438,438
+Imagenes/Iconos/Multijugador/FlechaPersonaje.png,774732,1536,1024
+Imagenes/Iconos/Multijugador/IcAnfitrión.png,152156,438,438
+Imagenes/Iconos/Multijugador/IcEsperaAnimate.png,246072,1168,146
+Imagenes/Iconos/Multijugador/IcListo.png,141649,438,438
+Imagenes/Iconos/Multijugador/IcRol-Aspirante.png,104932,438,438
+Imagenes/Iconos/Multijugador/IcRol-guardian.png,99262,438,438
+Imagenes/Iconos/Multijugador/IcRol-Habitante.png,127461,438,438
+Imagenes/Iconos/Multijugador/IcRol-Mensajero.png,113761,438,438
+Imagenes/Iconos/Multijugador/ImpulsoVientActive.png,222354,438,438
+Imagenes/Iconos/Multijugador/ImpulsoVientMensj.png,243693,438,438
+Imagenes/Iconos/Multijugador/ImpulsoVientRecarg.png,191950,438,438
+Imagenes/Iconos/Multijugador/LupaMemorActive.png,257102,438,438
+Imagenes/Iconos/Multijugador/LupaMemorGuardian.png,215166,438,438
+Imagenes/Iconos/Multijugador/LupaMemorRecarg.png,206935,438,438
+Imagenes/Iconos/Multijugador/VozComuHab.png,175248,803,438
+Imagenes/Iconos/Multijugador/VozComuRecarg.png,147218,803,438
+Imagenes/Iconos/Nuevos/avatares_cuentas.png,548045,1680,417
+Imagenes/Iconos/Nuevos/Boton_der.png,109756,438,438
+Imagenes/Iconos/Nuevos/Boton_izq.png,109606,438,438
+Imagenes/Iconos/Nuevos/cesto_lleno.png,182673,438,438
+Imagenes/Iconos/Nuevos/cesto_vacio.png,163699,438,438
+Imagenes/Iconos/Nuevos/emblema_copa.png,133197,438,438
+Imagenes/Iconos/Nuevos/emblema_futuro.png,160149,438,438
+Imagenes/Iconos/Nuevos/emblema_presente.png,124959,438,438
+Imagenes/Iconos/Nuevos/icono_apariencia.png,72920,438,438
+Imagenes/Iconos/Nuevos/icono_arbol.png,57856,438,438
+Imagenes/Iconos/Nuevos/icono_audio.png,64451,438,438
+Imagenes/Iconos/Nuevos/icono_captura.png,6920,64,64
+Imagenes/Iconos/Nuevos/icono_contraste.png,52654,438,438
+Imagenes/Iconos/Nuevos/icono_ley.png,112554,488,488
+Imagenes/Iconos/Nuevos/icono_libro.png,84067,438,438
+Imagenes/Iconos/Nuevos/icono_perfil_falso.png,96467,438,438
+Imagenes/Iconos/Nuevos/icono_sancion.png,86231,488,488
+Imagenes/Iconos/Nuevos/icono_silencio.png,81830,438,438
+Imagenes/Iconos/Nuevos/icono_sonido.png,59829,438,438
+Imagenes/Iconos/Nuevos/icono_tiempo.png,451050,1240,1269
+Imagenes/Iconos/Nuevos/icono_video.png,82522,438,438
+Imagenes/Iconos/Nuevos/insignia_base.png,115453,438,438
+Imagenes/Iconos/Nuevos/panel_expediente.png,134269,438,438
+Imagenes/Iconos/Nuevos/perfil_falso.png,134467,654,438
+Imagenes/Iconos/Nuevos/pergamino_informe.png,210263,488,488
+Imagenes/Iconos/Nuevos/RetratoAgenteDVerif.png,8133,128,128
+Imagenes/Iconos/Nuevos/sello_consejo.png,195285,488,488
+Imagenes/Iconos/Nuevos/tablilla_burla.png,161913,438,438
+Imagenes/Iconos/Nuevos/tarjeta_nodo.png,76437,626,438
+Imagenes/Iconos/Objetos varios/EvidenciaPrincipal.png,208932,803,438
+Imagenes/Iconos/Objetos varios/FeedRedSocial.jpg,109928,,
+Imagenes/Iconos/Objetos varios/IndicadorDirrKael.png,890713,2172,724
+Imagenes/Iconos/registro.png,130914,278,216
+Imagenes/Iconos/ruta.png,88284,222,219
+Imagenes/Iconos/testimonio.png,92397,212,221
+Imagenes/Iconos/Video_icono.mp4,6762643,,
+Imagenes/Indicadores Puente/Indicador.png,1252726,1254,1254
+Imagenes/Indicadores Puente/IndicadorAcierto.png,1491154,1254,1254
+Imagenes/Indicadores Puente/IndicadorError.png,1478193,1254,1254
+Imagenes/Manipulado/foto_manipulada.jpg,1909337,,
+Imagenes/Manipulado/foto_original.jpg,2009263,,
+Imagenes/Manipulado/procesado/foto_manipulada.png,241576,384,384
+Imagenes/Manipulado/procesado/foto_original.png,248637,384,384
+Imagenes/Manipulado/procesado/video_manipulado.png,573374,2368,288
+Imagenes/Manipulado/procesado/video_original.png,202550,2368,288
+Imagenes/Manipulado/video_manipulado_8f.png,2499641,5152,637
+Imagenes/Manipulado/video_original_8f.png,54486,,
+Imagenes/Mensaje privado/Mensaje_privado.png,190160,612,408
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Fila1.png,8923,673,67
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Fila2.png,7144,673,68
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Fila3.png,6085,674,73
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Fila4.png,5561,679,73
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Fila5.png,6316,679,81
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Fila6.png,26316,704,88
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Fila7.png,20548,704,88
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Fila8.png,25585,704,88
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Fila9.png,24149,704,88
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Hablando.png,6522,683,75
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-LeyendoInfo.png,5819,681,75
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Reposo 1.png,17897,704,88
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Reposo 2.png,13604,704,88
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Reposo 3.png,13233,704,88
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-Reposo 4.png,14380,704,88
+Imagenes/NPCS/Agente de verificación/Agente_de_verificacion-UsandoDispositivo.png,4505,676,78
+Imagenes/NPCS/Arel/Arel_fila1-1.png,1418,66,67
+Imagenes/NPCS/Arel/Arel_fila1-2.png,1469,70,67
+Imagenes/NPCS/Arel/Arel_fila1-3.png,1381,68,70
+Imagenes/NPCS/Arel/Arel_fila1-4.png,1366,65,77
+Imagenes/NPCS/Arel/Arel_fila1-5.png,1333,63,77
+Imagenes/NPCS/Arel/Arel_fila1-6.png,1421,63,75
+Imagenes/NPCS/Arel/Arel_fila1-7.png,1447,60,67
+Imagenes/NPCS/Arel/Arel_fila1-8.png,1461,64,74
+Imagenes/NPCS/Arel/Arel_fila2.png,5308,710,69
+Imagenes/NPCS/Arel/Arel_fila3.png,3977,708,79
+Imagenes/NPCS/Arel/Arel_fila4.png,5798,712,71
+Imagenes/NPCS/Arel/Arel_fila5.png,5467,701,85
+Imagenes/NPCS/Arel/Arel_fila6.png,5626,714,79
+Imagenes/NPCS/Arel/Arel_fila7.png,4839,703,78
+Imagenes/NPCS/Arel/Arel_fila8.png,4540,710,85
+Imagenes/NPCS/Arel/Arel_fila9.png,5403,705,70
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila1.png,7670,670,73
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila2.png,5925,678,71
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila3.png,5461,670,73
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila4.png,4851,676,75
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila5.png,4846,671,71
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila6.png,23645,704,88
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila7.png,19780,704,88
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila8.png,21077,704,88
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila9.png,25574,704,88
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Hablando.png,5188,677,80
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Reaccionando.png,6239,672,74
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Reposo 1.png,16289,704,88
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Reposo 2.png,12241,704,88
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Reposo 3.png,14481,704,88
+Imagenes/NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Reposo 4.png,12538,704,88
+Imagenes/NPCS/Aspirante hombre/Aspirante.jpeg,15246,,
+Imagenes/NPCS/Aspirante hombre/Aspirante_hombre_interaccion_ecos.png,5835,649,75
+Imagenes/NPCS/Aspirante hombre/Corriendo/Aspirante_a_cacique-corriendo_fila1.png,4910,641,67
+Imagenes/NPCS/Aspirante hombre/Corriendo/Aspirante_a_cacique-corriendo_fila2.png,4675,647,64
+Imagenes/NPCS/Aspirante hombre/Corriendo/Aspirante_a_cacique-corriendo_fila3.png,5106,636,71
+Imagenes/NPCS/Aspirante hombre/Corriendo/Aspirante_a_cacique-corriendo_fila4.png,5307,636,64
+Imagenes/NPCS/Aspirante hombre/Fila 1 - 1 . Aspirante_a_cacique-Idle .png,1368,67,69
+Imagenes/NPCS/Aspirante hombre/Fila 1 - 2. Aspirante_a_cacique-Idle.png,1387,69,74
+Imagenes/NPCS/Aspirante hombre/Fila 1 - 3. Aspirante_a_cacique-Idle.png,1094,58,72
+Imagenes/NPCS/Aspirante hombre/Fila 1 - 4. Aspirante_a_cacique-Idle.png,1321,65,78
+Imagenes/NPCS/Aspirante hombre/Fila 1 - 5. Aspirante_a_cacique-Idle.png,1349,72,73
+Imagenes/NPCS/Aspirante hombre/Fila 1 - 7. Aspirante_a_cacique-Idle.png,1143,67,72
+Imagenes/NPCS/Aspirante hombre/Fila 1 - 8. Aspirante_a_cacique-Idle.png,1394,48,76
+Imagenes/NPCS/Aspirante hombre/Fila 1- 6. Aspirante_a_cacique-Idle.png,1324,53,66
+Imagenes/NPCS/Aspirante hombre/Fila 2. Aspirante_a_cacique-Idle.png,5169,672,68
+Imagenes/NPCS/Aspirante hombre/Fila 3. Aspirante_a_cacique-Idle.png,4268,672,72
+Imagenes/NPCS/Aspirante hombre/Fila 4. Aspirante_a_cacique-Idle.png,4416,671,64
+Imagenes/NPCS/Aspirante hombre/Fila 5. Aspirante_a_cacique-Idle.png,4689,669,67
+Imagenes/NPCS/Aspirante hombre/Fila 6 - Aspirante_a_cacique.png,19486,672,84
+Imagenes/NPCS/Aspirante hombre/Fila 7 - Aspirante_a_cacique.png,17952,672,84
+Imagenes/NPCS/Aspirante hombre/Fila 8 - Aspirante_a_cacique.png,15745,672,84
+Imagenes/NPCS/Aspirante hombre/Fila 9 - Aspirante_a_cacique.png,17102,672,84
+Imagenes/NPCS/Aspirante hombre/Masculino_aspirante_hablando.png,4391,653,64
+Imagenes/NPCS/Aspirante hombre/Reposo/Aspirante_a_cacique-reposo_fila1.png,2715,643,67
+Imagenes/NPCS/Aspirante hombre/Reposo/Aspirante_a_cacique-reposo_fila2.png,2626,634,69
+Imagenes/NPCS/Aspirante hombre/Reposo/Aspirante_a_cacique-reposo_fila3.png,2760,637,68
+Imagenes/NPCS/Aspirante hombre/Reposo/Aspirante_a_cacique-reposo_fila4.png,2296,630,77
+Imagenes/NPCS/Aspirante mujer/Aspirante_mujer_interaccion_ecos.png,3844,649,73
+Imagenes/NPCS/Aspirante mujer/Femenino_aspirante_hablando.png,3852,643,76
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 1 - 1.png,1392,63,70
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 1 - 2.png,1241,75,76
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 1 - 3.png,1053,59,81
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 1 - 4.png,1190,50,68
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 1 - 5.png,1156,65,74
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 1 - 6.png,1053,62,71
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 1 - 7.png,1083,54,69
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 1 - 8.png,1378,67,73
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 2.png,6366,672,66
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 3.png,4404,672,65
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 4.png,3191,672,67
+Imagenes/NPCS/Aspirante mujer/MujerAspirante Fila 5.png,4762,672,75
+Imagenes/NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo _fila2.png,3023,637,69
+Imagenes/NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo _fila3.png,2322,644,65
+Imagenes/NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo_ fila4.png,2891,652,78
+Imagenes/NPCS/Aspirante mujer/Reposo/Aspirante_mujer_reposo_fila1.png,3123,642,80
+Imagenes/NPCS/Darek/Darek_fila1-1.png,1674,68,68
+Imagenes/NPCS/Darek/Darek_fila1-2.png,1692,65,68
+Imagenes/NPCS/Darek/Darek_fila1-3.png,1467,68,75
+Imagenes/NPCS/Darek/Darek_fila1-4.png,1303,72,73
+Imagenes/NPCS/Darek/Darek_fila1-5.png,1523,69,73
+Imagenes/NPCS/Darek/Darek_fila1-6.png,1484,69,71
+Imagenes/NPCS/Darek/Darek_fila1-7.png,1417,64,77
+Imagenes/NPCS/Darek/Darek_fila1-8.png,1507,68,74
+Imagenes/NPCS/Darek/Darek_fila2.png,8174,684,80
+Imagenes/NPCS/Darek/Darek_fila3.png,6858,684,73
+Imagenes/NPCS/Darek/Darek_fila4.png,6664,694,75
+Imagenes/NPCS/Darek/Darek_fila5.png,4229,678,69
+Imagenes/NPCS/Darek/fila1_Reposo_Darek.png,18442,704,88
+Imagenes/NPCS/Darek/fila2_Reposo_Darek.png,14985,704,88
+Imagenes/NPCS/Darek/fila3_Reposo_Darek.png,17277,704,88
+Imagenes/NPCS/Darek/fila4_Reposo_Darek.png,15018,704,88
+Imagenes/NPCS/Elia/Elia_fila1-1.png,1261,54,65
+Imagenes/NPCS/Elia/Elia_fila1-2.png,1286,51,69
+Imagenes/NPCS/Elia/Elia_fila1-3.png,1151,44,74
+Imagenes/NPCS/Elia/Elia_fila1-4.png,1143,52,67
+Imagenes/NPCS/Elia/Elia_fila1-5.png,1180,54,64
+Imagenes/NPCS/Elia/Elia_fila1-6.png,1179,48,67
+Imagenes/NPCS/Elia/Elia_fila1-7.png,1106,52,72
+Imagenes/NPCS/Elia/Elia_fila1-8.png,1273,59,71
+Imagenes/NPCS/Elia/Elia_fila2.png,4980,632,70
+Imagenes/NPCS/Elia/Elia_fila3.png,4356,626,71
+Imagenes/NPCS/Elia/Elia_fila4.png,3887,638,63
+Imagenes/NPCS/Elia/Elia_fila5.png,4026,632,67
+Imagenes/NPCS/Guardian/Fila 1 - 1. Guardián.png,2021,88,86
+Imagenes/NPCS/Guardian/Fila 1 - 2. Guardián.png,1846,100,86
+Imagenes/NPCS/Guardian/Fila 1 - 3. Guardián.png,1343,77,86
+Imagenes/NPCS/Guardian/Fila 1 - 4. Guardián.png,1523,68,84
+Imagenes/NPCS/Guardian/Fila 1 - 5. Guardián.png,1460,69,74
+Imagenes/NPCS/Guardian/Fila 1 - 6. Guardián.png,1451,61,81
+Imagenes/NPCS/Guardian/Fila 1 - 7. Guardián.png,1256,59,70
+Imagenes/NPCS/Guardian/Fila 1 - 8. Guardián.png,1831,63,75
+Imagenes/NPCS/Guardian/Fila 2. Guardián.png,9358,736,72
+Imagenes/NPCS/Guardian/Fila 3. Guardián.png,7257,736,72
+Imagenes/NPCS/Guardian/Fila 4. Guardián.png,6671,735,69
+Imagenes/NPCS/Guardian/Fila 5. Guardián.png,6900,736,65
+Imagenes/NPCS/Guardian/Fila 6. Guardián.png,29176,736,92
+Imagenes/NPCS/Guardian/Fila 7. Guardián.png,23378,736,92
+Imagenes/NPCS/Guardian/Fila 8. Guardián.png,18397,736,92
+Imagenes/NPCS/Guardian/Fila 9. Guardián.png,27832,736,92
+Imagenes/NPCS/Guardian/Guardian.jpeg,18672,,
+Imagenes/NPCS/Guardian/Guardian_consultando.png,7996,718,84
+Imagenes/NPCS/Guardian/Guardian_hablando.png,7208,719,80
+Imagenes/NPCS/Guardian/Guardian_interaccion_ecos.png,10658,736,70
+Imagenes/NPCS/Guardian/Reposo/Guardian_reposo_fila1.png,3927,723,80
+Imagenes/NPCS/Guardian/Reposo/Guardian_reposo_fila2.png,3690,697,79
+Imagenes/NPCS/Guardian/Reposo/Guardian_reposo_fila3.png,3283,714,71
+Imagenes/NPCS/Guardian/Reposo/Guardian_reposo_fila4.png,3382,689,71
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Fila1.png,6904,648,72
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Fila2.png,4654,640,69
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Fila3.png,5136,648,70
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Fila4.png,4538,630,63
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Fila5.png,4619,645,76
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Fila6.png,16876,672,84
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Fila7.png,16475,672,84
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Fila8.png,15341,672,84
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Fila9.png,20311,672,84
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Hablando.png,4208,637,75
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-LeyendoPubli.png,3944,648,70
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Reaccionando.png,5971,656,70
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-RecibiendoMensaje.png,4021,634,68
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Reposo 1.png,13219,672,84
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Reposo 2.png,12162,672,84
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Reposo 3.png,11710,672,84
+Imagenes/NPCS/Habitante Conectada/Habitante_conectada-Reposo 4.png,12053,672,84
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 1 - 1.png,892,52,61
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 1 - 2.png,900,48,61
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 1 - 4.png,811,49,61
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 1 - 5.png,866,69,71
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 1 - 6.png,899,52,70
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 1 - 7.png,768,52,60
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 1 - 8.png,863,62,78
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 1- 3.png,829,50,69
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 2.png,2264,576,56
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 3.png,2706,576,59
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 4.png,2467,576,58
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 5.png,2317,576,65
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 6.png,13706,608,76
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 7.png,12112,608,76
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 8.png,13103,608,76
+Imagenes/NPCS/Habitante hombre/HabHombre Fila 9.png,13177,608,76
+Imagenes/NPCS/Habitante hombre/Habitante.jpeg,11262,,
+Imagenes/NPCS/Habitante hombre/Habitante_hablando_atras.png,1853,404,61
+Imagenes/NPCS/Habitante hombre/Habitante_hablando_de_frente.png,2025,406,60
+Imagenes/NPCS/Habitante hombre/Habitante_hablando_derecha.png,1955,401,65
+Imagenes/NPCS/Habitante hombre/Habitante_hablando_izquierda.png,1961,406,60
+Imagenes/NPCS/Habitante hombre/Habitante_hombre_interaccion_ecos.png,3476,553,62
+Imagenes/NPCS/Habitante hombre/Reposo/Habitante_hombre_reposo_fila1.png,1736,555,59
+Imagenes/NPCS/Habitante hombre/Reposo/Habitante_hombre_reposo_fila2.png,1817,550,63
+Imagenes/NPCS/Habitante hombre/Reposo/Habitante_hombre_reposo_fila3.png,1447,549,59
+Imagenes/NPCS/Habitante hombre/Reposo/Habitante_hombre_reposo_fila4.png,1507,544,57
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 1 - 1.png,1286,60,73
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 1 - 2.png,1298,65,73
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 1 - 3.png,1076,61,74
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 1 - 4.png,1072,55,73
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 1 - 5.png,1078,53,73
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 1 - 6.png,1083,69,76
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 1 - 7.png,1044,58,79
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 1 - 8.png,1335,58,79
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 2.png,5274,700,66
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 3.png,5637,703,70
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 4.png,4070,698,73
+Imagenes/NPCS/Habitante mujer/HabMujer Fila 5.png,3479,704,67
+Imagenes/NPCS/Habitante mujer/Mujer_habitante_hablando_atras.png,3101,672,75
+Imagenes/NPCS/Habitante mujer/Mujer_habitante_hablando_derecha.png,3085,670,70
+Imagenes/NPCS/Habitante mujer/Mujer_habitante_hablando_frente.png,5401,666,85
+Imagenes/NPCS/Habitante mujer/Mujer_habitante_hablando_izquierda.png,3417,660,74
+Imagenes/NPCS/Habitante mujer/Mujer_habitante_interacción_ecos.png,5987,665,82
+Imagenes/NPCS/Habitante mujer/Reposo/Habitante_femenina-reposo_fila1.png,2776,689,82
+Imagenes/NPCS/Habitante mujer/Reposo/Habitante_femenina-reposo_fila2.png,2326,670,68
+Imagenes/NPCS/Habitante mujer/Reposo/Habitante_femenina-reposo_fila3.png,2730,672,74
+Imagenes/NPCS/Habitante mujer/Reposo/Habitante_femenina-reposo_fila4.png,2762,655,74
+Imagenes/NPCS/Influencer/influencer-GrabandoContenido.png,7914,660,72
+Imagenes/NPCS/Influencer/influencer-Hablando.png,4865,650,72
+Imagenes/NPCS/Influencer/influencer-LeyendoPubli.png,4916,660,74
+Imagenes/NPCS/Influencer/Influencer-Reposo 1.png,14106,672,84
+Imagenes/NPCS/Influencer/Influencer-Reposo 2.png,12388,672,84
+Imagenes/NPCS/Influencer/Influencer-Reposo 3.png,14220,672,84
+Imagenes/NPCS/Influencer/Influencer-Reposo 4.png,12398,672,84
+Imagenes/NPCS/Influencer/influencer-UsandoDispositivo.png,4567,675,73
+Imagenes/NPCS/Influencer/Influencer_fila1.png,7976,648,75
+Imagenes/NPCS/Influencer/Influencer_fila2.png,5507,646,77
+Imagenes/NPCS/Influencer/Influencer_fila3.png,4792,638,72
+Imagenes/NPCS/Influencer/Influencer_fila4.png,5723,638,67
+Imagenes/NPCS/Influencer/Influencer_fila5.png,4708,656,65
+Imagenes/NPCS/Influencer/Influencer_fila6.png,24429,672,84
+Imagenes/NPCS/Influencer/Influencer_fila7.png,20651,672,84
+Imagenes/NPCS/Influencer/Influencer_fila8.png,20393,672,84
+Imagenes/NPCS/Influencer/Influencer_fila9.png,23253,672,84
+Imagenes/NPCS/Iru/Iru_fila1-1.png,1350,64,68
+Imagenes/NPCS/Iru/Iru_fila1-2.png,1333,62,67
+Imagenes/NPCS/Iru/Iru_fila1-3.png,1132,54,66
+Imagenes/NPCS/Iru/Iru_fila1-4.png,1233,65,67
+Imagenes/NPCS/Iru/Iru_fila1-5.png,1290,62,69
+Imagenes/NPCS/Iru/Iru_fila1-6.png,1200,56,66
+Imagenes/NPCS/Iru/Iru_fila1-7.png,1131,60,69
+Imagenes/NPCS/Iru/Iru_fila1-8.png,1333,46,71
+Imagenes/NPCS/Iru/Iru_fila2.png,4712,634,67
+Imagenes/NPCS/Iru/Iru_fila3.png,3946,636,70
+Imagenes/NPCS/Iru/Iru_fila4.png,4495,634,67
+Imagenes/NPCS/Iru/Iru_fila5.png,4279,637,65
+Imagenes/NPCS/mensajero/Entregando_mensajero_1.png,4461,557,70
+Imagenes/NPCS/mensajero/Entregando_mensajero_2.png,3931,567,70
+Imagenes/NPCS/mensajero/Entregando_mensajero_3.png,4304,572,70
+Imagenes/NPCS/mensajero/Entregando_mensajero_4.png,3858,563,65
+Imagenes/NPCS/mensajero/fila 1 - 5.png,1132,50,62
+Imagenes/NPCS/mensajero/fila 1 - 6.png,1140,56,67
+Imagenes/NPCS/mensajero/fila 1 - 7.png,1003,44,67
+Imagenes/NPCS/mensajero/fila 1 - 8.png,1118,50,65
+Imagenes/NPCS/mensajero/fila 1- 2.png,1173,48,66
+Imagenes/NPCS/mensajero/fila 1- 3.png,1004,44,71
+Imagenes/NPCS/mensajero/fila 1- 4.png,1113,49,61
+Imagenes/NPCS/mensajero/fila 2 mensajero.png,4544,671,72
+Imagenes/NPCS/mensajero/fila 3 mensajero.png,3917,672,64
+Imagenes/NPCS/mensajero/fila 4 mensajero.png,4140,671,69
+Imagenes/NPCS/mensajero/fila 5 mensajero.png,4986,672,66
+Imagenes/NPCS/mensajero/Fila 6 - Mensajero.png,16756,672,84
+Imagenes/NPCS/mensajero/Fila 7 - Mensajero.png,15597,672,84
+Imagenes/NPCS/mensajero/Fila 8 - Mensajero.png,15044,672,84
+Imagenes/NPCS/mensajero/Fila 9 - Mensajero.png,17213,672,84
+Imagenes/NPCS/mensajero/fila1 -1.png,1218,51,67
+Imagenes/NPCS/mensajero/Mensajero.jpeg,15145,,
+Imagenes/NPCS/mensajero/Mensajero_corriendo_1.png,6099,658,79
+Imagenes/NPCS/mensajero/Mensajero_corriendo_2.png,4724,635,66
+Imagenes/NPCS/mensajero/Mensajero_corriendo_3.png,4926,650,66
+Imagenes/NPCS/mensajero/Mensajero_corriendo_4.png,4876,637,63
+Imagenes/NPCS/mensajero/Mensajero_interaccion_ecos.png,4507,649,72
+Imagenes/NPCS/mensajero/Recibiendo_mensajero_1.png,4466,564,71
+Imagenes/NPCS/mensajero/Recibiendo_mensajero_3.png,4292,546,66
+Imagenes/NPCS/mensajero/Recibiendo_mensajero_4.png,3872,547,69
+Imagenes/NPCS/mensajero/Recibiendo_mensajerp_2.png,3940,547,74
+Imagenes/NPCS/mensajero/Reposo/Mensajero_reposo_fila1.png,2439,648,76
+Imagenes/NPCS/mensajero/Reposo/Mensajero_reposo_fila2.png,2333,630,67
+Imagenes/NPCS/mensajero/Reposo/Mensajero_reposo_fila3.png,2391,644,71
+Imagenes/NPCS/mensajero/Reposo/Mensajero_reposo_fila4.png,2610,636,67
+Imagenes/NPCS/mensajero - copia/fila 1 - 5.png,1132,50,62
+Imagenes/NPCS/mensajero - copia/fila 1 - 6.png,1140,56,67
+Imagenes/NPCS/mensajero - copia/fila 1 - 7.png,1003,44,67
+Imagenes/NPCS/mensajero - copia/fila 1 - 8.png,1118,50,65
+Imagenes/NPCS/mensajero - copia/fila 1- 2.png,1173,48,66
+Imagenes/NPCS/mensajero - copia/fila 1- 3.png,1004,44,71
+Imagenes/NPCS/mensajero - copia/fila 1- 4.png,1113,49,61
+Imagenes/NPCS/mensajero - copia/fila 2 mensajero.png,4544,671,72
+Imagenes/NPCS/mensajero - copia/fila 3 mensajero.png,3917,672,64
+Imagenes/NPCS/mensajero - copia/fila 4 mensajero.png,4140,671,69
+Imagenes/NPCS/mensajero - copia/fila 5 mensajero.png,4986,672,66
+Imagenes/NPCS/mensajero - copia/fila1 -1.png,1218,51,67
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Corriendo.png,6194,651,64
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-EntregandoMensaje.png,5944,640,77
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Fila1.png,8049,655,67
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Fila2.png,6700,657,68
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Fila3.png,5998,640,67
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Fila4.png,4923,642,66
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Fila5.png,5407,653,67
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Fila6.png,25856,704,88
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Fila7.png,19008,704,88
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Fila8.png,20689,704,88
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Fila9.png,25596,704,88
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Hablando.png,4821,655,70
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-RecibiendoMensaje.png,7093,723,66
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Reposo 1.png,16021,672,84
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Reposo 2.png,13620,672,84
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Reposo 3.png,12437,672,84
+Imagenes/NPCS/Mensajero urbano/Mensajero_urbano-Reposo 4.png,14651,672,84
+Imagenes/NPCS/Naira/fila1_Reposo_Naira.png,15410,704,88
+Imagenes/NPCS/Naira/fila2_Reposo_Naira.png,15858,704,88
+Imagenes/NPCS/Naira/fila3_Reposo_Naira.png,14746,704,88
+Imagenes/NPCS/Naira/fila4_Reposo_Naira.png,13536,704,88
+Imagenes/NPCS/Naira/Naira_fila1-1.png,1555,65,67
+Imagenes/NPCS/Naira/Naira_fila1-2.png,1520,59,68
+Imagenes/NPCS/Naira/Naira_fila1-3.png,1353,73,71
+Imagenes/NPCS/Naira/Naira_fila1-4.png,1307,78,70
+Imagenes/NPCS/Naira/Naira_fila1-5.png,1390,62,72
+Imagenes/NPCS/Naira/Naira_fila1-6.png,1434,71,78
+Imagenes/NPCS/Naira/Naira_fila1-7.png,1221,72,69
+Imagenes/NPCS/Naira/Naira_fila1-8.png,1401,54,70
+Imagenes/NPCS/Naira/Naira_fila2.png,6510,680,78
+Imagenes/NPCS/Naira/Naira_fila3.png,5576,663,83
+Imagenes/NPCS/Naira/Naira_fila4.png,5606,682,64
+Imagenes/NPCS/Naira/Naira_fila5.png,4654,667,80
+Imagenes/NPCS/NPC Mundo2/NPC2-mundo2-Fila1.png,8211,693,70
+Imagenes/NPCS/NPC Mundo2/NPC2-mundo2-Fila2.png,6236,710,71
+Imagenes/NPCS/NPC Mundo2/NPC2-mundo2-Fila3.png,5063,704,71
+Imagenes/NPCS/NPC Mundo2/NPC2-mundo2-Fila4.png,5448,696,68
+Imagenes/NPCS/NPC Mundo2/NPC2-mundo2-Fila5.png,4838,696,70
+Imagenes/NPCS/Nucleo/NucleoCambiodeFase.png,94749,1620,180
+Imagenes/NPCS/Nucleo/NucleoCarga.png,73267,1620,180
+Imagenes/NPCS/Nucleo/NucleoFila1.png,96789,1440,180
+Imagenes/NPCS/Nucleo/NucleoInquieto.png,71336,1620,180
+Imagenes/NPCS/Nucleo/NucleoSaturado.png,109716,1620,180
+Imagenes/NPCS/Nucleo/NucleoSereno.png,82541,1620,180
+Imagenes/NPCS/Nucleo/NúcleoDerrota.png,123539,2340,180
+Imagenes/NPCS/Odran/fila1_Reposo_Odran.png,19335,672,84
+Imagenes/NPCS/Odran/fila2_Reposo_Odran.png,12974,672,84
+Imagenes/NPCS/Odran/fila3_Reposo_Odran.png,12864,672,84
+Imagenes/NPCS/Odran/fila4_Reposo_Odran.png,14410,672,84
+Imagenes/NPCS/Odran/Odran_fila1-1.png,1759,65,68
+Imagenes/NPCS/Odran/Odran_fila1-2.png,1707,61,67
+Imagenes/NPCS/Odran/Odran_fila1-3.png,1283,63,67
+Imagenes/NPCS/Odran/Odran_fila1-4.png,1438,59,68
+Imagenes/NPCS/Odran/Odran_fila1-5.png,1459,64,69
+Imagenes/NPCS/Odran/Odran_fila1-6.png,1534,65,70
+Imagenes/NPCS/Odran/Odran_fila1-7.png,1227,54,66
+Imagenes/NPCS/Odran/Odran_fila1-8.png,1746,58,72
+Imagenes/NPCS/Odran/Odran_fila2.png,5597,658,72
+Imagenes/NPCS/Odran/Odran_fila3.png,4794,640,67
+Imagenes/NPCS/Odran/Odran_fila4.png,4129,646,67
+Imagenes/NPCS/Odran/Odran_fila5.png,5002,650,67
+Imagenes/Pociones/pocion_amarilla.png,282943,363,590
+Imagenes/Pociones/pocion_azul.png,274330,333,588
+Imagenes/Pociones/pocion_morada.png,271627,347,596
+Imagenes/Pociones/pocion_roja.png,274225,328,591
+Imagenes/Portal/portal_fila_8frames.png,22929,512,64
+Imagenes/Puentes/Puente1.png,834853,1024,685
+Imagenes/Puentes/Puente1Det.png,22667,344,192
+Imagenes/Puentes/Puente1Roto.png,26160,344,192
+Imagenes/Puentes/Puente2.png,233855,738,438
+Imagenes/Puentes/Puente2Det.png,25786,344,192
+Imagenes/Puentes/Puente2Roto.png,25161,344,192
+Imagenes/Puentes/Puente3.png,146274,397,439
+Imagenes/Puentes/Puente3Det.png,17198,344,192
+Imagenes/Puentes/Puente3Roto.png,18948,344,192
+Imagenes/Puentes/Puente4.png,178103,515,438
+Imagenes/Puentes/puente4Det.png,21061,344,192
+Imagenes/Puentes/Puente4Roto.png,20076,344,192
+Imagenes/Puentes/Puente5.png,197141,477,438
+Imagenes/Puentes/Puente5Det.png,27064,344,192
+Imagenes/Puentes/Puente5Roto.png,16975,344,192
+Imagenes/Puentes/Puente6.png,242054,612,438
+Imagenes/Puentes/Puente6Det.png,31384,344,192
+Imagenes/Puentes/Puente6Roto.png,25836,344,192
+Imagenes/Puentes/Puente7.png,210210,583,438
+Imagenes/Puentes/Puente7Det.png,25939,344,192
+Imagenes/Puentes/Puente7Roto.png,19785,344,192
+Imagenes/Puentes/Puente8.png,180887,481,438
+Imagenes/Puentes/Puente8Det.png,17630,344,192
+Imagenes/Puentes/Puente8Roto.png,22450,344,192
+Imagenes/Retratos/DarekRetrato.png,255144,438,438
+Imagenes/Retratos/Habitante_Conectada-Retrato.png,191816,438,438
+Imagenes/Retratos/Mensajero-urbano-Retraro.png,186569,438,438
+Imagenes/Retratos/NairaRetraro.png,173688,438,438
+Imagenes/Retratos/NPC2retrato.png,212387,438,438
+Imagenes/Retratos/OdranRetrato.png,186682,438,438
+Imagenes/Retratos/Retrato Aspirante Hombre/RetratoAspiranteH_Num1.png,2732,100,110
+Imagenes/Retratos/Retrato Aspirante Hombre/RetratoAspiranteH_Num2.png,2702,93,112
+Imagenes/Retratos/Retrato Aspirante Hombre/RetratoAspiranteH_Num3.png,2942,95,119
+Imagenes/Retratos/Retrato Aspirante Hombre/RetratoAspiranteH_Num4.png,3178,95,112
+Imagenes/Retratos/Retrato Aspirante Mujer/RetratoAspiranteFem_Num1.png,5642,110,128
+Imagenes/Retratos/Retrato Aspirante Mujer/RetratoAspiranteFem_Num2.png,4929,95,129
+Imagenes/Retratos/Retrato Aspirante Mujer/RetratoAspiranteFem_Num3.png,5084,96,127
+Imagenes/Retratos/Retrato Aspirante Mujer/RetratoAspiranteFem_Num4.png,5211,97,127
+Imagenes/Retratos/Retrato Guardián/RetratoGuardian_Num1.png,4787,116,121
+Imagenes/Retratos/Retrato Guardián/RetratoGuardian_Num2.png,4724,111,120
+Imagenes/Retratos/Retrato Guardián/RetratoGuardian_Num3.png,4773,116,120
+Imagenes/Retratos/Retrato Guardián/RetratoGuardian_Num4.png,4342,107,114
+Imagenes/Retratos/Retrato Habitante Hombre/RetratoHabitanteH_Num1.png,3228,93,108
+Imagenes/Retratos/Retrato Habitante Hombre/RetratoHabitanteH_Num2.png,3292,91,105
+Imagenes/Retratos/Retrato Habitante Hombre/RetratoHabitanteH_Num3.png,3170,98,107
+Imagenes/Retratos/Retrato Habitante Hombre/RetratoHabitanteH_Num4.png,3102,92,102
+Imagenes/Retratos/Retrato Habitante Mujer/RetratoHabitanteFem_Num1.png,3273,89,103
+Imagenes/Retratos/Retrato Habitante Mujer/RetratoHabitanteFem_Num2.png,3761,100,106
+Imagenes/Retratos/Retrato Habitante Mujer/RetratoHabitanteFem_Num3.png,3359,91,108
+Imagenes/Retratos/Retrato Habitante Mujer/RetratoHabitanteFem_Num4.png,3439,99,106
+Imagenes/Retratos/Retrato Mensajero/RetratoMensajero_Num1.png,3472,98,125
+Imagenes/Retratos/Retrato Mensajero/RetratoMensajero_Num2.png,3450,110,125
+Imagenes/Retratos/Retrato Mensajero/RetratoMensajero_Num3.png,3883,114,123
+Imagenes/Retratos/Retrato Mensajero/RetratoMensajero_Num4.png,3669,99,124
+Imagenes/Retratos/RetratoAgenteDVerif.png,8133,128,128
+Imagenes/Retratos/RonaldoVelezRetrato.png,195958,438,438
+Imagenes/Tronco ecos/Efecto_eco_troncos.png,1448164,2172,724
+Imagenes/Tronco ecos/Tronco-ecos-fila1.png,15452,187,58
+Imagenes/Tronco ecos/Tronco-ecos-fila2.png,14750,187,53
+Imagenes/Tronco ecos/Tronco-ecos-fila3.png,15272,187,54
+Imagenes/Tronco ecos/Tronco-ecos-fila4.png,14745,185,58
+Imagenes/Vegetación/Charco1.png,19532,132,71
+Imagenes/Vegetación/Charco2.png,27243,175,80
+Imagenes/Vegetación/Charco3.png,18377,141,100
+Imagenes/Vegetación/Charco4.png,28490,166,81
+Imagenes/Vegetación/Colgante1.png,30965,92,164
+Imagenes/Vegetación/Colgante2.png,33165,94,166
+Imagenes/Vegetación/Colgante3.png,35252,104,169
+Imagenes/Vegetación/Flor1.png,79441,221,195
+Imagenes/Vegetación/Flor2.png,93598,238,221
+Imagenes/Vegetación/Flor3.png,93635,214,224
+Imagenes/Vegetación/Flor4.png,100652,235,253
+Imagenes/Vegetación/Helecho1.png,109953,346,229
+Imagenes/Vegetación/Helecho2.png,94210,261,195
+Imagenes/Vegetación/Helecho3.png,117714,315,194
+Imagenes/Vegetación/Helecho4.png,100868,318,219
+Imagenes/Vegetación/Hojas.png,58382,249,137
+Imagenes/Vegetación/Hongo1.png,52505,160,160
+Imagenes/Vegetación/Hongo2.png,49208,149,160
+Imagenes/Vegetación/Hongo3.png,48751,131,163
+Imagenes/Vegetación/Liana1.png,86828,178,291
+Imagenes/Vegetación/Liana2.png,68532,157,271
+Imagenes/Vegetación/Liana3.png,79345,163,285
+Imagenes/Vegetación/Musgo1.png,39080,169,126
+Imagenes/Vegetación/Musgo2.png,43241,181,130
+Imagenes/Vegetación/Musgo3.png,41315,174,122
+Imagenes/Vegetación/P_hoja_gigante1.png,138355,296,249
+Imagenes/Vegetación/P_hoja_gigante2.png,117099,281,240
+Imagenes/Vegetación/P_hoja_gigante3.png,128457,280,262
+Imagenes/Vegetación/Piedra1.png,52112,172,154
+Imagenes/Vegetación/Piedra2.png,52078,164,162
+Imagenes/Vegetación/Piedra3.png,48791,186,131
+Imagenes/Vegetación/Presente/vegetacionextrapresente_1.png,2701,78,97
+Imagenes/Vegetación/Presente/vegetacionextrapresente_2.png,2127,64,67
+Imagenes/Vegetación/Presente/vegetacionextrapresente_3.png,2673,87,67
+Imagenes/Vegetación/Presente/vegetacionextrapresente_4.png,2744,66,88
+Imagenes/Vegetación/Presente/vegetacionextrapresente_5.png,2288,64,81
+Imagenes/Vegetación/Presente/vegetacionextrapresente_6.png,2853,70,85
+Imagenes/Vegetación/Presente/vegetacionextrapresente_7.png,2264,83,59
+Imagenes/Vegetación/Presente/vegetacionextrapresente_8.png,2262,82,66
+Imagenes/Vegetación/Raiz1.png,28644,135,123
+Imagenes/Vegetación/Raiz2.png,22600,111,111
+Imagenes/Vegetación/Raiz3.png,24564,124,114
+Audios/09_caldero_inestable.mp3,12374,,
+Audios/12_pocion_agotada.mp3,3179,,
+Audios/Ambiente.mp3,620600,,
+Audios/audios_pociones_la_copa/01_activacion_pocion.wav,79424,,
+Audios/audios_pociones_la_copa/02_pocion_eco_publicar_tablilla.wav,86480,,
+Audios/audios_pociones_la_copa/03_activacion_pocion_claridad.wav,79424,,
+Audios/audios_pociones_la_copa/04_claridad_revelacion_pista.wav,110294,,
+Audios/audios_pociones_la_copa/05_activacion_pocion_ceniza.wav,79424,,
+Audios/audios_pociones_la_copa/06_ceniza_quemar_tablilla.wav,127934,,
+Audios/audios_pociones_la_copa/07_activacion_pocion_bruma.wav,79424,,
+Audios/audios_pociones_la_copa/08_bruma_viento_alejandose.wav,136754,,
+Audios/audios_pociones_la_copa/09_caldero_inestable.wav,132344,,
+Audios/audios_pociones_la_copa/10_informacion_verificada.wav,41938,,
+Audios/audios_pociones_la_copa/11_advertencia_informacion_falsa.wav,57374,,
+Audios/audios_pociones_la_copa/12_pocion_agotada.wav,30914,,
+Audios/game_over_la_copa_voces_alturas.mp3,135104,,
+Audios/intro_juego_naturaleza_mas_movida.mp3,441971,,
+Audios/Presente/audio_original.wav,197368,,
+Audios/Presente/audio_suplantado.wav,190728,,
+Audios/tablilla_colgar.wav,180446,,
+Audios/tablilla_consultar.wav,197204,,
+Audios/tablilla_ignorar.wav,173390,,
+Audios/tablilla_quemar.wav,155750,,
+Audios/victoria_la_copa_voces_en_las_alturas.mp3,163936,,
+Fuentes/determination.ttf,150948,,
+Fuentes/license.txt,226,,
+Fuentes/readme.txt,684,,

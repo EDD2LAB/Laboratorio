@@ -133,7 +133,16 @@ class ServicioSalas:
             self.limpiar()
             self.limitar(ip)
             if metodo == "GET" and ruta == "/health":
-                return {"ok": True, "protocolo": VERSION, "movimiento": True, "mision": "puente_norte", "campana": "la_copa", "casos": 4, "guia": True, "actividades": 3,
+                from .campana import CASOS
+                from .presente import EVENTOS
+                from .dimensiones_red import DIMENSIONES_RED, ORDEN
+                cantidades = {"la_copa": len(CASOS), "presente": len(EVENTOS), "futuro": 1}
+                eras = [{"id": era, "nombre": DIMENSIONES_RED[era]["nombre"], "casos": cantidades[era]}
+                        for era in ORDEN if DIMENSIONES_RED[era]["disponible"]]
+                return {"ok": True, "protocolo": VERSION, "movimiento": True,
+                        "mision": "campana_tres_eras", "campana": "tres_eras",
+                        "casos": sum(era["casos"] for era in eras), "eras": eras,
+                        "guia": True, "actividades": 3,
                         "build": os.environ.get("RENDER_GIT_COMMIT", "local")[:12]}
             if metodo == "POST" and ruta in ("/v1/crear", "/v1/unirse"):
                 crear = ruta == "/v1/crear"

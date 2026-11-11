@@ -96,3 +96,31 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
 - Bloque E: estado por diferencias (`multijugador/delta.py`), protocolo 11.
   Antes 246,9 KB/s por cliente (12,4 KB por mensaje: `caso` 9,7 KB, `privado` 1 KB,
   `jugadores` 0,8 KB); después 4,3 KB/s con 19,6 mensajes/s y 60,3 FPS.
+# Etapa 1 - base actualizada (2026-11-10)
+
+- Integrados `origin/multijugador` (`eb1318b`, 28 imágenes nuevas) y
+  `origin/main` (`383f7a2`, análisis de encuesta), sin conflictos ni pérdida
+  de los archivos aportados. Las ramas locales se alinean al cerrar la etapa.
+- Preparado `.venv` con Python 3.12.10, pygame-ce 2.5.8 y aiohttp 3.14.5;
+  requirements de cliente y narración opcional. `pip check` sin incompatibilidades.
+- README principal y multijugador reescritos, CLAUDE actualizado y docs del
+  Futuro corregidos. Los estados históricos siguientes se conservan como historial.
+- `/health`: tres eras, ocho casos y protocolo 12, sin cambiar mensajes de
+  partida. Importación y consulta del servicio comprobadas sin importar Pygame.
+- Inventario generado: 741 archivos físicos (714 en Imagenes, 24 en Audios,
+  3 en Fuentes; incluye archivos auxiliares) y 94 rutas concretas del plan.
+  CSV con tamaños PNG y documento con alternativas, pendientes e identidades
+  de retratos por confirmar. El arte nuevo aún no está conectado al juego.
+- Suite completa con pygame-ce: **443 pruebas aprobadas en 281,914 s**.
+  Quedan avisos de cinco imágenes antiguas ausentes y cortes de red simulados
+  por pruebas; ya no aparecen avisos de `pygame.Window`.
+- Benchmark headless local, 4 clientes, 15 s: **60 FPS**, trabajo de frame
+  medio 3,87 ms / p95 4,64 ms, aproximadamente 4,0 KB/s por cliente.
+  No mide Render, varias salas ni redes diferentes.
+- Ningún JSON de Hitboxes cambió. Sin borrado de ramas ni despliegue en Render.
+- Ramas remotas ya contenidas, solo candidatas a revisar antes de borrar:
+  Botones, botones, Logica-arboles, arte-pendiente, leyes-penas y npc-dialogos.
+  No se borró ninguna; esa acción requiere confirmación específica.
+
+---
+

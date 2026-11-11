@@ -8,6 +8,9 @@ La primera dimensión sigue llamándose La Copa (Era I).
 
 Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aiohttp):
 
+- Instalación: `py -3.12 -m venv .venv` y `.venv\Scripts\python.exe -m pip install -r requirements.txt`.
+- Narración opcional: `requirements-voz.txt`. No instalar pygame y pygame-ce juntos.
+
 - Juego: `.venv\Scripts\python.exe juego.py`
 - Pruebas: `.venv\Scripts\python.exe -m unittest discover -s tests`
   (sin pantalla: `SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy`; no hay pytest instalado).
@@ -47,8 +50,15 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 - Ningún módulo carga imágenes, fuentes ni sonidos al importarse: solo después de `pygame.init()`/`set_mode()`.
 - Cambios al multijugador deben ser aditivos; no alterar el modo un jugador al portar features.
 - Antes de terminar cualquier tarea: correr las pruebas y reportar resultados reales.
+- Las hitboxes de pared se editan a mano. No modificarlas al integrar arte o mecánicas.
 
 ## Trabajo en curso
 
-La tarea `multi-principal` (multijugador como modo principal, bots por red,
-optimización) está pausada tras su Fase 0; ver `docs/progreso.md`.
+Rama compartida: `multijugador`. Protocolo 12. Tres eras disponibles (4 casos en
+La Copa, 3 en Distrito Conecta y 1 en Ciudad Núcleo), campaña local con bots y
+bots de relleno en salas. Kael y Tarek son las apariencias predeterminadas.
+El expediente AVL, informe final y estados por diferencias están integrados.
+
+Plan vigente: `docs/etapas.md`; inventario de arte: `docs/arte_esperado.md`.
+`docs/progreso.md` conserva el historial: sus estados antiguos no describen la
+versión actual. Las etapas posteriores no están completas por aparecer en el plan.
