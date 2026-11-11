@@ -256,17 +256,24 @@ class SelectorDestinoTests(Base):
 
 
 class PantallaYMenuTests(unittest.TestCase):
-    def test_el_lienzo_ocupa_toda_la_ventana(self):
-        from interfaz.presentacion_pantalla import a_lienzo, presentar
+    def test_el_lienzo_conserva_su_proporcion_con_bandas(self):
+        from interfaz.presentacion_pantalla import a_lienzo, presentar, rect_destino
         pygame.init()
         pantalla = pygame.display.set_mode((1920, 1080))
         lienzo = pygame.Surface((960, 720))
         lienzo.fill((200, 10, 10))
         presentar(pantalla, lienzo)
-        for punto in ((0, 0), (1919, 0), (0, 1079), (1919, 1079), (5, 540), (1915, 540)):
+        # 1080 de alto -> 1440x1080 centrado, bandas de 240 px a cada lado.
+        self.assertEqual(rect_destino((1920, 1080)), pygame.Rect(240, 0, 1440, 1080))
+        for punto in ((240, 0), (1679, 0), (240, 1079), (1679, 1079), (960, 540)):
             self.assertEqual(pantalla.get_at(punto)[:3], (200, 10, 10), punto)
-        self.assertEqual(a_lienzo((1920, 1080), (1920, 1080)), (960, 720))
+        for punto in ((0, 0), (239, 540), (1680, 540), (1919, 1079)):
+            self.assertEqual(pantalla.get_at(punto)[:3], (0, 0, 0), punto)
         self.assertEqual(a_lienzo((960, 540), (1920, 1080)), (480, 360))
+        self.assertEqual(a_lienzo((240, 0), (1920, 1080)), (0, 0))
+        self.assertEqual(a_lienzo((100, 540), (1920, 1080)), (-1, -1))
+        # Ventana más alta que 4:3: bandas arriba y abajo.
+        self.assertEqual(rect_destino((960, 1000)), pygame.Rect(0, 140, 960, 720))
         pygame.quit()
 
     def test_el_menu_ya_no_ofrece_un_jugador(self):
