@@ -98,7 +98,7 @@ class ServidorSala:
             jugador = sesion["jugador"]
             tipo = mensaje.get("tipo")
             if tipo == "ping":
-                sesion["salida"].put_nowait({"tipo": "pong"})
+                sesion["salida"].put_nowait({"tipo": "pong", "t": mensaje.get("t")})
                 return
             if self._iniciada:
                 raise ValueError("El equipo ya está confirmado.")

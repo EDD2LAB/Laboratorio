@@ -18,6 +18,14 @@ from .protocolo import ROLES, VERSION
 from .partida_local import ClienteCampanaLocal
 from bots.gestor_bots import GestorBots
 
+GRACIA_PARTIDA = 120
+
+
+class DemasiadasSolicitudes(ValueError):
+    def __init__(self, espera):
+        super().__init__("Demasiadas solicitudes. Espera antes de intentarlo de nuevo.")
+        self.espera = max(1, int(espera) + 1)
+
 
 class SalaInternet(ServidorSala):
     def __init__(self, reloj=time.monotonic):
@@ -84,23 +92,24 @@ class ServicioSalas:
     def limpiar(self):
         ahora = self.reloj()
         for token, sesion in list(self.sesiones.items()):
-            if token not in self.sesiones or ahora - sesion["ultima"] <= 45:
+            sala = self.salas.get(sesion["codigo"])
+            gracia = GRACIA_PARTIDA if sala and sala.partida else 45
+            if token not in self.sesiones or ahora - sesion["ultima"] <= gracia:
                 continue
-            self._salir(token)
+            self._salir(token, por_caducidad=True)
         for ip, cola in list(self.peticiones.items()):
             while cola and ahora - cola[0] >= 60:
                 cola.popleft()
             if not cola:
                 self.peticiones.pop(ip, None)
 
-    def limitar(self, ip):
+    def limitar(self, clave, maximo=300):
         ahora = self.reloj()
-        cola = self.peticiones[ip]
+        cola = self.peticiones[clave]
         while cola and ahora - cola[0] >= 60:
             cola.popleft()
-        # Admite cuatro clientes detrás de una misma IP.
-        if len(cola) >= 1200:
-            raise ValueError("Demasiadas solicitudes. Espera un minuto.")
+        if len(cola) >= maximo:
+            raise DemasiadasSolicitudes(60 - (ahora - cola[0]))
         cola.append(ahora)
 
     def _sesion(self, token):
@@ -110,8 +119,9 @@ class ServicioSalas:
         sesion["ultima"] = self.reloj()
         return sesion, self.salas[sesion["codigo"]]
 
-    def _salir(self, token):
+    def _salir(self, token, por_caducidad=False):
         sesion = self.sesiones.pop(token, None)
+        self.peticiones.pop(("sesion", token), None)
         if not sesion:
             return
         codigo = sesion["codigo"]
@@ -120,7 +130,15 @@ class ServicioSalas:
             return
         jugador = sala._sesiones.pop(sesion["id"], None)
         if jugador and jugador["jugador"]["anfitrion"]:
-            self._eliminar_sala(codigo)
+            candidatos = [s for s in self.sesiones.values() if s["codigo"] == codigo
+                          and self.reloj() - s["ultima"] <= GRACIA_PARTIDA]
+            if por_caducidad and sala.partida and candidatos:
+                nuevo = max(candidatos, key=lambda s: s["ultima"])
+                sala._sesiones[nuevo["id"]]["jugador"]["anfitrion"] = True
+                sala.partida.quitar(sesion["id"])
+                sala._publicar()
+            else:
+                self._eliminar_sala(codigo)
         else:
             if sala.partida:
                 sala.partida.quitar(sesion["id"])
@@ -131,7 +149,6 @@ class ServicioSalas:
     def ejecutar(self, metodo, ruta, datos, token="", ip="local"):
         with self.lock:
             self.limpiar()
-            self.limitar(ip)
             if metodo == "GET" and ruta == "/health":
                 from .campana import CASOS
                 from .presente import EVENTOS
@@ -145,6 +162,7 @@ class ServicioSalas:
                         "guia": True, "actividades": 3,
                         "build": os.environ.get("RENDER_GIT_COMMIT", "local")[:12]}
             if metodo == "POST" and ruta in ("/v1/crear", "/v1/unirse"):
+                self.limitar(("ip", ip), 60)
                 crear = ruta == "/v1/crear"
                 if crear:
                     if len(self.salas) >= 100:
@@ -174,6 +192,7 @@ class ServicioSalas:
                 self.sesiones[token] = {"id": identificador, "codigo": codigo, "ultima": self.reloj()}
                 return {"id": identificador, "codigo": codigo, "token": token, "estado": sala._estado(identificador)}
             sesion, sala = self._sesion(token)
+            self.limitar(("sesion", token))
             if metodo == "GET" and ruta == "/v1/estado":
                 return sala._estado(sesion["id"])
             if metodo == "POST" and ruta == "/v1/accion":
@@ -220,6 +239,8 @@ class Manejador(BaseHTTPRequestHandler):
             respuesta = self.server.servicio.ejecutar(self.command, self.path, datos, token, self.client_address[0])
         except PermissionError as error:
             estado, respuesta = 401, {"error": str(error)}
+        except DemasiadasSolicitudes as error:
+            estado, respuesta = 429, {"error": str(error), "reintentar_en": error.espera}
         except (ValueError, UnicodeError) as error:
             estado, respuesta = 400, {"error": str(error)}
         except OSError:
@@ -230,6 +251,8 @@ class Manejador(BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Content-Length", str(len(datos)))
             self.send_header("Cache-Control", "no-store")
+            if estado == 429:
+                self.send_header("Retry-After", str(respuesta["reintentar_en"]))
             self.end_headers()
             self.wfile.write(datos)
         except OSError:

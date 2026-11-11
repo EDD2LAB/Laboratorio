@@ -229,6 +229,8 @@ class VistaPartida:
         self.titulo = cargar_fuente(20)
         self.jugadores = {}
         self.ultimo_paquete = time.monotonic()
+        self.datos_red = {"fps": 0, "kb_s": 0, "ping_ms": None}
+        self._muestra_red = (self.ultimo_paquete, 0)
         self.aviso_red = ""
         self.estado = estado
         self.variantes_eco = cargar_variantes_tronco_eco()
@@ -772,6 +774,19 @@ class VistaPartida:
             self.mostrar_detalles and self.dimension == LA_COPA and self.boton_guia.collidepoint(posicion)))
 
     def actualizar(self, segundos, cliente):
+        self.datos_red["fps"] = (self.datos_red["fps"] * .9 + .1 / segundos) if segundos > 0 else self.datos_red["fps"]
+        metricas = getattr(cliente, "metricas", None)
+        es_red = isinstance(metricas, dict)
+        metricas = metricas if es_red else {}
+        ahora = time.monotonic()
+        inicio, recibidos = self._muestra_red
+        total = metricas.get("bytes", 0)
+        if ahora - inicio >= 1:
+            self.datos_red["kb_s"] = max(0, total - recibidos) / (ahora - inicio) / 1000
+            self._muestra_red = (ahora, total)
+        self.datos_red["ping_ms"] = (metricas.get("ping_ms")
+                                     if ahora - metricas.get("ping_actualizado", 0) < 10 else None)
+        self.datos_red["local"] = not es_red
         if self.celular is not None:
             self.celular.ui.progreso_audio()  # devuelve la música al terminar la grabación
         if self.panel.pedir_informe_en is not None and time.monotonic() >= self.panel.pedir_informe_en:
@@ -1445,16 +1460,21 @@ class VistaPartida:
                 jugador["datos"] for jugador in self.jugadores.values()
                 if jugador["datos"].get("controlador") == "bot"
             ]
-            caja = pygame.Surface((338, 206), pygame.SRCALPHA)
+            caja = pygame.Surface((338, 250), pygame.SRCALPHA)
             caja.fill((8, 24, 19, 238))
             superficie.blit(caja, (610, 226))
-            pygame.draw.rect(superficie, (237, 185, 87), (610, 226, 338, 206), 2)
+            pygame.draw.rect(superficie, (237, 185, 87), (610, 226, 338, 250), 2)
             self.panel.texto_lineas(
-                superficie, "DEPURACIÓN DE BOTS · F3", 622, 235, 312,
+                superficie, "RED Y BOTS · F3", 622, 235, 312,
                 self.titulo, (237, 185, 87),
             )
+            datos_red = self.datos_red
+            ping = "Local" if datos_red.get("local") else (f"{datos_red['ping_ms']:.0f} ms" if datos_red.get("ping_ms") is not None else "Ping: midiendo…")
+            self.panel.texto_lineas(superficie,
+                                   f"{datos_red['fps']:.0f} FPS · {ping} · {datos_red['kb_s']:.1f} KB/s",
+                                   622, 266, 312, self.fuente)
             for indice, bot in enumerate(bots):
-                y = 265 + indice * 48
+                y = 295 + indice * 48
                 self.panel.texto_lineas(
                     superficie,
                     f"{bot['nombre']} · {bot.get('bot_estado', 'ESPERANDO')}",
@@ -1471,10 +1491,8 @@ class VistaPartida:
                         "Error: " + bot["bot_error"],
                         622, y + 34, 312, self.fuente, (255, 161, 145),
                     )
-        if self.aviso_red or time.monotonic() - self.ultimo_paquete > 1:
+        if self.aviso_red or time.monotonic() - self.ultimo_paquete > 3:
             mensaje = self.aviso_red or "Esperando al servidor…"
-            if self.estado.get("fase") == "partida" and self.estado.get("revision") is not None:
-                mensaje = ""
             if mensaje:
                 aviso = self.titulo.render(mensaje, True, (255, 207, 110))
                 superficie.blit(aviso, aviso.get_rect(center=(480, 45)))

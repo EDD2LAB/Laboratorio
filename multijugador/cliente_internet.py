@@ -11,6 +11,9 @@ import uuid
 
 from .protocolo import VERSION
 from .delta import DecodificadorEstado
+from .metricas_red import SondaPing
+
+VENTANA_RECONEXION = 110
 
 
 class CorteMovimiento(ConnectionError):
@@ -55,7 +58,7 @@ class ClienteInternet:
         self._ronda = 0
         self._http = urllib.request.build_opener(SinRedirecciones())
         # Métricas de red (F3 y benchmark): mensajes y bytes recibidos.
-        self.metricas = {"mensajes": 0, "bytes": 0}
+        self.metricas = {"mensajes": 0, "bytes": 0, "ping_ms": None}
         threading.Thread(target=self._ejecutar, daemon=True).start()
 
     def _peticion(self, ruta, datos=None, timeout=8):
@@ -74,6 +77,8 @@ class ClienteInternet:
                 mensaje = "El servidor no pudo atender la solicitud."
             if error.code == 401:
                 raise PermissionError(mensaje) from error
+            if error.code == 429:
+                raise ConnectionError(mensaje) from error
             raise ValueError(mensaje) from error
         if len(cuerpo) > 65536:
             raise ValueError("Respuesta del servidor demasiado grande.")
@@ -118,8 +123,9 @@ class ClienteInternet:
 
     def _abrir_juego(self):
         intento = 0
+        recuperando_desde = None
         while not self._cerrado.is_set():
-            inicio = time.monotonic()
+            self._conexion_sana_desde = None
             try:
                 asyncio.run(self._jugar())
                 return
@@ -140,13 +146,17 @@ class ClienteInternet:
                     raise ValueError("Render todavía no tiene la conexión de movimiento. Despliega el último commit del servidor.") from error
                 if "Certificate" in nombre:
                     raise ValueError("No se pudo validar el certificado del servidor. Comprueba la fecha y hora de esta PC.") from error
-                if time.monotonic() - inicio >= 10:
-                    intento = 0  # Los cortes separados por una sesión sana no agotan el contador.
-                if intento == 3:
+                sana = self._conexion_sana_desde
+                if sana is not None and time.monotonic() - sana >= 10:
+                    intento = 0
+                    recuperando_desde = None
+                if recuperando_desde is None:
+                    recuperando_desde = time.monotonic()
+                if time.monotonic() - recuperando_desde >= VENTANA_RECONEXION:
                     detalle = f"HTTP {estado}" if estado else f"WS {codigo_ws}" if codigo_ws else f"{nombre}" + (f", código {codigo}" if codigo else "")
-                    raise ConnectionError(f"Se perdió la conexión tras 3 reintentos ({detalle}). Vuelve a entrar a la sala.") from error
-                self._evento({"tipo": "reconectando", "mensaje": f"Conexión interrumpida. Reconectando ({intento + 1}/3)…"})
-                self._cerrado.wait(min(2 ** intento, 4))
+                    raise ConnectionError(f"No se pudo recuperar la conexión ({detalle}). Vuelve a entrar a la sala.") from error
+                self._evento({"tipo": "reconectando", "mensaje": f"Conexión interrumpida. Conservamos tu lugar; reconectando (intento {intento + 1})…"})
+                self._cerrado.wait(1 if intento == 0 else 2 if intento == 1 else 4)
                 intento += 1
 
     async def _jugar(self):
@@ -158,6 +168,8 @@ class ClienteInternet:
         async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=None, connect=10), trust_env=True) as sesion:
             async with sesion.ws_connect(url, headers={"Authorization": "Bearer " + self._token},
                                          heartbeat=8, max_msg_size=65536, compress=0) as ws:
+                self.metricas["ping_ms"] = None
+                sonda = SondaPing(self.metricas)
                 async def controles():
                     enviadas = {}
                     while not self._cerrado.is_set():
@@ -165,6 +177,9 @@ class ClienteInternet:
                         seq = self._secuencia
                         self._secuencia += 1
                         await ws.send_json({"tipo": "mover", "dx": dx, "dy": dy, "seq": seq, "correr": self._correr})
+                        ping = sonda.siguiente()
+                        if ping is not None:
+                            await ws.send_json(ping)
                         with self._lock_acciones:
                             pendientes = list(self._pendientes.values())
                         enviadas = {clave: fecha for clave, fecha in enviadas.items() if any(p["id_solicitud"] == clave for p in pendientes)}
@@ -182,9 +197,12 @@ class ClienteInternet:
                         mensaje = await asyncio.wait_for(ws.receive(), timeout=12)
                         if mensaje.type == aiohttp.WSMsgType.TEXT:
                             self.metricas["mensajes"] += 1
-                            self.metricas["bytes"] += len(mensaje.data)
+                            self.metricas["bytes"] += len(mensaje.data.encode("utf-8"))
                             estado = mensaje.json()
                             if isinstance(estado, dict):
+                                if estado.get("tipo") == "pong":
+                                    sonda.recibir(estado)
+                                    continue
                                 estado = decodificador.recibir(estado)
                                 if estado is None:  # falta la base: se pide un snapshot y se sigue
                                     if decodificador.tomar_peticion():
@@ -193,6 +211,8 @@ class ClienteInternet:
                                 if estado.get("tipo") == "acuse":
                                     with self._lock_acciones:
                                         self._pendientes.pop(estado.get("id_solicitud"), None)
+                                if estado.get("tipo") == "estado" and getattr(self, "_conexion_sana_desde", None) is None:
+                                    self._conexion_sana_desde = time.monotonic()
                                 self._evento(estado)
                                 if estado.get("tipo") == "desconectado":
                                     return
@@ -207,7 +227,28 @@ class ClienteInternet:
                 if not self._cerrado.is_set():
                     raise CorteMovimiento(ws.close_code)
 
+    def _estado_recuperable(self):
+        """Reintenta solo la lectura: nunca duplica crear, unirse o iniciar."""
+        inicio = time.monotonic()
+        recuperando = False
+        while not self._cerrado.is_set():
+            try:
+                estado = self._peticion("/v1/estado")
+                if recuperando:
+                    self._evento({"tipo": "conexion_recuperada", "mensaje": "Conexión recuperada. Ya puedes continuar."})
+                return estado
+            except PermissionError:
+                raise
+            except OSError:
+                if time.monotonic() - inicio >= 30:
+                    raise ConnectionError("No se pudo recuperar la sala de espera. Comprueba tu conexión.")
+                self._evento({"tipo": "reconectando", "mensaje": "Reconectando con la sala de espera…"})
+                recuperando = True
+                self._cerrado.wait(2)
+        return None
+
     def _ejecutar(self):
+        fallo = False
         try:
             respuesta = self._peticion("/v1/crear" if self._crear else "/v1/unirse", self._datos, timeout=60)
             self._token = respuesta["token"]
@@ -233,11 +274,17 @@ class ClienteInternet:
                             return
                     except ValueError as error:
                         self._evento({"tipo": "error", "mensaje": str(error)})
+                    except PermissionError:
+                        raise
+                    except OSError:
+                        self._evento({"tipo": "error", "mensaje": "No llegó la confirmación. Recuperaremos el estado; revisa tu selección."})
                 if time.monotonic() >= siguiente:
-                    estado = self._peticion("/v1/estado")
-                    if estado["revision"] != revision:
-                        self._evento(estado)
-                        revision = estado["revision"]
+                    estado = self._estado_recuperable()
+                    if estado is None:
+                        return
+                    # Publicar también el estado tras un corte aunque no haya cambios.
+                    self._evento(estado)
+                    revision = estado["revision"]
                     if estado.get("fase") == "partida":
                         self._abrir_juego()
                         return
@@ -245,11 +292,14 @@ class ClienteInternet:
         except ValueError as error:
             self._evento({"tipo": "rechazado", "mensaje": str(error)})
         except (OSError, KeyError) as error:
+            fallo = True
             mensaje = str(error) if isinstance(error, (PermissionError, ConnectionError)) else "No se pudo conectar con el servidor de Internet. Comprueba la dirección y tu conexión."
             if not self._cerrado.is_set():
                 self._evento({"tipo": "desconectado", "mensaje": mensaje})
         finally:
-            if self._token:
+            # Un fallo de red conserva la sesión hasta la gracia del servidor.
+            # Solo cerrar explícitamente abandona la sala.
+            if self._token and self._cerrado.is_set() and not fallo:
                 try:
                     self._peticion("/v1/salir", {})
                 except (OSError, ValueError):

@@ -14,7 +14,9 @@ from multijugador.movimiento import ColisionesMapa
 from multijugador.tiempo_real import CONEXIONES
 
 
-def ejecutar(segundos, salida):
+def ejecutar(segundos, salida, cortes_pedidos=None):
+    if cortes_pedidos is not None and any(not 0 < x < segundos - 5 for x in cortes_pedidos):
+        raise ValueError("Cada corte debe dejar al menos cinco segundos para recuperar la conexión.")
     servidor = ServidorPrueba()
     clientes = []
     def esperar(c, predicado):
@@ -45,7 +47,8 @@ def ejecutar(segundos, salida):
         inicio = time.monotonic()
         estados = acuses = reconexiones = 0
         ultimo = [inicio] * 4
-        cortes = [x for x in (120, 300, 480) if x < segundos - 10]
+        cortes = ([x for x in (120, 300, 480) if x < segundos - 10]
+                  if cortes_pedidos is None else sorted(cortes_pedidos))
         siguiente_corte, siguiente_informe, siguiente_accion = 0, 30, 10
         colisiones = ColisionesMapa()
         while time.monotonic() - inicio < segundos:
@@ -83,7 +86,7 @@ def ejecutar(segundos, salida):
                 siguiente_informe += 30
             time.sleep(.02)
         resultado = {"ok": True, "segundos": round(time.monotonic() - inicio), "clientes": 4,
-                     "estados": estados, "acuses": acuses, "cortes_simulados": len(cortes),
+                     "estados": estados, "acuses": acuses, "cortes_simulados": siguiente_corte,
                      "reconexiones": reconexiones, "entorno": "servidor y clientes locales, WebSocket real"}
         Path(salida).write_text(json.dumps(resultado, indent=2), encoding="utf-8")
         print(json.dumps(resultado), flush=True)
@@ -98,5 +101,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--segundos", type=int, default=600)
     parser.add_argument("--salida", required=True)
+    parser.add_argument("--cortes", nargs="*", type=float, help="Segundos de cada corte; por defecto 120, 300 y 480 si caben")
     args = parser.parse_args()
-    ejecutar(args.segundos, args.salida)
+    ejecutar(args.segundos, args.salida, args.cortes)

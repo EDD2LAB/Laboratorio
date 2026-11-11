@@ -1,0 +1,11 @@
+{
+  "ok": true,
+  "protocolo": 13,
+  "humanos": 2,
+  "jugadores": 4,
+  "ticks": 200,
+  "casos": 8,
+  "sin_pygame": true,
+  "archivos_copiados": 60,
+  "tipo": "simulacion_contexto_no_build"
+}

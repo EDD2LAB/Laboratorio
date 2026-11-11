@@ -1,7 +1,8 @@
 """Mensajes JSON delimitados por nueva línea; sin dependencias externas."""
 import json
 
-VERSION = 12  # 12: resultado con campos legales (norma, pena, cita_corta, conducta, nota, con_delito). 11: estado por diferencias (mensaje "delta", control "pedir_snapshot") y acciones habilidad
+VERSION = 13  # 13: ping/pong de aplicación por WebSocket y métricas de red; límites por sesión y gracia de reconexión.
+# 12: resultado con campos legales (norma, pena, cita_corta, conducta, nota, con_delito). 11: estado por diferencias (mensaje "delta", control "pedir_snapshot") y acciones habilidad
 # en el futuro y pedir_informe. Ver multijugador/delta.py
 # 10: eventos manipulados, Ciudad Núcleo y edificios (presente_analizar, presente_marcar,
 # presente_siguiente, futuro_resolver, entrar_edificio, salir_edificio)

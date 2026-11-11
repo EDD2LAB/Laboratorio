@@ -1,0 +1,36 @@
+{
+  "segundos": 15.0,
+  "participantes": "clientes",
+  "fps_medio": 60.2,
+  "frame_ms": {
+    "p50": 3.8,
+    "p95": 5.03,
+    "p99": 8.4,
+    "medio": 4.04
+  },
+  "tick_servidor_ms": {
+    "p50": 0.0,
+    "p95": 0.0,
+    "max": 16.0,
+    "ticks": 302
+  },
+  "por_cliente": [
+    {
+      "mensajes_s": 20.5,
+      "bytes_s": 4067
+    },
+    {
+      "mensajes_s": 20.5,
+      "bytes_s": 4065
+    },
+    {
+      "mensajes_s": 20.5,
+      "bytes_s": 4065
+    },
+    {
+      "mensajes_s": 20.5,
+      "bytes_s": 4065
+    }
+  ],
+  "ping_ms": 0.0
+}

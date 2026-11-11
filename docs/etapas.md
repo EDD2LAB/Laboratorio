@@ -16,6 +16,10 @@
 
 ## Trabajo restante
 
+La etapa 2 está implementada localmente con protocolo 13; ver
+`docs/red_estabilidad.md` y los resultados en `docs/progreso.md`. Requiere
+publicación y despliegue antes de usarla con el servidor de Render.
+
 | Etapa | Alcance | Criterio de cierre |
 | --- | --- | --- |
 | 2. Red | Ping, límites por sesión, recuperación y Docker | Varias salas con IP compartida, contenedor y reconexión comprobados |

@@ -54,7 +54,7 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 
 ## Trabajo en curso
 
-Rama compartida: `multijugador`. Protocolo 12. Tres eras disponibles (4 casos en
+Rama compartida: `multijugador`. Protocolo 13. Tres eras disponibles (4 casos en
 La Copa, 3 en Distrito Conecta y 1 en Ciudad Núcleo), campaña local con bots y
 bots de relleno en salas. Kael y Tarek son las apariencias predeterminadas.
 El expediente AVL, informe final y estados por diferencias están integrados.

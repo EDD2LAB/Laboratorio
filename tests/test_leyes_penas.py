@@ -124,7 +124,7 @@ class Catalogo(unittest.TestCase):
         self.assertEqual(expediente.arbol.total if hasattr(expediente.arbol, "total") else len(expediente.arbol.casos), 1)
 
     def test_protocolo_subio(self):
-        self.assertEqual(VERSION, 12)
+        self.assertGreaterEqual(VERSION, 12)
 
 
 class FichaSegunElCaso(unittest.TestCase):

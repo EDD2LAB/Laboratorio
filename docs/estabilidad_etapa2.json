@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "segundos": 45,
+  "clientes": 4,
+  "estados": 2981,
+  "acuses": 2,
+  "cortes_simulados": 3,
+  "reconexiones": 3,
+  "entorno": "servidor y clientes locales, WebSocket real"
+}

@@ -123,3 +123,38 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   No se borró ninguna; esa acción requiere confirmación específica.
 
 ---
+# Etapa 2 - red y estabilidad (2026-11-11)
+
+- Protocolo 13: ping/pong de aplicación cada 3 s por WebSocket y LAN, promedio
+  móvil de RTT y F3 con FPS, ping y KB/s. El ping usa una cuota independiente
+  del movimiento y no se entrega como evento de juego.
+- HTTP: consultas por token (300/min); crear y unirse por IP (60/min), con
+  respuesta 429 y Retry-After. Regresión de 30 sesiones con IP compartida,
+  consultando cada 0,6 s durante un minuto simulado, sin rechazos.
+- Reconexión: lectura de espera recuperable hasta 30 s; en partida se conserva
+  identidad y rol por 120 s, con reintentos del cliente durante 110 s. Si caduca
+  el anfitrión con otro humano activo, se conserva y transfiere la sala. Una
+  salida explícita sigue cerrándola. No se añade persistencia entre reinicios.
+- Corregidos el aviso de recuperación del lobby, el plazo tras intentos lentos,
+  la limpieza de sockets antiguos y el manejo de clientes sin métricas en F3.
+- Docker copia los paquetes de lógica y JSON/hitboxes permitidos, con cachés
+  excluidas. Herramienta de simulación de reglas y COPY: 60 archivos, aplicación
+  importada sin Pygame y sala de 2 humanos + 2 bots durante 200 ticks; estado
+  dentro de MAX_MENSAJE. Resultado en `validacion_docker_etapa2.json`.
+  Docker no está instalado: no se realizó una construcción real de Linux.
+- Primera suite: 457 pruebas, 7 errores al leer métricas de clientes simulados.
+  Corregido el acceso opcional; segunda suite: **457 aprobadas en 259,458 s**.
+  Tras los ajustes finales, **30 pruebas de red aprobadas** (15 nuevas, 8 de
+  salas y 7 de movimiento). El caso adicional de intentos lentos se añadió
+  después de iniciar la suite completa y se validó en ese grupo de 15.
+- Estabilidad: 45 s, cuatro clientes, 2981 estados, tres cortes simulados y
+  tres reconexiones. `estabilidad_etapa2.json`. Los cortes ahora se pueden
+  programar con `--cortes 8 20 32`; los valores por defecto se conservan.
+- Benchmark local headless de 15 s: 60,2 FPS, 4,04 ms de trabajo medio de frame,
+  p95 5,03 ms y unos 4,1 KB/s por cliente. RTT local 0 ms por resolución del
+  reloj; corregido el benchmark para no confundirlo con muestra ausente.
+- F3 renderizado e inspeccionado. Sin cambios en Hitboxes. Sin push ni Render.
+- Se requiere actualizar servidor y PC al protocolo 13 al publicar esta etapa.
+  Ver `docs/red_estabilidad.md` para límites, recuperación y pruebas.
+
+---

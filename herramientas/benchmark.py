@@ -153,7 +153,7 @@ def ejecutar(segundos, participantes, perfil):
                              "max": round(max(ticks, default=0) * 1000, 2), "ticks": len(ticks)},
         "por_cliente": [{"mensajes_s": round(c.metricas["mensajes"] / duracion, 1),
                          "bytes_s": round(c.metricas["bytes"] / duracion)} for c in clientes],
-        "ping_ms": round(humano.metricas.get("ping_ms", 0), 1) if humano.metricas.get("ping_ms") else None,
+        "ping_ms": round(humano.metricas["ping_ms"], 1) if humano.metricas.get("ping_ms") is not None else None,
     }
     if perfilador:
         texto = io.StringIO()

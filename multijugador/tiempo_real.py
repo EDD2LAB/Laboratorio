@@ -2,12 +2,13 @@
 import asyncio
 import contextlib
 import json
+import math
 from collections import deque
 
 from aiohttp import WSMsgType, web
 
 from .movimiento import ColisionesMapa
-from .servicio_internet import ServicioSalas
+from .servicio_internet import ServicioSalas, DemasiadasSolicitudes
 from .delta import CodificadorEstado
 
 SERVICIO = web.AppKey("servicio", ServicioSalas)
@@ -55,6 +56,9 @@ async def http(request):
         return web.json_response(respuesta, headers={"Cache-Control": "no-store"})
     except PermissionError as error:
         return web.json_response({"error": str(error)}, status=401)
+    except DemasiadasSolicitudes as error:
+        return web.json_response({"error": str(error), "reintentar_en": error.espera}, status=429,
+                                 headers={"Retry-After": str(error.espera)})
     except (ValueError, UnicodeError) as error:
         return web.json_response({"error": str(error)}, status=400)
 
@@ -96,12 +100,30 @@ async def websocket(request):
             await ws.close()
     escritor = asyncio.create_task(escribir())
     ultimo_rechazo = 0
+    ultimo_ping = -math.inf
     ventana, cantidad = servicio.reloj(), 0
     try:
         async for mensaje in ws:
             if mensaje.type != WSMsgType.TEXT:
                 break
             ahora = servicio.reloj()
+            try:
+                datos = json.loads(mensaje.data)
+                if isinstance(datos, dict) and datos.get("tipo") == "ping":
+                    marca = datos.get("t")
+                    if type(marca) not in (int, float) or not math.isfinite(marca):
+                        raise ValueError("Ping inválido.")
+                    # Límite independiente: el ping no consume controles de movimiento.
+                    if ahora - ultimo_ping < 1:
+                        continue
+                    servicio._sesion(token)
+                    ultimo_ping = ahora
+                    cola.confirmar({"tipo": "pong", "t": marca})
+                    continue
+            except PermissionError:
+                break
+            except ValueError:
+                datos = None  # el control inválido consume el límite habitual
             if ahora - ventana >= 1:
                 ventana, cantidad = ahora, 0
             cantidad += 1
@@ -109,7 +131,6 @@ async def websocket(request):
                 await ws.close(code=1008, message=b"Demasiados controles")
                 break
             try:
-                datos = json.loads(mensaje.data)
                 if not isinstance(datos, dict) or datos.get("tipo") not in ("mover", "accion", "pedir_snapshot"):
                     raise ValueError("Control inválido.")
                 if datos["tipo"] == "pedir_snapshot":
@@ -128,15 +149,17 @@ async def websocket(request):
                     await ws.send_json({"tipo": "error", "mensaje": str(error)})
                     ultimo_rechazo = ahora
     finally:
-        request.app[CONEXIONES].pop(token, None)
-        request.app[BUZONES].pop(token, None)
+        if request.app[CONEXIONES].get(token) is ws:
+            request.app[CONEXIONES].pop(token, None)
+        if request.app[BUZONES].get(token) is cola:
+            request.app[BUZONES].pop(token, None)
         escritor.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await escritor
         # Un corte de Wi-Fi no elimina inmediatamente al jugador ni su rol.
-        # Salir explícitamente usa /v1/salir; una ausencia caduca a los 45 s.
+        # Salir explícitamente usa /v1/salir; la partida tiene 120 s de gracia.
         actual = servicio.sesiones.get(token)
-        if actual:
+        if actual and token not in request.app[CONEXIONES]:
             sala = servicio.salas.get(actual["codigo"])
             if sala and sala.partida:
                 sala.partida.controles.pop(actual["id"], None)

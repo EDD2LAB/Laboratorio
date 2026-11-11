@@ -9,6 +9,8 @@
 !Hitboxes/Mapas/Presente/*.json
 !Hitboxes/Mapas/Futuro/
 !Hitboxes/Mapas/Futuro/*.json
+!Hitboxes/**/
+!Hitboxes/**/*.json
 !Hitboxes/Fondos/
 !Hitboxes/Fondos/Mapas/
 !Hitboxes/Fondos/Mapas/Presente/
@@ -20,9 +22,14 @@
 !logica/grafo_fisico.py
 !logica/expediente_avl.py
 !logica/sorteo_partida.py
+!logica/*.py
 !datos/
 !datos/casos_expediente.json
 !datos/marcas_manipulacion.json
+!datos/*.json
 !bots/
 !bots/*.py
 !Dockerfile.multijugador
+**/__pycache__/**
+**/*.pyc
+**/*.pyo
