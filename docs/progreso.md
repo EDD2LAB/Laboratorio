@@ -123,4 +123,3 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   No se borró ninguna; esa acción requiere confirmación específica.
 
 ---
-
