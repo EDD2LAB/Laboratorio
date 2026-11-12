@@ -18,7 +18,17 @@ def objetivo(vista, rol=None):
         return None
     rol = rol or getattr(vista, "final_rol_guia", None) or (vista.yo() or {}).get("rol", "guardian")
     puntos = final.get("puntos", {})
-    if final["fase"] in ("preparacion", "reintento") or len(final.get("hechos", [])) == 4:
+    aventura = final.get("aventura", {})
+    if final["fase"] == "preparacion" and aventura.get("faltan"):
+        rect = vista.rect_portal()
+        return dict(id="portal", nombre="Terminar las eras pendientes", x=rect.centerx, y=rect.centery) if rect else None
+    if final["fase"] == "preparacion" and not aventura.get("fabricado") and not aventura.get("faltan"):
+        yo = vista.yo() or {}
+        punto = aventura.get("taller") if yo.get("id") in aventura.get("cargas", {}) or len(aventura.get("entregadas", [])) == 3 else next(iter(aventura.get("materiales", [])), aventura.get("taller"))
+    elif len(final.get("hechos", [])) == 4:
+        rol = (vista.yo() or {}).get("rol", rol)
+        punto = puntos.get(rol)
+    elif final["fase"] in ("preparacion", "reintento"):
         punto = puntos.get("aspirante")
     elif rol == "mensajero" and rol not in final.get("hechos", []):
         ruta = final.get("ruta") or []
@@ -65,7 +75,26 @@ class PantallaFinal:
                 rect = p.botones["final:rol:" + rol].rect
                 pygame.draw.line(superficie, VERDE, (rect.left + 12, rect.bottom - 5), (rect.right - 12, rect.bottom - 5), 2)
         fase = f.get("fase", "bloqueado")
-        if fase == "preparacion":
+        aventura = f.get("aventura", {})
+        if fase == "preparacion" and aventura.get("faltan"):
+            self.texto(superficie, "Antes de ayudar a la rebelión, terminen:", 290, ORO)
+            self.texto(superficie, ", ".join(aventura["faltan"]), 365)
+            self.texto(superficie, "Vuelvan por el portal. Sus pruebas nos permitirán recuperar el control.", 440)
+        elif fase == "preparacion" and not aventura.get("fabricado"):
+            self.texto(superficie, "AYUDA A LA REBELIÓN", 270, VERDE)
+            self.texto(superficie, "Recojan tres piezas y llévenlas al taller del Corredor de Datos.", 320)
+            self.texto(superficie, "Construiremos el módulo y blásteres para detener los mini-núcleos.", 365)
+            self.texto(superficie, "Piezas entregadas: " + str(len(aventura.get("entregadas", []))) + "/3", 420)
+            self.texto(superficie, "Sigue la luz del mapa y pulsa E cerca de cada pieza.", 465)
+            yo = (p.vista.yo() or {}).get("id")
+            if yo in aventura.get("cargas", {}):
+                self.boton(superficie, "depositar", "Entregar en el taller", 480, 525, 340, p.vista.cerca(aventura["taller"]))
+            elif len(aventura.get("entregadas", [])) == 3:
+                self.boton(superficie, "fabricar", "Fabricar equipo", 480, 525, 340, p.vista.cerca(aventura["taller"]))
+            else:
+                for i, pieza in enumerate(aventura.get("materiales", [])):
+                    self.boton(superficie, "material:" + pieza["id"], "Recoger " + pieza["nombre"], 220 + i * 260, 525, 245, p.vista.cerca(pieza))
+        elif fase == "preparacion":
             self.texto(superficie, "Esquiven las marcas. Durante las pausas, usen sus estaciones.", 270)
             for i, rol in enumerate(ROLES):
                 self.texto(superficie, NOMBRES[rol] + ": " + dict(guardian="compara las órdenes.", mensajero="lleva el módulo sin perder la señal.",
@@ -84,8 +113,8 @@ class PantallaFinal:
             privados = p.privado.get("final_cooperativo", {})
             datos = privados.get(self.rol)
             if len(f.get("hechos", [])) == 4:
-                self.texto(superficie, "Las cuatro tareas están listas. Reúnanse en la pantalla central.", 300, VERDE)
-                self.texto(superficie, "Cada participante confirma la activación. Los bots también colaboran.", 365)
+                self.texto(superficie, "Las cuatro tareas están listas. Cada participante vuelve a su estación.", 300, VERDE)
+                self.texto(superficie, "Activen sus propias consolas con E. No hay límite de tiempo.", 365)
                 self.texto(superficie, "Confirmaciones: " + str(len(f.get("activaciones", []))), 435)
                 self.boton(superficie, "activar", "Confirmar activación", 480, 540, 340)
             elif f.get("batalla", {}).get("turno") != "recarga":
@@ -177,7 +206,9 @@ class PantallaFinal:
                 cliente.actuar("pedir_informe")
             else:
                 datos = dict(operacion=operacion, rol=self.rol, ronda_final=estado(self.panel.vista).get("ronda"))
-                if operacion == "comparar":
+                if operacion == "material":
+                    datos["pieza"] = partes[1]
+                elif operacion == "comparar":
                     datos["campo"] = partes[1]
                 elif operacion == "ajustar":
                     datos.update(indice=int(partes[1]), delta=int(partes[2]))

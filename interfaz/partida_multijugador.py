@@ -356,8 +356,17 @@ class VistaPartida:
             self.sonido({"tipo": "caldero", "estado": "estable"})
         if self.audio:
             try:
-                # Única pista de ambiente del proyecto (no hay una propia del Presente).
-                self.audio.reproducir_musica("ambiente", en_bucle=True)
+                final = self.contexto().get("desafio_final") or {}
+                etapa = final.get("aventura", {}).get("cierre", {}).get("etapa")
+                pista = "ambiente"
+                if self.dimension == FUTURO:
+                    pista = "musica_nucleo"
+                    if final.get("fase") == "activo":
+                        pista = "batalla_fase" + str(final.get("batalla", {}).get("fase", 1))
+                if etapa == "pantalla":
+                    from interfaz.finales import determinar_final
+                    pista = determinar_final(self.estado.get("mundo", {}).get("caso", {}).get("indicadores", {}))
+                self.audio.reproducir_musica(pista, en_bucle=True)
             except Exception as error:
                 print("[Multijugador] Sin música:", error)
 
@@ -583,10 +592,6 @@ class VistaPartida:
                     self.sonido({"tipo": "caldero", "estado": nuevo})
                 self.estado_caldero = nuevo
         completa = self.dimension_completa()
-        if completa and self.final_sonado is False and self.dimension == LA_COPA:
-            positivos = sum(indicadores.get(k, 0) for k in ("sabiduria", "confianza", "armonia")) / 3
-            negativos = indicadores.get("susurros_falsos", 0) + indicadores.get("desinformacion", 0)
-            self.sonido({"tipo": "final_partida", "resultado": "victoria" if positivos >= 55 and negativos < 100 else "game_over"})
         self.final_sonado = completa
         self.panel.actualizar()
 
@@ -849,12 +854,14 @@ class VistaPartida:
     def _revisar_final(self):
         """Al completar las tres eras, una vez por partida."""
         caso = self.estado.get("mundo", {}).get("caso", {})
+        if (caso.get("futuro") or {}).get("desafio_final"):
+            return
         if (self.final_visto or caso.get("fase") != "final" or not (caso.get("presente") or {}).get("fin")
                 or not (caso.get("futuro") or {}).get("fin")):
             return
         from interfaz.finales import PantallaFinal
         self.final_visto = True
-        self.pantalla_final = PantallaFinal(caso.get("indicadores", {}), self.etiquetas[self.dimension],
+        self.pantalla_final = PantallaFinal(caso.get("indicadores", {}), self.etiquetas.get(self.dimension, self.etiquetas[LA_COPA]),
                                             self.escenas.r["fuente_resultado"], self.titulo)
 
     def manejar_evento(self, evento, posicion, cliente):
@@ -887,6 +894,19 @@ class VistaPartida:
                            if j["id"] in caidos and self.cerca(j)), None)
             if aliado:
                 cliente.actuar("final_accion", operacion="auxiliar", aliado=aliado["id"], ronda_final=final["ronda"])
+                return True
+        if (evento.type == pygame.KEYDOWN and not self.panel.activo and self.dimension == FUTURO and not self.interior):
+            final = self.contexto().get("desafio_final") or {}
+            aventura = final.get("aventura", {})
+            if final.get("fase") == "activo" and evento.key == pygame.K_r:
+                cliente.actuar("final_accion", operacion="municion", ronda_final=final["ronda"])
+                return True
+            if final.get("fase") == "activo" and evento.key == pygame.K_f:
+                yo = self.yo() or {}
+                minis = aventura.get("minis", [])
+                if minis:
+                    mini = min(minis, key=lambda m: math.hypot(yo.get("x", 0)-m["x"], yo.get("y", 0)-m["y"]))
+                    cliente.actuar("final_accion", operacion="disparar", mini=mini["id"], ronda_final=final["ronda"])
                 return True
         if self.panel.manejar(evento, posicion, cliente):
             return True
@@ -946,6 +966,11 @@ class VistaPartida:
                 and final.get("batalla", {}).get("turno") in ("aviso", "rayo")):
             # Abrir un libro o celular no detiene el servidor: deja visible el peligro.
             self.panel.modo = None
+        cierre = final.get("aventura", {}).get("cierre", {})
+        if cierre.get("etapa"):
+            from interfaz.desenlace import pantalla as desenlace
+            self.panel.modo = "desenlace"
+            desenlace(self.panel).actualizar(cliente)
         if hasattr(self.panel, "pantalla_final_coop"):
             self.panel.pantalla_final_coop.actualizar(cliente)
         self.datos_red["fps"] = (self.datos_red["fps"] * .9 + .1 / segundos) if segundos > 0 else self.datos_red["fps"]
@@ -1250,6 +1275,8 @@ class VistaPartida:
         from interfaz.suministros import dibujar_encargos, dibujar_farol_en_suelo
         self.adornos.ruta(superficie, self.ruta_guia, ahora_ms)
         if self.dimension == FUTURO and not self.interior:
+            from interfaz.equipo_rebelion import dibujar
+            dibujar(superficie, self.contexto().get("desafio_final") or {}, self.estado.get("mundo", {}).get("jugadores", []))
             self._dibujar_nucleo(superficie, ahora_ms)
             self._dibujar_barreras_y_pulsos(superficie, ahora_ms)
             final = self.contexto().get("desafio_final") or {}

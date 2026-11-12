@@ -43,6 +43,10 @@ def dibujar_aviso(superficie, final, fuente, yo=None):
         texto = "Pide ayuda. Te recuperarás también en la pausa."
     elif b.get("derribados"):
         texto += " E junto a un caído para ayudar."
+    municion = final.get("aventura", {}).get("municion", 0)
+    ayuda = fuente.render(f"F: disparar · Cargas del equipo: {municion} · R: caja del taller", True, (255, 243, 210))
+    pygame.draw.rect(superficie, (8, 29, 38), (130, 576, 700, 28), border_radius=6)
+    superficie.blit(ayuda, ayuda.get_rect(center=(480, 590)))
     titulo = f"FASE {b.get('fase', 1)}/2 · Señal {final.get('integridad', 3)}/3 · {math.ceil(b.get('segundos', 0))} s · {texto}"
     while fuente.size(titulo)[0] > 890 and len(titulo) > 6:
         titulo = titulo[:-4].rstrip() + "..."

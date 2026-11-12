@@ -262,8 +262,10 @@ class CampanaCopa(MisionPuente):
         if accion == "final_accion":
             if self.futuro is None:
                 raise ValueError("Ciudad Núcleo aún no está disponible.")
+            self.futuro.final.aventura.faltan = (["La Copa"] if self.fase != "final" else []) + (["Distrito Conecta"] if not self.presente or not self.presente.fin else [])
             return self.futuro.final.ejecutar(identificador, self.jugadores[identificador], solicitud,
-                                              self.jugadores, self.participantes_final, self._cerca_presente)
+                                              self.jugadores, self.participantes_final, self._cerca_presente,
+                                              lambda a, b: self.linea_final(self.jugadores[identificador], a, b))
         if accion == "expediente_leer":
             return dict(vista="expediente_ficha", ficha=self.expediente.leer(solicitud.get("caso")), silencioso=True)
         if accion == "expediente_paso":

@@ -65,6 +65,13 @@ def tarea_actual(vista):
                   "habitante": "Estabiliza y sostiene la estación", "aspirante": "Prepara la autorización humana"}[rol]
         if final["fase"] != "activo" or len(final.get("hechos", [])) == 4:
             titulo = "Ve a la pantalla central para " + ("recuperar la señal" if final["fase"] == "reintento" else "activar juntos" if final["fase"] == "activo" else "iniciar el final")
+        aventura = final.get("aventura", {})
+        if final["fase"] == "preparacion" and aventura.get("faltan"):
+            titulo = "Vuelve por el portal: falta " + ", ".join(aventura["faltan"])
+        elif final["fase"] == "preparacion" and not aventura.get("fabricado"):
+            titulo = "Ayuda a la rebelión: recoge y entrega las piezas en el taller"
+        elif len(final.get("hechos", [])) == 4:
+            titulo = "Ve a tu consola y confirma con E"
         batalla = final.get("batalla", {})
         if final["fase"] == "activo" and batalla.get("turno") in ("aviso", "rayo"):
             titulo = "¡Sal de las marcas! NÚCLEO va a disparar"

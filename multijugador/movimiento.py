@@ -247,6 +247,7 @@ class PartidaMovimiento:
         self.mapas = {LA_COPA: self.colisiones}
         self.viajes = 0
         self.mision = CampanaCopa(self.jugadores, self.colisiones.datos, semilla=semilla)
+        self.mision.linea_final = lambda jugador, a, b: self.colisiones_de_jugador(jugador).trayecto_libre(a, b)
         self.mision.viajar = self.viajar
         self.mision.cancelar_viaje = self.cancelar_viaje
         self.mision.entrar_edificio = self.entrar_edificio
@@ -500,6 +501,7 @@ class PartidaMovimiento:
         self.mision.presentes_futuro = {i for i in self.presentes_en(FUTURO) if sin_personas or self._humano(i)}
         self.mision.participantes_final = self.presentes_en(FUTURO)
         if self.mision.futuro is not None:
+            self.mision.futuro.final.aventura.faltan = (["La Copa"] if self.mision.fase != "final" else []) + (["Distrito Conecta"] if not self.mision.presente or not self.mision.presente.fin else [])
             self.mision.futuro.final.actualizar(ahora - desde, self.jugadores,
                                                self.mision.futuro.posiciones_pulsos(), self.mision._cerca_presente,
                                                self.mision.participantes_final)

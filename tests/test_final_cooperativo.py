@@ -17,7 +17,13 @@ def partida():
     p = PartidaMovimiento([dict(id=r, nombre=r, rol=r) for r in ROLES], 0)
     p._viajar_equipo("la_copa", "futuro")
     p.actualizar(.05)
+    p.mision.ronda = 3
+    p.mision.resultado = dict(evento_id=29, opcion="corregir", correcto=True)
+    p.mision.presente.indice = 2
+    p.mision.presente.resultado = dict(evento_id=30, opcion="verificar", correcto=True)
     p.mision.futuro.final.preparar(31)
+    p.mision.futuro.final.aventura.fabricado = True
+    p.mision.futuro.final.aventura.municion = 12
     return p
 
 
@@ -28,7 +34,7 @@ class ReglasFinal(unittest.TestCase):
 
     def accion(self, rol, op, colocar=True, **datos):
         jugador = self.p.jugadores[rol]
-        punto = self.f.puntos["aspirante"] if op in ("iniciar", "reintentar", "activar") else self.f.objetivo(rol)
+        punto = self.f.puntos["aspirante"] if op in ("iniciar", "reintentar") else self.f.objetivo(rol)
         if colocar:
             jugador.update(x=punto["x"], y=punto["y"], interior=None)
         return self.p.actuar(rol, dict(accion="final_accion", rol=rol, operacion=op, ronda_final=self.f.ronda, id_solicitud=uuid.uuid4().hex, **datos), self.p.ultima)
@@ -292,7 +298,12 @@ class FinalPorInternet(unittest.TestCase):
                 sala = servidor.app[SERVICIO].salas[bienvenida["codigo"]]
                 p = sala.partida
                 p._viajar_equipo("la_copa", "futuro")
+                p.mision.ronda = 3
+                p.mision.resultado = dict(evento_id=97, opcion="corregir", correcto=True)
+                p.mision.presente.indice = 2
+                p.mision.presente.resultado = dict(evento_id=98, opcion="verificar", correcto=True)
                 p.mision.futuro.final.preparar(99)
+                p.mision.futuro.final.aventura.fabricado = True
                 punto = p.mision.futuro.final.puntos["aspirante"]
                 p.jugadores[bienvenida["id"]].update(x=punto["x"], y=punto["y"])
                 listo.set()

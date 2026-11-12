@@ -1,6 +1,7 @@
 """Recuperar el control: cuatro retos autoritativos, sin Pygame ni arte en red."""
 import random
 from multijugador.batalla_cooperativa import BatallaCooperativa
+from multijugador.aventura_final import AventuraFinal
 
 ROLES = ("guardian", "mensajero", "habitante", "aspirante")
 PROPUESTA = {
@@ -19,6 +20,7 @@ class FinalCooperativo:
         self.puntos = {rol: {k: v for k, v in por_id["futuro:" + tarea].items() if k in ("id", "nombre", "dimension", "x", "y")} for rol, tarea in
                        (("guardian", "archivos"), ("mensajero", "llave"),
                         ("habitante", "conexiones"), ("aspirante", "pantalla"))}
+        self.aventura = AventuraFinal(self.puntos)
         self.fase = "bloqueado"
         self.ronda = 0
         self.reloj = 0.0
@@ -67,14 +69,16 @@ class FinalCooperativo:
             self.avisos = "La señal se cortó. Reintenten: los casos y los pasos completados se conservan."
         return dict(mensaje=self.avisos, acierto=False, vista="final_cooperativo")
 
-    def objetivo(self, rol):
+    def objetivo(self, rol, identificador=None):
+        if self.fase == "preparacion" and not self.aventura.fabricado:
+            return self.aventura.objetivo(identificador)
         if len(self.hechos) == 4:
-            return self.puntos["aspirante"]
+            return self.puntos[rol]
         if rol == "mensajero" and "mensajero" not in self.hechos:
             return self.recogida if self.portador is None else self.ruta[min(self.tramo, len(self.ruta) - 1)]
         return self.puntos[rol]
 
-    def ejecutar(self, identificador, jugador, solicitud, jugadores, presentes, cerca):
+    def ejecutar(self, identificador, jugador, solicitud, jugadores, presentes, cerca, linea_libre=None):
         if self.fase == "bloqueado":
             raise ValueError("Primero investiguen el caso de NÚCLEO y tomen una decisión.")
         if type(solicitud.get("ronda_final")) is not int or solicitud["ronda_final"] != self.ronda:
@@ -82,6 +86,23 @@ class FinalCooperativo:
         if jugador.get("dimension") != "futuro" or jugador.get("interior"):
             raise ValueError("Vuelve a la ciudad para participar en el final.")
         operacion = solicitud.get("operacion")
+        if operacion == "continuar":
+            if (self.fase != "victoria" or type(solicitud.get("revision_cierre")) is not int
+                    or solicitud.get("revision_cierre") != self.aventura.revision):
+                raise ValueError("El cierre cambió. Revisa la escena actual.")
+            self.aventura.avanzar()
+            return dict(mensaje="", silencioso=True)
+        if operacion in ("material", "depositar", "fabricar"):
+            if self.fase != "preparacion":
+                raise ValueError("La preparación ya terminó.")
+            mensaje = self.aventura.preparar(operacion, identificador, jugador, solicitud, cerca, self.reloj)
+            return dict(mensaje=mensaje, vista="final_cooperativo", silencioso=True)
+        if operacion in ("disparar", "municion"):
+            if self.fase != "activo" or len(self.hechos) == 4:
+                raise ValueError("El combate no está activo.")
+            mensaje = self.aventura.combatir(operacion, identificador, jugador, solicitud, self.reloj, self.batalla,
+                                              linea_libre or (lambda a, b: False))
+            return dict(mensaje=mensaje, silencioso=True)
         rol = solicitud.get("rol", jugador["rol"])
         if rol not in ROLES:
             raise ValueError("Elige un rol válido.")
@@ -89,7 +110,7 @@ class FinalCooperativo:
         transportando = rol == "mensajero" and self.portador == identificador
         if rol != jugador["rol"] and rol in ocupados and not transportando:
             raise ValueError("Esa tarea le corresponde a tu compañero.")
-        objetivo = self.puntos["aspirante"] if operacion in ("iniciar", "reintentar", "activar") else self.objetivo(rol)
+        objetivo = self.puntos["aspirante"] if operacion in ("iniciar", "reintentar") else self.puntos[jugador["rol"]] if operacion == "activar" else self.objetivo(rol, identificador)
         if operacion == "auxiliar":
             aliado = solicitud.get("aliado")
             objetivo = jugadores.get(aliado, {}) if type(aliado) is str else {}
@@ -108,11 +129,18 @@ class FinalCooperativo:
         if operacion == "activar" and self.fase == "victoria":
             return dict(mensaje=self.avisos, vista="final_cooperativo", silencioso=True)
         if operacion == "iniciar" and self.fase == "preparacion":
+            if self.aventura.faltan:
+                raise ValueError("Primero terminen: " + ", ".join(self.aventura.faltan) + ". Vuelvan por el portal.")
+            if not self.aventura.fabricado:
+                raise ValueError("Ayuden a la rebelión: lleven tres piezas al taller y fabriquen el equipo.")
             self.fase = "activo"
             self.batalla.reiniciar(self.hechos)
             self.ronda += 1
             self.avisos = "¡Sal de las marcas! Cuando NÚCLEO recargue, usen las estaciones."
         elif operacion == "reintentar" and self.fase == "reintento":
+            for mini in self.aventura.minis:
+                mini["aviso"] = 2.5
+            self.aventura.generar_en = self.reloj + 3
             self.integridad = 3
             self.fase = "activo"
             self.batalla.reiniciar(self.hechos)
@@ -134,6 +162,7 @@ class FinalCooperativo:
             self.activaciones.add(identificador)
             if presentes and set(presentes).issubset(self.activaciones):
                 self.fase = "victoria"
+                self.aventura.victoria()
                 self.avisos = "¡Lo lograron! NÚCLEO ayuda a la ciudad bajo supervisión humana."
         elif rol == "guardian" and operacion == "comparar":
             if type(solicitud.get("campo")) is not str or solicitud["campo"] not in self.registro:
@@ -190,7 +219,7 @@ class FinalCooperativo:
             if self.propuesta != CORRECTA:
                 return self._fallo("Revisa tu propuesta: pruebas comprobadas y supervisión humana.")
             self.hechos.add("aspirante")
-            self.avisos = "¡Consejo autorizado! Reúnanse en la pantalla y activen juntos."
+            self.avisos = "¡Consejo autorizado! Cada participante activa su propia consola."
         else:
             raise ValueError("Esa acción no corresponde a este minijuego.")
         if self.fase == "activo" and self.batalla.fase == 1 and {"guardian", "habitante"} <= self.hechos:
@@ -200,6 +229,12 @@ class FinalCooperativo:
     def actualizar(self, segundos, jugadores, pulsos, cerca, presentes=None):
         dt = max(0, min(segundos, 1))
         self.reloj += dt
+        if self.fase == "victoria":
+            self.aventura.actualizar(dt, self.reloj, jugadores, set(jugadores) if presentes is None else presentes, self.batalla, self.hechos)
+            return
+        if self.fase == "preparacion":
+            for i in set(self.aventura.cargas) - (set(jugadores) if presentes is None else presentes):
+                self.aventura.cargas.pop(i)
         if self.fase != "activo":
             return
         if presentes is not None:
@@ -207,9 +242,13 @@ class FinalCooperativo:
                 self.portador = None
             if len(self.hechos) == 4 and presentes and set(presentes).issubset(self.activaciones):
                 self.fase = "victoria"
+                self.aventura.victoria()
                 self.avisos = "¡Lo lograron! NÚCLEO ayuda a la ciudad bajo supervisión humana."
                 return
         golpes = self.batalla.actualizar(dt, jugadores, set(jugadores) if presentes is None else presentes, self.hechos)
+        golpes = sorted(set(golpes) | set(self.aventura.actualizar(dt, self.reloj, jugadores,
+                        set(jugadores) if presentes is None else presentes, self.batalla, self.hechos)))
+        self.batalla.derribados.update(golpes)
         if golpes:
             if self.portador in golpes:
                 self.portador = None
@@ -232,7 +271,7 @@ class FinalCooperativo:
         if self.fase == "bloqueado":
             return dict(fase=self.fase)
         return dict(fase=self.fase, ronda=self.ronda, evento_id=self.evento_id, integridad=self.integridad,
-                    batalla=self.batalla.publico(),
+                    batalla=self.batalla.publico(), aventura=self.aventura.publico(self.batalla),
                     hechos=sorted(self.hechos), aviso=self.avisos, activaciones=sorted(self.activaciones),
                     puntos=self.puntos, ruta=self.ruta if "guardian" in self.hechos else [],
                     recogida=self.recogida, tramo=self.tramo, portador=self.portador,

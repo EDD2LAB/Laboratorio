@@ -223,6 +223,8 @@ def dibujar(panel, superficie):
     if panel.informe_exportado:
         panel.texto_lineas(superficie, "Guardado en: " + panel.informe_exportado, 30, 570, 400, panel.pequena, VERDE)
     for clave, texto, centro in (("informe_exportar", "Exportar a .txt", (130, 660)), ("informe_cerrar", "Cerrar", (330, 660))):
+        if clave == "informe_cerrar" and panel.modo == "desenlace":
+            continue
         boton = Boton(texto, centro=centro, fuente=panel.fuente, tamano=(180, 44))
         boton.dibujar(superficie, panel.vista.mouse)
         panel.botones[clave] = boton

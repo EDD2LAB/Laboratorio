@@ -582,6 +582,9 @@ class MenuInicio:
                     if not self.pausa.activo and self.vista == "partida" and self.partida:
                         posicion = a_lienzo(evento.pos, tamano) if hasattr(evento, "pos") else self.mouse
                         if self.partida.manejar_evento(evento, posicion, self.cliente):
+                            if getattr(self.partida, "volver_menu", False):
+                                self.limpiar_conexion()
+                                self.vista = "principal"
                             continue
                         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
                             self.pausa.abrir()  # Esc ya no saca de la partida: abre el menú

@@ -353,3 +353,30 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   cliente caído aprobada en 4,158 s. Los recuentos se superponen.
 - Implementación local, sin push ni despliegue. Mapa nuevo, hitboxes y música
   se mantienen fuera de esta integración.
+
+
+# Rebelión y desenlace de las tres eras (2026-11-12)
+
+- Protocolo 17. Taller con tres piezas transportables, fabricación de módulo y
+  blásteres, munición compartida, caja recargable y un tipo de mini-núcleo.
+- Combate de apoyo autoritativo: dos impactos por enemigo, alcance, línea de
+  visión, cadencia y límites de munición. Hasta dos enemigos; se suspenden sus
+  ataques durante las pausas. Los minijuegos siguen disponibles sin munición.
+- Consolas individuales sin cuenta atrás. Tras la activación se sincronizan
+  reconfiguración, tres epílogos, informe, resultado y créditos.
+- No empieza la preparación si faltan La Copa o Distrito Conecta. Reconexión
+  presenta el subpaso vigente; el resultado cuenta los casos aun sin informe
+  local. Los umbrales de victoria y humo se mantienen.
+- Créditos desde datos/creditos.json con cuatro registros vacíos, sin nombres
+  inventados. Ilustraciones opcionales ausentes usan fondos existentes; mini-
+  núcleos, armas, piezas y cajas tienen gráficos por código.
+- Música de victoria trasladada al resultado real. Registro de las pistas de
+  batalla y Ciudad Núcleo con respaldo a Ambiente.mp3 si no están disponibles.
+- Suite completa: 557 pruebas aprobadas en 585,054 s. Después de los últimos
+  ajustes: 17 comprobaciones específicas aprobadas en 21,503 s. Los recuentos
+  se superponen. Revisión visual de taller, disparo, reconfiguración, epílogo,
+  informe, resultado y créditos.
+- Simulación del contexto del servidor aprobada: protocolo 17, 67 archivos,
+  dos humanos, dos bots, ocho casos y 200 ticks sin Pygame. No es un build Docker.
+- Paredes y mapas sin cambios. Implementación local: sin push ni despliegue.
+  Documentación vigente: desenlace_tres_eras.md.

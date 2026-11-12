@@ -170,3 +170,22 @@ con certeza a todos los personajes solicitados. Confirmar con el equipo antes de
 El mapa nuevo mide 1048 x 577 y el provisional 998 x 576. Revisar alineación
 con paredes, puertas y puntos de aparición antes de reemplazarlo. Los estados
 de NÚCLEO no deben dividirse suponiendo ocho cuadros: comprobar cada tira.
+
+
+## Cierre de las tres eras en protocolo 17
+
+| Archivo opcional | Uso | Respaldo sin el archivo |
+| --- | --- | --- |
+| Imagenes/Finales/epilogo_futuro.png | Viñeta de Ciudad Núcleo | Mapa del Futuro oscurecido |
+| Imagenes/Finales/epilogo_presente.png | Viñeta de Distrito Conecta | Mapa del Presente oscurecido |
+| Imagenes/Finales/epilogo_copa.png | Viñeta de La Copa | Fondo de La Copa oscurecido |
+| Imagenes/Finales/Final_tres_eras.png | Resultado positivo | Final_positivo.jpeg |
+| Imagenes/Finales/Final_humo_tres_eras.png | Resultado de humo | Game_over.jpeg |
+
+Las cinco ilustraciones se ajustan a 960 x 720 con transform.scale, una vez al
+cargar. No se encontraron en esta copia local. Las piezas, blásteres, cajas,
+mini-núcleos y consolas tienen gráficos por código: no exigen imágenes nuevas.
+Se reutiliza NPCS/Nucleo/NucleoSereno.png para la reconfiguración.
+
+Las pistas musica_nucleo.mp3, batalla_fase1.mp3 y batalla_fase2.mp3 se buscan en
+Audios/Música/, Audios/Musica/ y Audios/. Sin ellas se conserva Ambiente.mp3.

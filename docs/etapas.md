@@ -16,7 +16,7 @@
 
 ## Trabajo restante
 
-El protocolo local actual es 16. Render conserva la última versión publicada
+El protocolo local actual es 17. Render conserva la última versión publicada
 hasta realizar el próximo push y despliegue.
 
 Las etapas 1 y 2 se publicaron y desplegaron en Render en `be2f6df`.
@@ -58,3 +58,5 @@ El final cooperativo acordado con el usuario se implementa en
 `docs/final_cooperativo.md`: cuatro minijuegos enlazados y reintento sin perder
 casos. No implementa un prompt de batalla que no haya sido entregado. Música y
 mapa exterior nuevo del Futuro siguen pendientes.
+
+El final ampliado del protocolo 17 se documenta en `desenlace_tres_eras.md`.

@@ -203,7 +203,9 @@ class PanelCooperativo:
             self.informe, self.informe_exportado = acuse["informe"], ""
             self.informe_scroll, self.informe_arrastre = 0, None
             self.informe_inicio = pygame.time.get_ticks()
-            self.modo = "informe"
+            from interfaz.final_cooperativo import estado
+            cierre = estado(self.vista).get("aventura", {}).get("cierre", {})
+            self.modo = "desenlace" if cierre.get("etapa") == "informe" else "informe"
             return
         if acuse.get("ok") and acuse.get("vista") == "dialogo_npc":
             dialogo_npc.abrir(self, acuse["dialogo"])
@@ -414,6 +416,10 @@ class PanelCooperativo:
 
     def dibujar(self, superficie):
         self.botones = {}
+        if self.modo == "desenlace":
+            from interfaz.desenlace import pantalla
+            pantalla(self).dibujar(superficie)
+            return
         if self.modo == "final_cooperativo":
             from interfaz.final_cooperativo import pantalla
             pantalla(self).dibujar(superficie)
@@ -715,6 +721,9 @@ class PanelCooperativo:
         return self.destinos_eco() if self.cerca_eco() and not self.destino_fijo else self.destinatarios()
 
     def manejar(self, evento, posicion, cliente):
+        if self.modo == "desenlace":
+            from interfaz.desenlace import pantalla
+            return pantalla(self).manejar(evento, posicion, cliente)
         if self.modo == "final_cooperativo":
             from interfaz.final_cooperativo import pantalla
             if pantalla(self).manejar(evento, posicion, cliente):

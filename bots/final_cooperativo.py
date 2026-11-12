@@ -15,6 +15,19 @@ def planificar(bot, estado, jugadores, tarea):
     humanos = [j for j in jugadores if j.get("controlador") != "bot" and j.get("conectado", True)]
     def accion(destino, operacion, **datos):
         return tarea("TRABAJANDO", destino, "final_accion", operacion=operacion, rol=bot.rol, ronda_final=final["ronda"], radio=40, **datos)
+    aventura = final.get("aventura", {})
+    if fase == "preparacion" and aventura.get("faltan"):
+        return dict(estado="ESPERANDO_EQUIPO", esperar=True)
+    if fase == "preparacion" and not aventura.get("fabricado"):
+        if bot.identificador in aventura.get("cargas", {}):
+            return accion(aventura["taller"], "depositar")
+        materiales = aventura.get("materiales", [])
+        if materiales:
+            pieza = min(materiales, key=lambda p: math.hypot(p["x"] - bot.posicion["x"], p["y"] - bot.posicion["y"]))
+            return accion(pieza, "material", pieza=pieza["id"])
+        if len(aventura.get("entregadas", [])) == 3:
+            return accion(aventura["taller"], "fabricar")
+        return dict(estado="ESPERANDO_EQUIPO", esperar=True)
     if fase in ("preparacion", "reintento"):
         if fase == "preparacion" and humanos:
             return dict(estado="ESPERANDO_EQUIPO", esperar=True)
@@ -23,12 +36,12 @@ def planificar(bot, estado, jugadores, tarea):
     if len(hechos) == 4:
         if bot.identificador in final["activaciones"]:
             return dict(estado="ESPERANDO_EQUIPO", esperar=True)
-        return accion(puntos["aspirante"], "activar")
+        return accion(puntos[bot.rol], "activar")
     batalla = final.get("batalla", {})
     if bot.identificador in batalla.get("derribados", []):
         return dict(estado="ESPERANDO_AYUDA", esperar=True)
     if batalla.get("turno") in ("aviso", "rayo"):
-        blancos = batalla.get("blancos", [])
+        blancos = batalla.get("blancos", []) + [[m["x"], m["y"]] for m in aventura.get("minis", [])]
         def distancia(punto):
             return min((math.hypot(punto["x"] - x, punto["y"] - y) for x, y in blancos), default=1000)
         if distancia(bot.posicion) < 44:
@@ -47,6 +60,12 @@ def planificar(bot, estado, jugadores, tarea):
                            and math.hypot(j["x"] - bot.posicion["x"], j["y"] - bot.posicion["y"]) <= 68), None)
             if aliado:
                 return accion(aliado, "auxiliar", aliado=aliado["id"])
+        if aventura.get("municion", 0) > 0:
+            for mini in aventura.get("minis", []):
+                origen = bot.posicion["x"], bot.posicion["y"]
+                destino = mini["x"], mini["y"]
+                if math.dist(origen, destino) <= 180 and bot._navegador.colisiones.trayecto_libre(origen, destino):
+                    return accion(bot.posicion, "disparar", mini=mini["id"])
         return dict(estado="ESPERANDO_RECARGA", esperar=True)
     if batalla.get("fase") == 1 and bot.rol in ("mensajero", "aspirante"):
         return dict(estado="ESPERANDO_EQUIPO", esperar=True)
