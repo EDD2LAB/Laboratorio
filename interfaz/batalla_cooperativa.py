@@ -157,28 +157,24 @@ def dibujar_aviso(superficie, final, fuente, yo=None, efectos=None, ahora_ms=0):
         relleno.width = round(relleno.width * fraccion)
         pygame.draw.rect(superficie, color if peligro else CIAN, relleno)
 
-    # Barra inferior: munición como celdas de batería y teclas.
-    municion = final.get("aventura", {}).get("municion", 0)
-    abajo = pygame.Rect(130, 572, 700, 34)
+    # Barra inferior: bláster sin munición, con su recarga de 0,6 s y la tecla.
+    abajo = pygame.Rect(230, 572, 500, 34)
     _panel(superficie, abajo, (60, 110, 130))
-    celda_llena, celda_vacia = sprites.celda_bateria(True), sprites.celda_bateria(False)
-    paso = celda_llena.get_width() + 3
-    bateria = pygame.Rect(abajo.x + 12, abajo.y + 6, 24 * paso + 5, celda_llena.get_height() + 7)
-    escasa = municion <= 3 and (ahora_ms // 250) % 2
-    borde = (255, 98, 109) if escasa else (160, 156, 196)
-    pygame.draw.rect(superficie, sprites.CONTORNO, bateria)
-    pygame.draw.rect(superficie, borde, bateria, 2)
-    superficie.fill(borde, (bateria.right, bateria.centery - 4, 4, 8))
-    for i in range(24):
-        superficie.blit(celda_llena if i < municion else celda_vacia, (bateria.x + 4 + i * paso, bateria.y + 4))
-    x = bateria.right + 14
-    _texto(superficie, fuente, f"{municion}", CIAN if not escasa else (255, 98, 109), (x + 12, abajo.centery))
-    x += 34
-    for tecla, accion in (("F", "Disparar"), ("R", "Munición (taller)")):
-        imagen = sprites.tecla(3)
-        rect = imagen.get_rect(midleft=(x, abajo.centery))
-        superficie.blit(imagen, rect)
-        _texto(superficie, fuente, tecla, CREMA, (rect.centerx, rect.centery - 1))
-        etiqueta = fuente.render(accion, True, CREMA)
-        superficie.blit(etiqueta, etiqueta.get_rect(midleft=(rect.right + 6, abajo.centery)))
-        x = rect.right + 14 + etiqueta.get_width()
+    arma = sprites.blaster_hud()
+    superficie.blit(arma, arma.get_rect(midleft=(abajo.x + 12, abajo.centery)))
+    carga = efectos.carga_blaster() if efectos is not None else 1.0
+    barra = pygame.Rect(abajo.x + 12 + arma.get_width() + 10, abajo.centery - 6, 120, 12)
+    pygame.draw.rect(superficie, sprites.CONTORNO, barra)
+    pygame.draw.rect(superficie, (160, 156, 196), barra, 2)
+    for i in range(8):  # ocho segmentos de píxel, como el resto del HUD
+        tinta = CIAN if (i + 1) / 8 <= carga + 1e-6 else (34, 46, 60)
+        superficie.fill(tinta, (barra.x + 3 + i * 14, barra.y + 3, 12, barra.height - 6))
+    lista = carga >= 1
+    estado = "Listo" if lista else "Recargando"
+    _texto(superficie, fuente, estado, CIAN if lista else (160, 156, 196), (barra.right + 52, abajo.centery))
+    imagen = sprites.tecla(3)
+    rect = imagen.get_rect(midleft=(barra.right + 108, abajo.centery))
+    superficie.blit(imagen, rect)
+    _texto(superficie, fuente, "F", CREMA, (rect.centerx, rect.centery - 1))
+    etiqueta = fuente.render("Disparar a la mira", True, CREMA)
+    superficie.blit(etiqueta, etiqueta.get_rect(midleft=(rect.right + 6, abajo.centery)))

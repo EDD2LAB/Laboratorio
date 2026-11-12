@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pygame  # noqa: E402
 
-from multijugador.aventura_final import ALCANCE_BLASTER  # noqa: E402
+from multijugador.aventura_final import ALCANCE_BLASTER, ESPERA_BLASTER  # noqa: E402
 from multijugador.dimensiones_red import cargar_datos  # noqa: E402
 from multijugador.movimiento import FACTOR_VELOCIDAD_PRESENTE, ColisionesMapa  # noqa: E402
 
@@ -29,7 +29,7 @@ RAYO = .7
 PAUSA = 6.0  # el juego usa 26 / 22 s; aquí se acorta para probar rápido
 VISTA = (320, 240)  # mismo zoom ×3 que el Futuro
 AYUDA = (
-    "WASD/flechas mover · F disparar · R munición",
+    "WASD/flechas mover · F disparar",
     "Espacio ciclo automático · 1 tanda de rayos ahora",
     "2 cambiar fase · M mini-núcleo · P pulso",
     "X caer/levantarse · L perder señal",
@@ -64,7 +64,7 @@ class Simulador:
         self.centro = (cx, cy)
         self.fase, self.fase_batalla, self.turno, self.segundos = "activo", 1, "recarga", PAUSA
         self.oleada, self.blancos, self.derribados = 1, [], set()
-        self.integridad, self.municion, self.fabricado = 3, 12, True
+        self.integridad, self.fabricado = 3, True
         self.minis, self.numero_mini, self.trazo, self.trazo_hasta = [], 0, None, 0.0
         self.cargas, self.entregadas = {}, []
         self.automatico, self.reloj, self.enfriamiento = True, 0.0, 0.0
@@ -96,20 +96,15 @@ class Simulador:
     def disparar(self, linea_libre):
         from interfaz.efectos_combate import elegir_objetivo
         mini, apuntable = elegir_objetivo(self.minis, (self.yo["x"], self.yo["y"]), linea_libre)
-        if (not mini or not apuntable or self.municion <= 0 or self.reloj < self.enfriamiento
+        if (not mini or not apuntable or self.reloj < self.enfriamiento
                 or self.turno not in ("aviso", "rayo") or self.yo["id"] in self.derribados):
             return False
         self.trazo = [round(self.yo["x"]), round(self.yo["y"]), round(mini["x"]), round(mini["y"])]
-        self.trazo_hasta, self.enfriamiento = self.reloj + .18, self.reloj + .6
-        self.municion -= 1
+        self.trazo_hasta, self.enfriamiento = self.reloj + .18, self.reloj + ESPERA_BLASTER
         mini["vida"] -= 1
         if mini["vida"] <= 0:
             self.minis.remove(mini)
-            self.municion = min(24, self.municion + 1)
         return True
-
-    def municion_taller(self):
-        self.municion = min(24, self.municion + 6)
 
     def caer_o_levantarse(self):
         self.derribados ^= {self.yo["id"]}
@@ -128,7 +123,7 @@ class Simulador:
         elif self.cargas:
             self.cargas, self.entregadas = {}, self.entregadas + ["pieza%d" % len(self.entregadas)]
         else:
-            self.fase, self.fabricado, self.municion = "activo", True, 12
+            self.fase, self.fabricado = "activo", True
 
     # --- Tiempo -------------------------------------------------------------------
     def mover(self, dx, dy, dt):
@@ -183,7 +178,7 @@ class Simulador:
             puntos=dict(aspirante=dict(x=self.centro[0] - 150, y=self.centro[1] - 80)),
             batalla=dict(fase=self.fase_batalla, turno=self.turno, segundos=round(self.segundos, 1),
                          oleada=self.oleada, blancos=list(self.blancos), derribados=sorted(self.derribados)),
-            aventura=dict(fabricado=self.fabricado, municion=self.municion, disparo=self.trazo,
+            aventura=dict(fabricado=self.fabricado, disparo=self.trazo,
                           minis=[dict(m, aviso=round(m["aviso"], 1)) for m in self.minis],
                           minis_activos=self.turno in ("aviso", "rayo"), taller=dict(x=self.centro[0] - 200, y=self.centro[1]),
                           cargas=dict(self.cargas), entregadas=list(self.entregadas), materiales=[]))
@@ -222,7 +217,7 @@ class Vista:
         sim = self.sim
         acciones = {
             pygame.K_f: lambda: sim.disparar(self.colisiones.trayecto_libre) or self.avisar("No hay mini-núcleo al alcance", ahora_ms),
-            pygame.K_r: sim.municion_taller, pygame.K_1: sim.tanda, pygame.K_2: sim.cambiar_fase,
+            pygame.K_1: sim.tanda, pygame.K_2: sim.cambiar_fase,
             pygame.K_m: sim.nuevo_mini, pygame.K_p: sim.pulso, pygame.K_x: sim.caer_o_levantarse,
             pygame.K_l: sim.perder_senal, pygame.K_b: sim.preparacion,
         }
@@ -304,7 +299,7 @@ class Vista:
         pantalla.blit(cabecera, cabecera.get_rect(midtop=(480, 12)))
         if self.ayuda:
             alto = 18 * len(AYUDA) + 12
-            caja = pygame.Rect(16, 562 - alto, 420, alto)  # sobre la barra de munición, sin tapar el HUD
+            caja = pygame.Rect(16, 562 - alto, 420, alto)  # sobre la barra inferior, sin tapar el HUD
             fondo = pygame.Surface(caja.size, pygame.SRCALPHA)
             fondo.fill((8, 22, 32, 215))
             pantalla.blit(fondo, caja)

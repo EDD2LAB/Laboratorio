@@ -16,7 +16,7 @@ def final(turno="aviso", segundos=2.0, minis=None, disparo=None, integridad=3, d
                 puntos=dict(aspirante=dict(x=300, y=300)),
                 batalla=dict(fase=1, turno=turno, segundos=segundos, blancos=[(200, 300)] if turno != "recarga" else [],
                              derribados=list(derribados)),
-                aventura=dict(fabricado=True, municion=2, disparo=disparo, taller=dict(x=100, y=300), cargas={},
+                aventura=dict(fabricado=True, disparo=disparo, taller=dict(x=100, y=300), cargas={},
                               minis=[dict(id=1, x=400, y=300, vida=2, aviso=2.5)] if minis is None else minis,
                               minis_activos=turno in ("aviso", "rayo")))
 

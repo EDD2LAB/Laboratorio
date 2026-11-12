@@ -35,7 +35,6 @@ class Aventura(unittest.TestCase):
         self.colocar(self.f.puntos["aspirante"])
         self.assertFalse(self.accion("iniciar")["ok"])
         self.fabricar()
-        self.assertEqual(self.a.municion, 12)
         self.colocar(self.f.puntos["aspirante"])
         self.assertTrue(self.accion("iniciar")["ok"])
 
@@ -74,7 +73,7 @@ class Aventura(unittest.TestCase):
         j = self.p.jugadores["guardian"]
         self.a.minis = [dict(id=1, x=j["x"], y=j["y"], vida=2, aviso=3)]
 
-    def test_dos_impactos_consumen_municion_compartida_y_desactivan(self):
+    def test_dos_impactos_desactivan_y_hay_espera_entre_disparos(self):
         self.combate()
         self.assertFalse(self.accion("disparar", mini=True)["ok"])
         self.assertTrue(self.accion("disparar", mini=1)["ok"])
@@ -82,25 +81,23 @@ class Aventura(unittest.TestCase):
         self.f.reloj += 1
         self.assertTrue(self.accion("disparar", mini=1)["ok"])
         self.assertFalse(self.a.minis)
-        self.assertEqual(self.a.municion, 11)
 
-    def test_disparo_sin_linea_de_vision_no_consume_cargas(self):
+    def test_disparo_sin_linea_de_vision_no_impacta(self):
         self.combate()
         self.p.mision.linea_final = lambda *args: False
         self.assertFalse(self.accion("disparar", mini=1)["ok"])
-        self.assertEqual(self.a.municion, 12)
+        self.assertEqual(self.a.minis[0]["vida"], 2)
 
-    def test_sin_municion_no_bloquea_minijuegos_y_caja_tiene_limite(self):
+    def test_disparos_ilimitados_sin_caja_de_municion(self):
         self.combate()
-        self.a.municion = 0
-        self.assertFalse(self.accion("disparar", mini=1)["ok"])
-        self.f.batalla.turno, self.f.batalla.restante = "recarga", 15
-        self.colocar(self.f.puntos["guardian"])
-        self.assertTrue(self.accion("comparar", campo=base.respuesta_guardian(self.f))["ok"])
+        self.a.minis[0]["vida"] = 99
+        for _ in range(30):  # más que la antigua reserva de 24 cargas
+            self.assertTrue(self.accion("disparar", mini=1)["ok"])
+            self.f.reloj += 1
+        self.assertEqual(self.a.minis[0]["vida"], 69)
+        self.assertNotIn("municion", self.a.publico(self.f.batalla))
         self.colocar(self.f.puntos["mensajero"])
-        self.assertTrue(self.accion("municion")["ok"])
         self.assertFalse(self.accion("municion")["ok"])
-        self.assertEqual(self.a.municion, 6)
 
     def test_minis_se_detienen_durante_la_pausa(self):
         self.combate()
@@ -137,7 +134,7 @@ class Aventura(unittest.TestCase):
 
     def test_bots_recolectan_y_fabrican_sin_teletransporte(self):
         from bots.gestor_bots import GestorBots
-        self.a.fabricado, self.a.municion = False, 0
+        self.a.fabricado = False
         gestor = GestorBots(self.p, set(), "normal")
         for _ in range(2500):
             self.p.actualizar(self.p.ultima + .1)

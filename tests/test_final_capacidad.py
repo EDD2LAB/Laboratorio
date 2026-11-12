@@ -55,7 +55,6 @@ class CapacidadFinal(unittest.TestCase):
             final.activaciones = set(p.jugadores)
             final.aventura.minis = [dict(id=n, x=100, y=200, vida=2, aviso=2.5) for n in (1, 2)]
             final.aventura.trazo = [100, 200, 130, 230]
-            final.aventura.municion = 24
             final.batalla.fase = 2
             final.batalla.blancos = [[j["x"], j["y"]] for j in p.jugadores.values()]
             final.batalla.derribados = set(p.jugadores)

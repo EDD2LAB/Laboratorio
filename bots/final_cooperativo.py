@@ -1,5 +1,6 @@
 """Los bots leen las mismas tarjetas y usan las mismas acciones que los jugadores."""
 import math
+from multijugador.aventura_final import ALCANCE_BLASTER
 from multijugador.final_cooperativo import CAMPOS_ORDEN, PRUEBAS, opcion_correcta
 
 
@@ -58,12 +59,11 @@ def planificar(bot, estado, jugadores, tarea):
                            and math.hypot(j["x"] - bot.posicion["x"], j["y"] - bot.posicion["y"]) <= 68), None)
             if aliado:
                 return accion(aliado, "auxiliar", aliado=aliado["id"])
-        if aventura.get("municion", 0) > 0:
-            for mini in aventura.get("minis", []):
-                origen = bot.posicion["x"], bot.posicion["y"]
-                destino = mini["x"], mini["y"]
-                if math.dist(origen, destino) <= 180 and bot._navegador.colisiones.trayecto_libre(origen, destino):
-                    return accion(bot.posicion, "disparar", mini=mini["id"])
+        for mini in aventura.get("minis", []):
+            origen = bot.posicion["x"], bot.posicion["y"]
+            destino = mini["x"], mini["y"]
+            if math.dist(origen, destino) <= ALCANCE_BLASTER and bot._navegador.colisiones.trayecto_libre(origen, destino):
+                return accion(bot.posicion, "disparar", mini=mini["id"])
         return dict(estado="ESPERANDO_RECARGA", esperar=True)
     roja = batalla.get("fase") == 2
     if bot.rol in hechos or (not roja and bot.rol in final.get("verde", [])):

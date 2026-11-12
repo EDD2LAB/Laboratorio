@@ -935,9 +935,6 @@ class VistaPartida:
         if (evento.type == pygame.KEYDOWN and not self.panel.activo and self.dimension == FUTURO and not self.interior):
             final = self.contexto().get("desafio_final") or {}
             aventura = final.get("aventura", {})
-            if final.get("fase") == "activo" and evento.key == pygame.K_r:
-                cliente.actuar("final_accion", operacion="municion", ronda_final=final["ronda"])
-                return True
             if final.get("fase") == "activo" and evento.key == pygame.K_f:
                 mini, _ = self._objetivo_blaster(final)
                 if mini:

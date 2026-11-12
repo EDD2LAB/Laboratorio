@@ -41,14 +41,14 @@ class Simulacion(unittest.TestCase):
         self.sim.paso(.8)
         self.assertEqual((self.sim.turno, self.sim.oleada), ("aviso", 2))
 
-    def test_disparo_gasta_municion_y_destruye_en_dos(self):
+    def test_dos_disparos_destruyen_con_espera_entre_ellos(self):
         self.sim.nuevo_mini()
         self.sim.tanda()
         libre = lambda a, b: True
         self.assertTrue(self.sim.disparar(libre))
         self.sim.paso(.7)
         self.assertTrue(self.sim.disparar(libre))
-        self.assertEqual((self.sim.minis, self.sim.municion), ([], 11))
+        self.assertEqual(self.sim.minis, [])
 
     def test_estado_tiene_la_forma_del_servidor(self):
         estado = self.sim.estado()

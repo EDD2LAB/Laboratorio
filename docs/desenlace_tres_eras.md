@@ -32,21 +32,20 @@ línea usan las mismas reglas del servidor.
 ## Combate auxiliar
 
 - F dispara al mini-núcleo más cercano. El servidor exige distancia <= 180,
-  línea de visión sin paredes, munición disponible y 0,6 s entre disparos.
+  línea de visión sin paredes y 0,6 s entre disparos de cada persona. Desde el
+  protocolo 22 los disparos son ilimitados: no hay munición.
 - Dos impactos desactivan cada mini-núcleo. Hay como máximo dos; se generan
   espaciados al menos doce segundos en estaciones ya validadas del mapa.
 - Son emisores fijos de pulsos cortos: su radio de peligro se señala en el suelo.
   Sus temporizadores y ataques se suspenden durante las pausas de los minijuegos.
-- Munición compartida: doce cargas al fabricar, máximo 24. R junto al taller
-  repone seis, con ocho segundos entre reposiciones para todo el equipo.
-- Desactivar un mini-núcleo devuelve una carga. Quedarse sin munición permite
-  seguir esquivando y resolviendo minijuegos: nunca bloquea la victoria.
+- La barra inferior muestra el bláster y su recarga de 0,6 s; ya no existen la
+  tecla R, la caja del taller ni el contador de cargas.
 - E ayuda a compañeros caídos. Los bots esquivan, disparan y ayudan; también
   transportan piezas y fabrican usando el mismo protocolo que una persona.
 
 ## Sincronización y reconexión
 
-El estado oficial incluye materiales, cargas, fabricación, munición, enemigos,
+El estado oficial incluye materiales, cargas, fabricación, enemigos,
 confirmaciones y subpaso del desenlace. Las acciones repetidas conservan la
 deduplicación de la campaña. Avanzar una escena requiere su revisión actual;
 dos solicitudes retrasadas no saltan dos escenas. Cualquier participante puede

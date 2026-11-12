@@ -52,5 +52,12 @@ propuesta incorrecta cuesta un punto de señal, como antes.
 - Con personas en la sala, los bots siguen sin resolver la parte de un rol
   que juega una persona; cubren solo los roles ausentes.
 
-Protocolo 20 exige actualizar juego y servidor juntos. Implementación local
+## Bláster sin munición (protocolo 22)
+
+Los disparos son ilimitados: solo hay 0,6 s de espera entre disparos de cada
+persona, que la barra inferior muestra como recarga. Desaparecen el contador
+compartido, la tecla R, la caja del taller y la carga devuelta al destruir un
+mini-núcleo. Así se evitan reglas que no pedían ninguna decisión.
+
+Cada cambio de protocolo exige actualizar juego y servidor juntos. Implementación local
 no significa push ni despliegue.

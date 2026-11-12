@@ -23,7 +23,6 @@ def partida():
     p.mision.presente.resultado = dict(evento_id=30, opcion="verificar", correcto=True)
     p.mision.futuro.final.preparar(31)
     p.mision.futuro.final.aventura.fabricado = True
-    p.mision.futuro.final.aventura.municion = 12
     return p
 
 

@@ -2,6 +2,7 @@
 import math
 
 ALCANCE_BLASTER = 180  # px del mapa; el cliente lo usa para la mira.
+ESPERA_BLASTER = .6  # s entre disparos de una misma persona; disparos ilimitados (protocolo 22)
 
 PIEZAS = (("bateria", "Batería", "guardian"), ("circuito", "Circuito", "habitante"),
           ("carcasa", "Carcasa", "aspirante"))
@@ -22,8 +23,6 @@ class AventuraFinal:
         self.entregadas = set()
         self.cargas = {}
         self.fabricado = False
-        self.municion = 0
-        self.reponer_en = 0
         self.disparo_en = {}
         self.minis = []
         self.numero_mini = 0
@@ -65,7 +64,7 @@ class AventuraFinal:
             self.entregadas.add(pieza)
             return "¡Pieza entregada! " + str(len(self.entregadas)) + "/3."
         if operacion == "fabricar" and len(self.entregadas) == 3:
-            self.fabricado, self.municion = True, 12
+            self.fabricado = True
             return "¡Módulo y blásteres listos! Reúnanse para empezar."
         raise ValueError("Faltan piezas para fabricar el equipo.")
 
@@ -74,19 +73,9 @@ class AventuraFinal:
             raise ValueError("Primero fabriquen el equipo en el taller.")
         if identificador in batalla.derribados:
             raise ValueError("Espera ayuda antes de usar el bláster.")
-        if operacion == "municion":
-            punto = self.puntos["mensajero"]
-            if math.hypot(jugador["x"] - punto["x"], jugador["y"] - punto["y"]) > 68:
-                raise ValueError("Las cajas de munición están en el taller.")
-            if reloj < self.reponer_en or self.municion >= 24:
-                raise ValueError("Esperen la recarga de la caja o utilicen la munición disponible.")
-            self.municion = min(24, self.municion + 6)
-            self.reponer_en = reloj + 8
-            return "Seis cargas nuevas para todo el equipo."
         objetivo = solicitud.get("mini")
         mini = next((m for m in self.minis if type(objetivo) is int and m["id"] == objetivo), None)
-        if (not mini or batalla.turno not in ("aviso", "rayo") or self.municion <= 0
-                or reloj < self.disparo_en.get(identificador, 0)):
+        if not mini or batalla.turno not in ("aviso", "rayo") or reloj < self.disparo_en.get(identificador, 0):
             raise ValueError("Elige un mini-núcleo activo y espera a que recargue el bláster.")
         if math.hypot(jugador["x"] - mini["x"], jugador["y"] - mini["y"]) > ALCANCE_BLASTER:
             raise ValueError("Acércate al mini-núcleo para disparar.")
@@ -94,13 +83,11 @@ class AventuraFinal:
             raise ValueError("Hay una pared entre el bláster y el mini-núcleo.")
         self.trazo = [round(jugador["x"]), round(jugador["y"]), round(mini["x"]), round(mini["y"])]
         self.trazo_hasta = reloj + .18
-        self.disparo_en[identificador] = reloj + .6
-        self.municion -= 1
+        self.disparo_en[identificador] = reloj + ESPERA_BLASTER
         mini["vida"] -= 1
         if mini["vida"] == 0:
             self.minis.remove(mini)
-            self.municion = min(24, self.municion + 1)
-            return "¡Mini-núcleo desactivado! Recuperaron una carga."
+            return "¡Mini-núcleo desactivado!"
         return "¡Impacto! Falta uno para desactivarlo."
 
     def actualizar(self, dt, reloj, jugadores, presentes, batalla, hechos):
@@ -159,7 +146,7 @@ class AventuraFinal:
 
     def publico(self, batalla):
         return dict(disparo=self.trazo, fabricado=self.fabricado, entregadas=sorted(self.entregadas), cargas=dict(self.cargas),
-                    materiales=self.materiales(), taller=self.puntos["mensajero"], municion=self.municion,
+                    materiales=self.materiales(), taller=self.puntos["mensajero"],
                     minis=[dict(m, aviso=round(m["aviso"], 1)) for m in self.minis],
                     minis_activos=batalla.turno in ("aviso", "rayo") and self.etapa is None,
                     faltan=list(self.faltan), cierre=dict(etapa=self.etapa, indice=self.indice,

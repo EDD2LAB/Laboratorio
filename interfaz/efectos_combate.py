@@ -11,7 +11,7 @@ import random
 import pygame
 
 from interfaz import sprites_combate as sprites
-from multijugador.aventura_final import ALCANCE_BLASTER
+from multijugador.aventura_final import ALCANCE_BLASTER, ESPERA_BLASTER
 
 DURACION_PROYECTIL = .12
 DURACION_EXPLOSION = .36
@@ -45,6 +45,7 @@ class EfectosCombate:
         self.aviso_total = 3.0
         self.trazo = None
         self.ultimo_disparo = -9.0
+        self.ultimo_propio = -9.0
         self.minis = {}
         self.golpes = {}
         self.integridad = None
@@ -135,6 +136,8 @@ class EfectosCombate:
             self.fogonazos.append([trazo[0], trazo[1], t])
             self.ultimo_disparo = t
             propio = posicion is not None and math.hypot(trazo[0] - posicion[0], trazo[1] - posicion[1]) < 12
+            if propio:
+                self.ultimo_propio = t
             self.sonar("blaster_disparo", 1.0 if propio else .45)  # los tiros ajenos, más bajos
         self.trazo = trazo
 
@@ -215,6 +218,12 @@ class EfectosCombate:
 
     def recien_golpeado(self, ident):
         return self.t is not None and self.t - self.golpes.get(ident, -9) < DURACION_GOLPE
+
+    def carga_blaster(self):
+        """0 justo después de tu disparo, 1 cuando puedes volver a disparar."""
+        if self.t is None:
+            return 1.0
+        return max(0.0, min(1.0, (self.t - self.ultimo_propio) / ESPERA_BLASTER))
 
     def perdio_senal(self, segundos=.6):
         return self.t is not None and self.t - self.corazon_perdido < segundos

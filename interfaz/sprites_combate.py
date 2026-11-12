@@ -144,16 +144,9 @@ def tecla(factor=3):
 
 
 @lru_cache(maxsize=None)
-def celda_bateria(llena=True, factor=3):
-    """Una carga de munición: 2 x 5 píxeles de energía con brillo arriba."""
-    superficie = pygame.Surface((2, 5), pygame.SRCALPHA)
-    if llena:
-        superficie.fill(PALETA["C"])
-        superficie.fill(PALETA["w"], (0, 0, 2, 1))
-        superficie.fill(PALETA["c"], (0, 4, 2, 1))
-    else:
-        superficie.fill((34, 46, 60))
-    return ampliar(superficie, factor)
+def blaster_hud(factor=3):
+    """El mismo bláster del mapa, ampliado para la barra inferior."""
+    return ampliar(blaster(), factor)
 
 
 @lru_cache(maxsize=None)

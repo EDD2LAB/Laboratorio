@@ -214,7 +214,7 @@ class FinalCooperativo:
                 raise ValueError("La preparación ya terminó.")
             mensaje = self.aventura.preparar(operacion, identificador, jugador, solicitud, cerca, self.reloj)
             return dict(mensaje=mensaje, vista="final_cooperativo", silencioso=True)
-        if operacion in ("disparar", "municion"):
+        if operacion == "disparar":
             if self.fase != "activo" or len(self.hechos) == 4:
                 raise ValueError("El combate no está activo.")
             mensaje = self.aventura.combatir(operacion, identificador, jugador, solicitud, self.reloj, self.batalla,
