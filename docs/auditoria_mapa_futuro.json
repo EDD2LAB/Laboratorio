@@ -19,7 +19,7 @@
     },
     "MapaFuturo_hitboxes.json": {
       "cantidad": 197,
-      "sha256": "4fadca47a0cb8d45307bcadf340ec69d979c272cc45ed3f24d5d575e4052c4cb"
+      "sha256": "fbb9a7bcc48b58594079556ec0d2ef4b276c4dc56287741791c11e8c28376c13"
     },
     "Sede-Aspirante-FuturoInt_hitboxes.json": {
       "cantidad": 81,
@@ -242,6 +242,66 @@
         960,
         536
       ]
+    }
+  },
+  "ajuste_calles": {
+    "motivo": "Solicitud de liberar el paso por las calles: bordes de 2 px y pies de 8x5 en el exterior, conservando los trazados y los interiores.",
+    "indices_lineas": [
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      46,
+      47,
+      48,
+      49,
+      50,
+      51,
+      52,
+      53,
+      54,
+      55,
+      56,
+      57,
+      58,
+      59,
+      60,
+      61,
+      62,
+      63,
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71,
+      72
+    ],
+    "sha256_exterior_original": "4fadca47a0cb8d45307bcadf340ec69d979c272cc45ed3f24d5d575e4052c4cb",
+    "descansillo_central": {
+      "indices": [
+        86,
+        87
+      ],
+      "motivo": "El borde superior del puesto cerraba el paso entre la escalera y el jardin. Ajuste manual de ocho pixeles hacia la base del remate."
     }
   }
 }

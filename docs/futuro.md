@@ -1,4 +1,4 @@
-# Ciudad Núcleo en protocolo 18
+# Ciudad Núcleo en protocolo 19
 
 El juego ya utiliza el exterior definitivo `Imagenes/Fondos/Mapas/Futuro/MapaFuturo.png`
 de 1048 x 577 y sus paredes propias. El mapa generado a partir del Presente se
@@ -27,8 +27,23 @@ La normalización y el rectángulo final de dibujo coinciden en ambos lados.
 
 Los cinco interiores traían paredes, sin apariciones ni salidas. Se añadieron
 solo el spawn, una salida junto a la entrada visible y una interacción de mesa.
-Las paredes originales se conservan exactamente: sus cantidades y hashes están
-en `auditoria_mapa_futuro.json`, junto con las rutas comprobadas.
+Los trazados originales se conservan. A petición del usuario se ajustaron los
+47 bordes exteriores que tenían más de diez píxeles de grosor a dos píxeles de
+la imagen: ese margen invisible invadía calles y escaleras. Los otros 143
+segmentos conservan su grosor. También se corrigieron dos segmentos del puesto
+junto al descansillo central: su borde elevado sellaba el paso hacia la calle.
+Los edificios, las esculturas y todos los interiores mantienen sus obstáculos.
+El hash original y el ajustado están en `auditoria_mapa_futuro.json`.
+
+Solo en el exterior los pies ocupan 8 x 5 píxeles del lienzo, en lugar de 12 x 8;
+cliente, predicción, bots y servidor leen este tamaño del mismo JSON. La Copa,
+Distrito Conecta y los interiores conservan su caja anterior.
+
+La flecha del Futuro sigue los tramos transitables de la ruta de luces, rodea
+paredes y sigue visible aunque el objetivo ya esté en cámara. Al llegar cede
+el lugar al marcador E. Si no hay ruta no apunta en línea recta a una pared.
+La cuadrícula de guía se afina a cuatro píxeles para detectar los descansillos;
+la ruta se conserva entre cuadros y solo se recalcula al cambiar de tramo.
 
 ## Apariciones y rutas
 
@@ -49,10 +64,11 @@ en `auditoria_mapa_futuro.json`, junto con las rutas comprobadas.
 No se reemplaza una imagen interior ausente por una del Presente con otras
 paredes: se informa del recurso que falta. El generador provisional cancela su
 trabajo si ya existe el JSON exterior, para no destruir el trabajo manual.
-Las futuras modificaciones de paredes siguen haciéndose en el editor.
+Los siguientes cambios de trazado deben contrastarse con el arte, como este
+ajuste de grosor autorizado; no se eliminan obstáculos para inventar atajos.
 
 El servidor empaqueta las seis hitboxes y `logica/zonas_caminables.py` con las
-reglas actuales del contexto de Docker. Protocolo 18 exige actualizar juego y
+reglas actuales del contexto de Docker. Protocolo 19 exige actualizar juego y
 servidor juntos. Implementación local no significa push ni despliegue.
 
 ## Misión `nucleo_control`
@@ -76,4 +92,5 @@ de completar los casos del Presente. Los puntos usan ids de hitboxes existentes:
 El caso entra al expediente con la ficha de `datos/casos_expediente.json`,
 incluidos los campos legales incorporados en el protocolo 12.
 
-Validación final: 564 pruebas aprobadas en 677,243 segundos.
+La validación de la integración anterior fue de 582 pruebas. El ajuste de
+calles y orientación añade regresiones en `test_calles_guia_futuro.py`.

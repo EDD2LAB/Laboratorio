@@ -1052,10 +1052,14 @@ class VistaPartida:
         destino = tarea_actual(self).get("objetivo")
         yo = self.yo()
         if destino and yo:
-            clave = (destino["id"], round(yo["x"]/24), round(yo["y"]/24))
+            clave = (destino["id"], round(destino["x"]), round(destino["y"]),
+                     round(yo["x"]/24), round(yo["y"]/24), tuple(map(tuple, self.colisiones.bloqueos)))
             if destino["id"] != self.destino_ruta or (clave != self.clave_ruta and time.monotonic()-self.ultima_ruta > .8):
                 from interfaz.guia import buscar_camino
-                self.ruta_guia = buscar_camino(self.colisiones, (yo["x"], yo["y"]), (destino["x"], destino["y"]))
+                radio = (40 if destino["id"] == "portal" else 24) if self.dimension == FUTURO else 54
+                self.ruta_guia = buscar_camino(self.colisiones, (yo["x"], yo["y"]), (destino["x"], destino["y"]), radio=radio,
+                                             paso=4 if self.dimension == FUTURO else 8,
+                                             limite=40000 if self.dimension == FUTURO else 10000)
                 self.clave_ruta, self.ultima_ruta = clave, time.monotonic()
                 self.destino_ruta = destino["id"]
         else:
@@ -1529,9 +1533,19 @@ class VistaPartida:
         return anclas
 
     def _destino_flecha(self, vista):
-        """A dónde señala la flecha: el portal al terminar, o un objetivo fuera de cámara."""
+        """Futuro: siguiente tramo caminable; otras eras: objetivo fuera de cámara."""
         from interfaz.orientacion import tarea_actual
         objetivo = tarea_actual(self).get("objetivo")
+        if self.dimension == FUTURO:
+            from interfaz.guia import siguiente_paso
+            mio = self.jugadores.get(self.identificador)
+            if not objetivo or not mio:
+                return None
+            origen = tuple(mio["posicion"])
+            destino = objetivo["x"], objetivo["y"]
+            if math.dist(origen, destino) <= 30 and self.colisiones.trayecto_libre(origen, destino):
+                return None  # al llegar toma el relevo el marcador de interacción E
+            return siguiente_paso(self.colisiones, origen, self.ruta_guia)
         if objetivo and objetivo.get("id") == "portal":
             return objetivo["x"], objetivo["y"]
         if objetivo and vista is not None and not vista.inflate(-60, -60).collidepoint(objetivo["x"], objetivo["y"]):

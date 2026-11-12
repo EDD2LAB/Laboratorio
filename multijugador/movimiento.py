@@ -46,6 +46,9 @@ class ColisionesMapa:
         if datos is None:
             datos = json.loads(MAPA.read_text(encoding="utf-8"))
         self.datos = datos
+        # El exterior del Futuro tiene calles estrechas y figuras pequeñas:
+        # colisionan los pies, no una caja del tamaño del cuerpo.
+        self.tamano_pies = tuple(datos.get("tamano_pies", (12, 8)))
         self.factor_velocidad = 1.0
         self.firma = hashlib.sha256(json.dumps(datos, sort_keys=True).encode()).hexdigest()[:16]
         self.paredes = [h for h in datos.get("hitboxes", []) if h.get("role", "wall") == "wall"]
@@ -110,7 +113,7 @@ class ColisionesMapa:
     def bloqueado(self, x, y):
         # La posición pública representa el centro inferior de la hitbox de pies.
         clave = (round(x), round(y))
-        rect = (clave[0] - 6, clave[1] - 8, 12, 8)
+        rect = self.rect_pies(*clave)
         # Lo único que cambia durante la partida (p. ej., el Puente 1 roto).
         if self.bloqueos and any(self.solapa(rect, bloqueo) for bloqueo in self.bloqueos):
             return True
@@ -118,13 +121,17 @@ class ColisionesMapa:
 
     def _fijo(self, x, y):
         clave = (round(x), round(y))
-        rect = (clave[0] - 6, clave[1] - 8, 12, 8)
+        rect = self.rect_pies(*clave)
         resultado = self._memoria.get(clave)
         if resultado is None:
             if len(self._memoria) >= MAX_MEMORIA_COLISIONES:
                 self._memoria.clear()
             resultado = self._memoria[clave] = self._bloqueado_fijo(rect)
         return resultado
+
+    def rect_pies(self, x, y):
+        ancho, alto = self.tamano_pies
+        return round(x) - ancho // 2, round(y) - alto, ancho, alto
 
     def _paredes_cercanas(self, izquierda, arriba, derecha, abajo):
         vistas, resultado = set(), []
@@ -181,7 +188,7 @@ class ColisionesMapa:
     def puede_pasar(self, origen, destino):
         if self._fijo(*destino):
             return False
-        pies = lambda p: (round(p[0]) - 6, round(p[1]) - 8, 12, 8)
+        pies = lambda p: self.rect_pies(*p)
         return permite_salir_bloqueos(pies(origen), pies(destino), self.bloqueos)
 
     def trayecto_libre(self, origen, destino):
@@ -192,9 +199,10 @@ class ColisionesMapa:
         if self._fijo(x, y):
             return None
         candidatos = []
+        ancho, alto = self.tamano_pies
         for bx, by, bw, bh in self.bloqueos:
-            if self.solapa((round(x) - 6, round(y) - 8, 12, 8), (bx, by, bw, bh)):
-                candidatos.extend(((bx - 6, y), (bx + bw + 6, y), (x, by), (x, by + bh + 8)))
+            if self.solapa(self.rect_pies(x, y), (bx, by, bw, bh)):
+                candidatos.extend(((bx - ancho / 2, y), (bx + bw + ancho / 2, y), (x, by), (x, by + bh + alto)))
         for punto in sorted(candidatos, key=lambda p: math.hypot(p[0] - x, p[1] - y)):
             if not self.bloqueado(*punto) and self.trayecto_libre((x, y), punto):
                 return punto

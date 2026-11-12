@@ -31,7 +31,7 @@ class MapaNuevo(unittest.TestCase):
         guardar.assert_not_called()
         self.assertEqual(ruta.read_bytes(), original)
 
-    def test_paredes_son_exactamente_las_que_entrego_la_companera(self):
+    def test_paredes_coinciden_con_la_auditoria_y_los_ajustes_autorizados(self):
         auditoria = json.loads((RAIZ / "docs/auditoria_mapa_futuro.json").read_text(encoding="utf-8"))
         for nombre, esperado in auditoria["paredes"].items():
             datos = json.loads((RAIZ / "Hitboxes/Mapas/Futuro" / nombre).read_text(encoding="utf-8"))
