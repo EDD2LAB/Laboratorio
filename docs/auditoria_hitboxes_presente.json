@@ -1,0 +1,34 @@
+{
+  "origen": "8b3911c9e259a817e7f28761162cd3676abf7da0",
+  "paredes": {
+    "MapaPresente_hitboxes.json": {
+      "cantidad": 199,
+      "sha256": "7376aec7ed90a6b1119b6a87b33cd1e1c0f790ebf8e20f162d875266cf185991"
+    },
+    "CaféDigitalInt_hitboxes.json": {
+      "cantidad": 91,
+      "sha256": "caa8056e202a5fe2e8c59c4f203e3055bc8df32a8eefc273beedc097cd4d711d"
+    },
+    "CentrodeVerifInt_hitboxes.json": {
+      "cantidad": 62,
+      "sha256": "75a529ebb6b8914ac38470ca6c9bb95ff3dfa9ee0d48191d15d91564598c510d"
+    },
+    "EstacionMensajeroInt_hitboxes.json": {
+      "cantidad": 79,
+      "sha256": "4067ed6b6ea03f5caf9250e971b788465faa6a2a1847da93fe60ab57d11f502f"
+    },
+    "EstudioInfluencerInt_hitboxes.json": {
+      "cantidad": 79,
+      "sha256": "7cd0d9feafe245edd607db1b10f5e51e846d120a7f5f2a18cc11a7612cb886bd"
+    },
+    "SededelAspiranteInt_hitboxes.json": {
+      "cantidad": 71,
+      "sha256": "cdc4b965e5dce2e36e63da557a5ecc15ebeff13900741b9dae65f6c55448bf23"
+    }
+  },
+  "la_copa": {
+    "origen": "04db4d8abb518286fadb508aa1e9aad33890b3fe",
+    "cantidad": 133,
+    "sha256": "c0aa0d20c2934b0ccfe1ec4819dcc6fa226473379d9ab1af06cc5f6525e350b2"
+  }
+}

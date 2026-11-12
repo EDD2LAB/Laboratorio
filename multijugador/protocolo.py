@@ -1,7 +1,8 @@
 """Mensajes JSON delimitados por nueva línea; sin dependencias externas."""
 import json
 
-VERSION = 20  # Final: dos partes por rol, pausas de 15/14 s y victoria sin confirmar consolas.
+VERSION = 21  # Hitboxes editadas de La Copa y del exterior y cinco interiores del Presente.
+# 20: final con dos partes por rol, pausas de 15/14 s y victoria sin confirmar consolas.
 # 19: pies y bordes del exterior del Futuro.
 # 14: exploración e interiores del Futuro, Elia y Arel.
 # 13: ping/pong de aplicación, métricas de red y recuperación.

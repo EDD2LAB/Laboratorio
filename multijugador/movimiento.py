@@ -330,7 +330,7 @@ class PartidaMovimiento:
         mapa = interiores[edificio]
         ocupadas = [(j["x"], j["y"]) for j in self.jugadores.values()
                     if j.get("interior") == edificio and j.get("dimension") == jugador.get("dimension")]
-        colocar = mapa.inicio_alcanzable if jugador.get("dimension") == FUTURO else mapa.inicio_libre
+        colocar = mapa.inicio_alcanzable
         self._colocar(identificador, *colocar(*spawn_interior(mapa.datos), ocupadas), edificio)
         return {"mensaje": "Entraste a " + puerta["nombre"] + ".", "silencioso": True}
 

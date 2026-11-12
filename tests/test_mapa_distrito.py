@@ -125,7 +125,7 @@ class NotaDeVoz(unittest.TestCase):
 
 
 class Estudio(unittest.TestCase):
-    def test_se_entra_por_abajo_y_lo_del_suelo_no_choca(self):
+    def test_se_entra_por_abajo_y_se_rodea_el_equipo_del_estudio(self):
         from multijugador.dimensiones_red import cargar_interior, rect_salida, spawn_interior
         datos = cargar_interior("estudio_influencer")
         x0, y0, ancho, alto = datos["rect_mapa"]
@@ -134,8 +134,13 @@ class Estudio(unittest.TestCase):
         self.assertGreater((y - y0) / alto, .8)
         self.assertFalse(mapa.bloqueado(x, y))
         self.assertGreater((rect_salida(datos)[1] - y0) / alto, .8)
-        self.assertFalse(mapa.bloqueado(x0 + .55 * ancho, y0 + .5 * alto))  # donde estaban la cámara y el trípode
-        self.assertNotIn("tripodes_estudio", {h["id"] for h in datos["hitboxes"]})
+        # Las paredes nuevas incluyen el equipo real dibujado en el suelo.
+        self.assertTrue(mapa.bloqueado(x0 + .55 * ancho, y0 + .5 * alto))
+        from bots.navegador_bot import NavegadorBot
+        destino = mapa.inicio_libre(x0 + .70 * ancho, y0 + .73 * alto)
+        ruta = NavegadorBot(mapa).buscar_ruta((x,y), destino, radio=8)
+        self.assertTrue(ruta)
+        self.assertTrue(all(mapa.trayecto_libre(a,b) for a,b in zip([(x,y)] + ruta, ruta)))
 
 
 class TarjetasDePistas(unittest.TestCase):

@@ -30,7 +30,9 @@ def componente(colisiones, origen, paso=8):
     if not puntos:
         raise ValueError("El punto de aparición no conecta con el área caminable.")
     _CACHE[clave] = puntos
-    if len(_CACHE) > 8:
+    # Exterior del Futuro y diez interiores activos: ocho entradas expulsaban
+    # mapas que la siguiente sala volvía a calcular inmediatamente.
+    if len(_CACHE) > 32:
         _CACHE.popitem(last=False)
     return puntos
 

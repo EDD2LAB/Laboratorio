@@ -26,7 +26,7 @@ DIMENSIONES_RED = {
 ORDEN = (LA_COPA, PRESENTE, FUTURO)
 
 # Interiores de Distrito Conecta: edificio -> nombre del arte y de sus hitboxes.
-CARPETA_INTERIORES = RAIZ / "Hitboxes" / "Fondos" / "Mapas" / "Presente"
+CARPETA_INTERIORES = RAIZ / "Hitboxes" / "Mapas" / "Presente"
 INTERIORES = {
     "centro_verificacion": "CentrodeVerifInt", "estudio_influencer": "EstudioInfluencerInt",
     "sede_aspirante": "SededelAspiranteInt", "cafe_digital": "CaféDigitalInt",

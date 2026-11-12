@@ -48,7 +48,7 @@ class ExploracionInteriores:
                     frente = (mesa["cx"] * 960, mesa["cy"] * 720 + mesa["r"] * 960 + 14)
                 else:
                     frente = ((mesa["rx"] + mesa["rw"] / 2) * 960, (mesa["ry"] + mesa["rh"]) * 720 + 14)
-                if dimension == "futuro":
+                if dimension in ("presente", "futuro"):
                     from logica.zonas_caminables import componente, ancla
                     candidato = ancla(componente(mapa, origen), frente)
                     # El componente ya prueba la conexión; no repetir A* al crear cada sala.

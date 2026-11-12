@@ -14,7 +14,7 @@ EDIFICIOS_PRESENTE = {
         "personaje": "Darío Veraz",
         "rol": "Agente de verificación",
         "interior": "Fondos/Mapas/Presente/CentrodeVerifInt.png",
-        "interior_hitboxes": "Fondos/Mapas/Presente/CentrodeVerifInt_hitboxes.json",
+        "interior_hitboxes": "Mapas/Presente/CentrodeVerifInt_hitboxes.json",
         "mision": "verificar_publicacion",
         "spawn_exterior": (0.1604, 0.2126),
     },
@@ -24,7 +24,7 @@ EDIFICIOS_PRESENTE = {
         "personaje": "Lía Nova",
         "rol": "Influencer",
         "interior": "Fondos/Mapas/Presente/EstudioInfluencerInt.png",
-        "interior_hitboxes": "Fondos/Mapas/Presente/EstudioInfluencerInt_hitboxes.json",
+        "interior_hitboxes": "Mapas/Presente/EstudioInfluencerInt_hitboxes.json",
         "mision": "alcance_publicacion",
         "spawn_exterior": (0.8104, 0.2054),
     },
@@ -34,7 +34,7 @@ EDIFICIOS_PRESENTE = {
         "personaje": "Ronaldo Vélez",
         "rol": "Aspirante",
         "interior": "Fondos/Mapas/Presente/SededelAspiranteInt.png",
-        "interior_hitboxes": "Fondos/Mapas/Presente/SededelAspiranteInt_hitboxes.json",
+        "interior_hitboxes": "Mapas/Presente/SededelAspiranteInt_hitboxes.json",
         "mision": "campana_alcaldia",
         "spawn_exterior": (0.0979, 0.5081),
     },
@@ -44,7 +44,7 @@ EDIFICIOS_PRESENTE = {
         "personaje": "Elías Vega",
         "rol": "Periodista",
         "interior": "Fondos/Mapas/Presente/CaféDigitalInt.png",
-        "interior_hitboxes": "Fondos/Mapas/Presente/CaféDigitalInt_hitboxes.json",
+        "interior_hitboxes": "Mapas/Presente/CaféDigitalInt_hitboxes.json",
         "mision": "investigacion_digital",
         "spawn_exterior": (0.8646, 0.5225),
     },
@@ -54,14 +54,14 @@ EDIFICIOS_PRESENTE = {
         "personaje": "Mateo Ríos",
         "rol": "Mensajero urbano",
         "interior": "Fondos/Mapas/Presente/EstacionMensajeroInt.png",
-        "interior_hitboxes": "Fondos/Mapas/Presente/EstacionMensajeroInt_hitboxes.json",
+        "interior_hitboxes": "Mapas/Presente/EstacionMensajeroInt_hitboxes.json",
         "mision": "rastrear_propagacion",
         "spawn_exterior": (0.4354, 0.8324),
     },
 }
 
-# Interiores del Futuro: misma planta isométrica que los del Presente.
-# Se reutilizan sus paredes editadas a mano; no se escriben archivos de Hitboxes.
+# Interiores del Futuro: conservan sus imágenes y paredes propias.
+# Solo heredan la configuración general del edificio; el JSON se reemplaza abajo.
 EDIFICIOS_FUTURO = {
     clave: dict(EDIFICIOS_PRESENTE[clave], nombre=nombre,
                 interior="Fondos/Mapas/Futuro/" + archivo,

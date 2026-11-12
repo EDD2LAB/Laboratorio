@@ -198,7 +198,9 @@ class MisionPresente:
         mapa = interiores[edificio]
         rx, ry = SITIOS_INTERIOR[edificio]
         izquierda, arriba, ancho, alto = mapa.datos["rect_mapa"]
-        x, y = mapa.inicio_libre(izquierda + rx * ancho, arriba + ry * alto)
+        from logica.zonas_caminables import componente, ancla
+        origen = spawn_interior(mapa.datos)
+        x, y = ancla(componente(mapa, origen), (izquierda + rx * ancho, arriba + ry * alto))
         return {"id": identificador_npc(nombre), "nombre": nombre, "dimension": "presente", "interior": edificio,
                 "x": round(x), "y": round(y), "pista": pista}
 
