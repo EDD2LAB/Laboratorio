@@ -138,7 +138,7 @@ class Pistas(unittest.TestCase):
         self.assertTrue(accion(p, "0", "hablar_npc", npc=ronaldo["id"])["ok"])
         self.assertIn("respuesta_kael", p.mision.presente.halladas)
 
-    def test_los_bots_usan_las_puertas_para_llegar_a_las_pistas(self):
+    def test_con_una_persona_los_bots_no_recogen_las_pistas(self):
         p = partida(1, bots=True)
         gestor = GestorBots(p, {"0"})
         original = p.actuar
@@ -149,9 +149,11 @@ class Pistas(unittest.TestCase):
             ahora += .15
             p.actualizar(ahora)
             gestor.actualizar(ahora, .15)
+        # Quien juega a un personaje con pista entra en su edificio a esperar;
+        # hablar con los personajes y reunir las pistas es tarea de la persona.
         self.assertIn("entrar_edificio", vistas)
-        self.assertIn("salir_edificio", vistas)
-        self.assertEqual(len(p.mision.presente.halladas), 2)
+        self.assertNotIn("hablar_npc", vistas)
+        self.assertEqual(p.mision.presente.halladas, {})
 
 
 class Vista(unittest.TestCase):

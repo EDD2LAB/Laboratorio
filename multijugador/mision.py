@@ -13,9 +13,10 @@ OPCIONES = {
     "descartar": "Descartar el aviso",
 }
 MENSAJES = ("¿Me ayudas a buscar una pista?", "Ven al caldero para comparar pistas.",
-            "Tengo una pista para compartir.", "No difundamos la noticia todavía.")
+            "Tengo una pista para compartir.", "No difundamos la noticia todavía.",
+            "¿Me ayudas a llevar un objeto al cesto?")
 # Lo que hace un bot al recibir cada mensaje de MENSAJES (mismo orden).
-ORDENES_ECO = ("ayudar", "caldero", "recibir", "no_difundir")
+ORDENES_ECO = ("ayudar", "caldero", "recibir", "no_difundir", "encargo")
 TODOS = "todos"  # destinatario de un eco que llega a todo el equipo
 PRUEBAS = {
     "guardian": ("Acta del consejo", "El papel del consejo dice: mañana arreglarán unas tablas. Hoy el puente está abierto."),
@@ -228,12 +229,16 @@ class MisionPuente:
             return {"mensaje": "¡Ya elegiste! Espera a tu equipo. Puedes cambiar tu elección."}
         raise ValueError("Acción desconocida.")
 
+    def decisores(self, presentes):
+        """Con personas en la partida deciden ellas: los bots no votan ni confirman."""
+        presentes = set(presentes) & self.jugadores.keys()
+        return {i for i in presentes if self.jugadores[i].get("controlador") != "bot"} or presentes
+
     def resolver(self, presentes):
         presentes = set(presentes) & self.jugadores.keys()
-        if self.resultado or len(presentes) < 2 or not presentes.issubset(self.votos):
+        decisores = self.decisores(presentes)
+        if self.resultado or len(presentes) < 2 or not decisores.issubset(self.votos):
             return
-        # Con personas en la partida deciden ellas: los bots no las superan en votos.
-        decisores = {i for i in presentes if self.jugadores[i].get("controlador") != "bot"} or presentes
         conteo = Counter(self.votos[i] for i in decisores)
         opcion, cantidad = conteo.most_common(1)[0]
         if cantidad <= len(decisores) / 2:
@@ -267,7 +272,7 @@ class MisionPuente:
         return texto
 
     def publico(self, presentes):
-        participantes = set(presentes) & self.jugadores.keys()
+        participantes = self.decisores(presentes)
         empate = bool(participantes) and participantes.issubset(self.votos) and self.resultado is None
         return {
             "id": "puente_norte", "titulo": "¿Quién rompió el puente norte?",
@@ -275,6 +280,7 @@ class MisionPuente:
             "objetivos": [dict(o) for o in self.objetivos], "pruebas_halladas": len(self.halladas),
             "investigadores": len(set(self.halladas.values())), "entregas": len(self.entregas),
             "votos_emitidos": sum(i in self.votos for i in participantes), "votantes": len(participantes),
+            "presentes": len(set(presentes) & self.jugadores.keys()),
             "empate": empate, "resultado": self.resultado, "rectificacion": self.rectificacion,
             "indicadores": dict(self.indicadores), "estado_puente": self.estado_puente,
             "historial": list(self.historial), "opciones": dict(self.opciones), "mensajes_eco": list(MENSAJES),

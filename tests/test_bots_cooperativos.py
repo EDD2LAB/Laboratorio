@@ -65,21 +65,34 @@ class CampanaLocalBotsTests(unittest.TestCase):
         self.fail(f"Los bots no completaron la tarea: {descripcion}.")
 
     @staticmethod
-    def compartir_prueba_humana(cliente, bots):
-        partida = cliente._partida
-        objetivo = partida.mision.privado("local")["objetivo"]
+    def ir(partida, objetivo):
         partida.jugadores["local"].update(x=objetivo["x"], y=objetivo["y"])
+
+    def investigar(self, cliente, partida):
+        """La persona busca su pista; un bot pone la segunda y se la da cuando ella la pide."""
+        objetivo = partida.mision.privado("local")["objetivo"]
+        self.ir(partida, objetivo)
         cliente.actuar("interactuar", objetivo=objetivo["id"])
-        pista = "pista_" + partida.jugadores["local"]["rol"]
-        for identificador in bots:
-            companero = partida.jugadores[identificador]
-            partida.jugadores["local"].update(x=companero["x"], y=companero["y"])
-            cliente.actuar(
-                "entregar",
-                destinatario=identificador,
-                pista=pista,
-                medio="directo",
-            )
+        self.avanzar_hasta(cliente, lambda: len(partida.mision.halladas) == 2, "buscar la segunda pista")
+        cliente.actuar("pedir_pista")
+        self.avanzar_hasta(cliente, lambda: len(partida.mision.conocidas["local"]) == 2, "entregar la pista pedida")
+
+    def aportar(self, cliente, partida, material):
+        encargo = partida.mision.encargo
+        self.ir(partida, encargo.fuente(material))
+        cliente.actuar("interactuar", objetivo=encargo.fuente(material)["id"], material=material)
+        self.ir(partida, encargo.destino)
+        cliente.actuar("interactuar", objetivo=encargo.destino["id"])
+        self.assertEqual(encargo.entregados.get(material), "local")
+
+    def trabajar(self, cliente, partida, bots):
+        encargo = partida.mision.encargo
+        self.avanzar_hasta(cliente, lambda: encargo.ayudante in bots, "sujetar en la actividad")
+        self.ir(partida, encargo.destino)
+        while not encargo.materiales_colocados:
+            for _ in range(5):
+                cliente.actualizar(.15)
+            cliente.actuar("trabajar")
 
     def reparar_puente_a_mano(self, cliente, partida):
         self.avanzar_hasta(cliente, lambda: partida.mision.encargo.materiales_colocados,
@@ -97,57 +110,49 @@ class CampanaLocalBotsTests(unittest.TestCase):
             cliente.actuar("intento_reparacion", tiempo_aguja_ms=tiempo_acierto(puente))
         self.avanzar_hasta(cliente, lambda: puente.reparado, "terminar la reparación")
 
-    def test_campana_completa_con_inferencia_votos_y_suministros(self):
+    def test_campana_completa_la_juega_la_persona_y_los_bots_solo_completan_parejas(self):
         cliente = ClienteCampanaLocal("Prueba", "guardian")
         partida = cliente._partida
         bots = set(cliente._bots.bots)
+        caldero = next(o for o in partida.mision.objetivos if o["id"] == "caldero")
 
         self.assertEqual(len(bots), 3)
         self.assertNotIn("correcta", partida.mision.publico(partida.conectados))
 
         for ronda, caso in enumerate(partida.mision.casos):
-            self.compartir_prueba_humana(cliente, bots)
-            self.avanzar_hasta(
-                cliente,
-                lambda: bots.issubset(partida.mision.votos),
-                f"votar en el caso {ronda + 1}",
-            )
-            for identificador, bot in cliente._bots.bots.items():
-                with self.subTest(ronda=ronda, bot=identificador):
-                    self.assertIn("pista_" + bot.rol, bot.pruebas_conocidas)
-                    self.assertGreaterEqual(len(bot.pruebas_conocidas), 2)
-                    self.assertEqual(partida.mision.votos[identificador], caso[3])
+            self.investigar(cliente, partida)
+            buscadores = {i for i in partida.mision.halladas.values() if i in bots}
+            self.assertEqual(len(buscadores), 1)  # un solo bot: el segundo investigador
+            for _ in range(60):
+                cliente.actualizar(.15)
+            self.assertEqual(partida.mision.votos, {})  # los bots nunca eligen
+            self.assertEqual(partida.mision.habilidades_usadas, set())
 
-            if ronda == 0:
-                self.assertEqual(partida.mision.habilidades_usadas, bots)
-            self.assertIsNone(partida.mision.resultado)
-            self.assertNotIn("local", partida.mision.votos)
-
-            partida.jugadores["local"].update(x=480, y=380)
+            self.ir(partida, caldero)
             cliente.actuar("votar", opcion=caso[3])
             self.assertTrue(partida.mision.resultado["correcto"])
 
             if ronda == len(partida.mision.casos) - 1:
                 continue
 
+            encargo = partida.mision.encargo
+            if encargo.config.get("aportes_libres"):
+                for material, *_ in encargo.config["materiales"]:
+                    self.aportar(cliente, partida, material)
+                self.assertEqual(set(encargo.entregados.values()), {"local"})
+            else:
+                self.aportar(cliente, partida, encargo.config["materiales"][0][0])
+                self.avanzar_hasta(cliente, lambda: encargo.materiales_listos, "aportar el otro material",
+                                   limite=1500)
+                self.assertEqual(len(set(encargo.entregados.values()) & bots), 1)
+            self.trabajar(cliente, partida, bots)
+
             if ronda == 0:
                 self.reparar_puente_a_mano(cliente, partida)
+            self.assertTrue(encargo.completo)
+            self.assertEqual(partida.mision.preparados, set())  # los bots no confirman
 
-            self.avanzar_hasta(
-                cliente,
-                lambda: bots.issubset(partida.mision.preparados),
-                f"preparar suministros para el caso {ronda + 2}",
-                limite=1500,
-            )
-            # Los bots solos recogen, entregan en el puesto y hacen la actividad
-            # en pareja; el Puente 1 (caso 1) lo repara la persona.
-            self.assertTrue(partida.mision.encargo.completo)
-            self.assertFalse(partida.mision.encargo.cargas)
-            if ronda == 0:
-                self.assertTrue(partida.mision.puente.reparado)
-
-            partida.jugadores["local"].update(x=480, y=380)
-            cliente.actuar("interactuar", objetivo="caldero")
+            self.ir(partida, caldero)
             cliente.actuar("continuar")
             self.assertEqual(partida.mision.ronda, ronda + 1)
 

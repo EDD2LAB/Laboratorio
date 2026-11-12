@@ -34,6 +34,7 @@ CONTROLES = (
     ("M", "Tu tarea"),
     ("T", "Libro de casos y expediente AVL"),
     ("Q", "Habilidad de tu rol"),
+    ("B", "Encargo: pedir que un compañero lleve un objeto"),
     ("J", "Detalles: tarea, indicadores y teclas"),
     ("H", "Ocultar o mostrar todo el HUD"),
     ("L", "Ocultar o mostrar los nombres"),
@@ -50,12 +51,12 @@ PAGINAS_COMO_JUGAR = (
         "2. Necesitas dos pistas. Pulsa I para leerlas y darlas a un compañero cercano, "
         "o envíalas desde un Tronco de los Ecos.",
         "3. En un tronco eliges con las flechas a quién escribir: a una persona o a todos. "
-        "Los bots hacen lo que les pidas, por ejemplo venir al caldero.",
+        "Los bots solo te ayudan en lo que necesita dos personas: no investigan ni eligen por ti.",
         "4. Vayan al caldero y elijan una poción: Quemar corrige lo falso, Colgar lo difunde "
         "e Ignorar no lo comparte. Con bots decide tu elección; entre personas, la mayoría.",
         "5. Clasifica qué tipo de información era.",
-        "6. Después ayuden a la aldea: lleven los materiales al lugar marcado, hagan la actividad "
-        "en pareja y confirmen en el caldero. En el primer caso también reparan el Puente 1: "
+        "6. Después ayuden a la aldea: lleva los materiales al lugar marcado (pulsa B para pedir que un bot lleve uno), haz la actividad "
+        "en pareja (un bot ayuda y tú trabajas) y confirma en el caldero. En el primer caso también reparan el Puente 1: "
         "pulsa E tres veces en la zona verde.",
         "Pulsa T o el botón Casos del mapa para consultar lo que descubrieron y ordenar el expediente.",
         "Son cuatro casos. Al terminar, la flecha dorada te lleva al portal.",
@@ -68,7 +69,7 @@ PAGINAS_COMO_JUGAR = (
         "2. Habla con las personas marcadas (E) hasta reunir las tres pistas: Darío Veraz, "
         "Tomás Red y Ronaldo Vélez.",
         "3. Tu celular (C) guarda las pistas. Junto a la pantalla pública decidan en él: Verificar, "
-        "Denunciar, Ignorar o Publicar. Los bots reúnen las demás pistas y te dejan una; decidir les toca a las personas.",
+        "Denunciar, Ignorar o Publicar. Las pistas, el análisis y la decisión les tocan a las personas; los bots las acompañan.",
         "4. Clasifica la publicación. Si la dejaron pendiente, pueden volver a decidir.",
         "Usa el portal para volver a La Copa. Los indicadores viajan contigo.",
     )),

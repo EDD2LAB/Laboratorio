@@ -174,20 +174,33 @@ class Decision(unittest.TestCase):
 
 
 class Bots(unittest.TestCase):
-    def test_los_bots_resuelven_terminales_con_los_mismos_mensajes(self):
-        p = partida(1, bots=True)
-        m = a_ciudad_nucleo(p)
-        gestor = GestorBots(p, {"0"})
+    def recorrer(self, p, gestor, m, pasos=900):
         original = p.actuar
         vistas = []
         p.actuar = lambda i, s, a: vistas.append((i, s["accion"])) or original(i, s, a)
         ahora = p.ultima
-        for _ in range(900):
+        for _ in range(pasos):
             ahora += .15
             p.actualizar(ahora)
             gestor.actualizar(ahora, .15)
             if m.tareas:
                 break
+        p.actuar = original
+        return vistas
+
+    def test_con_una_persona_los_bots_no_resuelven_terminales(self):
+        p = partida(1, bots=True)
+        m = a_ciudad_nucleo(p)
+        vistas = self.recorrer(p, GestorBots(p, {"0"}), m)
+        self.assertFalse(any(i.startswith("bot_") and a == "futuro_resolver" for i, a in vistas), vistas[-5:])
+        self.assertEqual(m.tareas, {})
+
+    def test_sin_personas_conectadas_los_bots_resuelven_con_los_mismos_mensajes(self):
+        p = partida(1, bots=True)
+        m = a_ciudad_nucleo(p)
+        gestor = GestorBots(p, {"0"})
+        p.conectados.discard("0")
+        vistas = self.recorrer(p, gestor, m)
         self.assertTrue(any(i.startswith("bot_") and a == "futuro_resolver" for i, a in vistas), vistas[-5:])
         self.assertTrue(m.tareas)
         self.assertTrue(all(i.startswith("bot_") for i in m.tareas.values()))

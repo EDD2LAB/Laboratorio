@@ -16,6 +16,8 @@ class MemoriaEquipo:
         # Tareas de preparación que solo debe hacer un bot (sujetar, trabajar,
         # reparar el puente). Clave con la ronda: no hace falta limpiarlas.
         self.reservas_preparacion = {}
+        # Personas que pulsaron «Pedir una pista» en este caso.
+        self.pedidos_pista = set()
 
     def reservar_preparacion(self, bot_id, tarea):
         propietario = self.reservas_preparacion.setdefault(tarea, bot_id)
@@ -48,3 +50,4 @@ class MemoriaEquipo:
         self.votos_propuestos.clear()
         self.solicitudes_ayuda.clear()
         self.suministros_pendientes.clear()
+        self.pedidos_pista.clear()

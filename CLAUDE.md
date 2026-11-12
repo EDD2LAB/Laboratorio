@@ -51,6 +51,11 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 - Cambios al multijugador deben ser aditivos; no alterar el modo un jugador al portar features.
 - Antes de terminar cualquier tarea: correr las pruebas y reportar resultados reales.
 - Las hitboxes de pared se editan a mano. No modificarlas al integrar arte o mecánicas.
+- Con personas en la partida, los bots no resuelven nada que una persona pueda hacer sola:
+  solo ponen la segunda persona que exige el servidor (segundo investigador, la pista que se
+  les pide, el aporte de otra persona, sujetar en la actividad, un objeto del encargo por cada
+  pedido con B o el eco). No votan, no confirman, no usan
+  habilidades ni investigan en Distrito Conecta o Ciudad Núcleo. Solos (sin personas) sí juegan.
 
 ## Trabajo en curso
 
