@@ -314,6 +314,13 @@ class VistaPartida:
         self.panel = PanelCooperativo(self)
         self.seleccion = None
         self.ultima_guia_seleccion = None
+        from interfaz.resaltado import Resaltado
+        self.resaltado = Resaltado()
+        self.objetivo_resaltado = None  # lo que se elige con E, resaltado en dorado
+        self._resaltado_hecho = False
+        self._ancla_resaltado = None
+        self._figura_resaltada = None
+        self._etiquetas_npc_doradas = {}
         self.mouse = (-1, -1)
         self.depurar = False
         self.recibir(estado)
@@ -621,6 +628,125 @@ class VistaPartida:
         recomendado = mundo.get("privado", {}).get("guia", {}).get("objetivo") or {}
         objetivos.sort(key=lambda o: math.hypot(yo["x"] - o["x"], yo["y"] - o["y"]) - (1000 if o["id"] == recomendado.get("id") or (o["id"] == "portal" and self.dimension_completa()) else 15 if o.get("rol") == yo["rol"] else 0))
         return objetivos
+
+    def _calcular_resaltado(self):
+        """Qué se resalta en dorado: el objetivo actual de E (el mismo que elige Tab).
+        Solo lee la selección; no cambia la lógica de E ni el orden de Tab."""
+        if (self.panel.activo or self.en_pausa or self.animacion_pocion or self.transicion
+                or self.pantalla_final is not None):
+            return None
+        opciones = self.candidatos()
+        claves = [o["id"] for o in opciones]
+        if self.seleccion not in claves:
+            self.seleccion = claves[0] if claves else None
+        opcion = next((o for o in opciones if o["id"] == self.seleccion), None)
+        if opcion is None:
+            return None
+        objetivo = dict(id=opcion["id"], x=opcion["x"], y=opcion["y"], varios=len(opciones) > 1,
+                        tipo="objeto", clave=opcion["id"])
+        if opcion["id"].startswith("jugador:"):
+            objetivo.update(tipo="jugador", clave=opcion["id"][8:])
+        elif opcion["id"].startswith("npc:"):
+            npc = next((n for n in self.estado.get("mundo", {}).get("caso", {}).get("npcs", [])
+                        if n["id"] == opcion["id"][4:]), None)
+            if npc and npc.get("jugador"):  # lo juega alguien: se resalta su personaje
+                objetivo.update(tipo="jugador", clave=npc["jugador"])
+            elif npc:
+                objetivo.update(tipo="npc", clave=npc["nombre"])
+        elif opcion["id"] == "caldero":
+            objetivo["tipo"] = "caldero"
+        elif opcion["id"] == "portal":
+            objetivo["tipo"] = "portal"
+        objetivo["hitbox"] = self._hitbox_interaccion(opcion["id"])
+        return objetivo
+
+    def _hitbox_interaccion(self, clave):
+        """Rectángulo de interacción (puerta, salida o barrera) de lo que no tiene sprite
+        propio; None si el objetivo solo es un punto. Solo se lee: no se modifica."""
+        if clave.startswith("entrar:"):
+            edificio = self.contexto().get("edificios", {}).get(clave[7:])
+            return pygame.Rect(edificio["rect"]) if edificio else None
+        if clave == "salir" and self.interior:
+            return pygame.Rect(self._interior(self.interior)["salida"])
+        if clave == "barrera":
+            yo = self.yo()
+            barreras = self.contexto().get("barreras", [])
+            if yo and barreras:
+                return pygame.Rect(min(barreras, key=lambda r: math.hypot(
+                    r[0] + r[2] / 2 - yo["x"], r[1] + r[3] / 2 - yo["y"])))
+        return None
+
+    def _es_resaltado(self, tipo, clave):
+        objetivo = self.objetivo_resaltado
+        return bool(objetivo) and not self._resaltado_hecho and objetivo["tipo"] == tipo and objetivo["clave"] == clave
+
+    def _resaltar(self, superficie, imagen, rect, espacio="mundo", area=None):
+        """Contorno dorado de ``imagen`` dibujada en ``rect``. ``espacio``: "pantalla"
+        (coordenadas finales), "capa" (capa ampliada, recortada por ``area``) o "mundo"
+        (coordenadas del mapa, que luego se escalan con la cámara)."""
+        rect = pygame.Rect(rect)
+        if espacio == "pantalla":
+            grosor, ancla = 2, (rect.right, rect.top)
+        elif espacio == "capa":
+            grosor, ancla = 2, (rect.right - area.x, rect.top - area.y)
+        else:
+            vista = self.vista_camara()
+            grosor = 1 if vista is not None else 2  # 1 px del mapa ya se ve grueso con el zoom
+            ancla = self.a_pantalla(rect.right, rect.top, vista)
+        self.resaltado.contorno(superficie, imagen, rect, pygame.time.get_ticks(), grosor)
+        self._resaltado_hecho = True
+        self._ancla_resaltado = ancla
+
+    def _resaltar_sin_sprite(self, suelo):
+        """Lo pintado en el mapa (sin sprite propio): elipse dorada que rodea su hitbox de
+        interacción (puertas, salida, barrera), el portal o, si solo hay un punto, ese
+        punto. Se dibuja en coordenadas del mapa."""
+        objetivo = self.objetivo_resaltado
+        if not objetivo or self._resaltado_hecho:
+            return
+        vista = self.vista_camara()
+        grosor = 1 if vista is not None else 2
+        portal = self.rect_portal() if objetivo["tipo"] == "portal" else None
+        if objetivo.get("hitbox") is not None:
+            # La elipse inscrita en el rectángulo ampliado ~1,45 veces contiene sus esquinas.
+            caja = objetivo["hitbox"]
+            rect = caja.inflate(max(12, round(caja.w * .45)), max(12, round(caja.h * .45)))
+        elif portal:
+            rect = pygame.Rect(0, 0, portal.w + 12, max(14, portal.h // 3))
+            rect.midbottom = (portal.centerx, portal.bottom + 4)
+        else:
+            rect = pygame.Rect(0, 0, 40, 16)
+            rect.center = (round(objetivo["x"]), round(objetivo["y"]) + 2)
+        self.resaltado.anillo(suelo, rect, pygame.time.get_ticks(), grosor)
+        self._resaltado_hecho = True
+        self._ancla_resaltado = self.a_pantalla(rect.right, rect.top - 18, vista)
+
+    def _objeto_resaltado(self, decoraciones, zoom, origen_x, origen_y):
+        """Decoración con sprite propio que corresponde al objetivo: el NPC con ese
+        nombre o, para un objeto, la imagen pequeña que contiene su punto."""
+        objetivo = self.objetivo_resaltado
+        if not objetivo or objetivo["tipo"] not in ("npc", "objeto"):
+            return None
+        if objetivo["tipo"] == "npc":
+            return next((o for o in decoraciones if o.get("personaje") == objetivo["clave"]), None)
+        punto = ((objetivo["x"] - origen_x) * zoom, (objetivo["y"] - origen_y) * zoom)
+        limite = (110 * zoom) ** 2  # árboles, casas y puentes no se resaltan enteros
+        posibles = [o for o in decoraciones if not o.get("personaje") and not o.get("mariposa")
+                    and o["rect"].w * o["rect"].h <= limite and o["rect"].inflate(10 * zoom, 10 * zoom).collidepoint(punto)]
+        return min(posibles, key=lambda o: o["rect"].w * o["rect"].h, default=None)
+
+    def _dibujar_tecla_objetivo(self, superficie):
+        """E (y Tab si hay varios) junto al objetivo resaltado."""
+        if not self.objetivo_resaltado or not self._ancla_resaltado or self.panel.activo:
+            return
+        ahora_ms = pygame.time.get_ticks()
+        x, y = round(self._ancla_resaltado[0]) + 4, round(self._ancla_resaltado[1])
+        tecla = self.resaltado.tecla(self.fuente, ahora_ms)
+        caja = tecla.get_rect(topleft=(x, y)).clamp(superficie.get_rect().inflate(-8, -8))
+        superficie.blit(tecla, caja)
+        if self.objetivo_resaltado["varios"]:
+            tab = self.resaltado.etiqueta_tab(self.fuente)
+            superficie.blit(tab, tab.get_rect(midleft=(caja.right + 4, caja.centery)))
 
     def _puertas_cercanas(self, yo):
         from multijugador.dimensiones_red import RADIO_PUERTA, RADIO_SALIDA, cerca_de_rect
@@ -959,7 +1085,10 @@ class VistaPartida:
         cuadros = self.cuadros_caldero.get((zoom, fila))
         rect = pygame.Rect(self.rect_caldero.x * zoom, self.rect_caldero.y * zoom, self.rect_caldero.w * zoom, self.rect_caldero.h * zoom)
         if cuadros and (area is None or rect.colliderect(area)):
-            superficie.blit(cuadros[(ahora_ms // 180) % len(cuadros)], rect)
+            cuadro = cuadros[(ahora_ms // 180) % len(cuadros)]
+            superficie.blit(cuadro, rect)
+            if self._es_resaltado("caldero", "caldero"):
+                self._resaltar(superficie, cuadro, rect, "capa" if area is not None else "mundo", area)
 
     def _dibujar_mapa(self, superficie, ahora_ms, escena=None, area=None):
         """Mapa y decoraciones. ``escena`` y ``area``: recursos ampliados y zona
@@ -985,6 +1114,14 @@ class VistaPartida:
         hablando = caso.get("npcs_en_dialogo", ())
         cestos = self.cesto_zoom if escena is not None else self.arte.cestos
         gemelos = self._npcs_gemelos()
+        elegido = self._objeto_resaltado(decoraciones, zoom, origen_x, origen_y)
+        espacio = "capa" if area is not None else "mundo"
+
+        def poner(imagen, rect):
+            superficie.blit(imagen, rect)
+            if objeto is elegido and not self._resaltado_hecho:
+                self._resaltar(superficie, imagen, rect, espacio, area)
+
         for objeto in decoraciones:
             if objeto.get("personaje") in gemelos:
                 continue
@@ -998,30 +1135,30 @@ class VistaPartida:
             if objeto.get("cuadros_hablando") and objeto.get("personaje") in hablando:
                 cuadros = objeto["cuadros_hablando"]
                 cuadro = cuadros[(ahora_ms // 130) % len(cuadros)]
-                superficie.blit(cuadro, cuadro.get_rect(midbottom=objeto["ancla_reposo"]))
+                poner(cuadro, cuadro.get_rect(midbottom=objeto["ancla_reposo"]))
                 continue
             if objeto.get("cuadros_reposo"):  # NPC con su animación de reposo
                 cuadros = objeto["cuadros_reposo"]
                 cuadro = cuadros[(ahora_ms // 180) % len(cuadros)]
-                superficie.blit(cuadro, cuadro.get_rect(midbottom=objeto["ancla_reposo"]))
+                poner(cuadro, cuadro.get_rect(midbottom=objeto["ancla_reposo"]))
                 continue
             if es_hoja_portales(objeto.get("nombre", "")) and self.adornos.portal:
                 continue  # se dibuja el portal animado
             if objeto.get("cesto") and cestos.get(clave_cesto(encargo)) is not None:
                 imagen = cestos[clave_cesto(encargo)]
-                superficie.blit(imagen, imagen.get_rect(midbottom=objeto["rect"].midbottom))
+                poner(imagen, imagen.get_rect(midbottom=objeto["rect"].midbottom))
             elif objeto.get("tronco_eco") and self._frames_tronco(objeto["rect"].size, objeto.get("variante_tronco", 1)):
                 frames = self._frames_tronco(objeto["rect"].size, objeto.get("variante_tronco", 1))
-                superficie.blit(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
+                poner(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
             elif objeto.get("puente_animable"):
                 dibujar_puente_balanceandose(superficie, objeto, ahora_ms)
             elif objeto.get("mariposa") and objeto.get("frames"):
                 dibujar_mariposa(superficie, objeto, ahora_ms)
             elif objeto.get("frames"):
                 frames = objeto["frames"]
-                superficie.blit(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
+                poner(frames[(ahora_ms // 140) % len(frames)], objeto["rect"])
             else:
-                superficie.blit(objeto["imagen"], objeto["rect"])
+                poner(objeto["imagen"], objeto["rect"])
         if self.dimension == LA_COPA:
             self._dibujar_caldero(superficie, ahora_ms, zoom, area)
         rect = self.rect_portal()
@@ -1135,14 +1272,21 @@ class VistaPartida:
                 if cuadros:
                     cuadro = cuadros[(pygame.time.get_ticks() // 180) % len(cuadros)]
                     pygame.draw.ellipse(suelo, (17, 28, 22), (npc["x"] - 20, npc["y"] - 6, 40, 12))
-                    suelo.blit(cuadro, cuadro.get_rect(midbottom=(npc["x"], npc["y"])))
+                    rect = cuadro.get_rect(midbottom=(npc["x"], npc["y"]))
+                    suelo.blit(cuadro, rect)
+                    if self._es_resaltado("npc", npc["nombre"]):
+                        self._resaltar(suelo, cuadro, rect, "mundo")
         if figuras is not None and escena.get("npcs"):  # los NPC de Ciudad Núcleo los coloca el servidor
             zoom = escena["zoom"]
             for npc in caso.get("npcs", []):
                 cuadros = escena["npcs"].get(npc["nombre"]) if npc["dimension"] == self.dimension and not npc.get("jugador") else None
                 if cuadros:
                     cuadro = cuadros[(pygame.time.get_ticks() // 180) % len(cuadros)]
-                    figuras.append((cuadro, cuadro.get_rect(midbottom=((npc["x"] - vista.x) * zoom, (npc["y"] - vista.y) * zoom))))
+                    rect = cuadro.get_rect(midbottom=((npc["x"] - vista.x) * zoom, (npc["y"] - vista.y) * zoom))
+                    figuras.append((cuadro, rect))
+                    if self._es_resaltado("npc", npc["nombre"]):
+                        self._figura_resaltada = (cuadro, rect)
+                        self._resaltado_hecho = True
         for jugador in sorted(self.jugadores.values(), key=lambda j: j["posicion"].y):
             datos = jugador["datos"]
             rol = datos["rol"]
@@ -1169,16 +1313,22 @@ class VistaPartida:
                 rect = frame.get_rect(midbottom=((x - vista.x) * zoom, (y - vista.y) * zoom))
                 figuras.append((frame, rect))
                 tope = y - frame.get_height() // zoom
+                if self._es_resaltado("jugador", datos["id"]):
+                    self._figura_resaltada = (frame, rect)
+                    self._resaltado_hecho = True
             else:
                 rect = frame.get_rect(midbottom=(x, y))
                 suelo.blit(frame, rect)
                 tope = rect.top
+                if self._es_resaltado("jugador", datos["id"]):
+                    self._resaltar(suelo, frame, rect, "mundo")
             carga = (caso.get("encargo") or {}).get("cargas", {}).get(datos["id"])
             if carga:
                 dibujar_carga(suelo, carga, (x + 22, y - 24))
             if datos["id"] in caso.get("tutorial_cargas", []):
                 dibujar_carga(suelo, "farol", (x + 22, y - 24))
             anclas.append((datos, color, (x, tope)))
+        self._resaltar_sin_sprite(suelo)
         return anclas
 
     def _mundo_ampliado(self, pantalla, vista, ahora_ms, escena):
@@ -1196,6 +1346,8 @@ class VistaPartida:
         pantalla.blit(pygame.transform.scale(efectos.subsurface(vista), pantalla.get_size()), (0, 0))
         for frame, rect in figuras:
             pantalla.blit(frame, rect)
+            if self._figura_resaltada is not None and self._figura_resaltada[0] is frame and self._figura_resaltada[1] == rect:
+                self._resaltar(pantalla, frame, rect, "pantalla")
         if self.dimension == LA_COPA:
             self.efectos_mapa.dibujar(pantalla, vista)
         self.particulas.dibujar(pantalla, camara=(vista.x, vista.y, zoom))
@@ -1230,6 +1382,8 @@ class VistaPartida:
     def dibujar(self, superficie, codigo, mouse=(-1, -1)):
         self.mouse = mouse
         ahora_ms = pygame.time.get_ticks()
+        self.objetivo_resaltado = self._calcular_resaltado()
+        self._resaltado_hecho, self._ancla_resaltado, self._figura_resaltada = False, None, None
         vista = self.vista_camara()
         escena = self.escenas_zoom.get(self.dimension) if vista is not None else None
         if escena is not None:
@@ -1258,7 +1412,12 @@ class VistaPartida:
                 nombre = "Bot · " + (PERSONAJES_FUTURO if self.dimension == FUTURO else PERSONAJES_DISTRITO)[datos["rol"]][0]
             elif datos.get("controlador") == "bot":
                 nombre = "Bot · " + nombre.split(" · ", 1)[0]
-            etiqueta = self.fuente.render(nombre, True, color)
+            if self.objetivo_resaltado and self.objetivo_resaltado["tipo"] == "jugador" \
+                    and self.objetivo_resaltado["clave"] == datos["id"]:
+                from interfaz.resaltado import DORADO
+                etiqueta = self.fuente.render(nombre, True, DORADO)
+            else:
+                etiqueta = self.fuente.render(nombre, True, color)
             etiquetas.append(dict(imagen=etiqueta, ancla=(x, tope), color=color, id=datos["id"],
                                    local=datos["id"] == self.identificador, bot=datos.get("controlador") == "bot"))
         reservas = []
@@ -1278,6 +1437,7 @@ class VistaPartida:
             superficie.blit(elemento["imagen"], elemento["imagen"].get_rect(center=caja.center))
             if elemento["local"]:
                 self.adornos.marcador_local(superficie, (x, tope - 6), color, ahora_ms)
+        self._dibujar_tecla_objetivo(superficie)
         if self.mostrar_hud:
             mundo = self.estado.get("mundo", {})
             privado = mundo.get("privado", {})
@@ -1439,6 +1599,11 @@ class VistaPartida:
                 texto_npc = npc["nombre"] + " · E: hablar"
                 self._etiquetas_npc[npc["nombre"]] = self.fuente.render(texto_npc, True, (255, 243, 210))
             texto = self._etiquetas_npc[npc["nombre"]]
+            if self.objetivo_resaltado and self.objetivo_resaltado["id"] == "npc:" + npc["id"]:
+                if npc["nombre"] not in self._etiquetas_npc_doradas:
+                    from interfaz.resaltado import DORADO
+                    self._etiquetas_npc_doradas[npc["nombre"]] = self.fuente.render(npc["nombre"] + " · E: hablar", True, DORADO)
+                texto = self._etiquetas_npc_doradas[npc["nombre"]]
             x, y = self.a_pantalla(npc["x"], npc["y"] - self._alto_etiqueta_npc(), vista)
             if superficie.get_rect().collidepoint(x, y):
                 elementos.append(dict(id="npc:" + npc["id"], imagen=texto, ancla=(x, y),

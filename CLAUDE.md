@@ -32,7 +32,7 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 | `logica/` | Árboles de decisión/clasificación, estado del juego, dimensiones, grafo físico, propagación, habilidades, conversaciones |
 | `mundo/` | Personajes, mapas, colisiones, cámara, NPC, jugador, grafo de la aldea, creación del mundo, reparación de puentes |
 | `un_jugador/` | Escenas que reutiliza el multijugador (tablilla, dibujo del mapa, ventana). El modo un jugador ya no se ofrece en el menú; `partida.main` queda sin entrada |
-| `interfaz/` | Componentes de UI y vista del multijugador (menú inicial, menú de pausa con Esc, presentación sin bandas negras, panel cooperativo, HUD de indicadores, efectos) |
+| `interfaz/` | Componentes de UI y vista del multijugador (menú inicial, menú de pausa con Esc, presentación 4:3 con bandas negras, panel cooperativo, HUD de indicadores, efectos) |
 | `multijugador/` | Servidor autoritativo, protocolo, salas, misiones cooperativas, clientes |
 | `bots/` | Bots cooperativos (campaña local y relleno de roles libres en salas en línea) |
 | `graficos/`, `audio/` | Partículas/animaciones y gestor de audio |

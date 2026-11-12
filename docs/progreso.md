@@ -229,3 +229,31 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
 - Documentación: docs/movimiento_etapa4.md. Sigue presentación, arte y audio.
 
 ---
+
+## Resaltado dorado del objetivo de E (rama `resaltado-objetivo`)
+
+- El objetivo actual de E (el mismo que cambia Tab) se resalta en dorado:
+  contorno de 2 px alrededor de la silueta y brillo que pulsa (alfa 140–230,
+  ciclo de 1,2 s). Nuevo módulo `interfaz/resaltado.py`.
+- Con sprite propio: jugadores y bots, NPC (La Copa, Distrito Conecta,
+  interiores y Ciudad Núcleo), el caldero y las decoraciones pequeñas que
+  contienen el punto del objetivo (por ejemplo, el cesto).
+- Sin sprite propio: puertas, salida y barrera reciben una elipse dorada que
+  rodea su hitbox de interacción (solo se lee); el portal, una elipse en su
+  base; puentes y objetivos pintados que solo son un punto, una elipse en él.
+- La etiqueta del nombre del objetivo se pone dorada. Junto al objetivo sale la
+  tecla E (`Imagenes/Indicadores/tecla_E.png` o una dibujada por código) y
+  "Tab" si hay más de un objetivo cerca.
+- No se resalta nada con un panel abierto (diálogo, celular, expediente,
+  terminal, portal), con el menú de pausa, la animación de poción, una
+  transición o la pantalla final; vuelve al cerrarlos. No cambia la lógica de E, el orden de Tab, el protocolo
+  ni el servidor. Sin cambios en Hitboxes.
+- El contorno de cada cuadro se calcula una vez y queda en caché.
+- Pruebas nuevas: `tests/test_resaltado_objetivo.py`.
+- Pendiente: el juego no tiene opción de "reducir efectos"; cuando exista,
+  pasar `fijo=True` a `Resaltado.contorno` y `Resaltado.anillo`.
+  Accesibilidad hoy solo tiene alto contraste y narración.
+- Benchmark (30 s, clientes): antes 58,9 FPS / 10,18 ms por cuadro; después
+  58,7 FPS / 9,54 ms (diferencia dentro del ruido).
+- La presentación del lienzo pasó a 4:3 centrado con bandas negras (commit
+  aparte en `multijugador`).

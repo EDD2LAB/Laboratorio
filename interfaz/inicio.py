@@ -635,7 +635,7 @@ class MenuInicio:
                     pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if activo else pygame.SYSTEM_CURSOR_ARROW)
                 except pygame.error:
                     pass
-                presentar(self.pantalla, self.lienzo)  # el juego llega hasta los bordes
+                presentar(self.pantalla, self.lienzo)  # 4:3 centrado, con bandas negras
                 pygame.display.flip()
         finally:
             pygame.key.stop_text_input()
