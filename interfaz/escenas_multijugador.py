@@ -331,13 +331,15 @@ def dibujar_portal(panel, superficie, destinos, origen):
 
 
 class Transicion:
-    """Fundido del modo de un jugador (velo, anillos y título del destino)."""
+    """Viaje por el túnel con fundido completo y nombre del destino."""
 
     DURACION = 2.6
 
     def __init__(self, nombre, emblema=None):
+        from interfaz.pantallas_viaje import PantallaViaje
         self.nombre = nombre
-        self.emblema = emblema.copy() if emblema is not None else None
+        self.pantalla = PantallaViaje("Fondos/Mapas/tunel.png")
+        self.capa = pygame.Surface((960, 720))
         self.t = 0.0
 
     @property
@@ -345,30 +347,13 @@ class Transicion:
         return self.t >= self.DURACION
 
     def actualizar(self, segundos, particulas):
-        anterior = self.t
         self.t += segundos
-        if int(anterior / .26) != int(self.t / .26) and self.t < 1.6:
-            particulas.emitir(480, 360, 5)
 
     def dibujar(self, superficie, fuente):
-        t = self.t
-        alpha = round(235 * (1 - min(1, max(0, t - 1.2) / 1.2))) if t > 1.2 else round(235 * min(1, t / .5))
-        velo = pygame.Surface((960, 720), pygame.SRCALPHA)
-        velo.fill((5, 14, 24, max(0, alpha)))
-        superficie.blit(velo, (0, 0))
-        fase = min(1.0, t / 1.4)
-        for indice in range(3):
-            radio = round((40 + ((t * 180 + indice * 92) % 310)) * fase)
-            if radio > 0:
-                pygame.draw.circle(superficie, (69, 220, 210), (480, 360), radio, 2)
-        if t > .6:
-            titulo = fuente.render(self.nombre, True, (231, 255, 247))
-            opacidad = round(255 * min(1, (t - .6) / .4) * min(1, (self.DURACION - t) / .5))
-            titulo.set_alpha(opacidad)
-            superficie.blit(titulo, titulo.get_rect(center=(480, 108)))
-            if self.emblema is not None:
-                self.emblema.set_alpha(opacidad)
-                superficie.blit(self.emblema, self.emblema.get_rect(center=(480, 360)))
+        self.pantalla.dibujar(self.capa, fuente, self.nombre, "Viajando entre dimensiones…")
+        alpha = round(255 * max(0, min(1, self.t / .45, (self.DURACION - self.t) / .55)))
+        self.capa.set_alpha(alpha)
+        superficie.blit(self.capa, (0, 0))
 
 
 def etiquetas_hud(dimension):

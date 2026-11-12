@@ -13,6 +13,7 @@ from interfaz.logo import LogoAnimado
 from interfaz.edicion_texto import EditorCampos
 from interfaz.menu_pausa import MenuPausa
 from interfaz.presentacion_pantalla import a_lienzo, presentar
+from interfaz.pantallas_viaje import PantallaViaje
 from multijugador.cliente import ClienteSala
 from multijugador.cliente_internet import ClienteInternet, validar_url
 from multijugador.servidor import ServidorSala
@@ -42,6 +43,8 @@ class MenuInicio:
         pygame.display.set_caption("Timeless Glitch")
         self.lienzo = pygame.Surface((960, 720))
         self.fuentes = {n: cargar_fuente(n) for n in (14, 16, 18, 20, 24, 32, 44)}
+        self.carga = PantallaViaje("Fondos/Mapas/fondoMenuInicio.png")
+        self.mostrar_carga("Preparando personajes y escenarios…")
         self.fondo = self.imagen("Fondos/Multijugador/FondoFernado.png", (1080, 725), recortar=False)
         self.iconos = [self.imagen("Iconos/Multijugador/" + nombre, (54, 54)) for nombre in (
             "IcRol-guardian.png", "IcRol-Mensajero.png", "IcRol-Habitante.png", "IcRol-Aspirante.png")]
@@ -103,6 +106,9 @@ class MenuInicio:
             return False
         self.pausa.aplicar_volumenes(audio)
         return audio
+
+    def mostrar_carga(self, detalle):
+        self.carga.mostrar_carga(self.pantalla, self.lienzo, self.fuentes[32], detalle)
 
     def _musica_menu(self):
         if self.audio:
@@ -285,6 +291,7 @@ class MenuInicio:
                 if evento.get("fase") == "partida":
                     try:
                         if self.partida is None:
+                            self.mostrar_carga("Entrando a la partida del equipo…")
                             from interfaz.partida_multijugador import VistaPartida
                             self.partida = VistaPartida(self.identificador, evento, self.audio)
                             self.aplicar_preferencias()
@@ -353,6 +360,7 @@ class MenuInicio:
             try:
                 from interfaz.partida_multijugador import VistaPartida
                 from multijugador.partida_local import ClienteCampanaLocal
+                self.mostrar_carga("Preparando La Copa y tus compañeros…")
                 self.limpiar_conexion()
                 self.cliente = ClienteCampanaLocal(
                     nombre,
