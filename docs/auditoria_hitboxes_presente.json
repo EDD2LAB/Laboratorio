@@ -29,6 +29,12 @@
   "la_copa": {
     "origen": "04db4d8abb518286fadb508aa1e9aad33890b3fe",
     "cantidad": 133,
-    "sha256": "c0aa0d20c2934b0ccfe1ec4819dcc6fa226473379d9ab1af06cc5f6525e350b2"
+    "sha256": "c0aa0d20c2934b0ccfe1ec4819dcc6fa226473379d9ab1af06cc5f6525e350b2",
+    "restauradas": {
+      "origen": "b2bd91b12a9764fcf28e009cedbf521c9ae1e543",
+      "cantidad": 7,
+      "sha256": "337e42edbc38632d9e2fb8185261796d521ff1d123efab0af7003ff4efbc5b69",
+      "motivo": "Autorizado por el usuario el 2026-11-12: las 133 paredes nuevas dejaban caminar por el aire (borde superior del caldero y plataforma superior derecha). Se añaden al final, sin editar las originales."
+    }
   }
 }

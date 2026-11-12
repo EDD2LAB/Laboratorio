@@ -26,8 +26,12 @@ class HitboxesIntegradas(unittest.TestCase):
             with self.subTest(archivo=ruta.name):
                 d = json.loads(ruta.read_text(encoding='utf8'))
                 paredes = [b for b in d['hitboxes'] if b.get('role','wall') == 'wall']
-                self.assertEqual(len(paredes), esperado['cantidad'])
-                self.assertEqual(hashlib.sha256(json.dumps(paredes, sort_keys=True).encode()).hexdigest(), esperado['sha256'])
+                # Paredes añadidas con autorización van al final; las originales no se tocan.
+                extra = esperado.get('restauradas', {'cantidad': 0, 'sha256': hashlib.sha256(b'[]').hexdigest()})
+                self.assertEqual(len(paredes), esperado['cantidad'] + extra['cantidad'])
+                originales, restauradas = paredes[:esperado['cantidad']], paredes[esperado['cantidad']:]
+                self.assertEqual(hashlib.sha256(json.dumps(originales, sort_keys=True).encode()).hexdigest(), esperado['sha256'])
+                self.assertEqual(hashlib.sha256(json.dumps(restauradas, sort_keys=True).encode()).hexdigest(), extra['sha256'])
 
     def test_interior_de_cliente_y_servidor_apunta_al_archivo_nuevo(self):
         for clave, config in EDIFICIOS_PRESENTE.items():

@@ -34,3 +34,18 @@ viajes entre eras, campaña y movimiento por WebSocket. Se inspeccionó además 
 superposición de las paredes sobre los seis fondos del Presente. La simulación
 del contexto Docker pasa con protocolo 21, dos humanos y cuatro participantes,
 78 archivos y 200 ticks, sin Pygame. Esto no constituye un build real de Docker.
+
+## Corrección posterior en La Copa
+
+La suite completa detectó que las 133 paredes nuevas de La Copa dejaban
+caminar por el aire: el recorrido desde el inicio pasaba de unas 2400 celdas
+(plataformas y puentes) a 10 341. Las fugas estaban en el borde superior de la
+plataforma del caldero y en la plataforma superior derecha, donde faltaban
+siete paredes de la versión anterior.
+
+Con autorización del usuario se añadieron esas siete paredes, copiadas sin
+cambios desde b2bd91b, al final del archivo. Las 133 originales no se editan:
+su hash sigue en auditoria_hitboxes_presente.json y las restauradas tienen su
+propio registro. El recorrido vuelve a 2379 celdas y todos los objetivos
+siguen alcanzables. Conviene que Keisy revise en el editor si prefiere cerrar
+esos bordes con su propio trazado.
