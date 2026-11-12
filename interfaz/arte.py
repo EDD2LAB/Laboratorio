@@ -11,6 +11,24 @@ NUEVOS = "Iconos/Nuevos/"
 HABILIDAD = "Iconos/Habilidad/"
 MULTI = "Iconos/Multijugador/"
 
+# Solo identidades confirmadas por el nombre del archivo. Los demás retratos
+# conservan el sprite de su era hasta que el equipo confirme a quién pertenecen.
+RETRATOS_NOMBRADOS = {
+    "naira": "NairaRetraro.png", "odran": "OdranRetrato.png",
+    "darek": "DarekRetrato.png", "ronaldo vélez": "RonaldoVelezRetrato.png",
+}
+
+
+def ajustar_imagen(imagen, caja):
+    """Encaja el contenido visible sin deformarlo ni cortar su silueta."""
+    limites = imagen.get_bounding_rect()
+    if not limites.width or not limites.height:
+        return None
+    imagen = imagen.subsurface(limites)
+    factor = min(caja[0] / imagen.get_width(), caja[1] / imagen.get_height())
+    return pygame.transform.scale(imagen, (max(1, round(imagen.get_width() * factor)),
+                                           max(1, round(imagen.get_height() * factor))))
+
 # clave -> (carpeta de Retratos, prefijo de sus cuatro expresiones Num1..Num4)
 RETRATOS = {
     "guardian": ("Retrato Guardián", "RetratoGuardian"),
@@ -46,12 +64,7 @@ def icono(ruta, caja):
     if imagen is None:
         print("[Arte] Falta la imagen:", ruta)
         return None
-    limites = imagen.get_bounding_rect()
-    if limites.width and limites.height:
-        imagen = imagen.subsurface(limites)
-    factor = min(caja[0] / imagen.get_width(), caja[1] / imagen.get_height())
-    return pygame.transform.scale(imagen, (max(1, round(imagen.get_width() * factor)),
-                                           max(1, round(imagen.get_height() * factor))))
+    return ajustar_imagen(imagen, caja)
 
 
 def cargar_retratos(clave, caja):
@@ -83,6 +96,10 @@ class ArtePartida:
 
     def __init__(self):
         self.retratos = {clave: cargar_retratos(clave, (78, 88)) for clave in RETRATOS}
+        self.retratos_nombrados = {nombre: icono("Retratos/" + archivo, (78, 88))
+                                   for nombre, archivo in RETRATOS_NOMBRADOS.items()}
+        from interfaz.presentacion_arte import AnimacionesNucleo
+        self.nucleo = AnimacionesNucleo()
         self.retrato_agente = icono("Retratos/RetratoAgenteDVerif.png", (78, 88))
         self.marco = icono(NUEVOS + "panel_expediente.png", (112, 120))
         self.flecha_izq = icono(NUEVOS + "Boton_izq.png", (44, 44))

@@ -141,7 +141,7 @@ class EncargoSuministros:
 
     @property
     def sitio(self):
-        """Dónde queda la obra terminada (su bandera verde): el puente, las familias, el archivo."""
+        """[x, y] de la obra terminada (su bandera verde): el puente, las familias, el archivo."""
         clave = self.config.get("sitio")
         sitio = next((dict(o) for o in self._lista_objetivos if o["id"] == clave), dict(self.destino))
         if "bandera" in sitio:  # el Puente 1 la lleva en medio del puente
@@ -149,7 +149,11 @@ class EncargoSuministros:
         else:  # a un lado del personaje que está allí, para que no la tape
             dx, dy = self.config.get("desvio_bandera", (0, 0))
             sitio["x"], sitio["y"] = sitio["x"] + dx, sitio["y"] + dy
-        return sitio
+        return [sitio["x"], sitio["y"]]
+
+    def obra(self):
+        """Lo justo para la bandera de una obra terminada: viaja en cada estado de red."""
+        return {"efecto": self.config["efecto"], "sitio": self.sitio, "completo": True}
 
     def publico(self):
         return {"titulo": self.config["titulo"], "motivo": self.config["motivo"],

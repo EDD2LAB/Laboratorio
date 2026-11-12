@@ -158,6 +158,77 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   Ver `docs/red_estabilidad.md` para límites, recuperación y pruebas.
 
 ---
+# Etapa 3 - orientación infantil (2026-11-11)
+
+- Tarea concreta siempre visible, con fuente, puerta o persona. La flecha y el
+  camino de luces comparten ese objetivo; durante el análisis se indica C y se
+  deja de enviar al jugador hacia la pantalla para votar.
+- Indicadores !, ?, check y tecla de interacción con respaldo por código,
+  caché de imágenes/teclas y filtro por escena. Los logros no saltan entre eras
+  o interiores. En Núcleo se guían los prerrequisitos de conexiones, archivos,
+  llave y firma sin revelar soluciones de los minijuegos.
+- F1 abre controles visuales con ocho tarjetas y leyenda de señales. Conserva
+  las pestañas anteriores y corrige la ayuda obsoleta de Ciudad Núcleo.
+- El celular avisa cuántas marcas faltan analizar antes de elegir, sin bloquear
+  decisiones ni cambiar sus consecuencias. Las tres eras muestran pendientes
+  de voto y empate sin publicar elecciones privadas de otras personas.
+- Protocolo 13 conservado: campos opcionales aditivos de presentación, sin
+  acciones nuevas ni cambios en validación de decisiones. El cliente conserva
+  el contador como respaldo si aún no recibe ids pendientes del servidor.
+- Auditoría estática: 1081 candidatos textuales, 12 con más de 20 palabras;
+  CSV completo y siete propuestas cortas en docs/textos.md. No se aplican esas
+  propuestas a testimonios, pistas ni normas. Sus límites de análisis estático
+  están documentados: no equivale a capturar todas las pantallas dinámicas.
+- Revisión completa: 466 pruebas, 465 aprobadas y una dependencia de orden en
+  la prueba del ping (podía llegar el snapshot antes del error). Corregida para
+  esperar el evento correcto. Repetición final de 54 pruebas de red, guía,
+  accesibilidad y Presente: todas aprobadas. Otras 8 de orientación aprobadas
+  tras el ajuste final del seguimiento por escena.
+- Revisadas capturas de tarea/tecla en La Copa, controles F1 y aviso de análisis
+  en celular; comprobado con estado real que la guía busca al Corredor de Datos.
+- Rendimiento actual: 33,4 FPS / 8,13 ms de trabajo medio de frame en 15 s con
+  cuatro clientes. Se investigó la diferencia respecto al registro anterior de
+  60 FPS: la base aislada be2f6df también dio 33,1 FPS / 10,66 ms en 10 s, con
+  el mismo intérprete y PC. Comparación corta, sin caída adicional observada de
+  esta etapa; no permite atribuir la variación general a una causa concreta.
+- Empaquetado simulado: servidor sin Pygame, dos humanos más dos bots y 200
+  ticks aprobados. No se hizo una construcción real de Docker.
+- No cambiaron paredes, arte ni el catálogo legal. Sin push ni Render para
+  esta etapa; las etapas 1 y 2 sí están publicadas en be2f6df.
+- Documentación: docs/claridad_etapa3.md. Siguiente etapa: atascos y movimiento.
+
+---
+# Etapa 4 - movimiento y atascos (2026-11-11)
+
+- Reproducidos seis fallos en los once casos iniciales: unión de zonas
+  caminables, líneas con margen excesivo, roce con objetos pequeños, escape
+  de un bloqueo de puente y paridad del motor local.
+- Geometría y desplazamiento comunes en logica/movimiento_suave.py, sin Pygame.
+  Cobertura por unión de zonas; colisión real segmento/rectángulo para líneas;
+  subpasos de hasta 1 px, deslizamiento y ayuda lateral limitada a 3 px que
+  consume el mismo presupuesto de movimiento. Se evitan cortes de esquina.
+- El bloqueo original del puente permite salir a quien ya está dentro, sin
+  profundizar ni atravesar paredes. Sigue impidiendo entrar desde fuera.
+- Bots: anclajes alcanzables desde su posición real, giros sin saltar vértices,
+  tramos finales para radios pequeños y consumo del tiempo entre nodos sin
+  reducir su velocidad. Escape de bloqueo temporal a pie y posterior recálculo.
+- Las 16 regresiones finales de movimiento pasan, junto con la suite completa:
+  **482 pruebas aprobadas en 298,030 s**. Las campañas con bots, reparación,
+  desplazamiento por red y arranque quedan cubiertos por esa suite.
+- Comprobación adicional con semilla 42: 960 posiciones en las tres eras y
+  cinco interiores coincidieron entre motor local y autoritativo (sin NPC);
+  353 movimientos desde posiciones libres conservaron colisión y velocidad.
+- Empaquetado simulado: 61 archivos, servidor sin Pygame, 2 humanos + 2 bots,
+  200 ticks y estado dentro de MAX_MENSAJE; validacion_docker_etapa4.json.
+- Benchmark headless local, cuatro clientes, 15 s: 33,4 FPS, trabajo medio de
+  frame 6,55 ms / p95 8,69 ms, unos 3,7 KB/s por cliente. Comparable al registro
+  actual de etapa 3 (33,4 FPS); no es una medición de Render ni garantiza un
+  rendimiento concreto en otras PC.
+- Protocolo 13 conservado; controles y estados mantienen sus formatos.
+  Ningún archivo de Hitboxes cambió. Sin push ni despliegue de las etapas 3 y 4.
+- Documentación: docs/movimiento_etapa4.md. Sigue presentación, arte y audio.
+
+---
 
 ## Resaltado dorado del objetivo de E (rama `resaltado-objetivo`)
 
@@ -186,3 +257,64 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   58,7 FPS / 9,54 ms (diferencia dentro del ruido).
 - La presentación del lienzo pasó a 4:3 centrado con bandas negras (commit
   aparte en `multijugador`).
+
+---
+
+# Etapa 5 - presentación visual sin música (2026-11-11)
+
+- Integrados cuatro retratos identificados, tarjetas de clasificación e iconos
+  del celular, y los estados animados de NÚCLEO con respaldo por código.
+- Diálogos de Kael y Tarek con su retrato, avisos de rechazo distinguibles por
+  texto y color, etiquetas de botones ajustadas y tamaños revisados visualmente.
+- 500 pruebas completas aprobadas (314,645 s); después de los últimos ajustes,
+  42 pruebas afectadas aprobadas (16,967 s). Sin cambios en paredes ni protocolo.
+- Música pendiente por petición del usuario. Mapas nuevos y retratos ambiguos
+  requieren geometría o identidad confirmada. Ver docs/presentacion_etapa5.md.
+- Solo local, sin push ni despliegue de esta etapa. Las etapas 3 y 4 sí se
+  publicaron y desplegaron junto con los cambios del equipo en bef84e9.
+
+---
+
+# Etapa 6 - exploración (2026-11-11, protocolo 14)
+
+- Elia y Arel en La Copa con sprites y conversaciones de ayuda, sin regalar pistas.
+- Cinco interiores nuevos del Futuro, diez consultas opcionales entre ambas
+  ciudades, contador compartido y validación de sala y cercanía en el servidor.
+- Barreras iniciales conservadas; personajes y bots siguen la sala real y usan
+  las puertas de su era. Se conservan tareas, soluciones y casos de la campaña.
+- 508 pruebas completas aprobadas en 348,768 s; auditoría con 20 recorridos
+  transitables. Ocho regresiones nuevas. Ningún archivo de Hitboxes modificado.
+- El mapa exterior nuevo del Futuro NO está activado: requiere revisión manual
+  de paredes, escaleras, puertas y portal. La geometría de esta etapa sigue
+  parcialmente pendiente; ver docs/exploracion_etapa6.md y su auditoría JSON.
+- Solo local, sin push ni despliegue. Al publicar hay que actualizar las PC y
+  Render al protocolo 14. Música pendiente de selección del usuario.
+
+---
+
+# Etapa 7 - expediente AVL legible y animado (2026-11-11)
+
+- Ocho nodos sin solaparse con la leyenda, colores por era, ficha desplazable
+  y decisiones nombradas según la misión. Explicación breve y consecuencia real.
+- Animación de inserción y rotaciones reales simples y dobles, con repetición
+  local y descripción compacta del servidor. Protocolo 14 conservado.
+- Catálogo legal e Hitboxes intactos. Referencias legales pendientes del profesor.
+- Batería general: 513 de 514 aprobadas; la prueba restante esperaba la ficha
+  completa en una pantalla. Se adaptó para comprobar todas sus líneas al desplazar.
+  Verificación final: 44 pruebas afectadas aprobadas (21,922 s). No se volvió a
+  ejecutar la batería completa tras adaptar esa prueba.
+- Paquete aislado del servidor validado, dos humanos y dos bots, 200 ticks.
+  Estado de ocho fichas y cuatro jugadores: 22.723 bytes de un máximo de 32.768.
+- Solo local, sin push ni despliegue. Ver docs/expediente_etapa7.md.
+
+---
+
+# Publicación de etapas 5, 6 y 7 - validación previa (2026-11-11)
+
+- 514 pruebas completas aprobadas en 346,223 s, incluida la comprobación de
+  lectura desplazable de referencias legales de los ocho casos.
+- Simulación del paquete del servidor aprobada: protocolo 14, dos humanos y
+  dos bots, 200 ticks, ocho casos, sin Pygame. No es un build real de Docker.
+- Se publican juntas presentación visual, exploración y expediente animado.
+  Música y geometría exterior nueva del Futuro siguen pendientes.
+- Los clientes y el servidor deben actualizarse al protocolo 14.

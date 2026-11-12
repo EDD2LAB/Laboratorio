@@ -115,10 +115,14 @@ class BanderasDeObras(unittest.TestCase):
         from multijugador.suministros import ENCARGOS, EncargoSuministros
         mision = ClienteCampanaLocal("Prueba", "guardian", semilla=72)._partida.mision
         sitios = [EncargoSuministros(r, mision.objetivos).publico()["sitio"] for r in range(len(ENCARGOS))]
-        self.assertEqual([s["id"] for s in sitios], ["puente_1", "testigo", "archivo"])
-        obras = [EncargoSuministros(r, mision.objetivos).publico() for r in range(len(ENCARGOS))]
+        base = {o["id"]: o for o in mision.objetivos}
+        puente = base["puente_1"]["bandera"]
+        self.assertEqual(sitios[0], puente)  # en medio del Puente 1
+        self.assertLess(abs(sitios[1][0] - base["testigo"]["x"]), 60)  # junto a Luma
+        self.assertLess(abs(sitios[2][0] - base["archivo"]["x"]), 60)  # junto a Naira
+        obras = [EncargoSuministros(r, mision.objetivos).obra() for r in range(len(ENCARGOS))]
         superficie = pygame.Surface((960, 720))
         dibujar_encargos(superficie, {"obras": obras, "encargo": None}, pygame.font.Font(None, 16))
         for sitio in sitios:  # el asta dorada de cada bandera
-            with self.subTest(sitio=sitio["id"]):
-                self.assertEqual(tuple(superficie.get_at((sitio["x"] - 22, sitio["y"] - 20)))[:3], (225, 189, 105))
+            with self.subTest(sitio=sitio):
+                self.assertEqual(tuple(superficie.get_at((sitio[0] - 22, sitio[1] - 20)))[:3], (225, 189, 105))

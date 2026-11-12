@@ -1,7 +1,7 @@
 # Timeless Glitch
 
 Juego educativo 2D para investigar información y decidir en equipo.
-Rama compartida: `multijugador`. Protocolo actual: **13**.
+Rama compartida: `multijugador`. Protocolo actual: **14**.
 
 ## Instalación en Windows / PowerShell
 
@@ -30,6 +30,8 @@ del sistema. Tras la instalación, la campaña local con bots no necesita Intern
 - Tres eras: La Copa (4 casos), Distrito Conecta (3) y Ciudad Núcleo (1 caso
   con 4 tareas). Portales con aceptación del equipo.
 - Expediente AVL compartido, informe final y fichas legales. Arte y audio locales.
+- F1: controles visuales. El mapa muestra la tarea actual y señales de interacción;
+  el celular avisa si falta analizar y las votaciones indican quién falta.
 
 Todos deben usar una versión compatible con el servidor. Tras actualizar,
 cerrar y abrir el juego. Reiniciar el servidor pierde las salas en memoria.

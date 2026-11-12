@@ -1,0 +1,1083 @@
+﻿archivo,linea,palabras,texto
+interfaz/analisis_manipulado.py,112,5,[Audio] No se pudo cargar
+interfaz/analisis_manipulado.py,241,3,Se necesitan {dato}
+interfaz/analisis_manipulado.py,242,5,Marcas {dato} de {dato} · {dato}
+interfaz/analisis_manipulado.py,269,9,Habla con Darío Veraz para conseguir el video original.
+interfaz/analisis_manipulado.py,282,3,analisis:frame:{dato}
+interfaz/analisis_manipulado.py,284,7,· Espacio: pausa · ← →: cuadro · E o clic: marcar
+interfaz/analisis_manipulado.py,307,9,Consigue la grabación auténtica en la Sede del Aspirante.
+interfaz/analisis_manipulado.py,324,3,NOTA DE VOZ
+interfaz/analisis_manipulado.py,328,3,La que circula
+interfaz/analisis_manipulado.py,345,13,· Escucha las dos y haz clic en la onda donde algo suene mal.
+interfaz/analisis_manipulado.py,348,3,analisis:zona:saturacion
+interfaz/analisis_manipulado.py,350,7,Pico: original {dato} · nota de voz {dato}
+interfaz/analisis_manipulado.py,376,3,DEL PERFIL FALSO
+interfaz/analisis_manipulado.py,376,3,ORIGINAL · Café Digital
+interfaz/analisis_manipulado.py,383,8,Consigue la foto original en el Café Digital.
+interfaz/analisis_manipulado.py,400,15,Pasa la lupa por la foto del perfil y haz clic donde veas algo alterado.
+interfaz/arte.py,18,3,Retrato Habitante Hombre
+interfaz/arte.py,19,3,Retrato Aspirante Hombre
+interfaz/arte.py,20,3,Retrato Habitante Mujer
+interfaz/arte.py,21,3,Retrato Aspirante Mujer
+interfaz/arte.py,47,4,[Arte] Falta la imagen:
+interfaz/aviso_legal.py,12,8,Caso documentado. El responsable responde ante la ley.
+interfaz/aviso_legal.py,13,8,El daño siguió. La conducta sigue siendo sancionable.
+interfaz/aviso_legal.py,14,7,Verificar y avisar protege a la aldea.
+interfaz/aviso_legal.py,15,8,La alerta era real: callarla también hace daño.
+interfaz/celular.py,139,3,Elementos presente/Verificaciones/
+interfaz/celular.py,199,3,analisis:reproducir:suplantado
+interfaz/celular.py,255,4,Caso {dato} de {dato} · 
+interfaz/celular.py,256,5,{dato}Pistas {dato} de {dato}
+interfaz/celular.py,258,3,Ver mis pistas
+interfaz/celular.py,275,3,Ver mis pistas
+interfaz/celular.py,283,12,Aún no hay pistas. Habla con las personas marcadas en el mapa.
+interfaz/celular.py,293,4,Pista {dato} de {dato}
+interfaz/celular.py,297,3,También la ven:
+interfaz/celular.py,303,3,Decidir qué hacer
+interfaz/celular.py,303,4,Revisar antes de decidir
+interfaz/celular.py,308,6,Reúnan las pistas de este caso.
+interfaz/celular.py,309,7,Acércate a la pantalla pública para elegir.
+interfaz/celular.py,319,5,Ya eligieron {dato} de {dato}
+interfaz/celular.py,364,8,Sigue circulando sin aclaración. Pueden volver a decidir.
+interfaz/celular.py,366,3,Volver a decidir
+interfaz/celular.py,368,8,Antes de seguir: ¿qué tipo de información era?
+interfaz/celular.py,369,3,Clasificar la publicación
+interfaz/celular.py,371,8,Sigue circulando sin aclaración. Pueden volver a decidir.
+interfaz/celular.py,372,3,Volver a decidir
+interfaz/celular.py,377,4,Esperando a tu equipo...
+interfaz/celular.py,377,7,"Cuando estén listos, abran el siguiente caso."
+interfaz/celular.py,384,4,¿Cómo clasificarías esta publicación?
+interfaz/celular.py,386,6,Elige la categoría que consideres correcta.
+interfaz/celular.py,398,3,Tu respuesta: {dato}
+interfaz/celular.py,402,3,En realidad era:
+interfaz/celular.py,405,4,Alfabetización digital {dato}{dato}
+interfaz/celular.py,406,4,Haz clic para continuar.
+interfaz/celular.py,431,3,Guardar el celular
+interfaz/cooperativo.py,252,3,\b{dato}\b
+interfaz/cooperativo.py,295,6,Espera a que entre otro compañero.
+interfaz/cooperativo.py,297,8,Te falta una pista. Pídesela a un compañero.
+interfaz/cooperativo.py,299,7,Otro compañero debe hablar con su personaje.
+interfaz/cooperativo.py,301,7,Compartan al menos una pista con I.
+interfaz/cooperativo.py,303,6,Acércate al caldero brillante para elegir.
+interfaz/cooperativo.py,330,8,Tus pistas: {dato} · Ya eligieron {dato} de {dato}
+interfaz/cooperativo.py,344,8,Antes de seguir: ¿qué tipo de información era?
+interfaz/cooperativo.py,346,3,Clasificar el evento
+interfaz/cooperativo.py,349,7,Leer las pistas e intentar otra vez
+interfaz/cooperativo.py,350,3,Ver nuestras estrellas
+interfaz/cooperativo.py,350,6,Vamos a ayudar a la aldea
+interfaz/cooperativo.py,351,3,Volver al mapa
+interfaz/cooperativo.py,441,3,TU SIGUIENTE AVENTURA
+interfaz/cooperativo.py,441,6,¿QUÉ LE CONTAMOS A LA ALDEA?
+interfaz/cooperativo.py,442,4,EL TRONCO NOS CONECTA
+interfaz/cooperativo.py,442,4,¡LO HICIMOS EN EQUIPO!
+interfaz/cooperativo.py,442,4,¡MANOS A LA OBRA!
+interfaz/cooperativo.py,442,5,UN MENSAJE PARA EL EQUIPO
+interfaz/cooperativo.py,443,4,AYUDEMOS A LA ALDEA
+interfaz/cooperativo.py,445,4,AYUDEMOS A LA ALDEA
+interfaz/cooperativo.py,454,7,"¡Hola, detectives! La aldea necesita su ayuda."
+interfaz/cooperativo.py,455,14,"Aprendamos a caminar, hablar y llevar un farol. Será una misión corta, sin reloj."
+interfaz/cooperativo.py,458,3,Ya sé jugar
+interfaz/cooperativo.py,462,6,¡Gracias por ayudar a la aldea!
+interfaz/cooperativo.py,463,6,Estrellas del equipo: {dato} de {dato}
+interfaz/cooperativo.py,481,3,Busca tu pista
+interfaz/cooperativo.py,482,5,Sigue las luces del camino.
+interfaz/cooperativo.py,485,3,Pedir una pista
+interfaz/cooperativo.py,486,6,Flechas: caminar · E: hablar o ayudar
+interfaz/cooperativo.py,487,4,Mi poder especial · Q
+interfaz/cooperativo.py,491,5,Sigue la luz del mapa.
+interfaz/cooperativo.py,493,3,Llevar el farol
+interfaz/cooperativo.py,496,5,Ver y compartir mis pistas
+interfaz/cooperativo.py,499,12,Aún no tienes pistas. Habla con el personaje que tiene una luz.
+interfaz/cooperativo.py,509,9,Vigente por {dato} s. Compartirlo conserva su fecha original.
+interfaz/cooperativo.py,514,4,Pista {dato} de {dato}
+interfaz/cooperativo.py,526,3,Dar mi pista
+interfaz/cooperativo.py,526,3,Enviar mi pista
+interfaz/cooperativo.py,526,4,Ya tiene esta pista
+interfaz/cooperativo.py,529,10,Acércate a esa persona o a un tronco para enviarla.
+interfaz/cooperativo.py,531,6,Me falta una pista: pedir ayuda
+interfaz/cooperativo.py,535,7,Eligieron distinto. Hablen y prueben otra vez.
+interfaz/cooperativo.py,535,7,Lee tus pistas. ¿Qué crees que pasó?
+interfaz/cooperativo.py,537,8,Tus pistas: {dato} · Ya eligieron {dato} de {dato}
+interfaz/cooperativo.py,539,6,Pedir la pista que me falta
+interfaz/cooperativo.py,545,12,Este tronco puede llevar tus pistas y mensajes a todo el mapa.
+interfaz/cooperativo.py,547,3,Enviar una pista
+interfaz/cooperativo.py,548,3,Enviar un mensaje
+interfaz/cooperativo.py,560,6,Puedes usarlo una vez por misterio.
+interfaz/cooperativo.py,561,3,Usar mi poder
+interfaz/cooperativo.py,565,4,Estrellas del equipo: {dato}
+interfaz/cooperativo.py,566,7,Ahora vamos a ayudar con nuestras manos.
+interfaz/cooperativo.py,568,7,Leer las pistas e intentar otra vez
+interfaz/cooperativo.py,570,7,Vuelve al caldero para intentarlo otra vez.
+interfaz/cooperativo.py,571,3,Ver nuestras estrellas
+interfaz/cooperativo.py,571,6,Vamos a ayudar a la aldea
+interfaz/cooperativo.py,572,3,Volver al mapa
+interfaz/cooperativo.py,596,3,Llevar el farol
+interfaz/cooperativo.py,596,3,Volver al mapa
+interfaz/cooperativo.py,596,5,Ver y compartir mis pistas
+interfaz/cooperativo.py,603,5,Sigue la luz del mapa.
+interfaz/cooperativo.py,612,6,Flechas izquierda y derecha: cambiar destinatario
+interfaz/cooperativo.py,622,5,: busca la luz del mapa
+interfaz/cooperativo.py,623,3,las manos libres
+interfaz/cooperativo.py,626,4,Hacer la actividad juntos
+interfaz/cooperativo.py,628,6,¡Terminado! Ganaron una estrella por ayudar.
+interfaz/cooperativo.py,629,5,Estoy listo para otra aventura
+interfaz/cooperativo.py,631,12,Sigue las luces. E recoge y entrega. Cada uno lleva un material.
+interfaz/cooperativo.py,636,4,Ayudemos a la aldea
+interfaz/cooperativo.py,640,7,está ayudando. ¡El otro hace la tarea!
+interfaz/cooperativo.py,640,11,Uno pulsa 'Yo ayudo'. El otro hace la tarea tres veces.
+interfaz/cooperativo.py,649,4,Ver el siguiente paso
+interfaz/cooperativo.py,651,5,Yo ayudo: me quedo aquí
+interfaz/cooperativo.py,652,3,Hacer la tarea
+interfaz/cooperativo.py,653,4,Quédate junto al cesto.
+interfaz/cooperativo.py,653,6,Acércate al círculo verde del cesto.
+interfaz/dialogo.py,129,3,Clic para continuar
+interfaz/efectos_visuales.py,37,6,[Efectos] Falta el recurso esperado: {dato}
+interfaz/escenas_multijugador.py,114,5,[Multijugador] Falta el ícono esperado:
+interfaz/escenas_multijugador.py,134,5,[Multijugador] Sin sprites de materiales:
+interfaz/escenas_multijugador.py,199,3,¿QUÉ POCIÓN USAMOS?
+interfaz/escenas_multijugador.py,239,4,CONSECUENCIA DE LA DECISIÓN
+interfaz/escenas_multijugador.py,268,3,REPARAR EL PUENTE
+interfaz/escenas_multijugador.py,287,9,Aciertos: {dato}/{dato}    Pulsa E en la zona verde
+interfaz/escenas_multijugador.py,289,7,ESC: dejar que otro compañero lo intente
+interfaz/escenas_multijugador.py,302,4,¿A QUÉ ÉPOCA VIAJAMOS?
+interfaz/escenas_multijugador.py,307,3,Aceptaste ir a
+interfaz/escenas_multijugador.py,307,3,Proponen ir a
+interfaz/escenas_multijugador.py,312,16,El equipo viaja junto: todos deben venir al portal y aceptar. Los indicadores viajan con ustedes.
+interfaz/escenas_multijugador.py,326,4,Ya no quiero viajar
+interfaz/expediente.py,33,5,EL LIBRO DE LOS CASOS
+interfaz/expediente.py,34,10,T: abrir o cerrar · Guarda lo que descubrieron entre todos.
+interfaz/expediente.py,67,7,Pulsa un círculo para leer el caso.
+interfaz/expediente.py,68,15,El número grande indica la gravedad (1 a 9). El pequeño indica cuándo lo resolvieron.
+interfaz/expediente.py,81,3,Prueba {dato}/{dato}: 
+interfaz/expediente.py,87,3,Ver la ley
+interfaz/expediente.py,87,3,Ver las pruebas
+interfaz/expediente.py,89,8,Resuelvan el primer caso. Aquí guardaremos sus descubrimientos.
+interfaz/expediente.py,93,14,"Menor: izquierda. Mayor: derecha. Si son iguales, el más nuevo va a la derecha."
+interfaz/expediente.py,98,8,¡El árbol se equilibró para facilitar la búsqueda!
+interfaz/finales.py,8,3,LA COPA FLORECE
+interfaz/finales.py,8,5,Mira será la nueva Cacique
+interfaz/finales.py,9,6,El Consejo deberá recomponer la confianza
+interfaz/finales.py,9,6,LA COPA SE CUBRE DE HUMO
+interfaz/finales.py,10,3,Finales/Final_positivo.jpeg
+interfaz/finales.py,10,3,Finales/Game_over.jpeg
+interfaz/finales.py,28,4,[Arte] Falta la imagen:
+interfaz/finales.py,47,4,Haz clic para continuar
+interfaz/hud.py,129,3,{dato}{dato} {dato}
+interfaz/informe_final.py,12,11,Lo que empezó como un rumor cambió a toda una comunidad.
+interfaz/informe_final.py,47,4,{dato} · Gravedad {dato} · {dato}
+interfaz/informe_final.py,60,3,informe_{dato}.txt
+interfaz/informe_final.py,60,6,%Y-%m-%d_%H%M%S
+interfaz/informe_final.py,61,5,%Y-%m-%d %H:%M
+interfaz/informe_final.py,61,6,INFORME FINAL DEL EXPEDIENTE - TIMELESS GLITCH
+interfaz/informe_final.py,210,4,INFORME FINAL DEL EXPEDIENTE
+interfaz/informe_final.py,211,8,Recorrido del árbol: de menor a mayor gravedad.
+interfaz/informe_final.py,222,3,Exportar a .txt
+interfaz/inicio.py,29,5,Lleva pistas a tus compañeros.
+interfaz/inicio.py,29,6,Busca pistas y revisa los mensajes.
+interfaz/inicio.py,30,6,Explica lo que pasó usando pistas.
+interfaz/inicio.py,30,6,Habla con los vecinos y ayuda.
+interfaz/inicio.py,91,4,Consultando las direcciones locales…
+interfaz/inicio.py,115,4,Consulta IPv4 con ipconfig
+interfaz/inicio.py,117,4,Consulta IPv4 con ipconfig
+interfaz/inicio.py,222,5,Escribe tu nombre para entrar.
+interfaz/inicio.py,227,14,"Falta publicar el servidor de Internet. Cuando esté disponible, escribe su dirección HTTPS aquí."
+interfaz/inicio.py,231,8,Escribe el código de sala de 6 caracteres.
+interfaz/inicio.py,235,12,Conectando… El primer arranque del servidor puede tardar. Puedes cancelar mientras esperas.
+interfaz/inicio.py,244,8,El puerto debe estar entre 1024 y 65535.
+interfaz/inicio.py,248,6,Escribe la IP local del anfitrión.
+interfaz/inicio.py,256,4,127.0.0.1
+interfaz/inicio.py,263,13,No se pudo abrir el puerto. Prueba otro o cierra la sala anterior.
+interfaz/inicio.py,281,8,Elige un rol y confirma que estás listo.
+interfaz/inicio.py,300,6,Todos los jugadores confirmaron el equipo.
+interfaz/inicio.py,316,25,"No hay conexión con el anfitrión. Comprueba que la sala siga abierta, la IP, el puerto y el permiso de Python en la red privada."
+interfaz/inicio.py,335,8,Copiado. Pégalo con Ctrl+V donde quieras compartirlo.
+interfaz/inicio.py,351,5,Escribe tu nombre para iniciar.
+interfaz/inicio.py,419,12,Era I: La Copa · Era II: Distrito Conecta · Era III: Ciudad Núcleo
+interfaz/inicio.py,420,3,Campaña con bots
+interfaz/inicio.py,427,4,CAMPAÑA LOCAL CON BOTS
+interfaz/inicio.py,428,10,Elige tu personaje. Los otros tres los controlará un bot.
+interfaz/inicio.py,434,4,Dificultad de los bots
+interfaz/inicio.py,455,9,De 2 a 4 jugadores · Una PC por jugador
+interfaz/inicio.py,457,3,Unirse a partida
+interfaz/inicio.py,459,9,Juega desde redes diferentes usando un código de sala.
+interfaz/inicio.py,460,11,Conecta computadores de la misma red mediante la IP del anfitrión.
+interfaz/inicio.py,463,3,UNIRSE A PARTIDA
+interfaz/inicio.py,465,3,IP del anfitrión
+interfaz/inicio.py,468,3,Código de sala
+interfaz/inicio.py,473,11,Recibirás un código para invitar a tus compañeros desde cualquier red.
+interfaz/inicio.py,474,16,Tus compañeros usarán tu IP local. Al salir de la sala se desconectará todo el equipo.
+interfaz/inicio.py,485,3,Mostrar HUD · H
+interfaz/inicio.py,485,3,Ocultar HUD · H
+interfaz/inicio.py,508,3,SALA DE ESPERA
+interfaz/inicio.py,511,3,Código de sala:
+interfaz/inicio.py,511,3,IP y puerto:
+interfaz/inicio.py,515,6,Comparte este dato con tu equipo
+interfaz/inicio.py,516,14,Elijan personajes distintos y pulsen Estoy listo. Los roles libres los cubrirá un bot.
+interfaz/inicio.py,537,3,Salir de sala
+interfaz/inicio.py,538,3,No estoy listo
+interfaz/inicio.py,544,5,El anfitrión confirma el equipo.
+interfaz/inicio.py,547,6,Preparando La Copa para el equipo…
+interfaz/mensaje_privado.py,75,5,El Mensajero entrega un pergamino...
+interfaz/menu_pausa.py,24,3,Efectos de sonido
+interfaz/menu_pausa.py,30,4,Caminar (con Shift: correr)
+interfaz/menu_pausa.py,31,7,Ayudar o usar lo que tienes cerca
+interfaz/menu_pausa.py,32,4,Cambiar entre objetivos cercanos
+interfaz/menu_pausa.py,35,6,Libro de casos y expediente AVL
+interfaz/menu_pausa.py,36,4,Habilidad de tu rol
+interfaz/menu_pausa.py,37,5,"Detalles: tarea, indicadores y teclas"
+interfaz/menu_pausa.py,38,6,Ocultar o mostrar todo el HUD
+interfaz/menu_pausa.py,39,5,Ocultar o mostrar los nombres
+interfaz/menu_pausa.py,40,3,Alternar pantalla completa
+interfaz/menu_pausa.py,41,5,Cerrar ventanas / abrir este menú
+interfaz/menu_pausa.py,42,5,Celular en Presente y Futuro
+interfaz/menu_pausa.py,43,4,"FPS, conexión y bots"
+interfaz/menu_pausa.py,49,12,Cada caso empieza con un rumor. Entre todos descubren si es verdad.
+interfaz/menu_pausa.py,50,14,1. Sigue la luz hasta tu personaje y pulsa E para conseguir tu pista.
+interfaz/menu_pausa.py,51,22,"2. Necesitas dos pistas. Pulsa I para leerlas y darlas a un compañero cercano, o envíalas desde un Tronco de los Ecos."
+interfaz/menu_pausa.py,53,29,"3. En un tronco eliges con las flechas a quién escribir: a una persona o a todos. Los bots hacen lo que les pidas, por ejemplo venir al caldero."
+interfaz/menu_pausa.py,55,29,"4. Vayan al caldero y elijan una poción: Quemar corrige lo falso, Colgar lo difunde e Ignorar no lo comparte. Con bots decide tu elección; entre personas, la mayoría."
+interfaz/menu_pausa.py,57,7,5. Clasifica qué tipo de información era.
+interfaz/menu_pausa.py,58,39,"6. Después ayuden a la aldea: lleven los materiales al lugar marcado, hagan la actividad en pareja y confirmen en el caldero. En el primer caso también reparan el Puente 1: pulsa E tres veces en la zona verde."
+interfaz/menu_pausa.py,61,17,Pulsa T o el botón Casos del mapa para consultar lo que descubrieron y ordenar el expediente.
+interfaz/menu_pausa.py,62,12,"Son cuatro casos. Al terminar, la flecha dorada te lleva al portal."
+interfaz/menu_pausa.py,65,22,Una imagen viral acusa a Ronaldo Vélez. ¿Es real? Aquí la cámara va cerca de tu personaje: recorre el mapa para descubrirlo.
+interfaz/menu_pausa.py,67,26,"1. Para viajar, ve al portal de La Copa y pulsa E. Cada persona del equipo debe aceptar junto al portal; los bots viajan con ustedes."
+interfaz/menu_pausa.py,69,19,"2. Habla con las personas marcadas (E) hasta reunir las tres pistas: Darío Veraz, Tomás Red y Ronaldo Vélez."
+interfaz/menu_pausa.py,71,36,"3. Tu celular (C) guarda las pistas. Junto a la pantalla pública decidan en él: Verificar, Denunciar, Ignorar o Publicar. Los bots reúnen las demás pistas y te dejan una; decidir les toca a las personas."
+interfaz/menu_pausa.py,73,12,"4. Clasifica la publicación. Si la dejaron pendiente, pueden volver a decidir."
+interfaz/menu_pausa.py,74,12,Usa el portal para volver a La Copa. Los indicadores viajan contigo.
+interfaz/menu_pausa.py,77,7,Ciudad Núcleo es la época del futuro.
+interfaz/menu_pausa.py,78,8,1. Restaura las conexiones en la terminal marcada.
+interfaz/menu_pausa.py,79,12,2. Habla con el Archivista y revisa las firmas de los registros.
+interfaz/menu_pausa.py,80,12,3. Lleva la llave del Corredor de Datos al Centro de Verificación.
+interfaz/menu_pausa.py,81,9,4. Ayuda al Ciudadano Conectado a investigar las cuentas.
+interfaz/menu_pausa.py,82,11,5. Habla con el Representante Humano. Decidan en la pantalla central.
+interfaz/menu_pausa.py,105,7,[Pantalla] No se pudo ajustar la ventana:
+interfaz/menu_pausa.py,236,4,La campaña está detenida.
+interfaz/menu_pausa.py,237,4,Tus compañeros siguen jugando.
+interfaz/menu_pausa.py,241,4,Reglas y clasificación · F1
+interfaz/menu_pausa.py,242,3,Ayuda y controles
+interfaz/menu_pausa.py,244,3,Ver expediente final
+interfaz/menu_pausa.py,259,3,HUD: oculto (H)
+interfaz/menu_pausa.py,259,3,HUD: visible (H)
+interfaz/menu_pausa.py,281,4,(sin dispositivo de sonido)
+interfaz/menu_pausa.py,282,3,Ayuda: cómo jugar
+interfaz/menu_pausa.py,290,10,El libro de casos guarda cada caso por su gravedad.
+interfaz/menu_pausa.py,291,11,"Si una rama crece demasiado, el árbol rota para seguir equilibrado."
+interfaz/menu_pausa.py,303,7,"Se insertan 2, 4 y 7: desequilibrado"
+interfaz/menu_pausa.py,304,4,Rotación a la izquierda  →
+interfaz/menu_pausa.py,311,8,El 4 sube y el árbol queda equilibrado
+interfaz/menu_pausa.py,312,19,"Menor a la izquierda, mayor a la derecha; recorrerlo en orden da los casos de menor a mayor gravedad."
+interfaz/menu_pausa.py,338,15,Indicadores: los cambios en verde ayudan al equipo; los que salen en rojo lo perjudican.
+interfaz/menu_pausa.py,362,3,Narración de mensajes
+interfaz/menu_pausa.py,365,6,Instala pyttsx3 para activar la narración.
+interfaz/menu_pausa.py,366,7,Apariencia de tu personaje en La Copa
+interfaz/menu_pausa.py,375,3,apariencia:{dato}:{dato}
+interfaz/menu_pausa.py,377,12,La apariencia se aplica al elegir tu personaje en la próxima partida.
+interfaz/menu_pausa.py,402,3,AYUDA Y CONTROLES
+interfaz/menu_pausa.py,411,4,Junto a la señal
+interfaz/menu_pausa.py,412,3,Leer y compartir
+interfaz/menu_pausa.py,413,3,Abrir el celular
+interfaz/menu_pausa.py,413,3,Presente y Futuro
+interfaz/menu_pausa.py,413,3,Según tu rol
+interfaz/menu_pausa.py,413,3,Usar tu poder
+interfaz/menu_pausa.py,414,3,F1: esta ayuda
+interfaz/menu_pausa.py,414,3,Libro de casos
+interfaz/menu_pausa.py,414,3,Lo que descubrieron
+interfaz/menu_pausa.py,421,3,Hay una pista
+interfaz/menu_pausa.py,425,13,Tab: cambiar objetivo · M: tarea · J: detalles · H: HUD · L: nombres · F11: pantalla
+interfaz/menu_pausa.py,431,7,Se perderá el progreso de esta campaña.
+interfaz/menu_pausa.py,432,8,Saldrás de la sala; tus compañeros podrán seguir.
+interfaz/menu_pausa.py,434,4,"Sí, volver al menú"
+interfaz/menu_pausa.py,435,3,Cerrar el juego
+interfaz/menu_pausa.py,436,3,"No, seguir jugando"
+interfaz/orientacion.py,34,12,Eligieron distinto. Hablen y cambien un voto para llegar a un acuerdo.
+interfaz/orientacion.py,36,9,Te toca elegir. Lee las pistas antes de votar.
+interfaz/orientacion.py,39,3,y otra persona.
+interfaz/orientacion.py,42,5,Faltan {dato} personas por elegir.
+interfaz/orientacion.py,43,5,Elijan juntos usando sus pistas.
+interfaz/orientacion.py,51,7,"Antes de decidir: Analizar, faltan {dato} marcas."
+interfaz/orientacion.py,67,3,Busca tu pista:
+interfaz/orientacion.py,67,3,sigue la luz
+interfaz/orientacion.py,70,7,Comparte o pide una pista con I
+interfaz/orientacion.py,77,8,Ve al caldero y elige con tu equipo
+interfaz/orientacion.py,80,7,Abre C para clasificar lo que descubrieron
+interfaz/orientacion.py,82,5,¡Misión completa! Ve al portal
+interfaz/orientacion.py,84,6,Abre C para clasificar y continuar
+interfaz/orientacion.py,91,8,Sal del edificio para buscar la siguiente pista
+interfaz/orientacion.py,93,3,la persona marcada
+interfaz/orientacion.py,95,3,la puerta marcada
+interfaz/orientacion.py,99,7,Abre C: encuentra {dato} marcas en Analizar
+interfaz/orientacion.py,102,9,Ve a la pantalla pública y elige en C
+interfaz/partida_multijugador.py,79,9,La hoja de personajes no contiene ocho cuadros utilizables.
+interfaz/partida_multijugador.py,122,6,[Multijugador] Sin animación de correr para
+interfaz/partida_multijugador.py,331,3,[Multijugador] Audio desactivado:
+interfaz/partida_multijugador.py,337,7,[Multijugador] No se pudo reproducir el sonido:
+interfaz/partida_multijugador.py,347,3,[Multijugador] Sin música:
+interfaz/partida_multijugador.py,366,4,No se pudo cargar
+interfaz/partida_multijugador.py,437,6,No se pudo cargar la dimensión:
+interfaz/partida_multijugador.py,481,8,! Ve al portal y pulsa E para aceptar
+interfaz/partida_multijugador.py,521,17,El mapa no coincide con el servidor. Actualiza la rama multijugador en todas las PC y Render.
+interfaz/partida_multijugador.py,612,4,Confirmar el siguiente caso
+interfaz/partida_multijugador.py,619,4,Viajar por el portal
+interfaz/partida_multijugador.py,630,4,NÚCLEO bloqueó este sector
+interfaz/partida_multijugador.py,637,4,Volver a la calle
+interfaz/partida_multijugador.py,664,4,[Arte] Sin variante de
+interfaz/partida_multijugador.py,761,7,NÚCLEO bloqueó este sector. Restaura las conexiones.
+interfaz/partida_multijugador.py,765,15,"Acércate a una fuente, al caldero, al portal o a otro jugador para pulsar E."
+interfaz/partida_multijugador.py,936,5,[Arte] Sin alineación del caldero:
+interfaz/partida_multijugador.py,1309,3,Terminales {dato}/{dato}
+interfaz/partida_multijugador.py,1309,14,Ve a las terminales marcadas (E). La llave la tiene el Corredor de Datos.
+interfaz/partida_multijugador.py,1311,5,¡Misión completada! Ve al portal
+interfaz/partida_multijugador.py,1311,10,Sigue la flecha hasta el portal para elegir otra época.
+interfaz/partida_multijugador.py,1313,10,Clasifíquenlo en el celular (C) y abran el siguiente caso.
+interfaz/partida_multijugador.py,1315,3,Pistas {dato}/{dato}
+interfaz/partida_multijugador.py,1315,25,Busca a las personas dentro de los edificios: entra por la puerta con E y habla con ellas. Tus pistas quedan en el celular (C).
+interfaz/partida_multijugador.py,1319,5,Analiza el material {dato}/{dato}
+interfaz/partida_multijugador.py,1319,14,"Abre el celular (C), entra en Analizar y encuentra las marcas de la manipulación."
+interfaz/partida_multijugador.py,1320,5,Vayan a la pantalla pública
+interfaz/partida_multijugador.py,1320,13,¡Análisis listo! Vayan a la pantalla pública y decidan en el celular (C).
+interfaz/partida_multijugador.py,1338,3,Casos ({dato}) · T
+interfaz/partida_multijugador.py,1366,6,F1: controles · J: detalles · Esc: menú
+interfaz/partida_multijugador.py,1375,5,{dato} · Sala {dato} · {dato} aquí
+interfaz/partida_multijugador.py,1377,4,Primera aventura: sin reloj
+interfaz/partida_multijugador.py,1377,6,El rumor crece en {dato} s
+interfaz/partida_multijugador.py,1379,3,Puente 1: roto
+interfaz/partida_multijugador.py,1379,4,Puente 1: faltan materiales
+interfaz/partida_multijugador.py,1380,4,Puente 1: en reparación
+interfaz/partida_multijugador.py,1380,5,Puente 1: ¡listo para reparar!
+interfaz/partida_multijugador.py,1381,3,Puente 1: reparado
+interfaz/partida_multijugador.py,1381,3,Puente 1: reparándose…
+interfaz/partida_multijugador.py,1392,3,Ver mi tarea
+interfaz/partida_multijugador.py,1394,4,Ver mi tarea · M
+interfaz/partida_multijugador.py,1398,16,Shift: correr | E: ayudar | I: pistas | M: tarea | T: casos | Q: poder | H: HUD | L: nombres
+interfaz/partida_multijugador.py,1470,4,RED Y BOTS · F3
+interfaz/partida_multijugador.py,1476,6,{dato} FPS · {dato} · {dato} KB/s
+interfaz/partida_multijugador.py,1487,6,Destino: {dato} · Pruebas: {dato} · Confianza: {dato}
+interfaz/partida_multijugador.py,1497,3,Esperando al servidor…
+interfaz/suministros.py,37,4,[Arte] Falta la imagen:
+interfaz/suministros.py,133,5,AHORA: REPARAR EL PUENTE 1
+interfaz/suministros.py,134,3,AYUDAR JUNTOS · E
+interfaz/suministros.py,135,7,METER EN EL CESTO · E  {dato}/{dato}
+interfaz/terminal_nucleo.py,35,18,NÚCLEO aisló sectores de la ciudad. Elige la conexión bloqueada que devuelve la zona roja a la red.
+interfaz/terminal_nucleo.py,46,3,terminal:arista:{dato}
+interfaz/terminal_nucleo.py,63,10,Un registro fue alterado. Mira quién lo firma y márcalo.
+interfaz/terminal_nucleo.py,77,12,Una orden solo vale si la firma quien tiene autoridad para darla.
+interfaz/terminal_nucleo.py,84,5,CUENTAS QUE ATACAN AL CIUDADANO
+interfaz/terminal_nucleo.py,85,17,"Tres son automáticas de NÚCLEO. Márcalas: fíjate en la hora, la frase y la fecha de creación."
+interfaz/terminal_nucleo.py,101,7,Persona real: descartada por la Voz Comunitaria
+interfaz/terminal_nucleo.py,104,3,terminal:confirmar:cuentas
+logica/Arboles.py,55,3,Opcion invalida: {dato}
+logica/Arboles.py,78,8,El Aspirante Kael quiere cerrar el puente norte
+logica/Arboles.py,79,3,Sobre un Aspirante
+logica/Arboles.py,82,4,¿Es verdadera esta tablilla?
+logica/Arboles.py,86,4,Colgaste una verdad confirmada
+logica/Arboles.py,93,6,Quemaste un rumor falso a tiempo
+logica/Arboles.py,101,6,La tablilla se propaga sin verificar
+logica/Arboles.py,109,7,"La tablilla desaparece, pero pudo ser verdad"
+logica/Arboles.py,123,8,Anoche cayo un rayo cerca del Mirador Alto
+logica/Arboles.py,129,7,La aldea se entera del suceso natural
+logica/Arboles.py,136,7,Se ignora informacion util para la aldea
+logica/Arboles.py,143,11,El Guardián confirma el suceso y avisa a las plataformas cercanas
+logica/Arboles.py,150,10,El aviso llega tarde y algunas rutas quedan sin preparar
+logica/Arboles.py,163,12,"Tras anunciar el trueno, la Aspirante Mira propone reparar el puente norte"
+logica/Arboles.py,164,14,"Tras ocultar el trueno, la Aspirante Mira pide ayuda para reparar el puente norte"
+logica/Arboles.py,167,9,La Aspirante Mira regalo comida a cambio de votos
+logica/Arboles.py,177,4,El rumor crece rapido
+logica/Arboles.py,178,6,El Guardian confirma que es exagerado
+logica/Arboles.py,179,5,Se evita un conflicto innecesario
+logica/Arboles.py,180,6,La tablilla se pierde entre otras
+logica/Arboles.py,183,9,Mira acepta reparar el puente con ayuda del consejo
+logica/Arboles.py,186,10,La falta de aviso hace crecer el rumor sobre Mira
+logica/Arboles.py,270,3,Sobre un Aspirante
+logica/Arboles.py,271,5,Sobre una decision del Consejo
+logica/Arboles.py,275,3,Fauna del bosque
+logica/Arboles.py,292,3,Categoria inexistente: {dato}
+logica/Arboles.py,307,3,Recursos y servicios
+logica/Arboles.py,311,3,Generado con IA
+logica/Arboles.py,332,3,Elige una opcion:
+logica/Arboles.py,337,5,"Opcion invalida, intenta de nuevo."
+logica/Arboles.py,341,5,=== Arbol de clasificacion de tablillas ===
+logica/Arboles.py,345,5,=== Tablilla de prueba: rumor politico ===
+logica/Arboles.py,349,3,Efecto aplicado: {dato}
+logica/Arboles.py,351,7,=== Recorrido completo del arbol (todas las ramas) ===
+logica/conversaciones.py,5,16,Revisé con el consejo las tablas del puente norte. ¿Quién te contó que yo lo rompí?
+logica/conversaciones.py,5,17,"Una propuesta, una discusión y una decisión no son lo mismo. Pide que te expliquen cuál ocurrió."
+logica/conversaciones.py,6,11,"Escuché que Kael rompió el puente, pero yo no estaba allí."
+logica/conversaciones.py,6,16,Mi información viene de otra persona. No deberías presentarla como si yo hubiera visto la reunión.
+logica/conversaciones.py,7,12,Que hubiera una reunión no demuestra que hayan decidido cerrar el paso.
+logica/conversaciones.py,7,12,Vi gente reunida cerca del puente. No pude escuchar lo que discutían.
+logica/conversaciones.py,8,12,El mensaje llegó por los Ecos sin decir quién escuchó a Kael.
+logica/conversaciones.py,8,14,"Cada vez que lo repiten suena más seguro, aunque sigue faltando la fuente original."
+logica/conversaciones.py,9,9,Crucé el puente esta mañana. Estaba abierto cuando pasé.
+logica/conversaciones.py,9,16,"Puedo confirmar cómo estaba esta mañana, pero eso no prueba qué planea el consejo para después."
+logica/conversaciones.py,10,12,Las familias necesitan saber si podrán cruzar. Una noticia incompleta puede asustarlas.
+logica/conversaciones.py,10,14,Pregunta también cuándo ocurriría el supuesto cierre; sin fecha no podemos organizar las rutas.
+logica/conversaciones.py,13,11,Antes de cambiar las rutas necesitamos saber dónde cayó el rayo.
+logica/conversaciones.py,13,14,Un aviso preciso ayuda más que decir que toda la aldea está en peligro.
+logica/conversaciones.py,14,10,Escuché el trueno anoche. Todavía no he visto los daños.
+logica/conversaciones.py,14,12,Haber oído el trueno no me permite decir qué golpeó el rayo.
+logica/conversaciones.py,15,13,Vi un destello cerca del Mirador Alto anoche y después escuché el trueno.
+logica/conversaciones.py,15,15,Puedo señalar dónde vi el destello. No alcancé a ver qué objeto recibió el impacto.
+logica/conversaciones.py,16,13,Conviene separar el aviso original de los daños que otros añadieron al repetirlo.
+logica/conversaciones.py,16,18,Los Ecos hablan de un rayo cerca del Mirador Alto; algunas versiones ya dicen que destruyó el puente.
+logica/conversaciones.py,17,11,Puedo llevar el aviso a las plataformas cercanas al Mirador Alto.
+logica/conversaciones.py,17,15,"El mensaje debe indicar el lugar y la hora, sin añadir daños que nadie comprobó."
+logica/conversaciones.py,18,10,Podemos revisar los caminos cercanos al Mirador antes de usarlos.
+logica/conversaciones.py,18,11,Avisar a tiempo permite preparar las rutas sin provocar miedo innecesario.
+logica/conversaciones.py,21,10,Una acusación puede dañar su reputación incluso después de corregirla.
+logica/conversaciones.py,21,13,"Antes de juzgar a Mira, quiero escuchar qué ocurrió y quién estuvo presente."
+logica/conversaciones.py,22,12,Pregunta a quienes estuvieron allí y compara sus relatos con el mío.
+logica/conversaciones.py,22,13,Quiero que escuchen mi versión antes de repetir lo que dice esa tablilla.
+logica/conversaciones.py,23,10,Que muchas personas lo repitan no me convierte en testigo.
+logica/conversaciones.py,23,11,No presencié lo que se cuenta de Mira. No puedo confirmarlo.
+logica/conversaciones.py,24,11,Busca la primera versión y pregunta qué partes se añadieron después.
+logica/conversaciones.py,24,12,La historia sobre Mira cambia cada vez que pasa por un Eco.
+logica/conversaciones.py,25,9,Puedo llevar una consulta a quienes estuvieron con Mira.
+logica/conversaciones.py,25,11,Un mensaje privado permite pedir detalles sin difundir primero la acusación.
+logica/conversaciones.py,26,11,Escuchemos a Mira y a las personas involucradas antes de decidir.
+logica/conversaciones.py,26,11,"Necesitamos hechos concretos, no comentarios sobre cómo creemos que es ella."
+logica/conversaciones.py,32,15,La noticia sobre Kael se difundió sin verificar y ahora hay dudas entre las familias.
+logica/conversaciones.py,33,13,"La tablilla desapareció, pero seguimos sin saber si lo que decía era cierto."
+logica/conversaciones.py,34,12,Consultar la tablilla permitió revisar el rumor antes de tomar una decisión.
+logica/conversaciones.py,37,11,El aviso del rayo llegó a la aldea y pudimos prepararnos.
+logica/conversaciones.py,38,13,"Al desaparecer el aviso del rayo, las plataformas se quedaron sin información útil."
+logica/conversaciones.py,39,11,El suceso se confirmó y las plataformas cercanas recibieron el aviso.
+logica/conversaciones.py,40,10,El aviso llegó tarde y algunas rutas quedaron sin preparar.
+logica/conversaciones.py,43,11,El mensaje sobre Mira se está propagando y aumenta la desconfianza.
+logica/conversaciones.py,44,12,La tablilla ya no circula y se evitó un conflicto entre habitantes.
+logica/conversaciones.py,45,9,La consulta aportó información antes de juzgar a Mira.
+logica/conversaciones.py,46,13,"La tablilla se perdió entre otras, pero las dudas sobre Mira siguen circulando."
+logica/conversaciones.py,52,18,Mi trabajo es separar los hechos de los rumores. Encontré el video original: compáralo con el que circula.
+logica/conversaciones.py,53,13,Compara cuadro por cuadro. Verificar exige contrastar también el testimonio y el contexto.
+logica/conversaciones.py,56,14,Aspiro a la Alcaldía. Ese día hice una donación pública; mi agenda lo confirma.
+logica/conversaciones.py,57,14,Lo que circula no demuestra culpabilidad. Compárenlo con el material original antes de creerlo.
+logica/conversaciones.py,60,19,"Estoy conectado a lo que comparte la comunidad. Vi la publicación, pero no el hecho ni su archivo original."
+logica/conversaciones.py,61,15,No vi a Ronaldo en ese lugar. Comprueba el contexto antes de compartir la imagen.
+logica/conversaciones.py,64,17,"Soy influencer y cuento historias a mucha gente. Este video circula mucho, pero primero comprobemos su origen."
+logica/conversaciones.py,65,15,El alcance no convierte una publicación en verdad. Busquemos una fuente verificable antes de amplificarla.
+logica/conversaciones.py,68,16,Soy mensajero: conecto a la gente por la ciudad. Puedo llevar una corrección con datos confirmados.
+logica/conversaciones.py,69,15,Una corrección clara debe enlazar la fuente y explicar qué parte del mensaje era dudosa.
+logica/conversaciones.py,72,16,Como periodista cuido lo que se publica. Una foto dice más cuando sabes de dónde salió.
+logica/conversaciones.py,73,11,"Antes de creer en una imagen, busca la original y compárala."
+logica/conversaciones.py,76,17,Guardo los registros de la ciudad. Una orden vale si la firma quien tiene autoridad para darla.
+logica/conversaciones.py,77,14,Mira primero la firma y luego la fecha. Un documento puede decir cualquier cosa.
+logica/conversaciones.py,80,14,"El consejo nunca autorizó esto. Firmo la reconfiguración: NÚCLEO seguirá, pero supervisado por personas."
+logica/conversaciones.py,81,11,No queremos apagarlo. Queremos que alguien pueda revisar lo que decide.
+logica/conversaciones.py,83,3,Corredor de Datos
+logica/conversaciones.py,84,20,Antes de que NÚCLEO bloqueara los sectores saqué la llave de supervisión. Llévala a la terminal del Centro de Verificación.
+logica/conversaciones.py,85,17,La llave no apaga a NÚCLEO: solo hace que las personas vuelvan a revisar lo que decide.
+logica/conversaciones.py,88,13,"Protesté porque nadie autorizó a NÚCLEO, y sus cuentas automáticas empezaron a atacarme."
+logica/conversaciones.py,89,10,No quiero destruirlo. Quiero que alguien pueda revisar sus decisiones.
+logica/conversaciones.py,103,4,Gracias por la información
+logica/conversaciones.py,110,9,Escucha a quienes estuvieron presentes y compara sus testimonios.
+logica/conversaciones.py,111,9,Revisa de dónde viene cada mensaje antes de compartirlo.
+logica/conversaciones.py,116,18,Propuse ayudar a reparar el puente. Pregunta al consejo qué ayuda se necesita antes de repetir otras versiones.
+logica/conversaciones.py,117,17,Podemos discutir la propuesta de reparación de Mira con el consejo. Primero hay que revisar los daños.
+logica/conversaciones.py,118,12,Puedo llevar al consejo la propuesta de Mira para reparar el puente.
+logica/conversaciones.py,119,18,La tablilla habla de reparar el puente. Comparemos la propuesta de Mira con lo que escuchó el consejo.
+logica/conversaciones.py,127,15,"Para investigar, escucha a los vecinos y luego revisa la tablilla en el Caldero central."
+logica/conversaciones.py,136,4,Gracias por la información
+logica/conversaciones.py,138,3,Entrega el mensaje
+logica/conversaciones.py,139,4,Sabio de las Raíces
+logica/conversaciones.py,149,5,Kael y el puente norte
+logica/conversaciones.py,149,9,¿Quién escuchó la propuesta de Kael sobre el puente?
+logica/conversaciones.py,150,5,el rayo del Mirador Alto
+logica/conversaciones.py,150,7,¿Quién vio el rayo y dónde cayó?
+logica/conversaciones.py,151,4,la tablilla sobre Mira
+logica/conversaciones.py,151,8,Escuchemos a Mira y a quienes estuvieron presentes.
+logica/conversaciones.py,152,5,las noticias de la aldea
+logica/conversaciones.py,152,6,Comparemos las fuentes de las noticias.
+logica/conversaciones.py,154,4,la reparación del puente
+logica/conversaciones.py,154,7,¿Qué propone Mira para reparar el puente?
+logica/conversaciones.py,157,8,Necesito verificar lo que se dice sobre {dato}.
+logica/conversaciones.py,158,8,No difundas el mensaje hasta revisar sus fuentes.
+logica/conversaciones.py,161,8,Estoy consultando la tablilla. ¿Puedes aportar un testimonio?
+logica/conversaciones.py,174,11,Recibido. Tendré en cuenta lo ocurrido al revisar los próximos mensajes.
+logica/conversaciones.py,176,9,Esperaré antes de difundirlo. Primero revisaré de dónde viene.
+logica/dimensiones.py,12,3,Centro de Verificación
+logica/dimensiones.py,13,5,"Verificar imágenes, fuentes y contexto"
+logica/dimensiones.py,15,3,Agente de verificación
+logica/dimensiones.py,22,3,Estudio del Influencer
+logica/dimensiones.py,23,4,Crear y difundir publicaciones
+logica/dimensiones.py,32,3,Sede del Aspirante
+logica/dimensiones.py,33,5,Sede política de Ronaldo Vélez
+logica/dimensiones.py,43,4,Redacción y archivo digital
+logica/dimensiones.py,52,3,Estación del Mensajero
+logica/dimensiones.py,53,5,Distribuir y rastrear mensajes urbanos
+logica/dimensiones.py,122,3,Dimensión desconocida: {dato}
+logica/dimensiones.py,124,5,Dimensión todavía no implementada: {dato}
+logica/dimensiones.py,131,3,Dimensión desconocida: {dato}
+logica/dimensiones.py,133,5,Dimensión todavía no implementada: {dato}
+logica/dimensiones.py,135,3,Dimensión bloqueada: {dato}
+logica/dimensiones.py,153,7,No hay una transición de dimensión activa.
+logica/dimensiones.py,155,8,La transición activa no tiene como destino {dato}.
+logica/dimensiones.py,157,5,Dimensión todavía no implementada: {dato}
+logica/dimensiones.py,159,3,Dimensión bloqueada: {dato}
+logica/expediente_avl.py,66,4,Caso o gravedad inválidos.
+logica/expediente_avl.py,72,10,No se puede cambiar la clave de un caso archivado.
+logica/grafo_fisico.py,26,5,Cada plataforma necesita un id.
+logica/grafo_fisico.py,28,5,Id de plataforma duplicado: {dato}
+logica/grafo_fisico.py,32,8,"La posicion de {dato} debe contener [x, y]."
+logica/grafo_fisico.py,47,5,Cada puente necesita un id.
+logica/grafo_fisico.py,49,5,Id de puente duplicado: {dato}
+logica/grafo_fisico.py,51,7,El puente {dato} referencia una plataforma inexistente.
+logica/grafo_fisico.py,53,10,El puente {dato} no puede conectar la plataforma consigo misma.
+logica/grafo_fisico.py,70,3,Plataforma desconocida: {dato}
+logica/grafo_fisico.py,98,7,El algoritmo debe ser 'bfs' o 'dfs'.
+logica/grafo_fisico.py,156,9,No existe una ruta transitable entre {dato} y {dato}.
+logica/grafo_fisico.py,163,8,La ruta contiene una conexion sin puente transitable.
+logica/grafo_fisico.py,171,8,La duracion de cada puente debe ser positiva.
+logica/grafo_fisico.py,173,9,La demora de una propagacion no puede ser negativa.
+logica/habilidades_jugador.py,10,3,Impulso de viento
+logica/habilidades_jugador.py,24,6,No hay habilidades configuradas para {dato}.
+logica/logica_juego.py,227,5,Decisión de misión inválida: {dato}
+logica/logica_juego.py,284,3,Clasificación inválida: {dato}
+logica/logica_juego.py,347,3,Opcion invalida: {dato}
+logica/logica_juego.py,406,7,La desconfianza se apodero de La Copa.
+logica/logica_juego.py,408,5,La Copa mantiene su armonia.
+logica/logica_juego.py,410,8,"La aldea sigue en pie, aunque con dudas."
+logica/logica_juego.py,411,5,Fin de la ronda. {dato}
+logica/logica_juego.py,429,3,Elige una opcion:
+logica/logica_juego.py,432,3,"
+Indicadores finales: {dato}"
+logica/propagacion_informacion.py,16,5,La informacion necesita un id.
+logica/propagacion_informacion.py,18,5,La informacion necesita un origen.
+logica/propagacion_informacion.py,20,5,La informacion necesita un tipo.
+logica/propagacion_informacion.py,40,6,Una transmision necesita transmisor y receptor.
+logica/propagacion_informacion.py,64,6,El receptor no puede estar vacio.
+logica/propagacion_informacion.py,79,5,La decision necesita una accion.
+logica/sorteo_partida.py,9,11,La semilla debe ser un entero de 64 bits sin signo.
+logica/sorteo_partida.py,18,3,{dato}:{dato}:{dato}
+logica/sorteo_partida.py,29,3,Inventario del reparto
+multijugador/campana.py,15,5,¿Quién rompió el puente norte?
+multijugador/campana.py,16,16,Alguien dice que Kael rompió el puente por descuido y por eso lo cerraron. ¿Será verdad?
+multijugador/campana.py,17,20,"El puente se dañó por el desgaste y la lluvia, no por Kael. Sigue abierto hoy; mañana habrá mantenimiento parcial."
+multijugador/campana.py,18,3,Agua bajo sospecha
+multijugador/campana.py,19,15,Un mensaje viejo dice que el agua de hoy está sucia. ¿Habla del mismo lugar?
+multijugador/campana.py,20,3,Fecha del informe
+multijugador/campana.py,20,11,El documento citado corresponde a un depósito clausurado hace diez años.
+multijugador/campana.py,21,3,Ruta del suministro
+multijugador/campana.py,21,12,"La entrega actual procede del manantial nuevo, no del depósito del informe."
+multijugador/campana.py,22,11,La muestra de hoy del manantial nuevo superó el control comunitario.
+multijugador/campana.py,23,3,Acta de sustitución
+multijugador/campana.py,23,13,El depósito antiguo fue sustituido y desconectado de la red hace diez años.
+multijugador/campana.py,24,14,El aviso mezcla fechas y depósitos. Se retira ese aviso antiguo de la circulación.
+multijugador/campana.py,25,4,La tormenta se acerca
+multijugador/campana.py,26,12,El consejo avisa: esta tarde habrá tormenta. ¿Debemos avisar a los vecinos?
+multijugador/campana.py,27,14,El boletín de hoy está firmado por dos observadores del consejo: tormenta esta tarde.
+multijugador/campana.py,28,3,Registro de señales
+multijugador/campana.py,28,10,Dos puestos independientes enviaron hoy la misma alerta de tormenta.
+multijugador/campana.py,29,3,Observación del mirador
+multijugador/campana.py,29,11,Los observadores registraron hoy viento y nubes compatibles con el boletín.
+multijugador/campana.py,30,13,El plan vigente confirma la alerta y pide asegurar suministros sin sembrar pánico.
+multijugador/campana.py,31,13,La alerta es actual y está contrastada. Difundirla permite preparar a la aldea.
+multijugador/campana.py,32,6,¿Quién se quedó con la ayuda?
+multijugador/campana.py,33,14,Dicen que Mira guardó para ella toda la ayuda. ¿Qué pasó con las entregas?
+multijugador/campana.py,34,3,Libro de reparto
+multijugador/campana.py,34,12,El libro firmado registra entregas a tres familias; dos entregas siguen pendientes.
+multijugador/campana.py,35,12,Las dos entregas pendientes están en tránsito: una ruta quedó temporalmente interrumpida.
+multijugador/campana.py,36,11,Tres familias confirman que recibieron materiales hoy y conservan sus recibos.
+multijugador/campana.py,37,3,Inventario de Mira
+multijugador/campana.py,37,13,El inventario distingue entregado y pendiente. No hay materiales asignados a uso personal.
+multijugador/campana.py,38,16,La acusación total era falsa: hubo entregas y retrasos. Se publica el estado real del reparto.
+multijugador/campana.py,42,3,Revisar mi pista
+multijugador/campana.py,42,11,Vuelve a Naira y revisa tu pista para reducir los rumores.
+multijugador/campana.py,43,7,Manda tu pista a todos tus compañeros.
+multijugador/campana.py,44,4,Reunir a los vecinos
+multijugador/campana.py,44,14,Ve con un compañero a ver a Luma. La aldea confiará más en ustedes.
+multijugador/campana.py,45,3,Explicar con pistas
+multijugador/campana.py,45,13,Lleva dos pistas al caldero. Ayudarás a que la aldea se lleve mejor.
+multijugador/campana.py,49,3,Agua bajo sospecha
+multijugador/campana.py,49,16,"Un aviso dice: no beban esa agua, usen el manantial seguro. ¿Es un aviso de hoy?"
+multijugador/campana.py,50,13,El informe de hoy confirma contaminación y recomienda suspender el consumo del depósito.
+multijugador/campana.py,51,14,Dos inspectores confirmaron la alerta. Ya se distribuye agua segura por una ruta alternativa.
+multijugador/campana.py,52,3,Control de muestras
+multijugador/campana.py,52,13,Dos muestras independientes de hoy dieron resultado no apto en el depósito señalado.
+multijugador/campana.py,53,3,Protocolo de cuidado
+multijugador/campana.py,53,15,El consejo firmó hoy el aviso preventivo y garantiza una fuente alternativa de agua potable.
+multijugador/campana.py,54,13,La advertencia estaba contrastada. Se difunde junto con la ubicación del agua segura.
+multijugador/campana.py,55,4,La tormenta se acerca
+multijugador/campana.py,55,15,"Un mensaje dice: ¡salgan de sus casas, viene una gran tormenta! ¿Es un aviso real?"
+multijugador/campana.py,56,10,El mensaje completo dice SIMULACRO. La copia eliminó ese encabezado.
+multijugador/campana.py,57,3,Registro del envío
+multijugador/campana.py,57,15,La copia procede del ensayo de alertas; no existe un aviso real de evacuación hoy.
+multijugador/campana.py,58,3,Puesto del mirador
+multijugador/campana.py,58,12,Los dos observadores confirman condiciones estables. Participaron en un simulacro esta mañana.
+multijugador/campana.py,59,3,Calendario de ejercicios
+multijugador/campana.py,59,12,"El consejo programó hoy un ejercicio de comunicación, sin evacuación de vecinos."
+multijugador/campana.py,60,14,Se retira la copia descontextualizada del simulacro: no existe una orden real de evacuar.
+multijugador/campana.py,64,12,El punto de reparto de agua segura está atendido para recibir consultas.
+multijugador/campana.py,65,10,El puesto del mirador está atendido para confirmar los avisos.
+multijugador/campana.py,66,10,El equipo de reparto recibe consultas sobre las entregas pendientes.
+multijugador/campana.py,70,3,Acta del consejo
+multijugador/campana.py,71,4,Registro de la ruta
+multijugador/campana.py,72,3,Testimonio de Luma
+multijugador/campana.py,73,3,Propuesta de Mira
+multijugador/campana.py,74,3,Fecha del informe
+multijugador/campana.py,75,3,Ruta del suministro
+multijugador/campana.py,77,3,Acta de sustitución
+multijugador/campana.py,80,3,Control de muestras
+multijugador/campana.py,81,3,Protocolo de cuidado
+multijugador/campana.py,83,3,Registro de señales
+multijugador/campana.py,84,3,Observación del mirador
+multijugador/campana.py,87,3,Registro del envío
+multijugador/campana.py,88,3,Puesto del mirador
+multijugador/campana.py,89,3,Calendario de ejercicios
+multijugador/campana.py,90,3,Libro de reparto
+multijugador/campana.py,93,3,Inventario de Mira
+multijugador/campana.py,94,3,Inventario del reparto
+multijugador/campana.py,106,4,Corregir las partes equivocadas
+multijugador/campana.py,106,5,Compartirlo: las pistas lo confirman
+multijugador/campana.py,106,6,No compartirlo: es un aviso falso
+multijugador/campana.py,148,3,Puente 1 · reparar
+multijugador/campana.py,169,5,Esa dimensión no está disponible.
+multijugador/campana.py,179,6,Esa acción es de Distrito Conecta.
+multijugador/campana.py,213,7,Primero decidan qué contar a la aldea.
+multijugador/campana.py,215,4,Ya clasificaste este evento.
+multijugador/campana.py,223,5,Esa no era la categoría.
+multijugador/campana.py,230,6,Puedes volver a intentarlo cuando quieras.
+multijugador/campana.py,235,10,El Puente 1 ya está reparado. ¡La ruta está abierta!
+multijugador/campana.py,237,13,El Puente 1 está roto. Lo repararán después de resolver el primer caso.
+multijugador/campana.py,260,7,Debes estar conectado para ordenar un caso.
+multijugador/campana.py,265,5,El portal no está disponible.
+multijugador/campana.py,269,5,El portal no está disponible.
+multijugador/campana.py,286,10,La acción pertenece a otro caso. Revisa el objetivo actual.
+multijugador/campana.py,301,9,Ahora sigue la tarea que aparece en el mapa.
+multijugador/campana.py,311,10,Uno ayuda y el otro hace la tarea. ¡Pueden turnarse!
+multijugador/campana.py,313,12,¡Materiales colocados! Ahora vayan al Puente 1 y pulsen E para repararlo.
+multijugador/campana.py,318,12,Revisen el encargo y confirmen aquí el próximo caso cuando esté completo.
+multijugador/campana.py,325,8,Tu habilidad está disponible una vez por investigación.
+multijugador/campana.py,328,7,Primero recoge la prueba de tu fuente.
+multijugador/campana.py,337,8,El Mensajero entregó su prueba por correo urgente.
+multijugador/campana.py,341,11,Invita a otro jugador a tu fuente para celebrar la asamblea.
+multijugador/campana.py,343,6,Necesitas dos pruebas para rendir cuentas.
+multijugador/campana.py,348,8,Habilidad completada. Se recargará en el próximo caso.
+multijugador/campana.py,351,7,Esta tarea solo está disponible entre investigaciones.
+multijugador/campana.py,365,7,¡Materiales listos! Ahora hagan la actividad juntos.
+multijugador/campana.py,365,9,Falta el otro material. Pídele ayuda a un compañero.
+multijugador/campana.py,368,11,Entreguen ambos materiales con dos jugadores distintos en el destino señalado.
+multijugador/campana.py,372,4,Comienza una nueva investigación.
+multijugador/campana.py,373,8,Listo para continuar. Esperando al resto del equipo.
+multijugador/campana.py,375,4,La investigación ya terminó.
+multijugador/campana.py,448,4,: +30 puntos de cooperación.
+multijugador/campana.py,449,3,. Ganaron una estrella.
+multijugador/campana.py,449,3,¡Lo hicieron juntos!
+multijugador/campana.py,459,5,Las pistas cuentan otra cosa.
+multijugador/campana.py,459,9,Pueden leer las pistas e intentarlo una vez más.
+multijugador/campana.py,459,11,La aldea sigue aprendiendo. Vamos a ayudar con la siguiente tarea.
+multijugador/campana.py,460,7,Campaña terminada. Revisen el balance del equipo.
+multijugador/campana.py,460,12,Ahora abran M: la aldea necesita materiales concretos en el destino señalado.
+multijugador/campana.py,468,11,¡El Puente 1 quedó reparado! La ruta vuelve a estar abierta.
+multijugador/campana.py,469,6,El equipo reparó el Puente 1.
+multijugador/campana.py,489,13,El rumor está creciendo. ¡Comparen sus pistas! No perderán la partida por tardar.
+multijugador/campana.py,494,9,¡Todos tienen dos pistas! Ganaron una estrella por ayudarse.
+multijugador/campana.py,518,3,{dato}/{dato} · {dato}
+multijugador/campana.py,549,14,Este aviso caducó. Vuelve a la fuente para renovarlo. Tus pruebas originales siguen guardadas.
+multijugador/campana.py,563,5,¡El puente se está reparando!
+multijugador/campana.py,564,5,está reparando el Puente 1.
+multijugador/campana.py,565,18,Ve al Puente 1 (arriba a la izquierda) y pulsa E. Acierta 3 veces en la zona verde.
+multijugador/campana.py,571,6,Encargo completo. Confirmen en el caldero.
+multijugador/campana.py,572,9,Tu aporte está entregado. Ayuda a coordinar al equipo.
+multijugador/campana.py,573,3,y pulsa E.
+multijugador/campana.py,574,3,y pulsa E.
+multijugador/campana.py,576,15,¡La Copa está completa! Sigue la flecha hasta el portal y pulsa E. (M: balance)
+multijugador/clasificacion.py,9,3,Sobre un Aspirante
+multijugador/clasificacion.py,11,3,Recursos y servicios
+multijugador/clasificacion.py,34,3,Generado con IA
+multijugador/cliente.py,26,8,Espera a que se procesen las acciones anteriores.
+multijugador/cliente.py,53,12,La sala se cerró o se perdió la conexión con el anfitrión.
+multijugador/cliente.py,67,5,El anfitrión dejó de responder.
+multijugador/cliente_internet.py,21,8,Se interrumpió la conexión con el mapa compartido.
+multijugador/cliente_internet.py,33,4,127.0.0.1
+multijugador/cliente_internet.py,37,10,"Usa la dirección HTTPS del servidor, sin rutas ni contraseñas."
+multijugador/cliente_internet.py,75,5,El servidor rechazó la solicitud.
+multijugador/cliente_internet.py,77,7,El servidor no pudo atender la solicitud.
+multijugador/cliente_internet.py,84,5,Respuesta del servidor demasiado grande.
+multijugador/cliente_internet.py,87,4,Respuesta del servidor inválida.
+multijugador/cliente_internet.py,110,6,Espera antes de enviar otra acción.
+multijugador/cliente_internet.py,120,8,Espera a que el servidor confirme tus acciones.
+multijugador/cliente_internet.py,142,9,[Red] WebSocket: {dato}; HTTP={dato}; WS={dato}; codigo={dato}
+multijugador/cliente_internet.py,144,15,La sala se cerró o tu sesión caducó. Pide al anfitrión crear una sala nueva.
+multijugador/cliente_internet.py,146,14,Render todavía no tiene la conexión de movimiento. Despliega el último commit del servidor.
+multijugador/cliente_internet.py,148,16,No se pudo validar el certificado del servidor. Comprueba la fecha y hora de esta PC.
+multijugador/cliente_internet.py,157,13,No se pudo recuperar la conexión ({dato}). Vuelve a entrar a la sala.
+multijugador/cliente_internet.py,158,8,Conexión interrumpida. Conservamos tu lugar; reconectando (intento {dato})…
+multijugador/cliente_internet.py,166,11,Instala las dependencias: python -m pip install -r multijugador/requirements.txt
+multijugador/cliente_internet.py,238,5,Conexión recuperada. Ya puedes continuar.
+multijugador/cliente_internet.py,244,11,No se pudo recuperar la sala de espera. Comprueba tu conexión.
+multijugador/cliente_internet.py,245,6,Reconectando con la sala de espera…
+multijugador/cliente_internet.py,280,10,No llegó la confirmación. Recuperaremos el estado; revisa tu selección.
+multijugador/cliente_internet.py,296,15,No se pudo conectar con el servidor de Internet. Comprueba la dirección y tu conexión.
+multijugador/dialogos.py,14,4,Sabio de las Raices
+multijugador/dialogos.py,16,4,Sabio de las Raices
+multijugador/dialogos.py,16,4,Sabio de las Raíces
+multijugador/dialogos.py,19,3,Corredor de Datos
+multijugador/dialogos.py,21,6,Ver las cuentas que te atacan
+multijugador/dialogos.py,132,5,Ese personaje no está aquí.
+multijugador/dialogos.py,161,9,¡Encontraste una pista! Abre I para leerla y compartirla.
+multijugador/dialogos.py,162,7,{dato} registró una prueba de su fuente.
+multijugador/dialogos.py,167,4,Esa conversación ya terminó.
+multijugador/dialogos.py,169,5,Esa respuesta no está disponible.
+multijugador/dialogos.py,173,7,Estas cuentas lo atacan. ¿Cuáles son automáticas?
+multijugador/dialogos.py,174,3,Entrega el mensaje
+multijugador/dialogos.py,175,6,Elige a quién llevarle el mensaje.
+multijugador/dialogos.py,179,7,Elijan juntos qué hacer con la tablilla.
+multijugador/dialogos.py,180,8,Ve al caldero central para revisar la tablilla.
+multijugador/dimensiones_red.py,72,4,todavía está en construcción.
+multijugador/expediente.py,35,5,una persona de la aldea
+multijugador/expediente.py,80,7,El expediente cambió. Revisa el paso actual.
+multijugador/expediente.py,83,6,Ese caso no está en turno.
+multijugador/expediente.py,86,14,"Compara la gravedad. Si es igual, el caso más reciente va a la derecha."
+multijugador/expediente.py,92,9,¡Caso guardado! El árbol se equilibra para encontrarlo fácilmente.
+multijugador/expediente.py,93,7,¡Bien! Ahora compara con el siguiente caso.
+multijugador/guia.py,17,6,¡Listo! Sigue tu tarea del mapa.
+multijugador/guia.py,20,8,Ya sabes jugar. Sigue la tarea del mapa.
+multijugador/guia.py,24,8,Camina con las flechas hasta el caldero brillante.
+multijugador/guia.py,29,13,Primero camina un poco con las flechas. Después pulsa E junto al caldero.
+multijugador/guia.py,33,18,¡Hola! Lleva este farol al Tronco de los Ecos que brilla: sigue la luz y allí pulsa E.
+multijugador/guia.py,34,3,Guía del caldero
+multijugador/guia.py,39,13,"¡Lo hiciste! Ya sabes caminar, hablar y entregar. Ahora busca tu primera pista."
+multijugador/guia.py,40,8,¡Farol entregado! Ya puedes ayudar a la aldea.
+multijugador/guia.py,56,8,Ahora toca ayudar con el encargo del mapa.
+multijugador/guia.py,58,12,¡Ya tienes dos pistas! Ve al caldero para elegir con tu equipo.
+multijugador/guia.py,60,10,Tu pedido ya llegó. Dale un momento a tu compañero.
+multijugador/guia.py,63,10,Espera a que vuelva un compañero para pedirle una pista.
+multijugador/guia.py,68,7,necesita una pista. Abre I para ayudar.
+multijugador/guia.py,69,5,Le pediste una pista a
+multijugador/guia.py,75,4,1. Busca tu pista
+multijugador/guia.py,75,9,Ve a la luz y pulsa E para hablar.
+multijugador/guia.py,79,3,Entrega el farol
+multijugador/guia.py,79,4,Camina con las flechas
+multijugador/guia.py,79,4,Habla con el guía
+multijugador/guia.py,80,4,Acércate al caldero brillante.
+multijugador/guia.py,80,5,"Junto al caldero, pulsa E."
+multijugador/guia.py,80,7,Ve al tronco brillante y pulsa E.
+multijugador/guia.py,86,5,4. Ayuda a la aldea
+multijugador/guia.py,89,4,¡Hagan la tarea juntos!
+multijugador/guia.py,89,9,Uno ayuda y el otro trabaja. Acérquense al cesto.
+multijugador/guia.py,90,3,Abrir actividad · E
+multijugador/guia.py,92,4,¡Reparen el Puente 1!
+multijugador/guia.py,95,3,¡Aldea a salvo!
+multijugador/guia.py,95,15,Sigue la flecha hasta el portal y pulsa E para viajar. M: estrellas del equipo.
+multijugador/guia.py,101,4,2. Consigue otra pista
+multijugador/guia.py,101,12,Pide una pista a un compañero. Tú también puedes compartir la tuya.
+multijugador/guia.py,102,3,Pedir una pista
+multijugador/guia.py,108,9,En el tronco puedes enviarle una pista con I.
+multijugador/guia.py,110,3,3. Elijan juntos
+multijugador/guia.py,110,11,Ve al caldero. Lee las pistas y elige con tu equipo.
+multijugador/mision.py,11,3,Corregir y aclarar
+multijugador/mision.py,12,3,Difundir sin verificar
+multijugador/mision.py,13,3,Descartar el aviso
+multijugador/mision.py,15,6,Ven al caldero para comparar pistas.
+multijugador/mision.py,15,6,¿Me ayudas a buscar una pista?
+multijugador/mision.py,16,5,No difundamos la noticia todavía.
+multijugador/mision.py,16,5,Tengo una pista para compartir.
+multijugador/mision.py,21,3,Acta del consejo
+multijugador/mision.py,21,14,El papel del consejo dice: mañana arreglarán unas tablas. Hoy el puente está abierto.
+multijugador/mision.py,22,4,Registro de la ruta
+multijugador/mision.py,22,10,Hoy llevé mensajes por el puente. Mañana revisarán unas tablas.
+multijugador/mision.py,23,3,Testimonio de Luma
+multijugador/mision.py,23,14,Luma cuenta: crucé hoy sin problemas. El aviso dice que mañana arreglarán unas tablas.
+multijugador/mision.py,24,3,Propuesta de Mira
+multijugador/mision.py,24,12,Mira pidió arreglar unas tablas mañana. No pidió cerrar hoy el puente.
+multijugador/mision.py,54,4,Caldero · decisión del equipo
+multijugador/mision.py,55,4,Naira · archivo del consejo
+multijugador/mision.py,57,5,Archivo de propuestas de Mira
+multijugador/mision.py,69,4,Tronco de los Ecos
+multijugador/mision.py,71,4,Tronco de los Ecos
+multijugador/mision.py,76,4,Cesto de la aldea
+multijugador/mision.py,79,5,Eco central · registro de ruta
+multijugador/mision.py,97,7,Acércate a la luz y pulsa E.
+multijugador/mision.py,114,7,El jugador no está en la partida.
+multijugador/mision.py,116,4,[a-f0-9]{32}
+multijugador/mision.py,117,4,Solicitud de acción inválida.
+multijugador/mision.py,140,7,Acércate al otro jugador para compartir pruebas.
+multijugador/mision.py,141,6,Puedes compartir una pista con {dato}.
+multijugador/mision.py,148,9,¡Encontraste una pista! Abre I para leerla y compartirla.
+multijugador/mision.py,149,7,{dato} registró una prueba de su fuente.
+multijugador/mision.py,153,11,Lean sus pistas y elijan juntos qué contar a la aldea.
+multijugador/mision.py,155,10,Envía mensajes breves o copias de tus pruebas al equipo.
+multijugador/mision.py,157,18,"Aquí se reúne lo que necesita la aldea. Cuando haya un encargo, trae cada objeto y pulsa E."
+multijugador/mision.py,159,13,Este personaje ayuda a otro compañero. Tu personaje está marcado con una luz.
+multijugador/mision.py,163,6,Primero busca una pista para compartir.
+multijugador/mision.py,168,5,El destinatario no está disponible.
+multijugador/mision.py,171,10,El otro jugador está demasiado lejos para una entrega directa.
+multijugador/mision.py,174,9,Debes estar cerca de un Tronco de los Ecos.
+multijugador/mision.py,176,4,Medio de entrega inválido.
+multijugador/mision.py,180,5,Todos ya tienen esta prueba.
+multijugador/mision.py,180,6,Ese jugador ya tiene esta prueba.
+multijugador/mision.py,184,8,{dato} te mandó una pista. Léela con I.
+multijugador/mision.py,185,4,{dato} recibió tu pista.
+multijugador/mision.py,186,6,{dato} compartió una prueba con {dato}.
+multijugador/mision.py,187,5,¡El equipo recibió la pista!
+multijugador/mision.py,187,5,¡Tu compañero recibió la pista!
+multijugador/mision.py,190,7,Acércate a un Tronco de los Ecos.
+multijugador/mision.py,193,3,Mensaje no permitido.
+multijugador/mision.py,197,5,El destinatario no está disponible.
+multijugador/mision.py,199,8,Espera dos segundos antes de enviar otro eco.
+multijugador/mision.py,203,4,Eco de {dato}: {dato}
+multijugador/mision.py,204,6,Eco recibido por los jugadores conectados.
+multijugador/mision.py,205,6,Eco de {dato} para ti: {dato}
+multijugador/mision.py,206,4,Eco enviado a {dato}.
+multijugador/mision.py,211,7,No hay una decisión pendiente de rectificar.
+multijugador/mision.py,215,12,¡Podemos intentarlo otra vez! Lean las pistas y elijan en el caldero.
+multijugador/mision.py,216,5,Pueden intentarlo una vez más.
+multijugador/mision.py,218,6,El caso ya tiene un resultado.
+multijugador/mision.py,220,11,Dos compañeros deben buscar sus pistas y compartir al menos una.
+multijugador/mision.py,222,11,Te falta una pista. Pulsa Pedir una pista para pedir ayuda.
+multijugador/mision.py,228,10,¡Ya elegiste! Espera a tu equipo. Puedes cambiar tu elección.
+multijugador/mision.py,244,20,"El puente se dañó por el desgaste y la lluvia, no por Kael. Sigue abierto hoy; mañana habrá mantenimiento parcial."
+multijugador/mision.py,248,13,Se difundió un cierre que no ocurrió. La alarma confundió a la comunidad.
+multijugador/mision.py,249,5,Todavía pueden rectificar una vez.
+multijugador/mision.py,249,8,La rectificación también fue incorrecta; el caso terminó.
+multijugador/mision.py,253,15,Descartaron también el aviso útil de mantenimiento. La comunidad sigue sin saber qué ocurrirá mañana.
+multijugador/mision.py,255,5,La oportunidad de rectificación terminó.
+multijugador/mision.py,263,3,Decisión del equipo:
+multijugador/mision.py,272,5,¿Quién rompió el puente norte?
+multijugador/mision.py,273,16,Alguien dice que Kael rompió el puente por descuido y por eso lo cerraron. ¿Será verdad?
+multijugador/mision.py,302,7,Revisa el resultado común en el caldero.
+multijugador/mision.py,304,3,y pulsa E.
+multijugador/mision.py,306,8,Comparte tu prueba y pide otra con I.
+multijugador/mision.py,308,8,Acérquense al caldero y voten con las pruebas.
+multijugador/movimiento.py,192,10,No se encontró una posición inicial libre en el mapa.
+multijugador/movimiento.py,240,5,[Multijugador] Distrito Conecta no disponible:
+multijugador/movimiento.py,278,4,NÚCLEO bloqueó este sector.
+multijugador/movimiento.py,280,5,Aquí no hay una puerta.
+multijugador/movimiento.py,282,7,Acércate a la puerta y pulsa E.
+multijugador/movimiento.py,292,5,Ya estás en la calle.
+multijugador/movimiento.py,294,7,Acércate a la salida y pulsa E.
+multijugador/movimiento.py,297,4,Volviste a la calle.
+multijugador/movimiento.py,335,6,Elige otra dimensión en el portal.
+multijugador/movimiento.py,337,4,todavía está en construcción.
+multijugador/movimiento.py,339,6,Acércate al portal y pulsa E.
+multijugador/movimiento.py,345,3,quiere viajar a
+multijugador/movimiento.py,346,8,. Vayan al portal y pulsen E para aceptar.
+multijugador/movimiento.py,351,3,Aceptaste viajar a
+multijugador/movimiento.py,353,5,¡El equipo viaja junto a
+multijugador/movimiento.py,360,5,Ya no aceptas el viaje.
+multijugador/movimiento.py,398,4,El equipo llegó a
+multijugador/movimiento.py,398,5,. Los indicadores viajan con ustedes.
+multijugador/movimiento.py,415,5,Jugador fuera de la partida.
+multijugador/movimiento.py,420,4,Controles de movimiento inválidos.
+multijugador/nucleo.py,16,4,NÚCLEO tomó el control
+multijugador/nucleo.py,17,25,"Sin permiso del consejo humano, le dieron a NÚCLEO el control absoluto. Bloqueó sectores y sus cuentas automáticas atacan a un Ciudadano Conectado que protesta."
+multijugador/nucleo.py,21,6,Reconfigurar a NÚCLEO con supervisión humana
+multijugador/nucleo.py,22,4,Desconectarlo a la fuerza
+multijugador/nucleo.py,23,3,Dejarlo como está
+multijugador/nucleo.py,24,4,Darle aún más control
+multijugador/nucleo.py,34,13,"NÚCLEO sigue ayudando a la ciudad, pero ahora las personas supervisan sus decisiones."
+multijugador/nucleo.py,35,17,Apagarlo de golpe dejó sin servicio a media ciudad. El problema era la falta de control humano.
+multijugador/nucleo.py,36,9,NÚCLEO sigue sin supervisión y los sectores continúan bloqueados.
+multijugador/nucleo.py,37,15,"Con aún más poder, NÚCLEO decide por todos y ya nadie puede revisar sus órdenes."
+multijugador/nucleo.py,48,3,Acta del consejo
+multijugador/nucleo.py,48,3,Firmas: 3 consejeras
+multijugador/nucleo.py,48,9,NÚCLEO asesora; toda decisión la firma el consejo humano.
+multijugador/nucleo.py,49,4,Firmas: registro del sistema
+multijugador/nucleo.py,49,9,03:12 El administrador amplió los permisos de NÚCLEO.
+multijugador/nucleo.py,50,3,Orden de autorización
+multijugador/nucleo.py,50,6,Firmas: la propia cuenta de NÚCLEO
+multijugador/nucleo.py,50,8,El consejo aprobó por unanimidad el control absoluto.
+multijugador/nucleo.py,56,10,El sector aislado volvió a la red de la ciudad.
+multijugador/nucleo.py,57,12,La orden que autorizaba a NÚCLEO era falsa: la firmó él mismo.
+multijugador/nucleo.py,58,3,Llave de supervisión
+multijugador/nucleo.py,58,10,La llave devolvió la supervisión de NÚCLEO a las personas.
+multijugador/nucleo.py,59,17,Las cuentas eran de NÚCLEO. El Ciudadano no estaba solo contra la ciudad: estaba contra una máquina.
+multijugador/nucleo.py,64,15,El Corredor de Datos te entregó la llave de supervisión. Llévala al Centro de Verificación.
+multijugador/nucleo.py,66,5,Archivista · Cómo leer un registro
+multijugador/nucleo.py,66,19,Una orden vale si la firma quien tiene autoridad para darla. Mira primero la firma y luego la fecha.
+multijugador/nucleo.py,67,3,Representante Humano · Firma
+multijugador/nucleo.py,67,12,"El Representante Humano acepta firmar la reconfiguración: NÚCLEO seguirá, pero bajo supervisión."
+multijugador/nucleo.py,70,3,Corredor de Datos
+multijugador/nucleo.py,79,5,Creada hoy · 0 seguidores reales
+multijugador/nucleo.py,80,3,03:12:07
+multijugador/nucleo.py,80,3,03:40:07
+multijugador/nucleo.py,80,5,Ese ciudadano miente sobre NÚCLEO.
+multijugador/nucleo.py,80,5,NÚCLEO nos protege a todos.
+multijugador/nucleo.py,81,5,Creada hoy · 0 seguidores reales
+multijugador/nucleo.py,82,3,03:12:07
+multijugador/nucleo.py,82,3,03:40:07
+multijugador/nucleo.py,82,5,Ese ciudadano engaña sobre NÚCLEO.
+multijugador/nucleo.py,82,5,NÚCLEO nos cuida a todos.
+multijugador/nucleo.py,83,5,Creada hoy · 0 seguidores reales
+multijugador/nucleo.py,84,3,03:12:07
+multijugador/nucleo.py,84,3,03:40:07
+multijugador/nucleo.py,84,5,Ese ciudadano exagera sobre NÚCLEO.
+multijugador/nucleo.py,84,5,NÚCLEO nos salva a todos.
+multijugador/nucleo.py,85,6,Desde hace 6 años · 214 seguidores
+multijugador/nucleo.py,86,3,08:21:40
+multijugador/nucleo.py,86,3,19:05:12
+multijugador/nucleo.py,86,6,¿Alguien sabe cuándo abren el Muelle?
+multijugador/nucleo.py,86,9,"No comparto su protesta, pero tiene derecho a hacerla."
+multijugador/nucleo.py,174,3,Ciudadano Conectado · cuentas
+multijugador/nucleo.py,177,3,Pantalla central · decidir
+multijugador/nucleo.py,208,7,Acércate a la luz y pulsa E.
+multijugador/nucleo.py,236,12,Un pulso de NÚCLEO detectó la llave. Volvió al Corredor de Datos.
+multijugador/nucleo.py,244,7,Ya usaste tu poder en Ciudad Núcleo.
+multijugador/nucleo.py,249,8,La Lupa de Memoria resalta una firma sospechosa.
+multijugador/nucleo.py,252,9,El Impulso del Viento funciona mientras llevas la llave.
+multijugador/nucleo.py,254,7,¡Impulso del Viento! Corre hasta la terminal.
+multijugador/nucleo.py,258,11,La Voz Comunitaria reconoce a una vecina real entre las cuentas.
+multijugador/nucleo.py,261,9,El Comunicado Público llega después de la decisión correcta.
+multijugador/nucleo.py,266,5,El comunicado recorrió la red:
+multijugador/nucleo.py,274,7,Pueden volver a Distrito Conecta cuando quieran.
+multijugador/nucleo.py,277,7,NÚCLEO no acepta órdenes: faltan {dato} terminales.
+multijugador/nucleo.py,278,6,Elijan juntos qué hacer con NÚCLEO.
+multijugador/nucleo.py,278,10,Para reconfigurarlo hace falta hablar antes con el Representante Humano.
+multijugador/nucleo.py,285,11,Falta la llave de supervisión. La tiene el Corredor de Datos.
+multijugador/nucleo.py,287,10,La llave la lleva otro compañero: debe traerla hasta aquí.
+multijugador/nucleo.py,295,5,Esa terminal ya está resuelta.
+multijugador/nucleo.py,299,4,Elige una conexión bloqueada.
+multijugador/nucleo.py,301,12,Esa conexión no devuelve el sector aislado a la red. Prueba otra.
+multijugador/nucleo.py,304,5,Elige uno de los registros.
+multijugador/nucleo.py,306,10,Ese registro está firmado por quien debe. Revisa las firmas.
+multijugador/nucleo.py,309,5,Falta la llave de supervisión.
+multijugador/nucleo.py,314,7,"Marca cuentas de la lista, sin repetir."
+multijugador/nucleo.py,316,14,"Compara la hora, las frases y la fecha de creación: una cuenta no encaja."
+multijugador/nucleo.py,324,5,NÚCLEO ya tiene una decisión.
+multijugador/nucleo.py,326,7,Completen las tres terminales antes de decidir.
+multijugador/nucleo.py,330,10,Antes de reconfigurar a NÚCLEO hablen con el Representante Humano.
+multijugador/nucleo.py,333,3,¡El equipo decidió!
+multijugador/nucleo.py,333,6,¡Ya elegiste! Espera a tu equipo.
+multijugador/nucleo.py,353,9,NÚCLEO no se clasifica: decidan qué hacer con él.
+multijugador/nucleo.py,374,4,Corredor de Datos · Llave
+multijugador/partida_local.py,13,5,El rol elegido no existe.
+multijugador/partida_local.py,45,4,Dirección de movimiento inválida.
+multijugador/presentacion.py,81,3,Confianza del Consejo
+multijugador/presentacion.py,90,3,Contenido viral dudoso
+multijugador/presentacion.py,99,8,La opción {dato} no tiene tipo de poción.
+multijugador/presentacion.py,110,4,Indicador sin polaridad: {dato}
+multijugador/presentacion.py,121,3,{dato}{dato} {dato}
+multijugador/presente.py,20,7,Verificar con las pistas antes de publicar
+multijugador/presente.py,21,3,Reportar la publicación
+multijugador/presente.py,22,4,Dejarla pendiente por ahora
+multijugador/presente.py,23,5,Compartirla ya: se ve real
+multijugador/presente.py,47,5,El video de las donaciones
+multijugador/presente.py,48,15,Un video muestra a Ronaldo Vélez sacando dinero de una caja de donaciones. ¿Es real?
+multijugador/presente.py,52,15,Encontré el video original: Ronaldo mete monedas en la caja. Ya pueden compararlo en Analizar.
+multijugador/presente.py,53,3,Testimonio y contexto
+multijugador/presente.py,54,12,El testigo no presenció el hecho ni conoce quién subió el archivo.
+multijugador/presente.py,55,3,Agenda de Ronaldo
+multijugador/presente.py,56,12,La agenda de Ronaldo confirma que ese día hizo una donación pública.
+multijugador/presente.py,59,18,Verificado: el video está editado para mostrar lo contrario de lo que pasó. No prueba nada contra Ronaldo.
+multijugador/presente.py,60,15,"Reportaron el video. Frena su difusión, pero la comunidad no sabe por qué era falso."
+multijugador/presente.py,61,11,"Lo dejaron pendiente. No se difundió, pero sigue circulando sin aclaración."
+multijugador/presente.py,62,11,Se compartió un video manipulado. La acusación falsa se volvió viral.
+multijugador/presente.py,64,15,Dijeron que estaba verificado sin terminar de compararlo con el original. Es igual de irresponsable.
+multijugador/presente.py,65,4,¡Correcto! Era contenido manipulado.
+multijugador/presente.py,65,9,El video fue manipulado a partir de uno real.
+multijugador/presente.py,70,4,La nota de voz
+multijugador/presente.py,71,17,Circula una nota de voz en la que Ronaldo admitiría el robo. ¿De verdad es su voz?
+multijugador/presente.py,74,16,En la Sede guardamos la grabación auténtica de mi discurso. Compárenla con la nota de voz.
+multijugador/presente.py,77,12,Verificado: la voz fue clonada con IA. Ronaldo nunca dijo esas palabras.
+multijugador/presente.py,78,13,"Reportaron la nota de voz, pero no explicaron que era una voz clonada."
+multijugador/presente.py,79,9,La dejaron pendiente. La nota de voz sigue circulando.
+multijugador/presente.py,80,12,Se compartió una voz clonada con IA. Muchos creyeron que era Ronaldo.
+multijugador/presente.py,82,16,Dijeron que estaba verificada sin terminar de escucharla. Nadie sabe aún si la voz era real.
+multijugador/presente.py,83,4,¡Correcto! Es una suplantación.
+multijugador/presente.py,83,9,Alguien se hizo pasar por Ronaldo clonando su voz.
+multijugador/presente.py,88,5,La foto del perfil falso
+multijugador/presente.py,89,17,Un perfil con la cara de la Habitante conectada publica insultos y pide dinero a sus seguidores.
+multijugador/presente.py,92,15,"Esa selfie se tomó aquí, en el Café Digital. Tenemos la foto original para compararla."
+multijugador/presente.py,95,15,Verificado: la foto fue alterada y el perfil es falso. La víctima recupera su identidad.
+multijugador/presente.py,96,13,"Reportaron el perfil, pero sus seguidores no saben que la foto era falsa."
+multijugador/presente.py,97,9,Lo dejaron pendiente. El perfil falso sigue pidiendo dinero.
+multijugador/presente.py,98,15,Se compartió el perfil falso. Más personas enviaron dinero a quien suplantaba a la víctima.
+multijugador/presente.py,100,13,Dijeron que estaba verificado sin examinar la foto. El perfil falso sigue activo.
+multijugador/presente.py,101,4,¡Correcto! Es una suplantación.
+multijugador/presente.py,101,11,Usaron la cara de otra persona para hacerse pasar por ella.
+multijugador/presente.py,116,5,Señala un cuadro del video.
+multijugador/presente.py,123,5,Señala un instante del audio.
+multijugador/presente.py,127,6,Señala un punto de la foto.
+multijugador/presente.py,160,3,Pantalla pública · decidir
+multijugador/presente.py,245,7,Acércate a la luz y pulsa E.
+multijugador/presente.py,253,7,Investiguen antes de decidir: faltan {dato} pistas.
+multijugador/presente.py,256,7,¡Resolvieron los tres casos de Distrito Conecta!
+multijugador/presente.py,257,7,Elijan juntos qué hacer con la publicación.
+multijugador/presente.py,262,7,Primero consigue la pista del material original.
+multijugador/presente.py,264,6,Busquen las marcas de la manipulación.
+multijugador/presente.py,268,8,Abre el análisis en el celular para marcar.
+multijugador/presente.py,270,6,Este caso ya tiene una decisión.
+multijugador/presente.py,273,8,Aquí no se ve nada extraño. Sigue buscando.
+multijugador/presente.py,275,6,El equipo ya encontró esa marca.
+multijugador/presente.py,284,6,La publicación ya tiene una decisión.
+multijugador/presente.py,286,6,Reúnan las pistas antes de decidir.
+multijugador/presente.py,292,6,¡El equipo decidió! Miren la consecuencia.
+multijugador/presente.py,293,9,¡Ya elegiste! Espera a tu equipo de Distrito Conecta.
+multijugador/presente.py,329,7,Primero decidan qué hacer con la publicación.
+multijugador/presente.py,331,4,Ya clasificaste esta publicación.
+multijugador/presente.py,342,7,Primero decidan qué hacer con este caso.
+multijugador/presente.py,344,8,Ya resolvieron todos los casos de Distrito Conecta.
+multijugador/presente.py,346,6,Clasifica la publicación antes de seguir.
+multijugador/presente.py,349,5,Listo para el siguiente caso.
+multijugador/protocolo.py,27,3,Mensaje demasiado largo.
+multijugador/protocolo.py,33,3,Mensaje demasiado largo.
+multijugador/reparacion.py,92,5,El puente ya está reparado.
+multijugador/reparacion.py,94,11,"Primero coloquen tablas, cuerda y canasta de herramientas en el cesto."
+multijugador/reparacion.py,96,5,¡El puente se está reparando!
+multijugador/reparacion.py,98,5,ya está reparando el puente.
+multijugador/reparacion.py,100,7,Acércate al Puente 1 y pulsa E.
+multijugador/reparacion.py,106,10,Pulsa E cuando la aguja entre en la zona verde.
+multijugador/reparacion.py,110,7,Abre la reparación junto al Puente 1.
+multijugador/reparacion.py,116,7,Intento fuera de tiempo. Vuelve a intentarlo.
+multijugador/reparacion.py,118,8,Espera a que la aguja vuelva a moverse.
+multijugador/reparacion.py,134,5,¡Buen trabajo! {dato}/{dato} aciertos.
+multijugador/reparacion.py,135,9,Casi. Espera la zona verde y vuelve a intentarlo.
+multijugador/reparacion.py,137,7,¡Puente listo! La reparación está en marcha.
+multijugador/servicio_internet.py,26,8,Demasiadas solicitudes. Espera antes de intentarlo de nuevo.
+multijugador/servicio_internet.py,55,8,No se pudo preparar el mapa del servidor.
+multijugador/servicio_internet.py,118,11,La sala se cerró o tu sesión caducó. Vuelve a entrar.
+multijugador/servicio_internet.py,169,7,El servicio está lleno. Intenta más tarde.
+multijugador/servicio_internet.py,178,4,Código de sala inválido.
+multijugador/servicio_internet.py,182,7,No encontramos esa sala. Comprueba el código.
+multijugador/servicio_internet.py,200,3,Acción no permitida.
+multijugador/servicio_internet.py,233,5,Solicitud demasiado grande o inválida.
+multijugador/servicio_internet.py,251,5,application/json; charset=utf-8
+multijugador/servicio_internet.py,269,4,0.0.0.0
+multijugador/servidor.py,25,4,0.0.0.0
+multijugador/servidor.py,68,10,Versión incompatible. Todos deben usar la misma versión del juego.
+multijugador/servidor.py,71,9,Escribe un nombre de entre 1 y 20 caracteres.
+multijugador/servidor.py,77,5,La sala ya se inició.
+multijugador/servidor.py,79,6,La sala está llena (4 jugadores).
+multijugador/servidor.py,81,7,Ese nombre ya está en la sala.
+multijugador/servidor.py,84,5,El anfitrión ya está conectado.
+multijugador/servidor.py,104,5,El equipo ya está confirmado.
+multijugador/servidor.py,111,7,Otro jugador acaba de elegir ese rol.
+multijugador/servidor.py,118,8,Elige un rol antes de marcarte como listo.
+multijugador/servidor.py,120,4,Estado de preparación inválido.
+multijugador/servidor.py,124,5,Solo el anfitrión puede iniciar.
+multijugador/servidor.py,126,11,Se necesitan entre 2 y 4 jugadores con rol y listos.
+multijugador/servidor_local.py,16,4,127.0.0.1
+multijugador/servidor_local.py,27,5,El servidor local no inició.
+multijugador/suministros.py,3,4,Cesto de la aldea
+multijugador/suministros.py,10,4,Reparar el Puente 1
+multijugador/suministros.py,10,23,"El Puente 1 está roto. Metan tablas, cuerda y la canasta de herramientas en el cesto de la aldea; después reparen el puente."
+multijugador/suministros.py,12,3,Canasta de herramientas
+multijugador/suministros.py,13,3,Puente 1 reparado
+multijugador/suministros.py,17,4,Abastecer a las familias
+multijugador/suministros.py,17,21,"Después de investigar el agua, reúnan en el cesto de la aldea agua segura y provisiones para repartirlas a las familias."
+multijugador/suministros.py,19,3,Reserva comunitaria abastecida
+multijugador/suministros.py,20,4,Preparar un boletín verificado
+multijugador/suministros.py,20,18,Pongan por escrito el resultado de la alerta: reúnan pergaminos y tinta en el cesto de la aldea.
+multijugador/suministros.py,22,3,Boletín verificado publicado
+multijugador/suministros.py,68,10,"Primero traigan los materiales. Si ya terminaron, vuelvan al caldero."
+multijugador/suministros.py,70,8,Acércate al círculo verde del cesto para ayudar.
+multijugador/suministros.py,74,10,¡Tú ayudas! Quédate aquí mientras otro compañero hace la tarea.
+multijugador/suministros.py,76,6,Elige ayudar o hacer la tarea.
+multijugador/suministros.py,78,13,Necesitas que otro compañero pulse 'Yo ayudo' y se quede junto al cesto.
+multijugador/suministros.py,80,12,¡Bien! Espera a que se llene el brillo y vuelve a pulsar.
+multijugador/suministros.py,83,3,de 3 pasos.
+multijugador/suministros.py,93,10,Tu aporte ya está entregado o el encargo está completo.
+multijugador/suministros.py,98,6,Otro compañero ya lleva ese objeto.
+multijugador/suministros.py,100,8,Ese material no está disponible en este punto.
+multijugador/suministros.py,102,10,En este punto no quedan materiales necesarios para el encargo.
+multijugador/suministros.py,110,5,Tu entrega ya quedó registrada.
+multijugador/suministros.py,112,8,Primero recoge uno de los materiales del encargo.
+multijugador/suministros.py,114,14,Ese material ya fue entregado. Cambia tu carga en el otro punto de recogida.
+multijugador/suministros.py,149,3,Colocar una tabla
+multijugador/suministros.py,149,3,Pegar un sello
+multijugador/suministros.py,149,3,Repartir una cesta
+multijugador/tiempo_real.py,34,3,Demasiadas acciones pendientes.
+multijugador/tiempo_real.py,72,6,La partida todavía no ha comenzado.
+multijugador/tiempo_real.py,76,7,Tu sesión ya está conectada al mapa.
+multijugador/tiempo_real.py,189,5,El anfitrión cerró la sala.

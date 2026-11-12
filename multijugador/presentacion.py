@@ -13,6 +13,17 @@ el cliente solo los lee para dibujar.
 ERAS = {"la_copa": "Era I", "presente": "Era II", "futuro": "Era III"}
 
 
+def estado_votacion(votos, participantes, resultado=None):
+    """Publica quién falta, nunca la elección privada de otra persona."""
+    from collections import Counter
+    participantes = set(participantes)
+    emitidos = participantes.intersection(votos)
+    todos = bool(participantes) and emitidos == participantes
+    mayor = max(Counter(votos[i] for i in emitidos).values(), default=0)
+    return {"faltan_votar": sorted(participantes - emitidos),
+            "empate": bool(todos and resultado is None and mayor <= len(participantes) / 2)}
+
+
 def titulo_era(dimension, nombre):
     return f"{ERAS[dimension]}: {nombre}"
 

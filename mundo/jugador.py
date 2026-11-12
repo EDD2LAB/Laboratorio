@@ -2,7 +2,8 @@
 
 import math
 import pygame
-from mundo.colisiones import jugador_bloqueado
+from mundo.colisiones import jugador_bloqueado, puede_mover_pies
+from logica.movimiento_suave import desplazar
 from nucleo.config import ALTO, ANCHO, DISTANCIA_INTERACCION, VELOCIDAD_GUARDIAN
 
 
@@ -149,9 +150,6 @@ def mover_jugador(jugador, mundo, teclas, delta_ms):
         dx *= math.sqrt(0.5)
         dy *= math.sqrt(0.5)
     delta = min(max(delta_ms, 0), 100) / 1000
-    pasos = max(1, math.ceil(velocidad * delta / 3))
-    paso_x = dx * velocidad * delta / pasos
-    paso_y = dy * velocidad * delta / pasos
     posicion_x = jugador.get("posicion_x", float(jugador["pies"].x))
     posicion_y = jugador.get("posicion_y", float(jugador["pies"].y))
     jugador["tiempo_animacion"] += delta_ms
@@ -163,21 +161,14 @@ def mover_jugador(jugador, mundo, teclas, delta_ms):
         if frames_direccion:
             jugador["indice_frame"] = (jugador["indice_frame"] + 1) % len(frames_direccion)
 
-    for _ in range(pasos):
-        for eje, movimiento_eje in (("x", paso_x), ("y", paso_y)):
-            if not movimiento_eje:
-                continue
-            pies = jugador["pies"].copy()
-            candidato = (posicion_x if eje == "x" else posicion_y) + movimiento_eje
-            setattr(pies, eje, round(candidato))
-            if not pygame.Rect(0, 0, ANCHO, ALTO).contains(pies):
-                continue
-            if not jugador_bloqueado(pies, mundo):
-                jugador["pies"] = pies
-                if eje == "x":
-                    posicion_x = candidato
-                else:
-                    posicion_y = candidato
+    def puede(origen, destino):
+        antes, despues = jugador["pies"].copy(), jugador["pies"].copy()
+        antes.topleft = round(origen[0]), round(origen[1])
+        despues.topleft = round(destino[0]), round(destino[1])
+        return puede_mover_pies(antes, despues, mundo)
+
+    posicion_x, posicion_y = desplazar(posicion_x, posicion_y, dx * velocidad * delta, dy * velocidad * delta, puede)
+    jugador["pies"].topleft = round(posicion_x), round(posicion_y)
     jugador["posicion_x"] = posicion_x
     jugador["posicion_y"] = posicion_y
     jugador["rect"].midbottom = jugador["pies"].midbottom

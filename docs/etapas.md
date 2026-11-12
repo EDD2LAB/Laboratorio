@@ -16,9 +16,13 @@
 
 ## Trabajo restante
 
-La etapa 2 está implementada localmente con protocolo 13; ver
-`docs/red_estabilidad.md` y los resultados en `docs/progreso.md`. Requiere
-publicación y despliegue antes de usarla con el servidor de Render.
+El protocolo local actual es 14. Render conserva la última versión publicada
+hasta realizar el próximo push y despliegue.
+
+Las etapas 1 y 2 se publicaron y desplegaron en Render en `be2f6df`.
+Las etapas 3 y 4 se publicaron junto con el resaltado del equipo en `bef84e9`.
+La etapa 3 se implementó en `58cc8c0`: ver `docs/claridad_etapa3.md`.
+La etapa 4 corrige movimiento y atascos: ver `docs/movimiento_etapa4.md`.
 
 | Etapa | Alcance | Criterio de cierre |
 | --- | --- | --- |
@@ -33,6 +37,15 @@ publicación y despliegue antes de usarla con el servidor de Render.
 El Modo Feria con QR sigue sin implementar y es una ampliación posterior.
 El PDF refiere un prompt de batalla que no incluye: falta ese diseño completo.
 No borrar ramas del equipo sin confirmación específica.
+
+La presentación visual de la etapa 5 se trabaja en `docs/presentacion_etapa5.md`.
+La música queda pendiente por petición del usuario. Esto no completa las etapas 6 a 8.
+
+La exploración de la etapa 6 está implementada localmente; el mapa exterior nuevo
+del Futuro sigue pendiente de revisión manual. Ver `docs/exploracion_etapa6.md`.
+
+La etapa 7 mejora el expediente compartido y su animación; ver
+`docs/expediente_etapa7.md`. El contenido legal sigue pendiente del profesor.
 
 ## Línea base del análisis previo
 

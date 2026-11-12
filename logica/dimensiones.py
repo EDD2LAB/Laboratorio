@@ -60,6 +60,20 @@ EDIFICIOS_PRESENTE = {
     },
 }
 
+# Interiores del Futuro: misma planta isométrica que los del Presente.
+# Se reutilizan sus paredes editadas a mano; no se escriben archivos de Hitboxes.
+EDIFICIOS_FUTURO = {
+    clave: dict(EDIFICIOS_PRESENTE[clave], nombre=nombre,
+                interior="Fondos/Mapas/Futuro/" + archivo)
+    for clave, nombre, archivo in (
+        ("centro_verificacion", "Centro de Supervisión", "Centro-Verif-FuturoInt.png"),
+        ("estudio_influencer", "Observatorio de Mensajes", "estudioInflu-Futuroint.png"),
+        ("sede_aspirante", "Archivo del Consejo", "Sede-Aspirante-FuturoInt.png"),
+        ("cafe_digital", "Café de Datos", "CafefuturoInt.png"),
+        ("estacion_mensajero", "Estación de Enlaces", "EstacióndeMensajeriaInt.png"),
+    )
+}
+
 DIMENSIONES = {
     DIMENSION_LA_COPA: {
         "nombre": "La Copa",

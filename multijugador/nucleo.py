@@ -9,7 +9,7 @@ import math
 from logica.grafo_fisico import GrafoFisico
 
 from .dialogos import identificador_npc
-from .presentacion import aplicar_efectos, tipo_pocion
+from .presentacion import aplicar_efectos, tipo_pocion, estado_votacion
 from .expediente import campos_legales, ficha_resuelta
 
 CASO = "nucleo_control"
@@ -157,6 +157,7 @@ class MisionNucleo:
             return round(x), round(y)
 
         self.objetivos = []
+        self.edificios = {}
         for tarea, entrada, titulo, _ in TERMINALES:
             if tarea == "cuentas":
                 continue  # es el propio Ciudadano Conectado
@@ -353,10 +354,12 @@ class MisionNucleo:
         raise ValueError("NÚCLEO no se clasifica: decidan qué hacer con él.")
 
     def publico(self, presentes):
-        return {"objetivos": [dict(o) for o in self.objetivos], "pistas": len(self.tareas), "total_pistas": len(TERMINALES),
+        return {"objetivos": [dict(o) for o in self.objetivos], "edificios": self.edificios,
+                "pistas": len(self.tareas), "total_pistas": len(TERMINALES),
                 "titulo": TITULO, "noticia": NOTICIA, "evento": {"id": CASO, "tipo": "nucleo", "indice": 0, "total": 1},
                 "tareas": sorted(self.tareas), "opciones": dict(OPCIONES), "tipos_pocion": {o: tipo_pocion(o) for o in OPCIONES},
                 "votos_emitidos": sum(i in self.votos for i in presentes), "votantes": len(presentes),
+                **estado_votacion(self.votos, presentes, self.resultado),
                 "resultado": dict(self.resultado) if self.resultado else None, "completada": self.completada,
                 "fin": self.completada, "sin_clasificacion": True,
                 "portador": self.portador, "pulsos": [[round(x), round(y)] for x, y in self.posiciones_pulsos()],

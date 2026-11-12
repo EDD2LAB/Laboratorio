@@ -140,7 +140,8 @@ def dibujar_encargos(superficie, caso, fuente, resaltar=None):
         superficie.blit(etiqueta, etiqueta.get_rect(midtop=(d["x"], d["y"]+28)))
     # Cada obra terminada deja su bandera verde donde quedó hecha (puente, familias, archivo).
     for obra in caso.get("obras", []) + ([encargo] if encargo and encargo["completo"] else []):
-        d = obra.get("sitio") or obra["destino"]
+        x0, y0 = obra.get("sitio") or (obra["destino"]["x"], obra["destino"]["y"])
+        d = {"x": x0, "y": y0}
         x, y = d["x"]-22, d["y"]-36
         pygame.draw.line(superficie, (225, 189, 105), (x, y), (x, y+28), 3)
         pygame.draw.polygon(superficie, (100, 223, 152), ((x, y), (x+18, y+6), (x, y+12)))

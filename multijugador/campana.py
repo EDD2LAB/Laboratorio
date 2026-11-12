@@ -109,6 +109,8 @@ class CampanaCopa(MisionPuente):
         self.expediente = ExpedientePartida()
         self.avisos_recientes = {i: {} for i in jugadores}
         self.dialogos = DialogosNPC(self, datos_mapa)
+        from .exploracion import ExploracionInteriores
+        self.exploracion = ExploracionInteriores()
         self.ronda = 0
         self.metadatos_pruebas = self._metadatos(self.pruebas)
         self.resumen = []
@@ -275,6 +277,9 @@ class CampanaCopa(MisionPuente):
             return self.entrar_edificio(identificador, solicitud.get("edificio"))
         if accion == "salir_edificio":
             return self.salir_edificio(identificador)
+        if accion == "explorar_sector":
+            return self.exploracion.inspeccionar(identificador, solicitud.get("objetivo"),
+                                                 self.jugadores, self._cerca_presente)
         if accion in ("hablar_npc", "responder_npc"):
             return self.dialogos.ejecutar(identificador, solicitud)
         objetivo_pedido = solicitud.get("objetivo")
@@ -413,7 +418,7 @@ class CampanaCopa(MisionPuente):
 
     def _siguiente(self):
         self.resumen.append({"caso": self.casos[self.ronda][1], **self.resultado})
-        self.obras.append(self.encargo.publico())
+        self.obras.append(self.encargo.obra())
         self.ronda += 1
         self.encargo = EncargoSuministros(self.ronda, self.objetivos) if self.ronda < 3 else None
         self.pruebas = self.casos[self.ronda][4]
@@ -529,6 +534,7 @@ class CampanaCopa(MisionPuente):
                       proxima_oleada=max(0, 60 - int(self.presion % 60)),
                       oleadas=self.oleadas, habilidades_usadas=sorted(self.habilidades_usadas),
                       npcs=self.dialogos.publico(), npcs_en_dialogo=self.dialogos.nombres_en_dialogo(),
+                      exploracion=self.exploracion.publico(),
                       opciones=dict(self.opciones),
                       tipos_pocion={clave: tipo_pocion(clave) for clave in self.opciones},
                       clasificacion_opciones=list(clasificacion.OPCIONES["la_copa"]),

@@ -113,6 +113,8 @@ class RecursosEscenas:
             if imagen_icono is None:
                 print("[Multijugador] Falta el ícono esperado:", icono)
             self.r["botones_clasificacion"][clave] = tarjeta_categoria(marco, imagen_icono)
+        from interfaz.presentacion_arte import tarjetas_disponibles
+        self.r["botones_clasificacion"].update(tarjetas_disponibles())
         self.iconos_hud = {
             "sabiduria": cargar_icono_hud("Barra_sabiduría.png"),
             "confianza": cargar_icono_hud("Barra_confianza.png"),

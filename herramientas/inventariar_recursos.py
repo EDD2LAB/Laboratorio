@@ -63,7 +63,7 @@ def esperados():
     for nombre in ("ficha_vacio", "ficha_logrado", "aguja"):
         agregar(f"Imagenes/Indicadores Puente/{nombre}.png", "Minijuego puente", "Dibujo actual")
     for nombre in ("exclamacion", "interrogacion", "check"):
-        agregar(f"Imagenes/Indicadores/{nombre}_4f.png", "Objetivo visual", "Indicador por código por implementar")
+        agregar(f"Imagenes/Indicadores/{nombre}_4f.png", "Objetivo visual", "Indicador por código implementado")
     for nombre in ("pista", "compartir", "pedir_pruebas", "verificar", "votar", "entregar", "rumor", "aclaracion", "eco"):
         agregar(f"Imagenes/Iconos/Acciones/{nombre}.png", "Acciones", "Texto actual")
     for nombre in ("PixelifySans", "Nunito", "ShareTechMono"):
@@ -102,13 +102,18 @@ def main():
         estado = "Existe; conexión pendiente" if ruta in existentes else "Falta en ruta esperada"
         if ruta not in existentes and alternativa in existentes:
             estado = f"Alternativa existente: `{alternativa}`; adaptar"
+        if uso == "NÚCLEO animado" and alternativa in existentes:
+            estado = f"Integrado: `{alternativa}`; celdas cuadradas"
+        if uso == "Tarjeta de clasificación" and alternativa in existentes and "Control_autonomo" not in ruta:
+            estado = f"Integrado: `{alternativa}`; proporciones conservadas"
         lineas.append(f"| `{ruta}` | {estado} | {uso} | {respaldo} |")
     lineas += ["", "## Familias con nombres o formatos variables", "",
                "- Retratos: los seis roles/apariencias ya tienen carpetas de cuatro expresiones.",
-               "  Kael y Tarek están registrados como aspirante y habitante; falta conectar sus diálogos.",
+               "  Kael y Tarek usan sus retratos de aspirante y habitante en los diálogos.",
                "  Nuevos retratos individuales abajo: no asumir cuatro expresiones ni identidad para NPC2.",
-               "- Elia y Arel tienen sprites, pero falta agregarlos al mapa y al diálogo.",
-               "- Teclas: faltan los recursos `Imagenes/Indicadores/tecla_<X>.png` del plan.",
+               "- Elia y Arel están en La Copa con sus sprites y conversaciones de ayuda.",
+               "- Teclas: faltan los recursos `Imagenes/Indicadores/tecla_<X>.png`; respaldo por código ya conectado en mapa y F1.",
+               "  `tecla_E.png` también se usa junto al objetivo resaltado; respaldo por código si falta.",
                "- Icono animado: falta `Imagenes/Iconos/icono_animado_<N>f.png`; existe brillo por código.",
                "- Balanceo: las tiras existentes deben compararse contra el tamaño de cada puente antes de conectarlas.",
                "- `herramientas/componer_pantallas.py` no existe en esta revisión.",
@@ -122,10 +127,10 @@ def main():
             lineas.append(f"| `{ruta}` | {f['ancho']} x {f['alto']} |")
     lineas += ["", "## Retratos solicitados en el plan", "",
                "| Personaje | Recurso físico / pendiente |", "| --- | --- |",
-               "| Naira | `Imagenes/Retratos/NairaRetraro.png`; imagen individual, adaptar |",
-               "| Odran | `Imagenes/Retratos/OdranRetrato.png`; imagen individual, adaptar |",
-               "| Darek | `Imagenes/Retratos/DarekRetrato.png`; imagen individual, adaptar |",
-               "| Ronaldo Vélez | `Imagenes/Retratos/RonaldoVelezRetrato.png`; imagen individual, adaptar |",
+               "| Naira | `Imagenes/Retratos/NairaRetraro.png`; imagen individual integrada sin deformar |",
+               "| Odran | `Imagenes/Retratos/OdranRetrato.png`; imagen individual integrada sin deformar |",
+               "| Darek | `Imagenes/Retratos/DarekRetrato.png`; imagen individual integrada sin deformar |",
+               "| Ronaldo Vélez | `Imagenes/Retratos/RonaldoVelezRetrato.png`; imagen individual integrada sin deformar |",
                "| Mateo Ríos | Candidato `Mensajero-urbano-Retraro.png`; confirmar identidad y adaptar |",
                "| Elías Vega y Tomás Red | Sin retrato identificado por nombre |",
                "| Elia y Arel | Hay sprites; sin retrato identificado por nombre |",

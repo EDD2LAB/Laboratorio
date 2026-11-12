@@ -213,9 +213,16 @@ def _comentarios(panel, superficie, *textos):
         superficie.blit(render, render.get_rect(midleft=(caja.x + 4, caja.centery)))
 
 
-def _boton(panel, superficie, clave, texto, centro, ancho=300, activo=True, alto=46):
-    boton = Boton(texto, centro=centro, fuente=panel.fuente, tamano=(ancho, alto), desactivado=not activo, paleta=PALETA)
+def _boton(panel, superficie, clave, texto, centro, ancho=300, activo=True, alto=46, imagen=None):
+    boton = Boton(texto if imagen is None else "", centro=centro, fuente=panel.fuente,
+                  tamano=(ancho, alto), desactivado=not activo, paleta=PALETA)
     boton.dibujar(superficie, panel.vista.mouse)
+    if imagen is not None:
+        from interfaz.boton import etiqueta_ajustada, CREMA
+        superficie.blit(imagen, imagen.get_rect(midleft=(boton.rect.left + 6, centro[1])))
+        etiqueta = etiqueta_ajustada(panel.fuente, texto, ancho - 60, alto - 10, CREMA)
+        superficie.blit(etiqueta, etiqueta.get_rect(center=(centro[0] + 20, centro[1])))
+        boton.texto = texto  # conserva la etiqueta para teclado, lectores y pruebas
     panel.botones[clave] = boton
 
 
@@ -296,7 +303,11 @@ def _pistas(panel, superficie, contexto, arte):
     equipo = ", ".join(equipo_distrito(panel))
     _comentarios(panel, superficie, "También la ven: " + equipo if equipo else "")
     completas = contexto.get("pistas", 0) >= contexto.get("total_pistas", 3)
-    _boton(panel, superficie, "caldero", "Decidir qué hacer", (338, ACCIONES_Y), activo=completas)
+    from interfaz.orientacion import aviso_analisis
+    aviso = aviso_analisis(contexto)
+    if aviso and completas:
+        _comentarios(panel, superficie, aviso)
+    _boton(panel, superficie, "caldero", "Revisar antes de decidir" if aviso else "Decidir qué hacer", (338, ACCIONES_Y), activo=completas)
 
 
 def falta_para_decidir(panel, contexto):
@@ -334,8 +345,11 @@ def _decidir(panel, superficie, contexto, arte):
             superficie.blit(velo, zona)
         if voto == clave:
             pygame.draw.rect(superficie, ORO, zona.inflate(6, 6), 3, border_radius=13)
-    _comentarios(panel, superficie, apuntada or falta or "Elijan juntos qué hacer con esta publicación.",
-                 "Tu elección: " + nombre_opcion(voto) if voto else "")
+    from interfaz.orientacion import aviso_analisis, datos_votacion
+    aviso = aviso_analisis(contexto)
+    estado_votos = datos_votacion(contexto, panel.vista.estado.get("mundo", {}).get("jugadores", []), panel.vista.identificador)
+    _comentarios(panel, superficie, aviso or apuntada or falta or estado_votos,
+                 (apuntada or falta or estado_votos) if aviso else ("Tu elección: " + nombre_opcion(voto) if voto else estado_votos))
 
 
 def _resultado(panel, superficie, contexto, arte):
@@ -378,8 +392,14 @@ def _clasificar(panel, superficie, contexto, arte):
     _texto(panel, superficie, contexto.get("noticia", ""), TEXTO_X, y + 6)
     _comentarios(panel, superficie, "Elige la categoría que consideres correcta.")
     opciones = contexto.get("clasificacion_opciones") or []
+    if not hasattr(arte, "categorias"):
+        from interfaz.presentacion_arte import tarjetas_disponibles
+        arte.categorias = tarjetas_disponibles((34, 38))
+    from nucleo.recursos import normalizar_ruta
     for i, opcion in enumerate(opciones):  # dos filas de dos: cada nombre cabe completo
-        _boton(panel, superficie, "clasificar:" + opcion, opcion, (192 + i % 2 * 292, 612 + i // 2 * 54), 280, alto=46)
+        imagen = arte.categorias.get(normalizar_ruta(opcion).replace(" ", "_"))
+        _boton(panel, superficie, "clasificar:" + opcion, opcion, (192 + i % 2 * 292, 612 + i // 2 * 54),
+               280, alto=46, imagen=imagen)
 
 
 def _clasificado(panel, superficie, contexto, arte):

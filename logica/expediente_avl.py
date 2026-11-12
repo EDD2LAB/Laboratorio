@@ -32,6 +32,15 @@ class ExpedienteAVL:
         self.raiz = None
         self.casos = {}
         self.rotaciones = []
+        self.animacion = None
+        self._giros = []
+
+    @staticmethod
+    def forma(nodo):
+        if nodo is None:
+            return None
+        return {"id": nodo.caso.id, "i": ExpedienteAVL.forma(nodo.izquierda),
+                "d": ExpedienteAVL.forma(nodo.derecha)}
 
     @staticmethod
     def altura(nodo):
@@ -41,6 +50,7 @@ class ExpedienteAVL:
         nodo.altura = 1 + max(self.altura(nodo.izquierda), self.altura(nodo.derecha))
 
     def _rotar(self, nodo, izquierda):
+        antes = self.forma(nodo)
         cima = nodo.derecha if izquierda else nodo.izquierda
         if izquierda:
             nodo.derecha, cima.izquierda = cima.izquierda, nodo
@@ -49,6 +59,7 @@ class ExpedienteAVL:
         self._medir(nodo)
         self._medir(cima)
         self.rotaciones.append({"nodo": nodo.caso.id, "direccion": "izquierda" if izquierda else "derecha"})
+        self._giros.append((antes, self.forma(cima), "izquierda" if izquierda else "derecha"))
         return cima
 
     def ruta_insercion(self, caso):
@@ -74,6 +85,18 @@ class ExpedienteAVL:
             return False
         caso = deepcopy(caso)
         self.rotaciones = []
+        self._giros = []
+        antes = self.forma(self.raiz)
+
+        def sin_equilibrar(forma):
+            if forma is None:
+                return {"id": caso.id, "i": None, "d": None}
+            forma = deepcopy(forma)
+            lado = "i" if caso.clave < self.casos[forma["id"]].clave else "d"
+            forma[lado] = sin_equilibrar(forma[lado])
+            return forma
+
+        forma = sin_equilibrar(antes)
 
         def agregar(nodo):
             if nodo is None:
@@ -94,6 +117,19 @@ class ExpedienteAVL:
 
         self.raiz = agregar(self.raiz)
         self.casos[caso.id] = caso
+        pasos = [{"tipo": "insertar", "forma": deepcopy(forma)}]
+
+        def sustituir(arbol, viejo, nuevo):
+            if arbol is None:
+                return None
+            if arbol["id"] == viejo:
+                return deepcopy(nuevo)
+            return dict(arbol, i=sustituir(arbol["i"], viejo, nuevo), d=sustituir(arbol["d"], viejo, nuevo))
+
+        for previa, nueva, direccion in self._giros:
+            forma = sustituir(forma, previa["id"], nueva)
+            pasos.append({"tipo": "rotar", "direccion": direccion, "forma": deepcopy(forma)})
+        self.animacion = {"caso": caso.id, "antes": antes, "pasos": pasos}
         return True
 
     def inorden(self):

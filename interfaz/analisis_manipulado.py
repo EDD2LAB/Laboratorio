@@ -153,7 +153,11 @@ class ArteAnalisis:
 
     @staticmethod
     def _componer_nucleo():
-        """Avatar provisional de NÚCLEO: una esfera luminosa, sin cara (ver docs/futuro.md)."""
+        """Retrato de NÚCLEO; la esfera queda como respaldo sin imágenes."""
+        from interfaz.presentacion_arte import AnimacionesNucleo
+        retrato = AnimacionesNucleo(lado=104).cuadro({}, 0)
+        if retrato is not None:
+            return retrato
         lado = 104
         imagen = pygame.Surface((lado, lado), pygame.SRCALPHA)
         for radio, alfa in ((50, 40), (42, 80), (32, 150)):

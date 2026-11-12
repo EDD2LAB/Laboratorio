@@ -255,20 +255,40 @@ class ExpedienteEInforme(unittest.TestCase):
             prueba = [{"id": "p", "titulo": "Prueba", "texto": "Texto"}]
             libro.registrar(caso, "Título", {"opcion": "corregir", "correcto": True, "evento_id": 1}, prueba, ficha)
             v.estado["mundo"]["caso"]["expediente"] = libro.publico()
-            escritos, original = [], v.panel.texto_lineas
+            originales = v.panel.pequena
+            renderizados = set()
 
-            def anotar(superficie, texto, x, y, *resto, **extra):
-                fin = original(superficie, texto, x, y, *resto, **extra)
-                escritos.append((texto, fin))
-                return fin
+            class FuenteRegistrada:
+                def __getattr__(self, nombre):
+                    return getattr(originales, nombre)
 
-            with mock.patch.object(v.panel, "texto_lineas", anotar):
-                tarjeta.dibujar(v.panel, pygame.Surface((960, 720)))
-            textos = {t: fin for t, fin in escritos}
-            for campo in ("conducta", "ley", "sancion", "nota"):
-                if ficha[campo]:
-                    self.assertIn(ficha[campo], textos, caso)
-                    self.assertLessEqual(textos[ficha[campo]], 484, (caso, campo))  # antes del botón
+                def render(self, texto, *args, **kwargs):
+                    renderizados.add(texto)
+                    return originales.render(texto, *args, **kwargs)
+
+            superficie = pygame.Surface((960, 720))
+            v.panel.pequena = FuenteRegistrada()
+            v.panel.modo = "expediente"
+            v.panel.caso_expediente = caso
+            try:
+                tarjeta.dibujar(v.panel, superficie)
+                lineas, _ = tarjeta.lineas_detalle(v.panel, libro.arbol.casos[caso].publico())
+                contenido = " ".join(t for t, _ in lineas)
+                for campo in ("conducta", "ley", "sancion", "nota"):
+                    if ficha[campo]:
+                        self.assertIn(ficha[campo], contenido, (caso, campo))
+                while v.panel.expediente_scroll < v.panel.expediente_scroll_max:
+                    evento = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_PAGEDOWN)
+                    v.panel.manejar(evento, tarjeta.DETALLE.center, None)
+                    tarjeta.dibujar(v.panel, superficie)
+                # Cada línea de la ficha llegó a dibujarse al recorrer las páginas.
+                for texto, _ in lineas:
+                    if texto:
+                        self.assertIn(texto, renderizados, caso)
+                self.assertEqual(superficie.get_clip(), superficie.get_rect())
+                self.assertLess(tarjeta.DETALLE.bottom, min(b.rect.top for b in v.panel.botones.values()))
+            finally:
+                v.panel.pequena = originales
 
     def test_el_informe_exportado_trae_ley_y_sancion_de_los_ocho(self):
         from interfaz.informe_final import exportar
