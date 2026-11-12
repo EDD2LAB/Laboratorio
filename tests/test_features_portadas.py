@@ -271,7 +271,7 @@ class PortalTests(unittest.TestCase):
         p.actualizar(p.ultima + .1)
         self.assertIsNone(p.viaje)
 
-    def test_bots_viajan_y_te_dejan_una_sola_pista(self):
+    def test_bots_viajan_y_te_dejan_todas_las_pistas(self):
         from multijugador.partida_local import ClienteCampanaLocal
         cliente = ClienteCampanaLocal("Prueba", "guardian")
         p = cliente._partida
@@ -281,8 +281,7 @@ class PortalTests(unittest.TestCase):
         for _ in range(500):
             cliente.actualizar(.15)
         presente = p.mision.presente
-        self.assertEqual(len(presente.halladas), 2)  # la tercera te toca a ti
-        self.assertTrue(all(i != "local" for i in presente.halladas.values()))
+        self.assertEqual(presente.halladas, {})  # las pistas las reúne la persona
         self.assertIsNone(presente.resultado)  # la decisión no la toman ellos
         humano = p.jugadores["local"]
         for identificador, bot in cliente._bots.bots.items():

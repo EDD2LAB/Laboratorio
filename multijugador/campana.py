@@ -148,7 +148,8 @@ class CampanaCopa(MisionPuente):
         x, y, w, h = self.puente.rect
         # Extremo inferior derecho: el lado de la plataforma central.
         px, py = colisiones.inicio_libre(x + w + 6, y + h + 4)
-        return {"id": PuenteRed.ID, "nombre": "Puente 1 · reparar", "tipo": "puente", "x": round(px), "y": round(py)}
+        return {"id": PuenteRed.ID, "nombre": "Puente 1 · reparar", "tipo": "puente", "x": round(px), "y": round(py),
+                "bandera": [x + w // 2 + 14, y + h // 2 + 26]}  # en medio del puente, a la vista
 
     @property
     def objetivo_puente(self):
@@ -312,6 +313,8 @@ class CampanaCopa(MisionPuente):
             return self._clasificar(identificador, solicitud.get("categoria"))
         if accion == "pedir_pista":
             return self.acompanante.pedir(self, identificador, self.reloj, presentes)
+        if accion == "pedir_ayuda":
+            return self.acompanante.pedir_ayuda(self, identificador, self.reloj, presentes)
         if accion in ("sujetar", "trabajar"):
             if self.fase != "preparacion":
                 raise ValueError("Ahora sigue la tarea que aparece en el mapa.")
@@ -383,7 +386,7 @@ class CampanaCopa(MisionPuente):
             if not self.encargo.completo or len(presentes) < 2:
                 raise ValueError("Entreguen ambos materiales con dos jugadores distintos en el destino señalado.")
             self.preparados.add(identificador)
-            if set(presentes).issubset(self.preparados):
+            if self.decisores(presentes).issubset(self.preparados):
                 self._siguiente()
                 return {"mensaje": "Comienza una nueva investigación.", "vista": "introduccion"}
             return {"mensaje": "Listo para continuar. Esperando al resto del equipo."}
@@ -426,7 +429,7 @@ class CampanaCopa(MisionPuente):
 
     def _siguiente(self):
         self.resumen.append({"caso": self.casos[self.ronda][1], **self.resultado})
-        self.obras.append(self.encargo.publico())
+        self.obras.append(self.encargo.obra())
         self.ronda += 1
         self.encargo = EncargoSuministros(self.ronda, self.objetivos) if self.ronda < 3 else None
         self.pruebas = self.casos[self.ronda][4]
@@ -511,7 +514,7 @@ class CampanaCopa(MisionPuente):
 
     def resolver(self, presentes):
         if (self.fase == "preparacion" and len(presentes) >= 2 and self.encargo.completo
-                and set(presentes).issubset(self.preparados)):
+                and self.decisores(presentes).issubset(self.preparados)):
             self._siguiente()
             return
         puente = self.estado_puente
@@ -534,7 +537,7 @@ class CampanaCopa(MisionPuente):
         estado.update(id=caso[0], titulo=f"{self.ronda + 1}/{len(self.casos)} · {caso[1]}", noticia=caso[2],
                       fase=self.fase, ronda=self.ronda, total_casos=len(self.casos),
                       encargo=self.encargo.publico() if self.fase == "preparacion" else None, obras=list(self.obras),
-                      suministros=len(self.depositos), preparados=len(set(presentes) & self.preparados),
+                      suministros=len(self.depositos), preparados=len(self.decisores(presentes) & self.preparados),
                       balance=list(self.resumen) + ([{"caso": caso[1], **self.resultado}] if self.resultado else []),
                       estrellas=len(self.acompanante.estrellas), estrellas_total=11,
                       tutorial_cargas=[i for i, t in self.acompanante.tutoriales.items() if t["estado"] == "activo" and t["paso"] == 2],

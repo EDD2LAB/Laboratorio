@@ -194,7 +194,7 @@ class Campana(unittest.TestCase):
             self.assertTrue(caso.datos["ley"])
             self.assertTrue(caso.datos["sancion"])
 
-    def test_con_bots_que_ayudan_a_marcar_el_caso_llega_al_expediente(self):
+    def test_con_bots_la_persona_marca_y_el_caso_llega_al_expediente(self):
         p = partida(1, bots=True)
         gestor = GestorBots(p, {"0"})
         m = p.mision.presente
@@ -207,15 +207,15 @@ class Campana(unittest.TestCase):
             ahora += .15
             p.actualizar(ahora)
             gestor.actualizar(ahora, .15)
-            if m.marcas:
-                break
-        self.assertTrue(any(i.startswith("bot_") and a == "presente_marcar" for i, a in vistas), vistas[-5:])
-        self.assertEqual(len(m.marcas), 1)  # la última marca queda para las personas
+        # Con una persona en el equipo, el análisis es suyo: los bots no marcan.
+        self.assertFalse(any(i.startswith("bot_") and a.startswith("presente_") for i, a in vistas), vistas[-5:])
+        self.assertEqual(m.marcas, {})
         p.actuar = original
         accion(p, "0", "presente_analizar")
-        punto = next(q for q in PUNTOS["presente_video"] if q["frame"] != next(
-            f for mk in MARCAS["video_manipulado"]["marcas"] if mk["id"] in m.marcas for f in mk["frames"][:1]))
-        accion(p, "0", "presente_marcar", **punto)
+        for punto in PUNTOS["presente_video"]:
+            if m.concluido:
+                break
+            accion(p, "0", "presente_marcar", **punto)
         self.assertTrue(m.concluido)
         self.assertTrue(votar(p)["ok"])
         expediente = p.mision.expediente

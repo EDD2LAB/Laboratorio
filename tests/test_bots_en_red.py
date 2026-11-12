@@ -9,7 +9,7 @@ os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 
 
 class BotsEnRedTests(unittest.TestCase):
-    def test_roles_libres_se_cubren_con_bots_que_juegan(self):
+    def test_roles_libres_se_cubren_con_bots_que_acompanan(self):
         from multijugador.cliente_internet import ClienteInternet
         from multijugador.servidor_local import ServidorLocal
         servidor = ServidorLocal()
@@ -52,8 +52,11 @@ class BotsEnRedTests(unittest.TestCase):
             def bots_se_movieron(evento):
                 if evento.get("tipo") != "estado" or "mundo" not in evento:
                     return False
+                # Con dos personas, los bots no investigan por su cuenta.
+                self.assertEqual(evento["mundo"].get("caso", {}).get("investigadores", 0), 0)
                 return any((j["x"], j["y"]) != inicio[j["id"]]
                            for j in evento["mundo"]["jugadores"] if j["id"] in inicio)
+            a.mover(0, 1)  # los bots acompañan a las personas y les dejan espacio
             esperar(a, bots_se_movieron, limite=10)
         finally:
             for cliente in clientes:

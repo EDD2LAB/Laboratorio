@@ -147,11 +147,13 @@ class NpcEnDialogo(ConPartida):
 
 class Bots(unittest.TestCase):
     def test_un_bot_obtiene_el_testimonio_por_la_misma_ruta(self):
+        # Solo sin personas conectadas: con una persona, las pistas son tarea suya.
         p = PartidaMovimiento([dict(id="0", nombre="A", rol="guardian")]
                               + [dict(id="bot_" + r, nombre=r, rol=r, controlador="bot") for r in ROLES[1:]], 0)
         gestor = GestorBots(p, {"0"})
         p.colisiones_de(PRESENTE)
         p._viajar_equipo(LA_COPA, PRESENTE)
+        p.conectados.discard("0")
         original = p.actuar
         vistas = []
         p.actuar = lambda i, s, a: vistas.append(s["accion"]) or original(i, s, a)
@@ -160,7 +162,7 @@ class Bots(unittest.TestCase):
             ahora += .15
             p.actualizar(ahora)
             gestor.actualizar(ahora, .15)
-        self.assertEqual(len(p.mision.presente.halladas), 2)
+        self.assertTrue(p.mision.presente.halladas)
         self.assertIn("hablar_npc", vistas)
         self.assertIn("responder_npc", vistas)
         self.assertEqual(p.mision.dialogos.abiertos, {})

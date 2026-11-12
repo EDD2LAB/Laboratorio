@@ -67,6 +67,7 @@ class PlanificadorBot:
         }
 
     def planificar(self, bot, estado, jugadores, memoria, dificultad):
+        bot.con_personas = not self._sin_personas(jugadores)
         if bot.posicion.get("dimension", "la_copa") != "la_copa":
             bot.orden = None
             if bot.posicion.get("dimension") == "futuro":
@@ -74,10 +75,13 @@ class PlanificadorBot:
                 final = planificar(bot, estado, jugadores, self._tarea)
                 if final is not None:
                     return final
+            if not self._sin_personas(jugadores):
+                # Con personas, investigar, marcar y resolver terminales es tarea de ellas.
+                return self._esperar_pista_propia(bot, estado) or self._acompanar(bot, jugadores, estado)
             tarea_de_era = self._tareas_nucleo if bot.posicion.get("dimension") == "futuro" else self._analizar_distrito
             return (self._distrito(bot, estado, jugadores, memoria)
                     or tarea_de_era(bot, estado, jugadores, memoria, dificultad)
-                    or (self._sin_personas(jugadores) and self._decidir_solos(bot, estado))
+                    or self._decidir_solos(bot, estado)
                     or self._acompanar(bot, jugadores, estado))
         caso = estado["caso"]
         if caso["fase"] == "final" and self._sin_personas(jugadores):
@@ -100,6 +104,8 @@ class PlanificadorBot:
             return plan_orden
         if caso["fase"] == "preparacion":
             return self._preparacion(bot, caso, privado, caldero, memoria, jugadores)
+        if not self._sin_personas(jugadores):
+            return self._investigar_con_personas(bot, caso, privado, objetivo_rol, jugadores, memoria)
 
         propia = "pista_" + bot.rol
         if propia not in {p["id"] for p in inventario}:
@@ -196,6 +202,53 @@ class PlanificadorBot:
             return self._tarea("RECTIFICANDO", caldero, "rectificar")
         return {"estado": "ANALIZANDO_PRUEBAS"}
 
+    # ------------------------------------------- La Copa junto a personas
+    # Lo que una persona puede hacer sola lo hace ella. El bot solo aporta la
+    # segunda persona que exige el servidor: un segundo investigador con su
+    # pista (si hay una sola persona) y entregarla cuando se la piden o cuando
+    # la persona compartió primero. Nunca vota, rectifica ni usa habilidades.
+    def _investigar_con_personas(self, bot, caso, privado, objetivo_rol, jugadores, memoria):
+        humanos = self._humanos_en(jugadores, "la_copa")
+        bot.ayuda_encargo = None  # llevar objetos solo vale durante el encargo
+        inventario = privado.get("inventario", [])
+        propia = "pista_" + bot.rol
+        mia = next((p for p in inventario if p["id"] == propia), None)
+        if mia is None:
+            # Falta un segundo investigador y la persona ya encontró la suya.
+            clave = f"{caso['ronda']}:{caso.get('rectificacion')}:investigar"
+            if (len(humanos) < 2 and caso.get("investigadores", 0) == 1
+                    and memoria.reservar_preparacion(bot.identificador, clave)):
+                return self._tarea("YENDO_A_FUENTE", objetivo_rol, "interactuar", objetivo=objetivo_rol["id"])
+            return self._acompanar(bot, jugadores)
+        tienen = mia.get("la_tienen", [])
+        for humano in humanos:
+            if humano["id"] in tienen or humano["id"] in bot.compartidas.get(caso["ronda"], set()):
+                continue
+            pistas_suyas = sum(humano["id"] in p.get("la_tienen", []) for p in inventario)
+            pidio = humano["id"] in memoria.pedidos_pista
+            compartio = any(p.get("origen") == humano["id"] for p in inventario)
+            if pistas_suyas < 2 and (pidio or compartio):
+                eco = min((o for o in caso["objetivos"] if o["tipo"] == "eco"), key=lambda o: self._distancia(bot, o))
+                return self._tarea("COMPARTIENDO_PRUEBA", eco, "entregar", destinatario=humano["id"], pista=propia,
+                                   medio="eco", marca_compartida=humano["id"])
+        return self._acompanar(bot, jugadores)
+
+    @staticmethod
+    def _humanos_en(jugadores, dimension):
+        return [j for j in jugadores if j.get("controlador") != "bot" and j.get("conectado", True)
+                and j.get("dimension", "la_copa") == dimension]
+
+    def _esperar_pista_propia(self, bot, estado):
+        """En Distrito Conecta, quien juega al personaje con la pista espera en su edificio."""
+        dimension = bot.posicion.get("dimension")
+        if dimension != "presente":
+            return None
+        halladas = {p["id"] for p in (estado["privado"].get(dimension) or {}).get("inventario", [])}
+        propia = next((n for n in estado["caso"].get("npcs", []) if n.get("dimension") == dimension
+                       and n.get("pista") and n["pista"] not in halladas
+                       and n.get("jugador") == bot.identificador and n.get("casa")), None)
+        return self._esperar_en_casa(bot, estado, propia) if propia else None
+
     # ------------------------------------------------- órdenes de los ecos
     @staticmethod
     def _debe_elegir(bot, privado):
@@ -234,6 +287,11 @@ class PlanificadorBot:
                 return None
             return {"estado": "ESPERANDO_EQUIPO", "destino": dict(caldero), "esperar": True}
         inventario = privado.get("inventario", [])
+        if bot.con_personas:
+            # Con personas eligen ellas: el bot acompaña junto al caldero.
+            if self._espera_cumplida(bot):
+                return None
+            return {"estado": "ESPERANDO_EQUIPO", "destino": dict(caldero), "esperar": True}
         if not self._debe_elegir(bot, privado):
             bot.orden = None
             return None
@@ -445,8 +503,8 @@ class PlanificadorBot:
     @staticmethod
     def _acompanar(bot, jugadores, estado=None):
         """Fuera de La Copa los bots acompañan al humano más cercano."""
-        dimension, interior = bot.posicion.get("dimension"), bot.posicion.get("interior")
-        humanos = [j for j in jugadores if j.get("controlador") != "bot" and j.get("dimension") == dimension
+        dimension, interior = bot.posicion.get("dimension", "la_copa"), bot.posicion.get("interior")
+        humanos = [j for j in jugadores if j.get("controlador") != "bot" and j.get("dimension", "la_copa") == dimension
                    and j.get("interior") == interior and j.get("conectado", True)]
         if interior and not humanos and estado is not None:  # terminó aquí dentro: vuelve a la calle
             salida = estado["caso"][dimension]["edificios"][interior]["salida"]
@@ -466,6 +524,9 @@ class PlanificadorBot:
         encargo = caso.get("encargo") or {}
         yo = bot.identificador
         ronda = caso["ronda"]
+        humanos = self._humanos_en(jugadores, "la_copa")
+        if humanos:
+            return self._preparar_con_personas(bot, caso, privado, encargo, caldero, memoria, humanos)
         if encargo.get("completo"):
             bot.inicio_reparacion = None
             if not privado.get("preparado"):
@@ -495,6 +556,46 @@ class PlanificadorBot:
             # Nada que recoger (otro lleva el objeto o ya aportó): esperar en el
             # puesto para ayudar en la actividad.
             return self._esperar("ESPERANDO_EQUIPO", destino, radio=40)
+        return self._tarea("YENDO_POR_SUMINISTRO", objetivo, "interactuar", objetivo=objetivo["id"])
+
+    def _preparar_con_personas(self, bot, caso, privado, encargo, caldero, memoria, humanos):
+        """Las personas recogen, entregan, trabajan, reparan y confirman.
+
+        El bot solo pone la segunda persona: sujeta en la actividad en pareja si
+        no hay otra persona para hacerlo, y aporta un material cuando el encargo
+        exige aportes de personas distintas y todas ya entregaron el suyo."""
+        yo, ronda = bot.identificador, caso["ronda"]
+        bot.inicio_reparacion = None
+        destino = encargo.get("destino") or caldero
+        if encargo.get("completo") or encargo.get("materiales_colocados"):
+            return {"estado": "ESPERANDO_EQUIPO"}
+        if encargo.get("materiales_listos"):
+            ayudante = (encargo.get("actividad") or {}).get("ayudante")
+            if ayudante == yo:
+                return self._esperar("SUJETANDO", destino, radio=40)
+            if (ayudante is None and len(humanos) < 2
+                    and memoria.reservar_preparacion(yo, f"{ronda}:sujetar")):
+                return self._tarea("SUJETANDO", destino, "sujetar", radio=40)
+            return {"estado": "ESPERANDO_EQUIPO"}
+        if privado.get("carga"):
+            bot.ayuda_encargo = None  # ya lleva el objeto que le pidieron
+            return self._tarea("ENTREGANDO_SUMINISTRO", destino, "interactuar", objetivo=destino["id"])
+        objetivo = privado.get("objetivo") or destino
+        if bot.ayuda_encargo is not None:
+            # Una persona le pidió ayuda: recoge un objeto que nadie lleva y lo mete en el cesto.
+            if objetivo.get("id") in (destino.get("id"), caldero["id"]):
+                bot.ayuda_encargo = None  # no queda nada que pueda llevar
+                return {"estado": "ESPERANDO_EQUIPO"}
+            return self._tarea("YENDO_POR_SUMINISTRO", objetivo, "interactuar", objetivo=objetivo["id"])
+        aportantes = set(encargo.get("aportantes", []))
+        faltan = [m for m in encargo.get("materiales", []) if not m.get("entregado")]
+        if (encargo.get("aportes_libres", True) or not faltan or yo in aportantes
+                or any(h["id"] not in aportantes for h in humanos)):
+            return {"estado": "ESPERANDO_EQUIPO"}
+        if not any(memoria.reservar_preparacion(yo, f"{ronda}:aporte:{k}") for k in range(len(faltan))):
+            return {"estado": "ESPERANDO_EQUIPO"}
+        if objetivo.get("id") in (destino.get("id"), caldero["id"]):
+            return {"estado": "ESPERANDO_EQUIPO"}
         return self._tarea("YENDO_POR_SUMINISTRO", objetivo, "interactuar", objetivo=objetivo["id"])
 
     def _reparar_puente(self, bot, puente, objetivo_puente, memoria):

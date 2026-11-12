@@ -83,6 +83,8 @@ class BotCooperativo:
         self.convocado = False  # debe volver al caldero a elegir cuando pueda
         self.espera_ayuda_desde = None
         self.sin_ayuda = False  # dejó de esperar compañero para su habilidad
+        self.con_personas = False  # hay personas: el bot solo completa tareas de dos
+        self.ayuda_encargo = None  # aviso de quien le pidió llevar un objeto al cesto
         self._ultimo_aviso = 0
         self._ronda = -1
         self._accion = None
@@ -121,6 +123,7 @@ class BotCooperativo:
             self.compartidas.pop(self._ronda, None)
             self.orden = None
             self.sin_difundir = self.convocado = self.sin_ayuda = False
+            self.ayuda_encargo = None
             self.espera_ayuda_desde = None
             self._accion = None
             self._datos_accion = {}
@@ -217,7 +220,14 @@ class BotCooperativo:
                 continue
             self._ultimo_aviso = aviso["id"]
             orden = aviso.get("orden")
-            if orden == "no_difundir":
+            if aviso.get("tipo") == "pedido" and aviso.get("emisor"):
+                # «Pedir una pista»: cualquier bot con una pista que le falte se la manda.
+                self._memoria.pedidos_pista.add(aviso["emisor"])
+            elif aviso.get("tipo") == "pedido_encargo" or (orden == "encargo" and aviso.get("emisor") != self.identificador):
+                # Le piden llevar un objeto; si el eco fue a todos, va un solo bot.
+                if self._memoria.reservar_preparacion(self.identificador, "encargo:" + str(aviso["id"])):
+                    self.ayuda_encargo = aviso["id"]
+            elif orden == "no_difundir":
                 self.sin_difundir = True
             elif orden and aviso.get("emisor") != self.identificador:
                 self.orden = {"tipo": orden, "emisor": aviso.get("emisor"), "llegada": None}

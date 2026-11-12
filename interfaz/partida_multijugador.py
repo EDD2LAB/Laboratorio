@@ -622,17 +622,20 @@ class VistaPartida:
         npcs = [n for n in caso.get("npcs", []) if n["dimension"] == self.dimension and self.cerca(n)
                 and (n.get("jugador") != self.identificador or (n.get("pista") and n["pista"] not in conocidas))]
         junto_a_npc = {(n["x"], n["y"]) for n in npcs}
-        # Donde hay alguien con quien hablar, sobra el objetivo "ayuda a otro compañero".
+        recogibles = self.materiales_recogibles()
+        # Donde hay alguien con quien hablar, sobra el objetivo "ayuda a otro compañero",
+        # salvo que allí espere un objeto del encargo: ese siempre se puede recoger.
         objetivos = [dict(o) for o in self.contexto().get("objetivos", []) if self.cerca(o)
                      and not (o["id"] == "puente_1" and puente.get("estado") not in ("READY_TO_REPAIR", "REPAIR_MINIGAME"))
-                     and not (o.get("tipo") == "fuente" and (o["x"], o["y"]) in junto_a_npc and o.get("rol") != yo["rol"])]
+                     and not (o.get("tipo") == "fuente" and (o["x"], o["y"]) in junto_a_npc and o.get("rol") != yo["rol"]
+                              and o["id"] not in recogibles)]
         objetivos.extend({"id": "npc:" + n["id"], "nombre": "Hablar con " + n["nombre"], "x": n["x"], "y": n["y"]} for n in npcs)
         encargo = caso.get("encargo") if self.dimension == LA_COPA else None
         if encargo:
             for o in objetivos:
-                for material in encargo["materiales"]:
-                    if o["id"] == material["fuente"]["id"] and not material["entregado"]:
-                        o["nombre"] = "Recoger " + material["nombre"]
+                if o["id"] in recogibles:
+                    o["nombre"] = "Recoger " + recogibles[o["id"]]["nombre"]
+                    o["material"] = recogibles[o["id"]]["id"]
                 if o["id"] == encargo["destino"]["id"]:
                     o["nombre"] = "Entregar: " + encargo["destino"]["nombre"]
                 if o["id"] == "caldero":
@@ -652,8 +655,21 @@ class VistaPartida:
                 objetivos.insert(0, punto_final)
         objetivos.extend(dict(o, nombre="Consultar: " + o["nombre"]) for o in caso.get("exploracion", []) if self.cerca(o))
         recomendado = mundo.get("privado", {}).get("guia", {}).get("objetivo") or {}
-        objetivos.sort(key=lambda o: math.hypot(yo["x"] - o["x"], yo["y"] - o["y"]) - (2000 if o["id"].startswith("final:") else 1000 if o["id"] == recomendado.get("id") or (o["id"] == "portal" and self.dimension_completa()) else 15 if o.get("rol") == yo["rol"] else 0))
+        objetivos.sort(key=lambda o: math.hypot(yo["x"] - o["x"], yo["y"] - o["y"]) - (2000 if o["id"].startswith("final:") else 1000 if o["id"] == recomendado.get("id") or (o["id"] == "portal" and self.dimension_completa()) else 20 if o.get("material") else 15 if o.get("rol") == yo["rol"] else 0))
+
         return objetivos
+
+    def materiales_recogibles(self):
+        """Punto de recogida -> material del encargo que sigue allí (nadie lo entregó ni lo lleva)."""
+        encargo = self.estado.get("mundo", {}).get("caso", {}).get("encargo") if self.dimension == LA_COPA else None
+        if not encargo or encargo.get("materiales_listos"):
+            return {}
+        llevados = set(encargo.get("cargas", {}).values())
+        recogibles = {}
+        for material in encargo["materiales"]:
+            if not material["entregado"] and material["id"] not in llevados:
+                recogibles.setdefault(material["fuente"]["id"], material)
+        return recogibles
 
     def _calcular_resaltado(self):
         """Qué se resalta en dorado: el objetivo actual de E (el mismo que elige Tab).
@@ -679,6 +695,9 @@ class VistaPartida:
                 objetivo.update(tipo="jugador", clave=npc["jugador"])
             elif npc:
                 objetivo.update(tipo="npc", clave=npc["nombre"])
+        elif opcion.get("material"):
+            fuente = next(o for o in self.contexto().get("objetivos", []) if o["id"] == opcion["id"])
+            objetivo.update(tipo="material", clave=opcion["material"], x=fuente["x"] + 23, y=fuente["y"] - 22)
         elif opcion["id"] == "caldero":
             objetivo["tipo"] = "caldero"
         elif opcion["id"] == "portal":
@@ -943,7 +962,11 @@ class VistaPartida:
                 elif self.seleccion and self.seleccion.startswith("explorar:"):
                     cliente.actuar("explorar_sector", objetivo=self.seleccion)
                 elif self.seleccion:
-                    cliente.actuar("interactuar", objetivo=self.seleccion)
+                    elegido = next((o for o in opciones if o["id"] == self.seleccion), {})
+                    if elegido.get("material"):  # el objeto del encargo que se ve resaltado
+                        cliente.actuar("interactuar", objetivo=self.seleccion, material=elegido["material"])
+                    else:
+                        cliente.actuar("interactuar", objetivo=self.seleccion)
                 else:
                     self.panel.notificar("Acércate a una fuente, al caldero, al portal o a otro jugador para pulsar E.")
             return True
@@ -1303,7 +1326,10 @@ class VistaPartida:
         guia = privado.get("guia", {})
         if self.dimension == LA_COPA:
             # Con la cámara cerca el texto se amplía: se parte de una fuente menor.
-            dibujar_encargos(superficie, caso, self.hud.fuente)
+            def resaltar_material(material, imagen, rect):
+                if self._es_resaltado("material", material):
+                    self._resaltar(superficie, imagen, rect, "mundo")
+            dibujar_encargos(superficie, caso, self.hud.fuente, resaltar_material)
             caldero = next((o for o in caso.get("objetivos", []) if o["id"] == "caldero"), None)
             if caldero and self._farol_en_el_suelo(privado.get("tutorial", {})):
                 dibujar_farol_en_suelo(superficie, (caldero["x"] + DESVIO_FAROL[0], caldero["y"] + DESVIO_FAROL[1]), ahora_ms)

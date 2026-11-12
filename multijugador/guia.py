@@ -61,12 +61,40 @@ class GuiaCooperativa:
         candidatos = [j for j in presentes if j != i and j in mision.jugadores]
         if not candidatos:
             raise ValueError("Espera a que vuelva un compañero para pedirle una pista.")
-        candidatos.sort(key=lambda j: not bool(mision.conocidas[j] - mision.conocidas[i]))
+        # Primero quien tiene una pista nueva; entre iguales, una persona antes que un bot.
+        candidatos.sort(key=lambda j: (not bool(mision.conocidas[j] - mision.conocidas[i]),
+                                       mision.jugadores[j].get("controlador") == "bot"))
         receptor = candidatos[0]
         self.ultimo_pedido[i] = ahora
         self.pedidos[i] = receptor
-        mision._avisar([receptor], mision.jugadores[i]["nombre"] + " necesita una pista. Abre I para ayudar.", "pedido")
+        mision._avisar([receptor], mision.jugadores[i]["nombre"] + " necesita una pista. Abre I para ayudar.", "pedido", emisor=i)
         return {"mensaje": "Le pediste una pista a " + mision.jugadores[receptor]["nombre"] + "."}
+
+    def pedir_ayuda(self, mision, i, ahora, presentes):
+        """Encargo: pide a un compañero que lleve uno de los objetos que faltan."""
+        encargo = mision.encargo
+        if mision.fase != "preparacion" or encargo is None:
+            raise ValueError("Ahora no hay objetos que llevar.")
+        if encargo.materiales_listos:
+            raise ValueError("Ya están todos los objetos en el cesto.")
+        if ahora - self.ultimo_pedido.get(("encargo", i), -100) < 3:
+            raise ValueError("Tu pedido ya llegó. Dale un momento a tu compañero.")
+        libres = [m[0] for m in encargo.config["materiales"]
+                  if m[0] not in encargo.entregados and m[0] not in encargo.cargas.values()]
+        if not libres:
+            raise ValueError("Los objetos que faltan ya los lleva alguien.")
+        candidatos = [j for j in presentes if j != i and j in mision.jugadores
+                      and mision.jugadores[j].get("dimension", "la_copa") == "la_copa" and j not in encargo.cargas
+                      and (encargo.config.get("aportes_libres") or j not in encargo.entregados.values())]
+        if not candidatos:
+            raise ValueError("Ahora no hay un compañero libre para ayudarte.")
+        # Primero un bot libre: está para eso; las personas reciben el aviso si no hay bots.
+        candidatos.sort(key=lambda j: mision.jugadores[j].get("controlador") != "bot")
+        receptor = candidatos[0]
+        self.ultimo_pedido[("encargo", i)] = ahora
+        mision._avisar([receptor], mision.jugadores[i]["nombre"] + " te pide ayuda para llevar un objeto al cesto.",
+                       "pedido_encargo", emisor=i)
+        return {"mensaje": mision.jugadores[receptor]["nombre"] + " va a llevar un objeto al cesto."}
 
     def datos(self, m, i, estado):
         t = self.tutoriales[i]
@@ -84,7 +112,7 @@ class GuiaCooperativa:
         elif m.fase == "preparacion":
             e = m.encargo
             guia.update(paso="encargo", titulo="4. Ayuda a la aldea", detalle=estado["instruccion"],
-                        objetivo=estado["objetivo"], boton="Ayudar · E")
+                        objetivo=estado["objetivo"], boton="Ayudar · E", ayuda=not e.materiales_listos)
             if e.materiales_listos and not e.materiales_colocados:
                 guia.update(titulo="¡Hagan la tarea juntos!", detalle="Uno ayuda y el otro trabaja. Acérquense al cesto.",
                             objetivo=dict(e.destino, nombre=e.config["lugar"]), boton="Abrir actividad · E")

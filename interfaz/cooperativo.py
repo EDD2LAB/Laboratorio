@@ -317,7 +317,7 @@ class PanelCooperativo:
             superficie.blit(img, img.get_rect(center=(x+48, y+52)))
 
     def falta_para_elegir(self):
-        if self.caso.get("votantes", 0) < 2:
+        if self.caso.get("presentes", self.caso.get("votantes", 0)) < 2:
             return "Espera a que entre otro compañero."
         if len(self.privado.get("inventario", [])) < 2:
             return "Te falta una pista. Pídesela a un compañero."
@@ -532,6 +532,8 @@ class PanelCooperativo:
                 self.texto_lineas(superficie, self.caso.get("noticia", ""), 165, 327, 630)
                 if guia.get("accion") == "pedir_pista":
                     self.boton(superficie, "pedir_pista", "Pedir una pista", 480, 455, 430)
+                elif guia.get("ayuda"):
+                    self.boton(superficie, "pedir_ayuda", "Pedir ayuda para llevar un objeto · B", 480, 455, 470)
                 self.texto_lineas(superficie, "Flechas: caminar · E: hablar o ayudar", 165, 535, 630, self.pequena, VERDE)
                 self.boton(superficie, "poder", "Mi poder especial · Q", 480, 578, 380)
         elif self.modo == "fuente":
@@ -597,7 +599,7 @@ class PanelCooperativo:
             self.boton(superficie, "eco_mensajes", "Enviar un mensaje", 480, 420, 440)
         elif self.modo == "eco_mensajes":
             for i, mensaje in enumerate(self.caso.get("mensajes_eco", [])):
-                self.boton(superficie, "eco:"+str(i), mensaje, 480, 225+i*75, 620)
+                self.boton(superficie, "eco:"+str(i), mensaje, 480, 205+i*62, 620)
             self.dibujar_selector_destino(superficie, 540)
         elif self.modo == "actividad":
             self.dibujar_actividad(superficie)
@@ -774,6 +776,9 @@ class PanelCooperativo:
             if evento.key == pygame.K_m:
                 self.abrir("introduccion")
                 return True
+            if evento.key == pygame.K_b and not self.digital and (self.privado.get("guia") or {}).get("ayuda"):
+                cliente.actuar("pedir_ayuda")  # encargo: un compañero lleva un objeto
+                return True
             if evento.key == pygame.K_q and not self.activo and (not self.digital or self.dimension == "futuro"):
                 cliente.actuar("habilidad")
                 return True
@@ -826,7 +831,7 @@ class PanelCooperativo:
             elif clave in ("iniciar_tutorial", "saltar_tutorial"):
                 cliente.actuar(clave)
                 self.modo = None
-            elif clave in ("habilidad", "pedir_pista", "sujetar", "trabajar", "recoger_suministro", "depositar", "continuar"):
+            elif clave in ("habilidad", "pedir_pista", "pedir_ayuda", "sujetar", "trabajar", "recoger_suministro", "depositar", "continuar"):
                 cliente.actuar(clave)
             elif clave.startswith("pista:"):
                 self.indice_pista = int(clave.split(":")[1])

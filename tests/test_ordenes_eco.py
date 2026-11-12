@@ -97,14 +97,16 @@ class EcoServidorTests(Base):
 
 
 class BotsObedecenTests(Base):
-    def test_ven_al_caldero_trae_y_hace_elegir_al_bot_lejano(self):
+    def test_ven_al_caldero_trae_al_bot_lejano_pero_no_elige_por_la_persona(self):
         fuente = next(o for o in self.mision.objetivos if o.get("rol") == "habitante")
         x, y = self.partida.colisiones.inicio_libre(fuente["x"], fuente["y"], [])  # junto a Luma, no sobre ella
         self.partida.jugadores[TAREK].update(x=x, y=y)
         self.dar_pistas(TAREK)
         self.eco_a(VEN_AL_CALDERO, TAREK)
         self.avanzar_hasta(lambda: self.en_caldero(TAREK), "Tarek llega al caldero")
-        self.avanzar_hasta(lambda: TAREK in self.mision.votos, "Tarek elige")
+        for _ in range(40):
+            self.cliente.actualizar(0.15)
+        self.assertNotIn(TAREK, self.mision.votos)
 
     def test_la_orden_solo_la_cumple_el_destinatario(self):
         self.eco_a(VEN_AL_CALDERO, TAREK)
@@ -117,12 +119,13 @@ class BotsObedecenTests(Base):
         self.cliente.actualizar(0.15)
         self.assertEqual(self.bot(TAREK).estado, "YENDO_AL_CALDERO")
 
-    def test_sin_dos_pistas_las_busca_y_vuelve_a_elegir(self):
+    def test_llamado_al_caldero_espera_junto_a_la_persona_sin_buscar_pistas(self):
         self.eco_a(VEN_AL_CALDERO)
         self.partida.jugadores[TAREK].update(x=self.caldero["x"], y=self.caldero["y"] + 40)
         self.cliente.actualizar(0.15)
-        self.assertTrue(self.bot(TAREK).convocado)
-        self.assertIsNone(self.bot(TAREK).orden)
+        self.assertEqual(self.bot(TAREK).estado, "ESPERANDO_EQUIPO")
+        self.assertFalse(self.bot(TAREK).convocado)
+        self.assertNotIn("pista_habitante", self.mision.halladas)
 
     def test_ayudame_lo_lleva_con_quien_llamo_y_le_da_su_pista(self):
         self.mision.conocidas[TAREK].add("pista_habitante")
@@ -164,22 +167,21 @@ class EleccionSinBloqueoTests(Base):
         self.assertIsNone(PlanificadorBot.proponer_decision(pistas)["accion_propuesta"])
         self.assertIn(PlanificadorBot.mejor_opcion(pistas), ("difundir", "descartar"))
 
-    def test_si_alguien_ya_eligio_el_bot_tambien_elige(self):
+    def test_la_eleccion_de_la_persona_no_espera_a_los_bots(self):
         self.dar_pistas(TAREK)
-        self.bot(TAREK).sin_ayuda = True
-        self.bot(TAREK).compartidas[0] = set(self.partida.jugadores)
+        self.dar_pistas("local")
         self.mision.votos["local"] = "corregir"
-        self.avanzar_hasta(lambda: TAREK in self.mision.votos, "Tarek elige como el resto")
+        self.mision.resolver(set(self.partida.jugadores))
+        self.assertEqual(self.mision.resultado["opcion"], "corregir")
+        self.assertNotIn(TAREK, self.mision.votos)
 
-    def test_tarek_no_se_queda_esperando_compañero_para_siempre(self):
-        bot = self.bot(TAREK)
-        for otro in (MATEO, "bot_aspirante"):
-            self.bot(otro).reemplaza_humano = True  # sin bots que acudan a ayudarlo
+    def test_con_personas_los_bots_no_usan_habilidades_ni_piden_ayuda(self):
         self.mision.conocidas[TAREK].add("pista_habitante")
         self.mision.halladas["pista_habitante"] = TAREK
-        pasos = round((ESPERA_ALIADO + 15) / 0.15)
-        self.avanzar_hasta(lambda: bot.sin_ayuda, "Tarek deja de esperar", limite=pasos)
-        self.assertNotIn(bot.identificador, self.cliente._bots.memoria.solicitudes_ayuda)
+        for _ in range(round((ESPERA_ALIADO + 5) / 0.15)):
+            self.cliente.actualizar(0.15)
+        self.assertEqual(self.mision.habilidades_usadas, set())
+        self.assertEqual(self.cliente._bots.memoria.solicitudes_ayuda, {})
 
 
 class DecisionHumanaTests(Base):
@@ -191,8 +193,8 @@ class DecisionHumanaTests(Base):
         self.assertEqual(self.mision.resultado["opcion"], "descartar")
         self.assertEqual(self.mision.resultado["tipo_pocion"], "ignorar")
 
-    def test_sin_el_voto_de_todos_no_se_resuelve(self):
-        self.mision.votos["local"] = "descartar"
+    def test_sin_el_voto_de_la_persona_no_se_resuelve(self):
+        self.mision.votos.update({i: "corregir" for i in self.cliente._bots.bots})
         self.mision.resolver(set(self.partida.jugadores))
         self.assertIsNone(self.mision.resultado)
 

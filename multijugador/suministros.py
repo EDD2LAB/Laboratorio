@@ -10,16 +10,16 @@ ENCARGOS = (
     {"titulo": "Reparar el Puente 1", "motivo": "El Puente 1 está roto. Metan tablas, cuerda y la canasta de herramientas en el cesto de la aldea; después reparen el puente.",
      "materiales": (("tablas", "Tablas", "archivo"), ("cuerdas", "Cuerda", "propuesta"),
                     ("herramientas", "Canasta de herramientas", "testigo")),
-     "lugar": CESTO, "efecto": "Puente 1 reparado", "indicador": "armonia", "delta": 4,
+     "lugar": CESTO, "efecto": "Puente 1 reparado", "indicador": "armonia", "delta": 4, "sitio": "puente_1",
      # Cada objeto es único (nadie puede llevar el que ya carga otro) y una
      # misma persona puede aportar más de uno, de a uno por vez.
      "objetos_unicos": True, "aportes_libres": True, "requiere_puente": True},
     {"titulo": "Abastecer a las familias", "motivo": "Después de investigar el agua, reúnan en el cesto de la aldea agua segura y provisiones para repartirlas a las familias.",
      "materiales": (("agua", "Agua segura", "archivo"), ("provisiones", "Provisiones", "propuesta")),
-     "lugar": CESTO, "efecto": "Reserva comunitaria abastecida", "indicador": "confianza", "delta": 4},
+     "lugar": CESTO, "efecto": "Reserva comunitaria abastecida", "indicador": "confianza", "delta": 4, "sitio": "testigo", "desvio_bandera": (-36, -6)},
     {"titulo": "Preparar un boletín verificado", "motivo": "Pongan por escrito el resultado de la alerta: reúnan pergaminos y tinta en el cesto de la aldea.",
      "materiales": (("pergaminos", "Pergaminos", "testigo"), ("tinta", "Tinta", "propuesta")),
-     "lugar": CESTO, "efecto": "Boletín verificado publicado", "indicador": "desinformacion", "delta": -6},
+     "lugar": CESTO, "efecto": "Boletín verificado publicado", "indicador": "desinformacion", "delta": -6, "sitio": "archivo", "desvio_bandera": (-38, -6)},
 )
 
 
@@ -33,6 +33,7 @@ class EncargoSuministros:
         self.progreso = 0
         self.ultima_accion = -10
         self.objetivos = {o["id"]: o for o in objetivos}
+        self._lista_objetivos = objetivos  # el Puente 1 se agrega después de crear el primer encargo
         self.puente_reparado = False
         self.destino = self.objetivos["cesto"]
 
@@ -138,6 +139,22 @@ class EncargoSuministros:
             material = faltantes[0]
         return dict(self.fuente(material), nombre="Recoger " + self.nombre(material))
 
+    @property
+    def sitio(self):
+        """[x, y] de la obra terminada (su bandera verde): el puente, las familias, el archivo."""
+        clave = self.config.get("sitio")
+        sitio = next((dict(o) for o in self._lista_objetivos if o["id"] == clave), dict(self.destino))
+        if "bandera" in sitio:  # el Puente 1 la lleva en medio del puente
+            sitio["x"], sitio["y"] = sitio.pop("bandera")
+        else:  # a un lado del personaje que está allí, para que no la tape
+            dx, dy = self.config.get("desvio_bandera", (0, 0))
+            sitio["x"], sitio["y"] = sitio["x"] + dx, sitio["y"] + dy
+        return [sitio["x"], sitio["y"]]
+
+    def obra(self):
+        """Lo justo para la bandera de una obra terminada: viaja en cada estado de red."""
+        return {"efecto": self.config["efecto"], "sitio": self.sitio, "completo": True}
+
     def publico(self):
         return {"titulo": self.config["titulo"], "motivo": self.config["motivo"],
                 "requiere_puente": bool(self.config.get("requiere_puente")), "materiales_colocados": self.materiales_colocados,
@@ -147,4 +164,6 @@ class EncargoSuministros:
                 "materiales_listos": self.materiales_listos,
                 "actividad": {"ayudante": self.ayudante, "progreso": self.progreso, "total": 3,
                               "verbo": ("Colocar una tabla", "Repartir una cesta", "Pegar un sello")[ENCARGOS.index(self.config)]},
-                "efecto": self.config["efecto"], "cargas": dict(self.cargas)}
+                "efecto": self.config["efecto"], "cargas": dict(self.cargas), "sitio": self.sitio,
+                # Quién ya aportó y si una sola persona puede aportarlo todo (lo usan los bots).
+                "aportantes": sorted(set(self.entregados.values())), "aportes_libres": bool(self.config.get("aportes_libres"))}

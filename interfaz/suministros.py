@@ -101,7 +101,8 @@ def dibujar_carga(superficie, material, centro, tamano=26):
         pygame.draw.rect(superficie, (228, 213, 168), (x-4, y-12, 8, 5))
 
 
-def dibujar_encargos(superficie, caso, fuente):
+def dibujar_encargos(superficie, caso, fuente, resaltar=None):
+    """``resaltar(material, imagen, rect)``: lo llama la vista para el contorno dorado del objeto elegido."""
     encargo = caso.get("encargo")
     if encargo:
         llevados = set(encargo.get("cargas", {}).values())
@@ -117,6 +118,9 @@ def dibujar_encargos(superficie, caso, fuente):
             o = material["fuente"]
             x, y = o["x"] + 23, o["y"] - 22
             dibujar_carga(superficie, material["id"], (x, y), 34)
+            sprite = _sprites.get((material["id"], 34))
+            if resaltar is not None and sprite is not None:
+                resaltar(material["id"], sprite, sprite.get_rect(center=(x, y)))
             texto = fuente.render(material["nombre"] + " · E", True, (255, 239, 191))
             caja = texto.get_rect(midtop=(x, y+17))
             caja.clamp_ip(superficie.get_rect().inflate(-10, -10))
@@ -134,9 +138,10 @@ def dibujar_encargos(superficie, caso, fuente):
                                  else "AYUDAR JUNTOS · E" if encargo.get("materiales_listos")
                                  else f"METER EN EL CESTO · E  {len(colocados)}/{len(encargo['materiales'])}", True, (128, 238, 180))
         superficie.blit(etiqueta, etiqueta.get_rect(midtop=(d["x"], d["y"]+28)))
-    # Todas las obras comparten el cesto: solo se rotula la última.
-    for obra in (caso.get("obras", []) + ([encargo] if encargo and encargo["completo"] else []))[-1:]:
-        d = obra["destino"]
+    # Cada obra terminada deja su bandera verde donde quedó hecha (puente, familias, archivo).
+    for obra in caso.get("obras", []) + ([encargo] if encargo and encargo["completo"] else []):
+        x0, y0 = obra.get("sitio") or (obra["destino"]["x"], obra["destino"]["y"])
+        d = {"x": x0, "y": y0}
         x, y = d["x"]-22, d["y"]-36
         pygame.draw.line(superficie, (225, 189, 105), (x, y), (x, y+28), 3)
         pygame.draw.polygon(superficie, (100, 223, 152), ((x, y), (x+18, y+6), (x, y+12)))
