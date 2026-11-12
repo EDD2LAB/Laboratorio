@@ -37,21 +37,22 @@ def objetivo(vista, rol=None):
             if punto:
                 nombre = "Recoger " + punto.get("nombre", "la pieza")
     elif len(final.get("hechos", [])) == 4:
-        if yo.get("id") in final.get("activaciones", []):
-            return None
-        rol = (vista.yo() or {}).get("rol", rol)
-        punto = puntos.get(rol)
+        return None
     elif final["fase"] in ("preparacion", "reintento"):
         punto = puntos.get("aspirante")
     elif rol in final.get("hechos", []):
         return None
-    elif rol in ("mensajero", "aspirante") and final.get("batalla", {}).get("fase", 1) == 1:
-        return None
-    elif rol == "mensajero" and rol not in final.get("hechos", []):
-        if final.get("portador") not in (None, yo.get("id")):
-            return None
+    elif final.get("batalla", {}).get("fase", 1) == 1 and rol in final.get("verde", []):
+        return None  # su parte verde está lista: espera la fase roja
+    elif rol == "mensajero":
         ruta = final.get("ruta") or []
-        punto = final.get("recogida") if final.get("portador") is None else ruta[min(final.get("tramo", 0), len(ruta) - 1)] if ruta else None
+        if final.get("batalla", {}).get("fase", 1) == 1:
+            punto = ruta[min(final.get("luces", 0), len(ruta) - 1)] if ruta else None
+            nombre = "Encender la luz " + str(final.get("luces", 0) + 1) + " de la ruta"
+        elif final.get("portador") not in (None, yo.get("id")):
+            return None
+        else:
+            punto = final.get("recogida") if final.get("portador") is None else ruta[min(final.get("tramo", 0), len(ruta) - 1)] if ruta else None
     else:
         punto = puntos.get(rol)
     return dict(punto, id="final:" + rol, nombre=nombre) if punto else None
@@ -116,8 +117,8 @@ class PantallaFinal:
         elif fase == "preparacion":
             self.texto(superficie, "Esquiven las marcas. Durante las pausas, usen sus estaciones.", 270)
             for i, rol in enumerate(ROLES):
-                self.texto(superficie, NOMBRES[rol] + ": " + dict(guardian="compara las órdenes.", mensajero="lleva el módulo sin perder la señal.",
-                           habitante="ajusta la estación para apagar el escudo.", aspirante="prepara la autorización del consejo.")[rol], 340 + i * 42)
+                self.texto(superficie, NOMBRES[rol] + ": " + dict(guardian="revisa las órdenes de NÚCLEO.", mensajero="enciende la ruta y lleva el módulo.",
+                           habitante="estabiliza los circuitos acoplados.", aspirante="reúne pruebas y arma la propuesta.")[rol], 340 + i * 42)
             self.boton(superficie, "iniciar", "Iniciar juntos", 480, 550)
         elif fase == "reintento":
             self.texto(superficie, "LA SEÑAL SE CORTÓ", 290, ORO)
@@ -131,65 +132,104 @@ class PantallaFinal:
         elif fase == "activo":
             privados = p.privado.get("final_cooperativo", {})
             datos = privados.get(self.rol)
-            if len(f.get("hechos", [])) == 4:
-                self.texto(superficie, "Las cuatro tareas están listas. Cada participante vuelve a su estación.", 300, VERDE)
-                self.texto(superficie, "Activen sus propias consolas con E. No hay límite de tiempo.", 365)
-                self.texto(superficie, "Confirmaciones: " + str(len(f.get("activaciones", []))), 435)
-                self.boton(superficie, "activar", "Confirmar activación", 480, 540, 340)
-            elif f.get("batalla", {}).get("turno") != "recarga":
+            roja = f.get("batalla", {}).get("fase") == 2
+            if f.get("batalla", {}).get("turno") != "recarga":
                 self.texto(superficie, "¡NÚCLEO está atacando! Vuelve al mapa y sal de las marcas.", 310, ORO)
                 self.texto(superficie, "Los minijuegos continúan durante su próxima recarga.", 380)
-            elif f.get("batalla", {}).get("fase") == 1 and self.rol in ("mensajero", "aspirante"):
-                self.texto(superficie, "Guardián y Habitante están apagando el escudo.", 310)
-                self.texto(superficie, "Esquiva las marcas. Tu tarea empieza en la fase roja.", 380)
             elif datos is None:
                 self.texto(superficie, "Esta misión la realiza tu compañero " + NOMBRES[self.rol] + ".", 310)
                 self.texto(superficie, "Puedes seguir su progreso arriba. Elige tu rol para realizar tu tarea.", 380)
             elif self.rol in f.get("hechos", []):
                 self.texto(superficie, "¡Tu tarea está lista! El equipo conserva este avance.", 310, VERDE)
                 self.texto(superficie, "Vuelve al mapa, esquiva las marcas y ayuda a tus compañeros con E.", 380)
+            elif not roja and self.rol in f.get("verde", []):
+                self.texto(superficie, "¡Tu parte de la fase verde está lista!", 310, VERDE)
+                self.texto(superficie, "El escudo cae cuando los cuatro terminen. En la fase roja tendrás otra tarea.", 380)
             elif self.rol == "guardian":
-                self.texto(superficie, "Compara las dos tarjetas. ¿Qué dato cambió sin autorización?", 260)
-                for x, clave, titulo in ((110, "registro", "Registro del consejo"), (515, "orden", "Orden recibida")):
-                    pygame.draw.rect(superficie, (18, 48, 57), (x - 8, 305, 350, 160), border_radius=8)
-                    self.texto(superficie, titulo, 315, ORO, x=x, ancho=330)
-                    for i, campo in enumerate(("firma", "fecha", "permiso")):
-                        self.texto(superficie, campo.capitalize() + ": " + datos.get(clave, {}).get(campo, ""), 355 + i * 32, x=x, ancho=330)
-                for i, campo in enumerate(("firma", "fecha", "permiso")):
-                    self.boton(superficie, "comparar:" + campo, campo.capitalize(), 245 + i * 235, 515, 210, "guardian" not in f.get("hechos", []))
+                self._guardian(superficie, datos)
             elif self.rol == "habitante":
-                self.texto(superficie, "Pon cada indicador en verde. Después mantén E o Espacio durante 2 segundos.", 260)
-                for i, (valor, meta) in enumerate(zip(datos.get("valores", []), datos.get("metas", []))):
-                    y = 335 + i * 65
-                    self.texto(superficie, "Circuito " + str(i + 1), y - 12, x=115, ancho=180)
-                    self.boton(superficie, "ajustar:" + str(i) + ":-1", "-", 300, y, 60)
-                    for n in range(7):
-                        rect = pygame.Rect(350 + n * 42, y - 14, 35, 28)
-                        pygame.draw.rect(superficie, VERDE if n == meta else (47, 80, 88), rect, border_radius=3)
-                        if n == valor:
-                            pygame.draw.rect(superficie, CREMA, rect.inflate(4, 4), 3, border_radius=3)
-                    self.boton(superficie, "ajustar:" + str(i) + ":1", "+", 705, y, 60)
-                self.texto(superficie, f"Carga: {f.get('carga', 0):.1f}/2 s · " + ("Estación activa" if f.get("estacion_activa") else "Mantén E para cargarla"), 535, VERDE)
+                self._habitante(superficie, datos, f, roja)
             elif self.rol == "mensajero":
-                self.texto(superficie, "Espera la orden verificada, recoge el módulo y recorre las recargas del mapa.", 270)
-                self.texto(superficie, "Módulo: " + str(f.get("modulo") or "pendiente de verificar"), 345, ORO)
-                self.texto(superficie, "Recargas: " + str(f.get("tramo", 0)) + "/2. Los pulsos rojos cortan la señal; puedes recuperar la carga.", 395)
-                self.texto(superficie, "El escudo ya está apagado. Entrega el módulo en la última estación.", 455)
-                self.boton(superficie, "recargar" if f.get("portador") else "recoger", "Recargar / entregar" if f.get("portador") else "Recoger módulo", 480, 540, 320,
-                           "guardian" in f.get("hechos", []) and "mensajero" not in f.get("hechos", []))
+                self._mensajero(superficie, f, roja)
+            elif roja:
+                self._propuesta(superficie, datos)
             else:
-                self.texto(superficie, "Arma la propuesta: prueba, conexión y límite del sistema.", 260)
-                for i, (campo, opciones) in enumerate(datos.get("opciones", {}).items()):
-                    for j, (valor, etiqueta) in enumerate(opciones):
-                        elegido = datos.get("propuesta", {}).get(campo) == valor
-                        self.boton(superficie, "elegir:" + campo + ":" + valor, ("> " if elegido else "") + etiqueta,
-                                   290 + j * 380, 330 + i * 65, 350)
-                self.boton(superficie, "autorizar", "Presentar al consejo", 480, 540, 320)
+                self._pruebas(superficie, datos)
         self.boton(superficie, "mapa", "Volver al mapa", 480, 625, 320)
         from nucleo.recursos import envolver_texto
         aviso = p.toast if p.toast and time.monotonic() < p.toast_hasta else f.get("aviso", "")
         for i, linea in enumerate(envolver_texto(aviso, p.pequena, 770)[:2]):
             superficie.blit(p.pequena.render(linea, True, ORO), (95, 568 + i * 18))
+
+    def _guardian(self, superficie, datos):
+        self.texto(superficie, "Orden " + str(datos.get("numero", 1)) + "/" + str(datos.get("parte", 3)) + ": "
+                   + datos.get("titulo", "") + ". ¿Coincide con el registro?", 260)
+        for x, clave, titulo in ((110, "registro", "Registro del consejo"), (515, "orden", "Orden recibida")):
+            pygame.draw.rect(superficie, (18, 48, 57), (x - 8, 305, 350, 160), border_radius=8)
+            self.texto(superficie, titulo, 315, ORO, x=x, ancho=330)
+            for i, campo in enumerate(("firma", "fecha", "permiso")):
+                self.texto(superficie, campo.capitalize() + ": " + datos.get(clave, {}).get(campo, ""), 355 + i * 32, x=x, ancho=330)
+        for i, campo in enumerate(("firma", "fecha", "permiso")):
+            etiqueta = dict(firma="Firma alterada", fecha="Fecha alterada", permiso="Permiso alterado")[campo]
+            self.boton(superficie, "comparar:" + campo, etiqueta, 175 + i * 203, 515, 190)
+        self.boton(superficie, "comparar:aprobar", "Aprobar orden", 784, 515, 190)
+
+    def _habitante(self, superficie, datos, f, roja):
+        if roja:
+            self.texto(superficie, "NÚCLEO descalibró la estación. Recalíbrala antes de la entrega del módulo.", 255, ORO)
+        else:
+            self.texto(superficie, "Pon cada indicador en verde y mantén E o Espacio 2 segundos.", 255)
+        self.texto(superficie, "Están acoplados: lo que sube un circuito lo cede el siguiente (el 3 cede al 1).", 285)
+        for i, (valor, meta) in enumerate(zip(datos.get("valores", []), datos.get("metas", []))):
+            y = 345 + i * 60
+            self.texto(superficie, "Circuito " + str(i + 1), y - 12, x=115, ancho=180)
+            self.boton(superficie, "ajustar:" + str(i) + ":-1", "-", 300, y, 60)
+            for n in range(7):
+                rect = pygame.Rect(350 + n * 42, y - 14, 35, 28)
+                pygame.draw.rect(superficie, VERDE if n == meta else (47, 80, 88), rect, border_radius=3)
+                if n == valor:
+                    pygame.draw.rect(superficie, CREMA, rect.inflate(4, 4), 3, border_radius=3)
+            self.boton(superficie, "ajustar:" + str(i) + ":1", "+", 705, y, 60)
+        self.texto(superficie, "Carga: %.1f/2 s · Mantén E para cargarla" % f.get("carga", 0), 530, VERDE)
+
+    def _mensajero(self, superficie, f, roja):
+        if not roja:
+            self.texto(superficie, "Enciende las luces de la ruta: ve a cada punto iluminado y pulsa el botón.", 270)
+            self.texto(superficie, "Luces encendidas: " + str(f.get("luces", 0)) + "/" + str(len(f.get("ruta", [])) or 3), 345, ORO)
+            self.texto(superficie, "En la fase roja llevarás el módulo por esta ruta.", 400)
+            self.boton(superficie, "encender", "Encender luz", 480, 520, 320)
+            return
+        self.texto(superficie, "Recoge el módulo y recorre las luces que encendiste hasta la última estación.", 270)
+        self.texto(superficie, "Módulo: " + str(f.get("modulo") or "pendiente"), 345, ORO)
+        self.texto(superficie, "Recargas: " + str(f.get("tramo", 0)) + "/2. Si te alcanza un rayo, sueltas el módulo pero conservas las recargas.", 395)
+        self.texto(superficie, "La entrega final necesita la estación recalibrada por el Habitante.", 455)
+        self.boton(superficie, "recargar" if f.get("portador") else "recoger",
+                   "Recargar / entregar" if f.get("portador") else "Recoger módulo", 480, 530, 320)
+
+    def _pruebas(self, superficie, datos):
+        self.texto(superficie, "Reúne pruebas: marca solo las que tienen fuente (quién la firma o de dónde sale).", 255)
+        seleccion = set(datos.get("seleccion", []))
+        for i, prueba in enumerate(datos.get("pruebas", [])):
+            x, y = 72 + (i % 2) * 412, 282 + (i // 2) * 72
+            marcada = prueba["id"] in seleccion
+            pygame.draw.rect(superficie, (24, 66, 58) if marcada else (18, 48, 57), (x, y, 400, 66), border_radius=8)
+            pygame.draw.rect(superficie, VERDE if marcada else (47, 80, 88), (x, y, 400, 66), 2, border_radius=8)
+            superficie.blit(self.panel.pequena.render(prueba["titulo"], True, ORO), (x + 10, y + 5))
+            self.panel.texto_lineas(superficie, prueba["detalle"], x + 10, y + 23, 285, self.panel.pequena)
+            self.boton(superficie, "marcar:" + prueba["id"], "Elegida" if marcada else "Marcar", x + 349, y + 33, 92)
+        self.boton(superficie, "guardar", "Guardar pruebas", 480, 527, 320)
+
+    def _propuesta(self, superficie, datos):
+        self.texto(superficie, "Arma la propuesta con lo que el equipo comprobó. Presenta cuando el resto termine.", 252)
+        titulos = dict(prueba="Prueba que la respalda", conexion="Estado de la conexión", limite="Límite de NÚCLEO")
+        for i, (campo, opciones) in enumerate(datos.get("opciones", {}).items()):
+            y = 322 + i * 72
+            superficie.blit(self.panel.pequena.render(titulos.get(campo, campo), True, ORO), (80, y - 43))
+            for j, (valor, etiqueta) in enumerate(opciones):
+                elegido = datos.get("propuesta", {}).get(campo) == valor
+                self.boton(superficie, "elegir:" + campo + ":" + valor, ("> " if elegido else "") + etiqueta,
+                           200 + j * 280, y, 266)
+        self.boton(superficie, "autorizar", "Presentar al consejo", 480, 527, 320)
 
     def actualizar(self, cliente):
         p = self.panel
@@ -232,6 +272,8 @@ class PantallaFinal:
                     datos.update(indice=int(partes[1]), delta=int(partes[2]))
                 elif operacion == "elegir":
                     datos.update(campo=partes[1], valor=partes[2])
+                elif operacion == "marcar":
+                    datos["prueba"] = partes[1]
                 cliente.actuar("final_accion", **datos)
             return True
         return False

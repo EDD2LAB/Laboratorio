@@ -74,7 +74,7 @@ Los siguientes cambios de trazado deben contrastarse con el arte, como este
 ajuste de grosor autorizado; no se eliminan obstáculos para inventar atajos.
 
 El servidor empaqueta las seis hitboxes y `logica/zonas_caminables.py` con las
-reglas actuales del contexto de Docker. Protocolo 19 exige actualizar juego y
+reglas actuales del contexto de Docker. El protocolo vigente (20) exige actualizar juego y
 servidor juntos. Implementación local no significa push ni despliegue.
 
 ## Misión `nucleo_control`

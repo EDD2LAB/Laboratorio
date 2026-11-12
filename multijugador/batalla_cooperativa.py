@@ -1,6 +1,9 @@
 """Tandas anunciadas y pausas: reloj y colisiones exclusivamente del servidor."""
 import math
 
+CUATRO = frozenset(("guardian", "mensajero", "habitante", "aspirante"))
+PAUSA = {1: 15.0, 2: 14.0}  # protocolo 20: pausas a la medida de las tareas (antes 26 y 22)
+
 
 class BatallaCooperativa:
     def __init__(self):
@@ -11,21 +14,26 @@ class BatallaCooperativa:
         self.derribados = set()
         self.oleada = 1
 
-    def reiniciar(self, hechos):
-        self.fase = 2 if {"guardian", "habitante"} <= hechos else 1
+    @staticmethod
+    def fase_de(verde):
+        """La fase roja empieza cuando los cuatro roles terminan su parte verde."""
+        return 2 if CUATRO <= set(verde) else 1
+
+    def reiniciar(self, hechos, verde=()):
+        self.fase = self.fase_de(verde)
         self.turno, self.restante = "aviso", 3.0
         self.blancos = []
         self.derribados.clear()
         self.oleada = 1
 
-    def actualizar(self, dt, jugadores, presentes, hechos):
-        nueva = 2 if {"guardian", "habitante"} <= hechos else 1
+    def actualizar(self, dt, jugadores, presentes, hechos, verde=()):
+        nueva = self.fase_de(verde)
         if len(hechos) == 4:
             self.turno, self.blancos = "terminado", []
             self.derribados.clear()
             return []
         if nueva != self.fase:
-            self.reiniciar(hechos)
+            self.reiniciar(hechos, verde)
         activos = {i: j for i, j in jugadores.items() if i in presentes
                    and j.get("dimension") == "futuro" and not j.get("interior")}
         self.derribados.intersection_update(activos)
@@ -47,7 +55,7 @@ class BatallaCooperativa:
                 self.oleada = 2
                 self.turno, self.restante, self.blancos = "aviso", 2.5, []
                 return []
-            self.turno, self.restante, self.blancos = "recarga", 26.0 if self.fase == 1 else 22.0, []
+            self.turno, self.restante, self.blancos = "recarga", PAUSA[self.fase], []
             # Nadie queda bloqueado sin compañero: la pausa recupera a los caídos.
             self.derribados.clear()
         else:

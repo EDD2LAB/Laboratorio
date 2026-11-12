@@ -1,6 +1,7 @@
 # Base del final cooperativo en protocolo 16
 
-El final actual usa protocolo 17. La preparación de la rebelión, armas, mini-núcleos
+Las reglas vigentes de los minijuegos (protocolo 20) están en
+[misiones_final.md](misiones_final.md). El final usaba protocolo 17. La preparación de la rebelión, armas, mini-núcleos
 y cierre completo se documentan en [desenlace_tres_eras.md](desenlace_tres_eras.md).
 
 ## Cómo se inicia

@@ -9,11 +9,12 @@ import math
 import pygame
 
 from interfaz import sprites_combate as sprites
+from multijugador.batalla_cooperativa import PAUSA
 
 PANEL = (8, 22, 32)
 CREMA = (255, 240, 200)
 CIAN = (104, 243, 241)
-RECARGA = {1: 26.0, 2: 22.0}
+RECARGA = PAUSA
 
 
 def _color(fase):
@@ -65,9 +66,10 @@ def dibujar_ataques(superficie, final, jugadores, efectos=None, ahora_ms=0):
     punto = final.get("puntos", {}).get("aspirante")
     if punto and b.get("fase") == 1:
         caja = pygame.Rect(round(punto["x"] - 34), round(punto["y"] - 64), 68, 68)
-        for i, rol in enumerate(("guardian", "habitante")):
-            if rol not in final.get("hechos", []):
-                pygame.draw.arc(superficie, color, caja, i * math.pi + .1, (i + 1) * math.pi - .1, 4)
+        # Escudo: un cuarto por rol que aún no termina su parte verde.
+        for i, rol in enumerate(("guardian", "mensajero", "habitante", "aspirante")):
+            if rol not in final.get("verde", []):
+                pygame.draw.arc(superficie, color, caja, i * math.pi / 2 + .1, (i + 1) * math.pi / 2 - .1, 4)
     total = efectos.aviso_total if efectos is not None else 3.0
     progreso = max(0.0, min(1.0, 1 - b.get("segundos", 0) / total))
     for x, y in b.get("blancos", []):
@@ -111,7 +113,7 @@ def dibujar_aviso(superficie, final, fuente, yo=None, efectos=None, ahora_ms=0):
     color = _color(fase)
     peligro = turno in ("aviso", "rayo")
     texto = {"aviso": "¡Sal de las marcas!", "rayo": "¡Rayos! Sal de las zonas.",
-             "recarga": "Está recargando: usa tu estación.", "terminado": "¡Activen sus consolas!"}.get(turno, "")
+             "recarga": "Está recargando: usa tu estación.", "terminado": "¡Lo lograron!"}.get(turno, "")
     if yo and yo.get("id") in b.get("derribados", []):
         texto = "Te derribaron: pide ayuda o espera la pausa."
     elif b.get("derribados"):

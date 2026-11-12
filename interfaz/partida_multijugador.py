@@ -1356,7 +1356,8 @@ class VistaPartida:
             from interfaz.batalla_cooperativa import dibujar_ataques
             dibujar_ataques(superficie, final, jugadores, self.efectos_combate, ahora_ms)
             self.efectos_combate.dibujar(superficie)
-            if final.get("fase") == "activo" and "guardian" in final.get("hechos", []) and "mensajero" not in final.get("hechos", []):
+            if (final.get("fase") == "activo" and final.get("batalla", {}).get("fase") == 2
+                    and "mensajero" not in final.get("hechos", [])):
                 portador = next((j for j in self.estado.get("mundo", {}).get("jugadores", []) if j["id"] == final.get("portador")), None)
                 punto = portador or final.get("recogida")
                 if punto and self.arte.modulo_final is not None and not punto.get("interior"):

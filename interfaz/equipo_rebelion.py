@@ -36,6 +36,24 @@ def _dibujar_mini(s, m, activos, efectos, ahora_ms):
         s.fill(color, (x - 3 + i * 5, y - 11 - flote, 2, 1))
 
 
+def _dibujar_luces(s, final, ahora_ms):
+    """Faroles de la ruta del Mensajero: apagados hasta que los enciende en la fase verde."""
+    roja = final.get("batalla", {}).get("fase") == 2
+    luces = len(final.get("ruta", [])) if roja else final.get("luces", 0)
+    for i, p in enumerate(final.get("ruta", [])):
+        x, y = round(p["x"]) + 14, round(p["y"]) - 4
+        encendida = i < luces
+        s.fill(sprites.CONTORNO, (x - 1, y - 12, 5, 13))
+        s.fill((104, 98, 146), (x, y - 11, 3, 11))
+        s.fill(sprites.CONTORNO, (x - 3, y - 17, 9, 7))
+        if encendida:
+            brillo = 1 if (ahora_ms // 300 + i) % 2 else 0
+            s.fill((226, 255, 252) if brillo else sprites.PALETA["C"], (x - 2, y - 16, 7, 5))
+            pygame.draw.circle(s, sprites.PALETA["c"], (x + 1, y - 14), 8, 1)
+        else:
+            s.fill((52, 60, 76), (x - 2, y - 16, 7, 5))
+
+
 def dibujar(s, final, jugadores, efectos=None, ahora_ms=0, objetivo=None):
     """``objetivo`` es ``(mini, apuntable)`` de ``efectos_combate.elegir_objetivo``."""
     if final.get("fase") in (None, "bloqueado", "victoria"):
@@ -68,11 +86,9 @@ def dibujar(s, final, jugadores, efectos=None, ahora_ms=0, objetivo=None):
             ancla = (round(j["x"] - 6), y + 2) if izquierda else (x - 4, y + 2)
             s.blit(imagen, imagen.get_rect(midright=ancla) if izquierda else imagen.get_rect(midleft=ancla))
     if len(final.get("hechos", [])) == 4:
-        for rol, p in final.get("puntos", {}).items():
-            listo = any(j["rol"] == rol and j["id"] in final.get("activaciones", []) for j in jugadores)
-            rect = pygame.Rect(round(p["x"]-8), round(p["y"]-9), 16, 12)
-            pygame.draw.rect(s, (100, 250, 150) if listo else (100, 220, 250), rect, 2)
         return
+    if final.get("fase") == "activo":
+        _dibujar_luces(s, final, ahora_ms)
     activos = a.get("minis_activos")
     for m in a.get("minis", []):
         _dibujar_mini(s, m, activos, efectos, ahora_ms)

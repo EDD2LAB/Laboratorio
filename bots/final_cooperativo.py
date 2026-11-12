@@ -1,6 +1,6 @@
 """Los bots leen las mismas tarjetas y usan las mismas acciones que los jugadores."""
 import math
-from multijugador.final_cooperativo import CORRECTA
+from multijugador.final_cooperativo import CAMPOS_ORDEN, PRUEBAS, opcion_correcta
 
 
 def planificar(bot, estado, jugadores, tarea):
@@ -34,9 +34,7 @@ def planificar(bot, estado, jugadores, tarea):
         return accion(puntos["aspirante"], "iniciar" if fase == "preparacion" else "reintentar")
     hechos = final["hechos"]
     if len(hechos) == 4:
-        if bot.identificador in final["activaciones"]:
-            return dict(estado="ESPERANDO_EQUIPO", esperar=True)
-        return accion(puntos[bot.rol], "activar")
+        return dict(estado="ESPERANDO_EQUIPO", esperar=True)
     batalla = final.get("batalla", {})
     if bot.identificador in batalla.get("derribados", []):
         return dict(estado="ESPERANDO_AYUDA", esperar=True)
@@ -67,30 +65,48 @@ def planificar(bot, estado, jugadores, tarea):
                 if math.dist(origen, destino) <= 180 and bot._navegador.colisiones.trayecto_libre(origen, destino):
                     return accion(bot.posicion, "disparar", mini=mini["id"])
         return dict(estado="ESPERANDO_RECARGA", esperar=True)
-    if batalla.get("fase") == 1 and bot.rol in ("mensajero", "aspirante"):
+    roja = batalla.get("fase") == 2
+    if bot.rol in hechos or (not roja and bot.rol in final.get("verde", [])):
         return dict(estado="ESPERANDO_EQUIPO", esperar=True)
     datos = estado["privado"].get("final_cooperativo", {}).get(bot.rol, {})
-    if bot.rol == "guardian" and "guardian" not in hechos:
+    if bot.rol == "guardian":
         registro, orden = datos.get("registro", {}), datos.get("orden", {})
-        campo = next((c for c in registro if registro[c] != orden[c]), None)
-        return accion(puntos["guardian"], "comparar", campo=campo) if campo else None
-    if bot.rol == "habitante" and "habitante" not in hechos:
-        for i, (valor, meta) in enumerate(zip(datos.get("valores", []), datos.get("metas", []))):
-            if valor != meta:
-                return accion(puntos["habitante"], "ajustar", indice=i, delta=1 if valor < meta else -1)
-        return accion(puntos["habitante"], "mantener")
-    if bot.rol == "mensajero" and "mensajero" not in hechos:
-        if "guardian" not in hechos:
+        if not registro:
             return dict(estado="ESPERANDO_EQUIPO", esperar=True)
+        campo = next((c for c in CAMPOS_ORDEN if registro.get(c) != orden.get(c)), "aprobar")
+        return accion(puntos["guardian"], "comparar", campo=campo)
+    if bot.rol == "habitante":
+        valores, metas = datos.get("valores", []), datos.get("metas", [])
+        # Acoplados: subir el circuito i baja el (i+1) % 3. En un ciclo de tres, el que
+        # sobra y el que falta siempre son vecinos: se pasa una unidad sin salir de 0..6.
+        falta = next((i for i, (v, m) in enumerate(zip(valores, metas)) if v < m), None)
+        sobra = next((i for i, (v, m) in enumerate(zip(valores, metas)) if v > m), None)
+        if falta is not None and sobra is not None:
+            if (falta + 1) % 3 == sobra:
+                return accion(puntos["habitante"], "ajustar", indice=falta, delta=1)
+            return accion(puntos["habitante"], "ajustar", indice=sobra, delta=-1)
+        return accion(puntos["habitante"], "mantener")
+    if bot.rol == "mensajero":
+        ruta = final.get("ruta") or []
+        if not roja:
+            return accion(ruta[min(final.get("luces", 0), len(ruta) - 1)], "encender")
         if final["portador"] is None:
             return accion(final["recogida"], "recoger")
         if final["portador"] != bot.identificador:
             return dict(estado="ESPERANDO_EQUIPO", esperar=True)
-        return accion(final["ruta"][final["tramo"]], "recargar")
-    if bot.rol == "aspirante" and "aspirante" not in hechos:
-        for campo, valor in CORRECTA.items():
-            if datos.get("propuesta", {}).get(campo) != valor:
-                return accion(puntos["aspirante"], "elegir", campo=campo, valor=valor)
+        return accion(ruta[final["tramo"]], "recargar")
+    if bot.rol == "aspirante":
+        if not roja:
+            correctas = {p["id"] for p in datos.get("pruebas", []) if PRUEBAS[p["id"]][2]}
+            seleccion = set(datos.get("seleccion", []))
+            distinta = next(iter(sorted(correctas ^ seleccion)), None)
+            if distinta:
+                return accion(puntos["aspirante"], "marcar", prueba=distinta)
+            return accion(puntos["aspirante"], "guardar")
+        for campo, opciones in datos.get("opciones", {}).items():
+            buena = next(v for v, _ in opciones if opcion_correcta(campo, v))
+            if datos.get("propuesta", {}).get(campo) != buena:
+                return accion(puntos["aspirante"], "elegir", campo=campo, valor=buena)
         if {"guardian", "habitante", "mensajero"}.issubset(hechos):
             return accion(puntos["aspirante"], "autorizar")
     return dict(estado="ESPERANDO_EQUIPO", esperar=True)

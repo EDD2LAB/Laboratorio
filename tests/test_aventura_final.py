@@ -94,9 +94,9 @@ class Aventura(unittest.TestCase):
         self.combate()
         self.a.municion = 0
         self.assertFalse(self.accion("disparar", mini=1)["ok"])
-        self.f.batalla.turno, self.f.batalla.restante = "recarga", 26
+        self.f.batalla.turno, self.f.batalla.restante = "recarga", 15
         self.colocar(self.f.puntos["guardian"])
-        self.assertTrue(self.accion("comparar", campo=self.f.campo_falso)["ok"])
+        self.assertTrue(self.accion("comparar", campo=base.respuesta_guardian(self.f))["ok"])
         self.colocar(self.f.puntos["mensajero"])
         self.assertTrue(self.accion("municion")["ok"])
         self.assertFalse(self.accion("municion")["ok"])
@@ -110,12 +110,16 @@ class Aventura(unittest.TestCase):
         self.assertEqual(self.f.integridad, 3)
         self.assertEqual(self.a.minis[0]["aviso"], .01)
 
-    def test_activacion_exige_consola_propia_y_abre_reconfiguracion(self):
+    def test_ultima_tarea_abre_la_reconfiguracion_sin_confirmar(self):
         self.f.fase = "activo"
-        self.f.hechos.update(base.ROLES)
-        for rol in base.ROLES:
-            self.colocar(self.f.puntos[rol], rol)
-            self.assertTrue(self.accion("activar", rol)["ok"])
+        self.f.ronda = 1
+        self.f.verde.update(base.ROLES)
+        self.f.batalla.reiniciar(self.f.hechos, self.f.verde)
+        self.f.batalla.turno, self.f.batalla.restante = "recarga", 14
+        self.f.hechos.update(("guardian", "habitante", "mensajero"))
+        self.f.propuesta = {c: next(v for v in vs if base.opcion_correcta(c, v)) for c, vs in self.f.opciones.items()}
+        self.colocar(self.f.puntos["aspirante"], "aspirante")
+        self.assertTrue(self.accion("autorizar", "aspirante")["ok"])
         self.assertEqual(self.f.fase, "victoria")
         self.assertEqual(self.a.etapa, "reconfiguracion")
 

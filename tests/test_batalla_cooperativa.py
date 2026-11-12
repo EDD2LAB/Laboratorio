@@ -10,8 +10,8 @@ class Tandas(unittest.TestCase):
         self.j = {"a": dict(x=100, y=100, dimension="futuro", interior=None),
                   "b": dict(x=200, y=100, dimension="futuro", interior=None)}
 
-    def tick(self, dt=1, hechos=None):
-        return self.b.actualizar(dt, self.j, set(self.j), hechos or set())
+    def tick(self, dt=1, hechos=None, verde=()):
+        return self.b.actualizar(dt, self.j, set(self.j), hechos or set(), verde)
 
     def test_avisos_fijos_permiten_esquivar_y_no_hacen_dano_antes_del_impacto(self):
         self.assertEqual(self.tick(), [])
@@ -28,25 +28,28 @@ class Tandas(unittest.TestCase):
         self.tick()
         self.assertEqual(self.b.turno, "recarga")
         self.assertFalse(self.b.derribados)
-        for _ in range(25):
+        for _ in range(14):  # pausa verde de 15 s (protocolo 20)
             self.assertFalse(self.tick())
         self.assertEqual(self.b.turno, "recarga")
         self.tick()
         self.assertEqual(self.b.turno, "aviso")
 
     def test_roja_tiene_dos_tandas_anunciadas_antes_de_la_pausa(self):
-        hechos = {"guardian", "habitante"}
+        verde = base.ROLES
+        self.tick(verde=("guardian", "habitante"))
+        self.assertEqual(self.b.fase, 1)  # dos partes verdes no bastan
+        self.b.reiniciar(set(), verde)
         for _ in range(3):
-            self.tick(hechos=hechos)
+            self.tick(verde=verde)
         self.assertEqual(self.b.fase, 2)
         self.assertEqual(self.b.turno, "rayo")
-        self.tick(hechos=hechos)
+        self.tick(verde=verde)
         self.assertEqual((self.b.turno, self.b.oleada), ("aviso", 2))
         for _ in range(3):
-            self.tick(hechos=hechos)
+            self.tick(verde=verde)
         self.assertEqual(self.b.turno, "rayo")
-        self.tick(hechos=hechos)
-        self.assertEqual(self.b.turno, "recarga")
+        self.tick(verde=verde)
+        self.assertEqual((self.b.turno, self.b.restante), ("recarga", 14.0))
 
     def test_finalizar_las_tareas_detiene_los_rayos(self):
         self.tick(hechos={"guardian", "habitante", "mensajero", "aspirante"})
@@ -68,17 +71,17 @@ class IntegracionBatalla(unittest.TestCase):
     def test_empezar_abre_aviso_y_bloquea_consola_hasta_recarga(self):
         r = self.reglas
         self.assertTrue(r.accion("guardian", "iniciar")["ok"])
-        self.assertFalse(r.accion("guardian", "comparar", campo=self.f.campo_falso)["ok"])
-        self.f.batalla.turno, self.f.batalla.restante = "recarga", 26
-        self.assertTrue(r.accion("guardian", "comparar", campo=self.f.campo_falso)["ok"])
+        self.assertFalse(r.accion("guardian", "comparar", campo=base.respuesta_guardian(self.f))["ok"])
+        self.f.batalla.turno, self.f.batalla.restante = "recarga", 15
+        self.assertTrue(r.accion("guardian", "comparar", campo=base.respuesta_guardian(self.f))["ok"])
 
-    def test_mensajero_y_aspirante_esperan_el_escudo(self):
+    def test_los_cuatro_trabajan_en_la_fase_verde(self):
         r = self.reglas
         r.iniciar()
-        r.guardian()
         self.assertFalse(r.accion("mensajero", "recoger")["ok"])
-        self.assertFalse(r.accion("aspirante", "elegir", campo="prueba", valor="informe")["ok"])
-        r.habitante()
+        self.assertTrue(r.accion("mensajero", "encender")["ok"])
+        self.assertTrue(r.accion("aspirante", "marcar", prueba=self.f.mazo[0])["ok"])
+        r.verde()
         self.assertEqual(self.f.batalla.fase, 2)
 
     def test_ayudar_exige_proximidad_y_un_caido_real(self):
@@ -112,7 +115,7 @@ class IntegracionBatalla(unittest.TestCase):
 
     def test_reintentar_en_roja_conserva_fase_y_recorrido(self):
         self.reglas.iniciar()
-        self.f.hechos.update(("guardian", "habitante"))
+        self.f.verde.update(base.ROLES)
         self.f.tramo = 1
         for _ in range(3):
             self.f._fallo("Sin señal")

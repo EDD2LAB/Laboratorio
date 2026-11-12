@@ -126,7 +126,9 @@ class ObjetivosUtiles(unittest.TestCase):
         from interfaz.final_cooperativo import objetivo
         v, f = self.vista()
         self.assertEqual(objetivo(v)["x"], 200)
-        f["batalla"]["fase"] = 1
+        f["batalla"]["fase"] = 1  # protocolo 20: en la verde enciende la ruta
+        self.assertEqual(objetivo(v)["x"], 300)
+        f["verde"] = ["mensajero"]
         self.assertIsNone(objetivo(v))
 
     def test_no_senala_tarea_terminada_ni_consola_ya_confirmada(self):
@@ -135,9 +137,7 @@ class ObjetivosUtiles(unittest.TestCase):
         f["hechos"] = ["guardian"]
         self.assertIsNone(objetivo(v))
         f["hechos"] = ["guardian", "mensajero", "habitante", "aspirante"]
-        self.assertIsNotNone(objetivo(v))
-        f["activaciones"] = ["yo"]
-        self.assertIsNone(objetivo(v))
+        self.assertIsNone(objetivo(v))  # protocolo 20: se gana sin confirmar consolas
 
     def test_pieza_fija_hasta_que_deje_de_estar_disponible(self):
         from interfaz.final_cooperativo import objetivo

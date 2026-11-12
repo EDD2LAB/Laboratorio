@@ -59,16 +59,18 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
   pedido con B o el eco). No votan, no confirman, no usan
   habilidades ni investigan en Distrito Conecta o Ciudad Núcleo. Solos (sin personas) sí juegan.
   Excepción acordada: durante el final cooperativo cubren los roles ausentes y
-  completan sus minijuegos, fabricación y consolas; esta ayuda es necesaria para jugar con menos de cuatro personas.
+  completan sus minijuegos y la fabricación; esta ayuda es necesaria para jugar con menos de cuatro personas.
 
 ## Trabajo en curso
 
-Rama compartida: `multijugador`. Protocolo 19. Tres eras disponibles (4 casos en
+Rama compartida: `multijugador`. Protocolo 20. Tres eras disponibles (4 casos en
 La Copa, 3 en Distrito Conecta y 1 en Ciudad Núcleo), campaña local con bots y
 bots de relleno en salas. Kael y Tarek son las apariencias predeterminadas.
 El expediente AVL, informe final y estados por diferencias están integrados.
 El final cooperativo incluye rebelión, blásteres, mini-núcleos, minijuegos por
 rol y desenlace sincronizado de las tres eras; ver docs/desenlace_tres_eras.md.
+Misiones del final en protocolo 20 (dos partes por rol, pausas 15/14 s, sin
+confirmar consolas): ver docs/misiones_final.md.
 
 El Futuro usa el mapa definitivo y paredes propias de exterior e interiores;
 ver `docs/futuro.md`. No volver a copiar las paredes del Presente.

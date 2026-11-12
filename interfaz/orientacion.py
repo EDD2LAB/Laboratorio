@@ -61,21 +61,22 @@ def tarea_actual(vista):
     final = contexto.get("desafio_final") or {}
     if vista.dimension == "futuro" and not vista.interior and final.get("fase") in ("preparacion", "activo", "reintento"):
         rol = (vista.yo() or {}).get("rol", "guardian")
-        titulo = {"guardian": "Compara las órdenes del consejo", "mensajero": "Lleva el módulo por las recargas",
-                  "habitante": "Estabiliza y sostiene la estación", "aspirante": "Prepara la autorización humana"}[rol]
-        if final["fase"] != "activo" or len(final.get("hechos", [])) == 4:
-            titulo = "Ve a la pantalla central para " + ("recuperar la señal" if final["fase"] == "reintento" else "activar juntos" if final["fase"] == "activo" else "iniciar el final")
+        roja = final.get("batalla", {}).get("fase", 1) == 2
+        titulo = ({"guardian": "Revisa las órdenes que manda NÚCLEO", "mensajero": "Lleva el módulo por las luces",
+                   "habitante": "Recalibra la estación acoplada", "aspirante": "Arma la propuesta con tus pruebas"} if roja else
+                  {"guardian": "Revisa las órdenes del consejo", "mensajero": "Enciende las luces de la ruta",
+                   "habitante": "Estabiliza los circuitos acoplados", "aspirante": "Reúne las pruebas con fuente"})[rol]
+        if final["fase"] != "activo":
+            titulo = "Ve a la pantalla central para " + ("recuperar la señal" if final["fase"] == "reintento" else "iniciar el final")
         aventura = final.get("aventura", {})
         if final["fase"] == "preparacion" and aventura.get("faltan"):
             titulo = "Vuelve por el portal: falta " + ", ".join(aventura["faltan"])
         elif final["fase"] == "preparacion" and not aventura.get("fabricado"):
             titulo = objetivo["nombre"] if objetivo else "Tus compañeros llevan las piezas. Espera su entrega"
-        elif len(final.get("hechos", [])) == 4:
-            titulo = "Espera las confirmaciones de tu equipo" if (vista.yo() or {}).get("id") in final.get("activaciones", []) else "Ve a tu consola y confirma con E"
         elif final["fase"] == "activo" and rol in final.get("hechos", []):
             titulo = "Tu tarea está lista. Ayuda a tu equipo y esquiva"
-        elif final["fase"] == "activo" and rol in ("mensajero", "aspirante") and final.get("batalla", {}).get("fase", 1) == 1:
-            titulo = "Ayuda a esquivar mientras Guardián y Habitante apagan el escudo"
+        elif final["fase"] == "activo" and not roja and rol in final.get("verde", []):
+            titulo = "Tu parte está lista: esquiva hasta que caiga el escudo"
         batalla = final.get("batalla", {})
         if final["fase"] == "activo" and batalla.get("turno") in ("aviso", "rayo"):
             titulo = "¡Sal de las marcas! NÚCLEO va a disparar"
