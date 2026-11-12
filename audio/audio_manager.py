@@ -15,6 +15,10 @@ class GestorAudio:
     CANAL_EVENTOS = 3
     CANALES_MUSICA = (4, 5)
     TIEMPO_COOLDOWN_POCION_AGOTADA = 650
+    SONIDOS_BATALLA = ("rayo_aviso", "rayo_impacto", "blaster_disparo", "mini_golpe", "mini_explosion",
+                       "mini_disparo", "mini_aparicion", "derribado", "levantado", "senal_perdida",
+                       "cambio_fase", "recoger_material", "fabricar")
+    CANALES_LIBRES = 6  # sin reservar, para que los efectos del combate se superpongan
 
     def __init__(self, ruta_base, categorias=False):
         """``categorias=True`` (multijugador/bots): volúmenes separados de
@@ -52,6 +56,12 @@ class GestorAudio:
             "pocion_ignorar_activacion": os.path.join(carpeta_pociones, "07_activacion_pocion_bruma.wav"),
             "pocion_ignorar_efecto": os.path.join(carpeta_pociones, "08_bruma_viento_alejandose.wav"),
         }
+        # Combate final: solo los .wav presentes (herramientas/sintetizar_sonidos_batalla.py).
+        carpeta_batalla = os.path.join(carpeta_audios, "Batalla")
+        for nombre in self.SONIDOS_BATALLA:
+            ruta = os.path.join(carpeta_batalla, nombre + ".wav")
+            if os.path.isfile(ruta):
+                self.rutas_efectos["batalla_" + nombre] = ruta
         self.efectos = {}
         self.musicas = {}
         self.volumen_musica = 0.45
@@ -83,7 +93,7 @@ class GestorAudio:
         return pygame.mixer.get_init() is not None
 
     def _preparar_canales(self):
-        cantidad_canales = max(6, pygame.mixer.get_num_channels())
+        cantidad_canales = max(6 + self.CANALES_LIBRES, pygame.mixer.get_num_channels())
         pygame.mixer.set_num_channels(cantidad_canales)
         pygame.mixer.set_reserved(6)
         self._canales_efectos = {
@@ -259,6 +269,18 @@ class GestorAudio:
             return False
         canal_audio.set_volume(self._volumen_canal_efectos(canal))
         canal_audio.play(sonido)
+        return True
+
+    def reproducir_batalla(self, nombre, volumen=1.0):
+        """Efecto del combate en un canal libre: varios pueden sonar a la vez."""
+        sonido = self.efectos.get("batalla_" + nombre)
+        if sonido is None or self.silenciado or not self._mixer_disponible:
+            return False
+        canal = pygame.mixer.find_channel(True)  # si todos suenan, reemplaza el más antiguo
+        if canal is None:
+            return False
+        canal.set_volume(self._volumen_canal_efectos(self.CANAL_EVENTOS) * self._limitar_volumen(volumen))
+        canal.play(sonido)
         return True
 
     def reproducir_secuencia_efectos(self, identificadores, canal):

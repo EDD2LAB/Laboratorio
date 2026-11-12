@@ -17,6 +17,7 @@ DURACION_PROYECTIL = .12
 DURACION_EXPLOSION = .36
 DURACION_GOLPE = .12
 RADIO_PULSO_MINI = 38  # igual que el alcance del pulso en aventura_final
+LIMITE_REPETICION = .08  # s entre dos copias del mismo sonido
 
 
 def elegir_objetivo(minis, origen, linea_libre):
@@ -53,37 +54,88 @@ class EfectosCombate:
         self.fuerza = 0
         self.proyectiles, self.explosiones, self.ondas, self.chispas, self.textos, self.fogonazos = [], [], [], [], [], []
         self._fuente = None
+        # Sonidos pendientes ``(nombre, volumen)``; la vista los reproduce y vacía.
+        self.sonidos = []
+        self._ultimo_sonido = {}
+        self.fase_batalla = None
+        self.derribados = set()
+        self.preparacion = None
+        self.t_inicio_combate = None
+
+    def sonar(self, nombre, volumen=1.0):
+        """Encola un sonido; si el mismo sonó hace menos de 80 ms, sube el volumen
+        del anterior en vez de apilar otro (tres rayos = un estallido más fuerte)."""
+        if self.t is None:
+            return
+        if self.t - self._ultimo_sonido.get(nombre, -9) < LIMITE_REPETICION:
+            for i, (pendiente, anterior) in enumerate(self.sonidos):
+                if pendiente == nombre:
+                    self.sonidos[i] = (nombre, min(1.0, max(anterior, volumen) + .15))
+            return
+        self._ultimo_sonido[nombre] = self.t
+        self.sonidos.append((nombre, volumen))
+
+    def tomar_sonidos(self):
+        pendientes, self.sonidos = self.sonidos, []
+        return pendientes
+
+    def _preparacion(self, aventura):
+        """Antes del combate: piezas recogidas o entregadas y fabricación."""
+        estado = (len(aventura.get("cargas", {})), len(aventura.get("entregadas", [])), bool(aventura.get("fabricado")))
+        if self.preparacion is not None:
+            if estado[2] and not self.preparacion[2]:
+                self.sonar("fabricar")
+            elif estado[0] > self.preparacion[0] or estado[1] > self.preparacion[1]:
+                self.sonar("recoger_material", .8)
+        self.preparacion = estado
 
     # --- Detección de sucesos -------------------------------------------------
-    def actualizar(self, final, ahora_ms, yo_id=None):
+    def actualizar(self, final, ahora_ms, yo_id=None, posicion=None):
         t = ahora_ms / 1000
         self.dt = 0.0 if self.t is None else max(0.0, min(.1, t - self.t))
         self.t = t
+        if final.get("fase") in ("preparacion", "activo"):
+            self._preparacion(final.get("aventura", {}))
+        else:
+            self.preparacion = None
         if final.get("fase") != "activo":
             self.turno, self.trazo, self.minis, self.integridad = None, None, {}, None
+            self.fase_batalla, self.derribados, self.t_inicio_combate = None, set(), None
             self._envejecer()
             return
         batalla, aventura = final.get("batalla", {}), final.get("aventura", {})
         turno = batalla.get("turno")
         color = self.color_fase(batalla.get("fase", 1))
+        if self.fase_batalla == 1 and batalla.get("fase") == 2:
+            self.sonar("cambio_fase")
+        self.fase_batalla = batalla.get("fase")
         if turno == "aviso" and self.turno != "aviso":
             self.aviso_total = max(.5, float(batalla.get("segundos", 3.0)))
+            self.sonar("rayo_aviso", .7)
         if turno == "rayo" and self.turno != "rayo":
             for x, y in batalla.get("blancos", []):
                 self.ondas.append([x, y, t, 30 if batalla.get("fase") == 2 else 22, color])
                 self._chispas(x, y, 10, color)
             self.sacudir(.25, 2)
+            self.sonar("rayo_impacto", min(1.0, .7 + .1 * len(batalla.get("blancos", []))))
         self.turno = turno
-        caido = yo_id is not None and yo_id in batalla.get("derribados", [])
+        derribados = set(batalla.get("derribados", []))
+        caido = yo_id is not None and yo_id in derribados
         if caido and not self.derribado:
             self.sacudir(.4, 3)
-        self.derribado = caido
+        if derribados - self.derribados:
+            self.sonar("derribado", 1.0 if caido and not self.derribado else .5)
+        if self.derribados - derribados:
+            self.sonar("levantado", 1.0 if self.derribado and not caido else .5)
+        self.derribado, self.derribados = caido, derribados
 
         trazo = aventura.get("disparo")
         if trazo and trazo != self.trazo:
             self.proyectiles.append([*trazo, t])
             self.fogonazos.append([trazo[0], trazo[1], t])
             self.ultimo_disparo = t
+            propio = posicion is not None and math.hypot(trazo[0] - posicion[0], trazo[1] - posicion[1]) < 12
+            self.sonar("blaster_disparo", 1.0 if propio else .45)  # los tiros ajenos, más bajos
         self.trazo = trazo
 
         actuales = {m["id"]: m for m in aventura.get("minis", [])}
@@ -91,24 +143,31 @@ class EfectosCombate:
             previo = self.minis.get(ident)
             if previo is None:
                 self.ondas.append([mini["x"], mini["y"], t, 14, (246, 70, 122)])  # aparece
+                if self.t_inicio_combate is not None:
+                    self.sonar("mini_aparicion", .7)
                 continue
             if mini.get("vida", 0) < previo.get("vida", 0):
                 self.golpes[ident] = t
                 self._chispas(mini["x"], mini["y"], 6, (255, 226, 238))
+                self.sonar("mini_golpe", .8)
             if mini.get("aviso", 0) > previo.get("aviso", 0) + .5:
                 self.ondas.append([mini["x"], mini["y"], t, RADIO_PULSO_MINI, (246, 70, 122)])  # descarga
+                self.sonar("mini_disparo", .8)
         for ident, previo in self.minis.items():
             if ident not in actuales and previo.get("vida", 0) <= 1 and t - self.ultimo_disparo < 1.0:
                 self.explosiones.append([previo["x"], previo["y"], t])
                 self._chispas(previo["x"], previo["y"], 14, (246, 70, 122))
                 self.textos.append([previo["x"], previo["y"] - 12, t, "+1", (104, 243, 241)])
                 self.sacudir(.15, 1)
+                self.sonar("mini_explosion")
         self.minis = {ident: dict(m) for ident, m in actuales.items()}
+        self.t_inicio_combate = t  # desde el segundo cuadro, los minis nuevos suenan
 
         integridad = final.get("integridad")
         if self.integridad is not None and integridad is not None and integridad < self.integridad:
             self.corazon_perdido = t
             self.sacudir(.3, 2)
+            self.sonar("senal_perdida", .8)
         self.integridad = integridad
         self._envejecer()
 

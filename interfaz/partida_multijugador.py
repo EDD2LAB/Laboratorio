@@ -353,6 +353,17 @@ class VistaPartida:
             except Exception as error:
                 print("[Multijugador] No se pudo reproducir el sonido:", error)
 
+    def _sonidos_combate(self):
+        """Reproduce lo que EfectosCombate detectó en este cuadro (sin audio, se descarta)."""
+        pendientes = self.efectos_combate.tomar_sonidos()
+        if not pendientes or not self.audio:
+            return
+        for nombre, volumen in pendientes:
+            try:
+                self.audio.reproducir_batalla(nombre, volumen)
+            except Exception as error:
+                print("[Multijugador] No se pudo reproducir el sonido:", error)
+
     def sonido_musica(self):
         if self.audio is None:
             self.sonido({"tipo": "caldero", "estado": "estable"})
@@ -1336,7 +1347,9 @@ class VistaPartida:
             from interfaz.equipo_rebelion import dibujar
             final = self.contexto().get("desafio_final") or {}
             jugadores = self.estado.get("mundo", {}).get("jugadores", [])
-            self.efectos_combate.actualizar(final, ahora_ms, self.identificador)
+            yo = self.yo()
+            self.efectos_combate.actualizar(final, ahora_ms, self.identificador, (yo["x"], yo["y"]) if yo else None)
+            self._sonidos_combate()
             dibujar(superficie, final, jugadores, self.efectos_combate, ahora_ms, self._objetivo_blaster(final))
             self._dibujar_nucleo(superficie, ahora_ms)
             self._dibujar_barreras_y_pulsos(superficie, ahora_ms)

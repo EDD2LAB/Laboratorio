@@ -18,6 +18,8 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 - Servidor multijugador local: `.venv\Scripts\python.exe -m multijugador.servicio_internet`
   y en otra consola `$env:COPA_SERVIDOR_INTERNET="http://127.0.0.1:10000"`.
 - Benchmark: `.venv\Scripts\python.exe herramientas/benchmark.py --segundos 60`
+- Vista previa del combate final (sin servidor ni campaña): `.venv\Scripts\python.exe -m herramientas.vista_combate`.
+  Sonidos de batalla provisionales: `herramientas/sintetizar_sonidos_batalla.py` (no pisa `.wav` existentes).
 - Editores: `.venv\Scripts\python.exe -m editores.hitbox_editor` (igual con
   `alineacion_editor` y `personaje_editor`; usar `-m` para que encuentren los paquetes).
 

@@ -106,6 +106,94 @@ class Sucesos(unittest.TestCase):
         self.assertEqual((self.e.minis, self.e.turno), ({}, None))
 
 
+class Sonidos(unittest.TestCase):
+    def setUp(self):
+        from interfaz.efectos_combate import EfectosCombate
+        self.e = EfectosCombate()
+
+    def nombres(self):
+        return [n for n, _ in self.e.tomar_sonidos()]
+
+    def test_cada_suceso_suena_una_vez(self):
+        self.e.actualizar(final("recarga", 20), 1000)
+        self.e.tomar_sonidos()
+        self.e.actualizar(final("aviso", 3.0), 1100)
+        self.assertEqual(self.nombres(), ["rayo_aviso"])
+        self.e.actualizar(final("rayo", .7), 1200)
+        self.assertEqual(self.nombres(), ["rayo_impacto"])
+        self.e.actualizar(final("rayo", .6), 1300)
+        self.assertEqual(self.nombres(), [])
+
+    def test_disparo_propio_mas_fuerte_que_ajeno(self):
+        self.e.actualizar(final(), 1000, 0, (0, 0))
+        self.e.tomar_sonidos()
+        self.e.actualizar(final(disparo=[0, 0, 400, 300]), 1100, 0, (0, 0))
+        self.e.actualizar(final(disparo=[200, 0, 400, 300]), 1300, 0, (0, 0))
+        sonidos = self.e.tomar_sonidos()
+        self.assertEqual([n for n, _ in sonidos], ["blaster_disparo", "blaster_disparo"])
+        self.assertGreater(sonidos[0][1], sonidos[1][1])
+
+    def test_golpe_explosion_senal_y_caidos(self):
+        self.e.actualizar(final(), 1000, 0)
+        self.e.tomar_sonidos()
+        self.e.actualizar(final(minis=[dict(id=1, x=400, y=300, vida=1, aviso=2)], disparo=[0, 0, 400, 300],
+                                integridad=2, derribados=[0]), 1100, 0)
+        self.assertTrue({"mini_golpe", "senal_perdida", "derribado"} <= set(self.nombres()))
+        self.e.actualizar(final(minis=[], disparo=[1, 0, 400, 300], integridad=2), 1300, 0)
+        self.assertTrue({"mini_explosion", "levantado"} <= set(self.nombres()))
+
+    def test_repeticiones_juntas_se_funden(self):
+        self.e.actualizar(final(), 1000)
+        self.e.tomar_sonidos()
+        self.e.sonar("mini_golpe", .5)
+        self.e.sonar("mini_golpe", .5)
+        self.assertEqual(self.e.tomar_sonidos(), [("mini_golpe", .65)])
+
+    def test_cambio_de_fase_y_preparacion(self):
+        def preparacion(cargas=0, fabricado=False):
+            return dict(fase="preparacion", aventura=dict(cargas={i: "x" for i in range(cargas)},
+                                                          entregadas=[], fabricado=fabricado))
+        self.e.actualizar(preparacion(), 1000)
+        self.e.actualizar(preparacion(1), 1100)
+        self.assertEqual(self.nombres(), ["recoger_material"])
+        self.e.actualizar(preparacion(0, True), 1200)
+        self.assertEqual(self.nombres(), ["fabricar"])
+        rojo = final()
+        self.e.actualizar(rojo, 1300)
+        self.e.tomar_sonidos()
+        rojo["batalla"]["fase"] = 2
+        self.e.actualizar(rojo, 1400)
+        self.assertIn("cambio_fase", self.nombres())
+
+
+class Sintesis(unittest.TestCase):
+    def test_genera_wav_validos_sin_pisar_los_existentes(self):
+        import tempfile
+        import wave
+        from pathlib import Path
+        from herramientas.sintetizar_sonidos_batalla import generar
+        from audio.audio_manager import GestorAudio
+        with tempfile.TemporaryDirectory() as carpeta:
+            carpeta = Path(carpeta)
+            (carpeta / "rayo_aviso.wav").write_bytes(b"propio")
+            creados = generar(carpeta)
+            self.assertEqual(set(creados) | {"rayo_aviso"}, set(GestorAudio.SONIDOS_BATALLA))
+            self.assertEqual((carpeta / "rayo_aviso.wav").read_bytes(), b"propio")
+            for nombre in creados:
+                with wave.open(str(carpeta / f"{nombre}.wav")) as archivo:
+                    self.assertEqual((archivo.getnchannels(), archivo.getsampwidth()), (1, 2))
+                    self.assertLess(archivo.getnframes() / archivo.getframerate(), 1.5)
+
+    def test_los_sonidos_del_repositorio_estan_registrados(self):
+        from audio.audio_manager import GestorAudio
+        for nombre in GestorAudio.SONIDOS_BATALLA:
+            self.assertTrue((RAIZ / "Audios" / "Batalla" / f"{nombre}.wav").is_file(), nombre)
+        audio = GestorAudio(str(RAIZ), categorias=True)
+        self.assertIn("batalla_rayo_impacto", audio.rutas_efectos)
+        audio.reproducir_batalla("rayo_impacto", .5)  # sin mezclador real no debe fallar
+        self.assertFalse(audio.reproducir_batalla("no_existe"))
+
+
 class Dibujo(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
