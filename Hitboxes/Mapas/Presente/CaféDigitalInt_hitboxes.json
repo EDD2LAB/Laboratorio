@@ -1,0 +1,14 @@
+{
+  "image": "Imagenes/Fondos/Mapas/Presente/CaféDigitalInt.png",
+  "image_size": [
+    1027,
+    573
+  ],
+  "hitboxes": [],
+  "spawn": {
+    "default": null,
+    "by_origin": {}
+  },
+  "npc_positions": {},
+  "decoracion": []
+}
