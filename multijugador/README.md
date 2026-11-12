@@ -1,6 +1,6 @@
 # Campaña cooperativa multijugador
 
-## Estado actual: protocolo 13
+## Estado actual: protocolo 14
 
 Salas por código desde distintas PC y redes, mediante el servicio HTTPS de
 `configuracion.json`. No exige abrir puertos en los routers de los jugadores.
@@ -41,7 +41,7 @@ y se exporta a `informes/`. Las normas se revisan con el profesor.
   promedio móvil. HTTP limita las consultas por sesión (300/min); crear y
   unirse tienen un límite independiente por IP (60/min). Los límites responden
   429 con Retry-After. Consultar `../docs/red_estabilidad.md`.
-- Pendientes: interiores del Futuro y demás etapas de `../docs/etapas.md`.
+- Cinco interiores del Futuro y diez consultas opcionales implementados localmente. Pendientes: geometría exterior nueva del Futuro y demás etapas de `../docs/etapas.md`.
 
 ## Ejecutar en desarrollo
 
@@ -68,7 +68,7 @@ movimiento que ofrece el menú actual.
 2. Abrir `la-copa-salas`: **Manual Deploy → Deploy latest commit**.
 3. Esperar a **Deploy succeeded | Live**.
 4. Consultar `https://la-copa-salas.onrender.com/health`: comprobar `ok`,
-   `protocolo: 13`, `casos: 8`, tres entradas de `eras` (4, 3 y 1 casos), y
+   `protocolo: 14`, `casos: 8`, tres entradas de `eras` (4, 3 y 1 casos), y
    que `build` corresponda al commit publicado.
 5. Actualizar las PC y abrir una sala nueva. No desplegar durante una partida.
 
@@ -96,3 +96,6 @@ sustituyen una partida entre PC y redes distintas. No publicar tokens en registr
 El protocolo 13 añade ping/pong por WebSocket: actualizar servidor y clientes
 antes de probar por Internet. Reiniciar Render no permite recuperar salas
 perdidas: hay que crear una nueva.
+
+El protocolo 14 añade Elia, Arel y exploración opcional en los interiores de ambas
+ciudades. Actualizar servidor y clientes al publicar; ver `../docs/exploracion_etapa6.md`.

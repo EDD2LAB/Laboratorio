@@ -272,3 +272,20 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   requieren geometría o identidad confirmada. Ver docs/presentacion_etapa5.md.
 - Solo local, sin push ni despliegue de esta etapa. Las etapas 3 y 4 sí se
   publicaron y desplegaron junto con los cambios del equipo en bef84e9.
+
+---
+
+# Etapa 6 - exploración (2026-11-11, protocolo 14)
+
+- Elia y Arel en La Copa con sprites y conversaciones de ayuda, sin regalar pistas.
+- Cinco interiores nuevos del Futuro, diez consultas opcionales entre ambas
+  ciudades, contador compartido y validación de sala y cercanía en el servidor.
+- Barreras iniciales conservadas; personajes y bots siguen la sala real y usan
+  las puertas de su era. Se conservan tareas, soluciones y casos de la campaña.
+- 508 pruebas completas aprobadas en 348,768 s; auditoría con 20 recorridos
+  transitables. Ocho regresiones nuevas. Ningún archivo de Hitboxes modificado.
+- El mapa exterior nuevo del Futuro NO está activado: requiere revisión manual
+  de paredes, escaleras, puertas y portal. La geometría de esta etapa sigue
+  parcialmente pendiente; ver docs/exploracion_etapa6.md y su auditoría JSON.
+- Solo local, sin push ni despliegue. Al publicar hay que actualizar las PC y
+  Render al protocolo 14. Música pendiente de selección del usuario.

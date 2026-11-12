@@ -251,6 +251,9 @@ class PanelCooperativo:
         """Retrato real de quien habla; si no tiene, su sprite o el del jugador."""
         arte = self.vista.arte
         clave = nombre.lower().split(" · ")[0].split(":")[0]
+        for vecino, imagen in getattr(self.vista, "vecinos_exploracion", {}).items():
+            if re.search(rf"\b{vecino.lower()}\b", clave) and imagen is not None:
+                return imagen
         for nombre_real, imagen in getattr(arte, "retratos_nombrados", {}).items():
             if re.search(rf"\b{re.escape(nombre_real)}\b", clave) and imagen is not None:
                 return imagen
@@ -398,6 +401,21 @@ class PanelCooperativo:
 
     def dibujar(self, superficie):
         self.botones = {}
+        if self.modo == "descubrimiento":
+            velo = pygame.Surface(superficie.get_size(), pygame.SRCALPHA)
+            velo.fill((5, 16, 22, 210))
+            superficie.blit(velo, (0, 0))
+            caja = pygame.Rect(130, 150, 700, 420)
+            pygame.draw.rect(superficie, (13, 35, 40), caja, border_radius=14)
+            pygame.draw.rect(superficie, ORO, caja, 2, border_radius=14)
+            self.texto_lineas(superficie, "DESCUBRIMIENTO", 170, 180, 620, self.encabezado, ORO)
+            self.texto_lineas(superficie, self.titulo, 170, 235, 620, self.fuente, CREMA)
+            self.texto_lineas(superficie, self.texto, 170, 280, 620, self.fuente, CREMA)
+            puntos = [p for p in self.caso.get("exploracion", []) if p["dimension"] == self.dimension]
+            vistos = sum(p.get("visitado", False) for p in puntos)
+            self.texto_lineas(superficie, f"Descubrimientos del equipo en esta ciudad: {vistos}/{len(puntos)}", 170, 420, 620, self.pequena, VERDE)
+            self.boton(superficie, "cerrar", "Seguir explorando", 480, 505, 360)
+            return
         if self.modo != "reparar":
             self._abierto = 0
         elif not getattr(self, "_abierto", 0):

@@ -16,9 +16,8 @@
 
 ## Trabajo restante
 
-La etapa 2 está implementada localmente con protocolo 13; ver
-`docs/red_estabilidad.md` y los resultados en `docs/progreso.md`. Requiere
-publicación y despliegue antes de usarla con el servidor de Render.
+El protocolo local actual es 14. Render conserva la última versión publicada
+hasta realizar el próximo push y despliegue.
 
 Las etapas 1 y 2 se publicaron y desplegaron en Render en `be2f6df`.
 Las etapas 3 y 4 se publicaron junto con el resaltado del equipo en `bef84e9`.
@@ -41,6 +40,9 @@ No borrar ramas del equipo sin confirmación específica.
 
 La presentación visual de la etapa 5 se trabaja en `docs/presentacion_etapa5.md`.
 La música queda pendiente por petición del usuario. Esto no completa las etapas 6 a 8.
+
+La exploración de la etapa 6 está implementada localmente; el mapa exterior nuevo
+del Futuro sigue pendiente de revisión manual. Ver `docs/exploracion_etapa6.md`.
 
 ## Línea base del análisis previo
 

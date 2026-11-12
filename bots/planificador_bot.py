@@ -352,7 +352,7 @@ class PlanificadorBot:
 
     def _hablar_con(self, bot, estado, objetivo):
         """Va hasta el personaje; si está en otro edificio, usa las puertas como cualquiera."""
-        edificios = (estado["caso"].get("presente") or {}).get("edificios", {})
+        edificios = (estado["caso"].get(bot.posicion.get("dimension")) or {}).get("edificios", {})
         destino, mio = objetivo.get("interior"), bot.posicion.get("interior")
         if destino == mio:
             return self._tarea("INVESTIGANDO", objetivo, "hablar_npc", npc=objetivo["id"])
@@ -363,6 +363,9 @@ class PlanificadorBot:
     def _tareas_nucleo(self, bot, estado, jugadores, memoria, dificultad):
         """Recorren las terminales con los mismos mensajes y dejan una por persona."""
         futuro = estado["caso"].get("futuro") or {}
+        interior = bot.posicion.get("interior")
+        if interior:
+            return self._tarea("INVESTIGANDO", futuro["edificios"][interior]["salida"], "salir_edificio", radio=30)
         inventario = {p["id"] for p in (estado["privado"].get("futuro") or {}).get("inventario", [])}
         humanos = [j for j in jugadores if j.get("controlador") != "bot"
                    and j.get("dimension") == "futuro" and j.get("conectado", True)]
@@ -430,7 +433,7 @@ class PlanificadorBot:
         humanos = [j for j in jugadores if j.get("controlador") != "bot" and j.get("dimension") == dimension
                    and j.get("interior") == interior and j.get("conectado", True)]
         if interior and not humanos and estado is not None:  # terminó aquí dentro: vuelve a la calle
-            salida = estado["caso"]["presente"]["edificios"][interior]["salida"]
+            salida = estado["caso"][dimension]["edificios"][interior]["salida"]
             return PlanificadorBot._tarea("ACOMPANANDO", salida, "salir_edificio", radio=30)
         if not humanos:
             return {"estado": "ESPERANDO_EQUIPO"}

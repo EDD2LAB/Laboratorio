@@ -157,6 +157,7 @@ class MisionNucleo:
             return round(x), round(y)
 
         self.objetivos = []
+        self.edificios = {}
         for tarea, entrada, titulo, _ in TERMINALES:
             if tarea == "cuentas":
                 continue  # es el propio Ciudadano Conectado
@@ -353,7 +354,8 @@ class MisionNucleo:
         raise ValueError("NÚCLEO no se clasifica: decidan qué hacer con él.")
 
     def publico(self, presentes):
-        return {"objetivos": [dict(o) for o in self.objetivos], "pistas": len(self.tareas), "total_pistas": len(TERMINALES),
+        return {"objetivos": [dict(o) for o in self.objetivos], "edificios": self.edificios,
+                "pistas": len(self.tareas), "total_pistas": len(TERMINALES),
                 "titulo": TITULO, "noticia": NOTICIA, "evento": {"id": CASO, "tipo": "nucleo", "indice": 0, "total": 1},
                 "tareas": sorted(self.tareas), "opciones": dict(OPCIONES), "tipos_pocion": {o: tipo_pocion(o) for o in OPCIONES},
                 "votos_emitidos": sum(i in self.votos for i in presentes), "votantes": len(presentes),

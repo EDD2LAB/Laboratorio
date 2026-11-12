@@ -111,7 +111,7 @@ def main():
                "- Retratos: los seis roles/apariencias ya tienen carpetas de cuatro expresiones.",
                "  Kael y Tarek usan sus retratos de aspirante y habitante en los diálogos.",
                "  Nuevos retratos individuales abajo: no asumir cuatro expresiones ni identidad para NPC2.",
-               "- Elia y Arel tienen sprites, pero falta agregarlos al mapa y al diálogo.",
+               "- Elia y Arel están en La Copa con sus sprites y conversaciones de ayuda.",
                "- Teclas: faltan los recursos `Imagenes/Indicadores/tecla_<X>.png`; respaldo por código ya conectado en mapa y F1.",
                "  `tecla_E.png` también se usa junto al objetivo resaltado; respaldo por código si falta.",
                "- Icono animado: falta `Imagenes/Iconos/icono_animado_<N>f.png`; existe brillo por código.",

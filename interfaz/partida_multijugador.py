@@ -221,6 +221,14 @@ class VistaPartida:
             "capa": pygame.Surface(self.fondo_zoom.get_size()).convert(),
             "decoraciones": self.decoraciones_zoom, "personajes": self.personajes_zoom,
         }}
+        from interfaz.arte import icono
+        self.vecinos_exploracion = {nombre: icono(f"NPCS/{nombre}/{nombre}_fila1-1.png",
+                                                  (ALTURA_PERSONAJE * ZOOM_COPA, ALTURA_PERSONAJE * ZOOM_COPA))
+                                    for nombre in ("Elia", "Arel")}
+        self.vecinos_suelo = {nombre: pygame.transform.scale(imagen,
+                             (max(1, imagen.get_width() // ZOOM_COPA), max(1, imagen.get_height() // ZOOM_COPA)))
+                             for nombre, imagen in self.vecinos_exploracion.items() if imagen is not None}
+        self._personajes_interiores = {}
         self.capa_efectos = pygame.Surface((960, 720), pygame.SRCALPHA)
         self.fondo = pygame.transform.scale(self.fondo_zoom, (960, 720))
         self.fuente = cargar_fuente(16)
@@ -411,19 +419,24 @@ class VistaPartida:
 
     def _interior(self, edificio):
         """Fondo y paredes de un edificio; se cargan una vez, la primera vez que se entra."""
-        if edificio not in self.interiores:
+        clave = (self.dimension, edificio)
+        if clave not in self.interiores:
             from multijugador.dimensiones_red import cargar_interior, rect_salida
             from mundo.mapas import cargar_mapa_edificio
             datos = cargar_interior(edificio)
-            self.interiores[edificio] = {"fondo": cargar_mapa_edificio(edificio)["mapa"], "colisiones": ColisionesMapa(datos),
+            self.interiores[clave] = {"fondo": cargar_mapa_edificio(edificio, self.dimension)["mapa"], "colisiones": ColisionesMapa(datos),
                                          "salida": pygame.Rect(rect_salida(datos))}
-        if self.personajes_interior is None:
-            from mundo.personajes import PERSONAJES_DISTRITO, cargar_personajes_distrito
-            self.personajes_interior = cargar_personajes_distrito(ALTURA_INTERIOR)
+        if self.dimension not in self._personajes_interiores:
+            from mundo.personajes import PERSONAJES_DISTRITO, PERSONAJES_FUTURO, cargar_personajes_distrito
+            tabla = PERSONAJES_FUTURO if self.dimension == FUTURO else PERSONAJES_DISTRITO
+            personajes = cargar_personajes_distrito(ALTURA_INTERIOR, tabla)
             agente = {"agente": ("Darío Veraz", "NPCS/Agente de verificación/Agente_de_verificacion-Fila{fila}.png", 9)}
-            self.npcs_interior = {datos[0]: self.personajes_interior[rol][("reposo", "abajo")] for rol, datos in PERSONAJES_DISTRITO.items()}
-            self.npcs_interior["Darío Veraz"] = cargar_personajes_distrito(ALTURA_INTERIOR, agente)["agente"][("reposo", "abajo")]
-        return self.interiores[edificio]
+            npcs = {datos[0]: personajes[rol][("reposo", "abajo")] for rol, datos in tabla.items()}
+            if self.dimension == PRESENTE:
+                npcs["Darío Veraz"] = cargar_personajes_distrito(ALTURA_INTERIOR, agente)["agente"][("reposo", "abajo")]
+            self._personajes_interiores[self.dimension] = personajes, npcs
+        self.personajes_interior, self.npcs_interior = self._personajes_interiores[self.dimension]
+        return self.interiores[clave]
 
     def _cambiar_interior(self, edificio):
         lugar = self._interior(edificio) if edificio else self.mapas[self.dimension]
@@ -625,6 +638,7 @@ class VistaPartida:
             rect = self.rect_portal()
             objetivos.append({"id": "portal", "nombre": "Viajar por el portal", "x": rect.centerx, "y": rect.bottom})
         objetivos.extend(self._puertas_cercanas(yo))
+        objetivos.extend(dict(o, nombre="Consultar: " + o["nombre"]) for o in caso.get("exploracion", []) if self.cerca(o))
         recomendado = mundo.get("privado", {}).get("guia", {}).get("objetivo") or {}
         objetivos.sort(key=lambda o: math.hypot(yo["x"] - o["x"], yo["y"] - o["y"]) - (1000 if o["id"] == recomendado.get("id") or (o["id"] == "portal" and self.dimension_completa()) else 15 if o.get("rol") == yo["rol"] else 0))
         return objetivos
@@ -670,7 +684,8 @@ class VistaPartida:
             return pygame.Rect(self._interior(self.interior)["salida"])
         if clave == "barrera":
             yo = self.yo()
-            barreras = self.contexto().get("barreras", [])
+            barreras = list(self.contexto().get("barreras", []))
+            barreras.extend(e["rect"] for e in self.contexto().get("edificios", {}).values())
             if yo and barreras:
                 return pygame.Rect(min(barreras, key=lambda r: math.hypot(
                     r[0] + r[2] / 2 - yo["x"], r[1] + r[3] / 2 - yo["y"])))
@@ -750,12 +765,12 @@ class VistaPartida:
 
     def _puertas_cercanas(self, yo):
         from multijugador.dimensiones_red import RADIO_PUERTA, RADIO_SALIDA, cerca_de_rect
-        if self.dimension == FUTURO:
+        if self.dimension == FUTURO and not self.interior:
             mision = self.contexto()
-            if mision.get("barreras_activas") and any(cerca_de_rect(yo["x"], yo["y"], r, RADIO_PUERTA) for r in mision.get("barreras", [])):
+            puertas = [e["rect"] for e in mision.get("edificios", {}).values()]
+            if mision.get("barreras_activas") and any(cerca_de_rect(yo["x"], yo["y"], r, RADIO_PUERTA) for r in [*mision.get("barreras", []), *puertas]):
                 return [{"id": "barrera", "nombre": "NÚCLEO bloqueó este sector", "x": yo["x"], "y": yo["y"]}]
-            return []
-        if self.dimension != PRESENTE:
+        if self.dimension not in (PRESENTE, FUTURO):
             return []
         if self.interior:
             salida = self._interior(self.interior)["salida"]
@@ -885,6 +900,8 @@ class VistaPartida:
                     cliente.actuar("salir_edificio")
                 elif self.seleccion == "barrera":
                     self.panel.notificar("NÚCLEO bloqueó este sector. Restaura las conexiones.")
+                elif self.seleccion and self.seleccion.startswith("explorar:"):
+                    cliente.actuar("explorar_sector", objetivo=self.seleccion)
                 elif self.seleccion:
                     cliente.actuar("interactuar", objetivo=self.seleccion)
                 else:
@@ -1013,6 +1030,14 @@ class VistaPartida:
     def _objetivo_presente(self):
         """Siguiente paso en Distrito Conecta: pista pendiente o pantalla."""
         presente = self.contexto()
+        if self.dimension == FUTURO and self.interior:
+            objetivos = self.estado.get("mundo", {}).get("caso", {}).get("exploracion", [])
+            pendiente = next((o for o in objetivos if o["dimension"] == FUTURO
+                              and o["interior"] == self.interior and not o.get("visitado")), None)
+            if pendiente:
+                return pendiente
+            salida = self._interior(self.interior)["salida"]
+            return dict(id="salir", nombre="Salida a la ciudad", x=salida.centerx, y=salida.centery)
         if not presente or presente.get("completada"):
             return None
         conocidas = {p["id"] for p in (self.estado.get("mundo", {}).get("privado", {}).get(self.dimension) or {}).get("inventario", [])}
@@ -1020,7 +1045,13 @@ class VistaPartida:
         if self.dimension == PRESENTE:
             return self._guia_distrito(presente, conocidas, yo)
         from interfaz.orientacion import objetivo_nucleo
-        return objetivo_nucleo(presente, conocidas, self.estado.get("mundo", {}).get("caso", {}).get("npcs", []))
+        objetivo = objetivo_nucleo(presente, conocidas, self.estado.get("mundo", {}).get("caso", {}).get("npcs", []))
+        if objetivo and objetivo.get("interior"):
+            puerta = presente.get("edificios", {}).get(objetivo["interior"])
+            if puerta:
+                return dict(puerta, id="entrar:" + objetivo["interior"],
+                            nombre="Entrar para hablar con " + objetivo["nombre"], puerta=True)
+        return objetivo
 
     def _guia_distrito(self, presente, conocidas, yo):
         """Hasta el personaje con la pista, pasando por las puertas que hagan falta."""
@@ -1182,9 +1213,18 @@ class VistaPartida:
         """Ruta guía, encargos y anillos de objetivo (coordenadas del mundo)."""
         from interfaz.suministros import dibujar_encargos, dibujar_farol_en_suelo
         self.adornos.ruta(superficie, self.ruta_guia, ahora_ms)
-        if self.dimension == FUTURO:
+        if self.dimension == FUTURO and not self.interior:
             self._dibujar_nucleo(superficie, ahora_ms)
             self._dibujar_barreras_y_pulsos(superficie, ahora_ms)
+        for punto in self.estado.get("mundo", {}).get("caso", {}).get("exploracion", []):
+            if punto["dimension"] != self.dimension or punto["interior"] != self.interior:
+                continue
+            centro = (punto["x"], punto["y"])
+            color = (130, 222, 158) if punto.get("visitado") else (237, 185, 87)
+            pygame.draw.circle(superficie, (13, 35, 28), centro, 17)
+            pygame.draw.circle(superficie, color, centro, 17, 2)
+            imagen = self.fuente.render("i", True, color)
+            superficie.blit(imagen, imagen.get_rect(center=centro))
         mundo = self.estado.get("mundo", {})
         caso = mundo.get("caso", {})
         privado = mundo.get("privado", {})
@@ -1270,9 +1310,26 @@ class VistaPartida:
         from interfaz.suministros import dibujar_carga
         caso = self.estado.get("mundo", {}).get("caso", {})
         anclas = []
+        if self.dimension == LA_COPA and not self.interior:
+            for npc in caso.get("npcs", []):
+                if not npc.get("exploracion") or npc["dimension"] != LA_COPA:
+                    continue
+                frame = self.vecinos_exploracion.get(npc["nombre"])
+                if frame is None:
+                    pygame.draw.circle(suelo, (237, 185, 87), (npc["x"], npc["y"] - 24), 9)
+                    pygame.draw.line(suelo, (237, 185, 87), (npc["x"], npc["y"] - 16), (npc["x"], npc["y"]), 8)
+                elif figuras is not None:
+                    rect = frame.get_rect(midbottom=self.a_pantalla(npc["x"], npc["y"], vista))
+                    figuras.append((frame, rect))
+                    if self._es_resaltado("npc", npc["nombre"]):
+                        self._figura_resaltada = (frame, rect)
+                        self._resaltado_hecho = True
+                else:
+                    pequeno = self.vecinos_suelo[npc["nombre"]]
+                    suelo.blit(pequeno, pequeno.get_rect(midbottom=(npc["x"], npc["y"])))
         if self.interior:  # quien tiene una pista espera dentro de su edificio
             for npc in caso.get("npcs", []):
-                cuadros = self.npcs_interior.get(npc["nombre"]) if npc.get("interior") == self.interior and not npc.get("jugador") else None
+                cuadros = self.npcs_interior.get(npc["nombre"]) if npc.get("interior") == self.interior and npc["dimension"] == self.dimension and not npc.get("jugador") else None
                 if cuadros:
                     cuadro = cuadros[(pygame.time.get_ticks() // 180) % len(cuadros)]
                     pygame.draw.ellipse(suelo, (17, 28, 22), (npc["x"] - 20, npc["y"] - 6, 40, 12))
@@ -1571,7 +1628,13 @@ class VistaPartida:
 
     def imagen_npc(self, nombre):
         """Retrato del personaje o, si no tiene, su sprite (ya cargados)."""
-        retrato = {"Luma": "luma", "Mira": "mira"}.get(nombre)
+        clave = "odran" if nombre == "Sabio de las Raíces" else nombre.lower()
+        imagen = self.arte.retratos_nombrados.get(clave)
+        if imagen is not None:
+            return imagen
+        if self.vecinos_exploracion.get(nombre) is not None:
+            return self.vecinos_exploracion[nombre]
+        retrato = {"Luma": "luma", "Mira": "mira", "Kael": "aspirante", "Tarek": "habitante"}.get(nombre)
         if retrato and self.arte.retratos.get(retrato):
             return self.arte.retratos[retrato][0]
         if nombre == "Darío Veraz" and self.arte.retrato_agente is not None:

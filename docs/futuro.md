@@ -1,9 +1,9 @@
 # Ciudad Núcleo (Era III)
 
-El juego sigue usando el arte provisional generado a partir del Presente.
-En `eb1318b` llegaron un mapa e interiores en `Imagenes/Fondos/Mapas/Futuro/`,
-y animaciones en `Imagenes/NPCS/Nucleo/`. Están integrados en Git, pendientes
-de conectar al juego. Consultar `docs/arte_esperado.md` para los tamaños reales.
+El exterior sigue usando el mapa provisional generado a partir del Presente.
+Los cinco interiores nuevos ya se usan en la exploración del protocolo 14;
+las animaciones de NÚCLEO se conectaron en la etapa 5. Ver
+`exploracion_etapa6.md` y `auditoria_exploracion_etapa6.json`.
 
 El mapa nuevo mide 1048 x 577 y el provisional 998 x 576: comprobar geometría,
 puertas y puntos caminables antes de sustituirlo. Las paredes de los JSON se
@@ -19,9 +19,7 @@ definitivo: su protección contra sobrescritura todavía está pendiente.
 | Ciudadano Conectado | `Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/` | Derivado de la Habitante conectada |
 | Representante Humano | `Imagenes/Futuro/generado/NPCS/Representante Humano/` | Derivado del Aspirante contemporáneo |
 
-Provisional dibujado por código: el avatar de NÚCLEO
-(`VistaPartida._dibujar_nucleo` en el mapa y `ArteAnalisis._componer_nucleo` en
-el celular).
+El avatar de NÚCLEO usa sus animaciones reales, con respaldo por código si faltan.
 
 ## Misión `nucleo_control`
 
@@ -37,8 +35,8 @@ de completar los casos del Presente. Los puntos usan ids de hitboxes existentes:
 - `entrada_sede_aspirante` y `entrada_campana_ronaldo`: Archivista y Representante Humano;
   sin hablar con el Representante no se vota la reconfiguración.
 - Barreras: `entrada_cafe_digital`, `entrada_influencer`, `entrada_campana_ronaldo` y
-  `entrada_centro_comunitario`, hasta restaurar las conexiones. Ciudad Núcleo aún no
-  tiene interiores propios.
+  `entrada_centro_comunitario`, hasta restaurar las conexiones. Los cinco interiores se abren después de
+  restaurarlas y ofrecen consultas opcionales.
 - `pantalla_publica_presente`: decisión final y regreso a Distrito Conecta.
 
 El caso entra al expediente con la ficha de `datos/casos_expediente.json`,

@@ -1,7 +1,7 @@
 # Timeless Glitch
 
 Juego educativo 2D para investigar información y decidir en equipo.
-Rama compartida: `multijugador`. Protocolo actual: **13**.
+Rama compartida: `multijugador`. Protocolo actual: **14**.
 
 ## Instalación en Windows / PowerShell
 

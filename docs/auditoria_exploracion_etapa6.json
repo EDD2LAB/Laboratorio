@@ -1,0 +1,200 @@
+{
+  "ok": true,
+  "recorridos": [
+    {
+      "dimension": "presente",
+      "edificio": "centro_verificacion",
+      "destino": "mesa",
+      "transitable": true
+    },
+    {
+      "dimension": "presente",
+      "edificio": "centro_verificacion",
+      "destino": "salida",
+      "transitable": true
+    },
+    {
+      "dimension": "presente",
+      "edificio": "estudio_influencer",
+      "destino": "mesa",
+      "transitable": true
+    },
+    {
+      "dimension": "presente",
+      "edificio": "estudio_influencer",
+      "destino": "salida",
+      "transitable": true
+    },
+    {
+      "dimension": "presente",
+      "edificio": "sede_aspirante",
+      "destino": "mesa",
+      "transitable": true
+    },
+    {
+      "dimension": "presente",
+      "edificio": "sede_aspirante",
+      "destino": "salida",
+      "transitable": true
+    },
+    {
+      "dimension": "presente",
+      "edificio": "cafe_digital",
+      "destino": "mesa",
+      "transitable": true
+    },
+    {
+      "dimension": "presente",
+      "edificio": "cafe_digital",
+      "destino": "salida",
+      "transitable": true
+    },
+    {
+      "dimension": "presente",
+      "edificio": "estacion_mensajero",
+      "destino": "mesa",
+      "transitable": true
+    },
+    {
+      "dimension": "presente",
+      "edificio": "estacion_mensajero",
+      "destino": "salida",
+      "transitable": true
+    },
+    {
+      "dimension": "futuro",
+      "edificio": "centro_verificacion",
+      "destino": "mesa",
+      "transitable": true
+    },
+    {
+      "dimension": "futuro",
+      "edificio": "centro_verificacion",
+      "destino": "salida",
+      "transitable": true
+    },
+    {
+      "dimension": "futuro",
+      "edificio": "estudio_influencer",
+      "destino": "mesa",
+      "transitable": true
+    },
+    {
+      "dimension": "futuro",
+      "edificio": "estudio_influencer",
+      "destino": "salida",
+      "transitable": true
+    },
+    {
+      "dimension": "futuro",
+      "edificio": "sede_aspirante",
+      "destino": "mesa",
+      "transitable": true
+    },
+    {
+      "dimension": "futuro",
+      "edificio": "sede_aspirante",
+      "destino": "salida",
+      "transitable": true
+    },
+    {
+      "dimension": "futuro",
+      "edificio": "cafe_digital",
+      "destino": "mesa",
+      "transitable": true
+    },
+    {
+      "dimension": "futuro",
+      "edificio": "cafe_digital",
+      "destino": "salida",
+      "transitable": true
+    },
+    {
+      "dimension": "futuro",
+      "edificio": "estacion_mensajero",
+      "destino": "mesa",
+      "transitable": true
+    },
+    {
+      "dimension": "futuro",
+      "edificio": "estacion_mensajero",
+      "destino": "salida",
+      "transitable": true
+    }
+  ],
+  "interiores": [
+    {
+      "edificio": "centro_verificacion",
+      "imagen": [
+        344,
+        192
+      ],
+      "plantilla": [
+        344,
+        192
+      ],
+      "mismo_tamano": true
+    },
+    {
+      "edificio": "estudio_influencer",
+      "imagen": [
+        344,
+        192
+      ],
+      "plantilla": [
+        344,
+        192
+      ],
+      "mismo_tamano": true
+    },
+    {
+      "edificio": "sede_aspirante",
+      "imagen": [
+        344,
+        192
+      ],
+      "plantilla": [
+        344,
+        192
+      ],
+      "mismo_tamano": true
+    },
+    {
+      "edificio": "cafe_digital",
+      "imagen": [
+        344,
+        192
+      ],
+      "plantilla": [
+        344,
+        192
+      ],
+      "mismo_tamano": true
+    },
+    {
+      "edificio": "estacion_mensajero",
+      "imagen": [
+        344,
+        192
+      ],
+      "plantilla": [
+        344,
+        192
+      ],
+      "mismo_tamano": true
+    }
+  ],
+  "mapa_exterior": {
+    "nuevo": [
+      1048,
+      577
+    ],
+    "activo": [
+      998,
+      576
+    ],
+    "sustitucion_habilitada": false,
+    "pendiente": "Revisión manual de paredes, escaleras, puertas y portal sobre el mapa nuevo."
+  },
+  "limite": "Las rutas y tamaños no certifican todos los muebles. Las plantillas de paredes siguen siendo las editadas por el equipo."
+}

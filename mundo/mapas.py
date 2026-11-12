@@ -544,13 +544,16 @@ def cargar_mapa_presente(configuracion):
     }
 
 
-def cargar_mapa_edificio(edificio_id):
+def cargar_mapa_edificio(edificio_id, dimension=DIMENSION_PRESENTE):
     """Carga el interior existente y las hitboxes editables de un edificio."""
-    edificio = EDIFICIOS_PRESENTE.get(edificio_id)
+    from logica.dimensiones import EDIFICIOS_FUTURO
+    edificio = (EDIFICIOS_FUTURO if dimension == "futuro" else EDIFICIOS_PRESENTE).get(edificio_id)
     if edificio is None:
         raise ValueError(f"El edificio del presente no esta configurado: {edificio_id}")
 
     ruta_imagen = buscar_asset(edificio["interior"])
+    if dimension == "futuro" and not os.path.isfile(ruta_imagen):
+        ruta_imagen = buscar_asset(EDIFICIOS_PRESENTE[edificio_id]["interior"])
     if not os.path.isfile(ruta_imagen):
         raise FileNotFoundError(
             f"No existe el interior configurado para {edificio['nombre']}: {ruta_imagen}"
@@ -594,7 +597,7 @@ def cargar_mapa_edificio(edificio_id):
             "nombre_edificio": hitbox.get("nombre_edificio"),
             "rect": rect,
             "role": hitbox.get("role"),
-            "dimension": DIMENSION_PRESENTE,
+            "dimension": dimension,
             "datos": hitbox.get("datos", {}),
             "activo": hitbox.get("activo", True),
             "distancia": hitbox.get("distancia", DISTANCIA_INTERACCION),

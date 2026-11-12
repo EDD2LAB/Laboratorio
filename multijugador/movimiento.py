@@ -252,11 +252,14 @@ class PartidaMovimiento:
         self.mision.entrar_edificio = self.entrar_edificio
         self.mision.salir_edificio = self.salir_edificio
         self.interiores = {}
+        self.interiores_futuro = {}
         self.viaje = None  # propuesta de viaje en grupo (ver viajar)
         self._sincronizar_bloqueos()
         try:
             self.colisiones_de(PRESENTE)  # el portal funciona desde el primer momento
             self.colisiones_de(FUTURO)
+            from .exploracion import colocar_vecinos
+            colocar_vecinos(self.mision, self.colisiones)
         except (OSError, ValueError) as error:
             print("[Multijugador] Distrito Conecta no disponible:", error)
 
@@ -274,17 +277,28 @@ class PartidaMovimiento:
                 self.mision.futuro = MisionNucleo(self.mapas[dimension], datos, self.mision.indicadores,
                                                   self.mision.siguiente_evento, self.mision.expediente)
                 self.mision.futuro.avisar = self.mision._avisar
+                from logica.dimensiones import EDIFICIOS_FUTURO
+                self.mision.futuro.edificios = edificios_de(datos)
+                for clave, puerta in self.mision.futuro.edificios.items():
+                    puerta["nombre"] = EDIFICIOS_FUTURO[clave]["nombre"]
+                self.interiores_futuro = {e: ColisionesMapa(cargar_interior(e)) for e in INTERIORES}
+                for clave, mapa in self.interiores_futuro.items():
+                    x, y = mapa.inicio_libre(*spawn_interior(mapa.datos))
+                    self.mision.futuro.edificios[clave]["salida"] = dict(x=round(x), y=round(y))
+                self.mision.exploracion.configurar(FUTURO, self.interiores_futuro)
             if dimension == PRESENTE and self.mision.presente is None:
                 from .presente import MisionPresente
                 self.interiores = {e: ColisionesMapa(cargar_interior(e)) for e in INTERIORES}
                 self.mision.presente = MisionPresente(self.mapas[dimension], datos, self.mision.indicadores,
                                                       self.mision.siguiente_evento, self.mision.expediente,
                                                       self.interiores, edificios_de(datos))
+                self.mision.exploracion.configurar(PRESENTE, self.interiores)
         return self.mapas[dimension]
 
     def colisiones_de_jugador(self, jugador):
         """Las paredes de donde está: su edificio o el mapa de su dimensión."""
-        return self.interiores[jugador["interior"]] if jugador.get("interior") else self.colisiones_de(jugador.get("dimension", LA_COPA))
+        interiores = self.interiores_futuro if jugador.get("dimension") == FUTURO else self.interiores
+        return interiores[jugador["interior"]] if jugador.get("interior") else self.colisiones_de(jugador.get("dimension", LA_COPA))
 
     def _colocar(self, identificador, x, y, interior):
         self.viajes += 1  # el cliente lo coloca sin recorrer el mapa
@@ -292,17 +306,21 @@ class PartidaMovimiento:
         self.jugadores[identificador].update(x=x, y=y, interior=interior, animacion="reposo", corriendo=False, viaje=self.viajes)
 
     def entrar_edificio(self, identificador, edificio):
+        if not isinstance(edificio, str):
+            raise ValueError("Elige un edificio válido.")
         jugador = self.jugadores[identificador]
-        presente = self.mision.presente
+        presente = self.mision.futuro if jugador.get("dimension") == FUTURO else self.mision.presente
         puerta = presente.edificios.get(edificio) if presente else None
         if jugador.get("dimension") == FUTURO and self.mision.futuro.barreras_activas:
             raise ValueError("NÚCLEO bloqueó este sector.")
-        if jugador.get("dimension") != PRESENTE or jugador.get("interior") or puerta is None:
+        if jugador.get("dimension") not in (PRESENTE, FUTURO) or jugador.get("interior") or puerta is None:
             raise ValueError("Aquí no hay una puerta.")
         if not cerca_de_rect(jugador["x"], jugador["y"], puerta["rect"], RADIO_PUERTA):
             raise ValueError("Acércate a la puerta y pulsa E.")
-        mapa = self.interiores[edificio]
-        ocupadas = [(j["x"], j["y"]) for j in self.jugadores.values() if j.get("interior") == edificio]
+        interiores = self.interiores_futuro if jugador.get("dimension") == FUTURO else self.interiores
+        mapa = interiores[edificio]
+        ocupadas = [(j["x"], j["y"]) for j in self.jugadores.values()
+                    if j.get("interior") == edificio and j.get("dimension") == jugador.get("dimension")]
         self._colocar(identificador, *mapa.inicio_libre(*spawn_interior(mapa.datos), ocupadas), edificio)
         return {"mensaje": "Entraste a " + puerta["nombre"] + ".", "silencioso": True}
 
@@ -311,9 +329,11 @@ class PartidaMovimiento:
         edificio = jugador.get("interior")
         if not edificio:
             raise ValueError("Ya estás en la calle.")
-        if not cerca_de_rect(jugador["x"], jugador["y"], rect_salida(self.interiores[edificio].datos), RADIO_SALIDA):
+        interiores = self.interiores_futuro if jugador.get("dimension") == FUTURO else self.interiores
+        if not cerca_de_rect(jugador["x"], jugador["y"], rect_salida(interiores[edificio].datos), RADIO_SALIDA):
             raise ValueError("Acércate a la salida y pulsa E.")
-        puerta = self.mision.presente.edificios[edificio]
+        mision = self.mision.futuro if jugador.get("dimension") == FUTURO else self.mision.presente
+        puerta = mision.edificios[edificio]
         self._colocar(identificador, float(puerta["x"]), float(puerta["y"]), None)
         return {"mensaje": "Volviste a la calle.", "silencioso": True}
 

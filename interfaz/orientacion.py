@@ -58,6 +58,10 @@ def tarea_actual(vista):
     objetivo = (privado.get("guia", {}).get("objetivo") if vista.dimension == "la_copa"
                 else vista._objetivo_presente())
     titulo, detalle = vista._textos_objetivo(caso, privado, privado.get("guia", {}))
+    if vista.dimension == "futuro" and vista.interior:
+        return {"titulo": "Consulta la mesa" if objetivo and objetivo["id"] != "salir" else "Vuelve a la ciudad",
+                "detalle": "La visita es opcional. Pulsa E junto a la mesa; usa E en la puerta para salir.",
+                "objetivo": objetivo, "tecla": "E", "logro": None}
     tecla = "E"
     logro = None
     if vista.dimension == "la_copa":

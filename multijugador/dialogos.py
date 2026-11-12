@@ -105,7 +105,8 @@ class DialogosNPC:
             jugados = {PERSONAJE_FUTURO_DE_ROL[j["rol"]]: j for j in self.campana.jugadores.values() if j.get("dimension") == "futuro"}
             for npc in self.campana.futuro.npcs:
                 jugador = jugados.get(npc["nombre"])
-                npcs.append(dict(npc, x=round(jugador["x"]), y=round(jugador["y"]), jugador=jugador["id"]) if jugador else npc)
+                npcs.append(dict(npc, x=round(jugador["x"]), y=round(jugador["y"]), jugador=jugador["id"],
+                                 interior=jugador.get("interior")) if jugador else npc)
         return npcs
 
     def publico(self):
@@ -133,7 +134,13 @@ class DialogosNPC:
         if not self.campana._cerca(identificador, npc):
             raise ValueError("Acércate a " + npc["nombre"] + " para hablar.")
         vistas = self.vistas.setdefault(identificador, set())
-        dialogo, clave = construir_conversacion(npc["nombre"], EstadoConversacion(self.campana), vistas)
+        from .exploracion import AYUDA_VECINOS
+        if npc["nombre"] in AYUDA_VECINOS:
+            clave = ("ayuda", npc["nombre"], self.campana.ronda)
+            dialogo = {"personaje": npc["nombre"], "texto": "Podemos investigar juntos. ¿En qué te ayudo? Pulsa Esc para volver al mapa.",
+                       "respuestas": list(AYUDA_VECINOS[npc["nombre"]])}
+        else:
+            dialogo, clave = construir_conversacion(npc["nombre"], EstadoConversacion(self.campana), vistas)
         if npc["dimension"] == "presente" and npc.get("pista"):  # el personaje cuenta la pista de este caso
             dialogo = dict(dialogo, texto=self.campana.presente.texto_pista(npc["pista"]))
         if npc["nombre"] == "Ciudadano Conectado" and "cuentas" not in self.campana.futuro.tareas:
@@ -169,6 +176,17 @@ class DialogosNPC:
             raise ValueError("Esa respuesta no está disponible.")
         del self.abiertos[identificador]
         self.vistas.setdefault(identificador, set()).add(abierto["clave"])
+        ayudas = {
+            "¿Cómo comparo las pistas?": "Abre I y compara quién habla, la fecha y el lugar. Busca algo en lo que coincidan fuentes independientes. Yo no voto por ustedes.",
+            "¿Y si mis compañeros piensan distinto?": "Cada uno puede contar qué prueba encontró. Escuchen las razones del otro antes de elegir en el caldero. Pueden cambiar un voto para llegar a un acuerdo.",
+            "¿Cómo comparto una pista?": "Abre I, elige la pista y un compañero. El Mensajero puede llevarla. También puedes hablar con alguien cercano. Compartir una pista ayuda a investigar juntos.",
+            "¿Qué hago con los suministros?": "Busca los cestos del encargo, recoge una carga y llévala al destino iluminado. El equipo ve las entregas. Si ya llevas algo, entrégalo antes de recoger otra carga.",
+        }
+        if respuesta in ayudas:
+            npc = next((n for n in self._visibles() if n["id"] == npc_id), None)
+            if npc is None or not self.campana._cerca(identificador, npc):
+                raise ValueError("Acércate de nuevo para seguir hablando.")
+            return {"mensaje": ayudas[respuesta], "vista": "fuente", "titulo": npc["nombre"]}
         if respuesta == VER_CUENTAS:
             return {"mensaje": "Estas cuentas lo atacan. ¿Cuáles son automáticas?", "vista": "terminal", "terminal": "cuentas"}
         if respuesta == "Entrega el mensaje":
