@@ -1,6 +1,6 @@
 # Campaña cooperativa multijugador
 
-## Estado actual: protocolo 15
+## Estado actual: protocolo 16
 
 Salas por código desde distintas PC y redes, mediante el servicio HTTPS de
 `configuracion.json`. No exige abrir puertos en los routers de los jugadores.
@@ -68,7 +68,7 @@ movimiento que ofrece el menú actual.
 2. Abrir `la-copa-salas`: **Manual Deploy → Deploy latest commit**.
 3. Esperar a **Deploy succeeded | Live**.
 4. Consultar `https://la-copa-salas.onrender.com/health`: comprobar `ok`,
-   `protocolo: 15`, `casos: 8`, tres entradas de `eras` (4, 3 y 1 casos), y
+   `protocolo: 16`, `casos: 8`, tres entradas de `eras` (4, 3 y 1 casos), y
    que `build` corresponda al commit publicado.
 5. Actualizar las PC y abrir una sala nueva. No desplegar durante una partida.
 
@@ -100,7 +100,11 @@ perdidas: hay que crear una nueva.
 El protocolo 14 añade Elia, Arel y exploración opcional en los interiores de ambas
 ciudades. Actualizar servidor y clientes al publicar; ver `../docs/exploracion_etapa6.md`.
 
-Protocolo 15: final cooperativo por roles, reintentos y lectura de fichas del
+Protocolo 16: final cooperativo por roles, reintentos y lectura de fichas del
 expediente a demanda. Compatible con campaña con bots y salas en línea; ver
 `../docs/final_cooperativo.md`. Requiere publicar y desplegar servidor y clientes
 juntos. El contenido puede estar validado localmente sin estar activo en Render.
+
+El protocolo 16 integra el combate cooperativo: rayos verdes y rojos anunciados,
+pausas para los cuatro minijuegos y recuperación de compañeros. Cliente y
+servidor deben actualizarse juntos. Detalles en `../docs/final_cooperativo.md`.

@@ -372,10 +372,10 @@ class MisionNucleo:
                 "portador": self.portador, "pulsos": [[round(x), round(y)] for x, y in self.posiciones_pulsos()],
                 "barreras": self.barreras, "barreras_activas": self.barreras_activas, "barreras_evento": self.barreras_evento,
                 "registro_resaltado": self.registro_resaltado, "cuenta_descartada": self.cuenta_descartada,
-                "comunicado": self.comunicado, "cuentas": [dict(c) for c in CUENTAS],
-                "red": {"sectores": [list(s) for s in SECTORES], "abiertas": [list(a) for a in ARISTAS_ABIERTAS],
+                "comunicado": self.comunicado, "cuentas": [dict(c) for c in CUENTAS] if not self.completada else [],
+                "red": None if self.completada else {"sectores": [list(s) for s in SECTORES], "abiertas": [list(a) for a in ARISTAS_ABIERTAS],
                         "bloqueadas": [list(a) for a in ARISTAS_BLOQUEADAS]},
-                "registros": [dict(r) for r in REGISTROS]}
+                "registros": [dict(r) for r in REGISTROS] if not self.completada else []}
 
     def privado(self, identificador):
         inventario = [{"id": t[0], "titulo": t[2] + " · Terminal", "texto": t[3]} for t in TERMINALES if t[0] in self.tareas]

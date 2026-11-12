@@ -54,6 +54,11 @@ class PantallaFinal:
             pygame.draw.rect(superficie, ORO, (30, 20, 900, 675), 3, border_radius=14)
         self.texto(superficie, "RECUPERAR EL CONTROL", 155, ORO)
         self.texto(superficie, "Señal: " + str(f.get("integridad", 3)) + "/3", 155, VERDE, x=740, ancho=145)
+        batalla = f.get("batalla", {})
+        if f.get("fase") == "activo" and batalla.get("turno") == "recarga":
+            import math
+            etiqueta = p.pequena.render("Pausa: " + str(math.ceil(batalla.get("segundos", 0))) + " s", True, ORO)
+            superficie.blit(etiqueta, (540, 158))
         for i, rol in enumerate(ROLES):
             self.boton(superficie, "rol:" + rol, NOMBRES[rol] + (" · listo" if rol in f.get("hechos", []) else ""), 200 + i * 185, 215, 175)
             if rol == self.rol:
@@ -61,10 +66,10 @@ class PantallaFinal:
                 pygame.draw.line(superficie, VERDE, (rect.left + 12, rect.bottom - 5), (rect.right - 12, rect.bottom - 5), 2)
         fase = f.get("fase", "bloqueado")
         if fase == "preparacion":
-            self.texto(superficie, "La investigación terminó. Ahora cada rol aporta algo para recuperar la ciudad.", 270)
+            self.texto(superficie, "Esquiven las marcas. Durante las pausas, usen sus estaciones.", 270)
             for i, rol in enumerate(ROLES):
                 self.texto(superficie, NOMBRES[rol] + ": " + dict(guardian="compara las órdenes.", mensajero="lleva el módulo sin perder la señal.",
-                           habitante="ajusta y mantiene la estación.", aspirante="prepara la autorización del consejo.")[rol], 340 + i * 42)
+                           habitante="ajusta la estación para apagar el escudo.", aspirante="prepara la autorización del consejo.")[rol], 340 + i * 42)
             self.boton(superficie, "iniciar", "Iniciar juntos", 480, 550)
         elif fase == "reintento":
             self.texto(superficie, "LA SEÑAL SE CORTÓ", 290, ORO)
@@ -83,9 +88,18 @@ class PantallaFinal:
                 self.texto(superficie, "Cada participante confirma la activación. Los bots también colaboran.", 365)
                 self.texto(superficie, "Confirmaciones: " + str(len(f.get("activaciones", []))), 435)
                 self.boton(superficie, "activar", "Confirmar activación", 480, 540, 340)
+            elif f.get("batalla", {}).get("turno") != "recarga":
+                self.texto(superficie, "¡NÚCLEO está atacando! Vuelve al mapa y sal de las marcas.", 310, ORO)
+                self.texto(superficie, "Los minijuegos continúan durante su próxima recarga.", 380)
+            elif f.get("batalla", {}).get("fase") == 1 and self.rol in ("mensajero", "aspirante"):
+                self.texto(superficie, "Guardián y Habitante están apagando el escudo.", 310)
+                self.texto(superficie, "Esquiva las marcas. Tu tarea empieza en la fase roja.", 380)
             elif datos is None:
                 self.texto(superficie, "Esta misión la realiza tu compañero " + NOMBRES[self.rol] + ".", 310)
                 self.texto(superficie, "Puedes seguir su progreso arriba. Elige tu rol para realizar tu tarea.", 380)
+            elif self.rol in f.get("hechos", []):
+                self.texto(superficie, "¡Tu tarea está lista! El equipo conserva este avance.", 310, VERDE)
+                self.texto(superficie, "Vuelve al mapa, esquiva las marcas y ayuda a tus compañeros con E.", 380)
             elif self.rol == "guardian":
                 self.texto(superficie, "Compara las dos tarjetas. ¿Qué dato cambió sin autorización?", 260)
                 for x, clave, titulo in ((110, "registro", "Registro del consejo"), (515, "orden", "Orden recibida")):
@@ -107,12 +121,12 @@ class PantallaFinal:
                         if n == valor:
                             pygame.draw.rect(superficie, CREMA, rect.inflate(4, 4), 3, border_radius=3)
                     self.boton(superficie, "ajustar:" + str(i) + ":1", "+", 705, y, 60)
-                self.texto(superficie, f"Carga: {f.get('carga', 0):.1f}/2 s · " + ("Estación activa" if f.get("estacion_activa") else "Mantén E para sostenerla"), 535, VERDE)
+                self.texto(superficie, f"Carga: {f.get('carga', 0):.1f}/2 s · " + ("Estación activa" if f.get("estacion_activa") else "Mantén E para cargarla"), 535, VERDE)
             elif self.rol == "mensajero":
                 self.texto(superficie, "Espera la orden verificada, recoge el módulo y recorre las recargas del mapa.", 270)
                 self.texto(superficie, "Módulo: " + str(f.get("modulo") or "pendiente de verificar"), 345, ORO)
                 self.texto(superficie, "Recargas: " + str(f.get("tramo", 0)) + "/2. Los pulsos rojos cortan la señal; puedes recuperar la carga.", 395)
-                self.texto(superficie, "En la última estación, el Habitante debe mantener activa la conexión.", 455)
+                self.texto(superficie, "El escudo ya está apagado. Entrega el módulo en la última estación.", 455)
                 self.boton(superficie, "recargar" if f.get("portador") else "recoger", "Recargar / entregar" if f.get("portador") else "Recoger módulo", 480, 540, 320,
                            "guardian" in f.get("hechos", []) and "mensajero" not in f.get("hechos", []))
             else:
@@ -132,6 +146,9 @@ class PantallaFinal:
     def actualizar(self, cliente):
         p = self.panel
         if p.modo != "final_cooperativo" or self.rol != "habitante" or not pygame.key.get_focused():
+            self.manteniendo = False
+            return
+        if estado(p.vista).get("batalla", {}).get("turno") != "recarga":
             self.manteniendo = False
             return
         datos = p.privado.get("final_cooperativo", {}).get(self.rol, {})

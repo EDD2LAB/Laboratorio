@@ -330,3 +330,26 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
 - 532 pruebas aprobadas en 544,922 s y revisión visual de las pantallas.
 - Protocolo 15: requiere publicar cliente y servidor juntos. Sin push ni
   despliegue en esta etapa. No se modificaron música ni hitboxes exteriores.
+
+# Batalla integrada al final cooperativo (2026-11-11)
+
+- Fase verde: aviso de tres segundos, una tanda y pausa de 26 segundos.
+  Guardián y Habitante apagan las dos mitades del escudo con sus minijuegos.
+- Fase roja: dos tandas anunciadas y pausa de 22 segundos. Mensajero transporta
+  el módulo y Aspirante prepara la autorización. Cuatro tareas detienen el ataque
+  y permiten la activación compartida; NÚCLEO queda bajo supervisión humana.
+- Impactos y reloj validados en el servidor. Caídos recuperables con E o al
+  empezar la pausa. Los bots esquivan y pueden ayudar a un compañero cercano.
+- Consolas disponibles durante la recarga, con contador visible. Conservan
+  ajustes, pruebas y recargas entre tandas y al reintentar la fase alcanzada.
+- Snapshot de prueba exigente: 30.028 bytes con ocho casos y cuatro jugadores;
+  referencias y pruebas completas conservadas en el expediente bajo demanda.
+- Revisión visual de fase verde, roja y consola. Simulación del paquete del
+  servidor aprobada con protocolo 16, dos humanos, dos bots y 200 ticks,
+  sin importar Pygame. Es una simulación de contexto, no un build de Docker.
+- Suite completa: 543 pruebas aprobadas en 500,834 s. Tras los últimos ajustes,
+  36 pruebas de batalla, minijuegos, capacidad y presentación aprobadas en
+  30,778 s; una comprobación adicional de cierre de consola e inmovilidad del
+  cliente caído aprobada en 4,158 s. Los recuentos se superponen.
+- Implementación local, sin push ni despliegue. Mapa nuevo, hitboxes y música
+  se mantienen fuera de esta integración.

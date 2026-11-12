@@ -476,6 +476,9 @@ class PartidaMovimiento:
             factor = MULTIPLICADOR_CORRER if correr else 1.0
             if self.mision.futuro is not None:
                 factor *= self.mision.futuro.factor_impulso(identificador)
+            if (self.mision.futuro is not None and self.mision.futuro.final.fase == "activo"
+                    and identificador in self.mision.futuro.final.batalla.derribados):
+                segundos = 0
             nx, ny = self.colisiones_de_jugador(jugador).mover(x, y, dx, dy, segundos, factor)
             jugador["x"], jugador["y"] = nx, ny
             if ahora > desde:  # sin tiempo transcurrido nadie se mueve: se conserva su estado

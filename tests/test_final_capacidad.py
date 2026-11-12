@@ -49,10 +49,21 @@ class CapacidadFinal(unittest.TestCase):
             self.assertIn("ley", caso.datos)
             self.assertNotIn("norma", caso.datos["resultado"])
         for fase in ("preparacion", "activo", "victoria"):
-            p.mision.futuro.final.fase = fase
+            final = p.mision.futuro.final
+            final.fase = fase
+            final.hechos.update(("guardian", "habitante", "mensajero", "aspirante"))
+            final.activaciones = set(p.jugadores)
+            final.batalla.fase = 2
+            final.batalla.blancos = [[j["x"], j["y"]] for j in p.jugadores.values()]
+            final.batalla.derribados = set(p.jugadores)
             for i in p.jugadores:
                 mensaje = dict(tipo="estado", fase="partida", revision=99999, mundo=p.estado(i))
-                tamano = len(codificar(mensaje))
+                # Identificadores LAN reales y nombres de 20 caracteres multibyte.
+                mundo = json.dumps(mensaje, ensure_ascii=False)
+                for numero in range(4):
+                    mundo = mundo.replace('"' + str(numero) + '"', '"' + str(numero) * 16 + '"')
+                    mundo = mundo.replace('"J' + str(numero) + '"', '"' + 'ñ' * 20 + '"')
+                tamano = len(codificar(json.loads(mundo)))
                 self.assertLess(tamano, MAX_MENSAJE - 512, (fase, i, tamano))
 
     def test_ficha_completa_se_lee_sin_perder_pruebas_y_sin_revelar_casos_futuros(self):

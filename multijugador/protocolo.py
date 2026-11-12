@@ -1,7 +1,7 @@
 """Mensajes JSON delimitados por nueva línea; sin dependencias externas."""
 import json
 
-VERSION = 15  # 15: final cooperativo autoritativo y cuatro minijuegos por rol.
+VERSION = 16  # 16: batalla en dos fases con pausas y minijuegos cooperativos.
 # 14: exploración e interiores del Futuro, Elia y Arel.
 # 13: ping/pong de aplicación, métricas de red y recuperación.
 # 12: resultado con campos legales (norma, pena, cita_corta, conducta, nota, con_delito). 11: estado por diferencias (mensaje "delta", control "pedir_snapshot") y acciones habilidad
@@ -14,7 +14,7 @@ VERSION = 15  # 15: final cooperativo autoritativo y cuatro minijuegos por rol.
 PUERTO = 45871
 ROLES = ("guardian", "mensajero", "habitante", "aspirante")
 NOMBRES_ROLES = ("Guardián", "Mensajero", "Habitante", "Aspirante")
-MAX_MENSAJE = 32768  # Incluye el expediente acotado a los cuatro casos de La Copa.
+MAX_MENSAJE = 32768  # Estados completos, incluidos expediente resumido y batalla.
 
 
 def codificar(mensaje):

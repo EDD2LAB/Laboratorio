@@ -39,7 +39,7 @@ class AnimacionesNucleo:
     ARCHIVOS = {
         "reposo": "NucleoFila1.png", "inquieto": "NucleoInquieto.png",
         "carga": "NucleoCarga.png", "sereno": "NucleoSereno.png",
-        "saturado": "NucleoSaturado.png",
+        "saturado": "NucleoSaturado.png", "cambio": "NucleoCambiodeFase.png",
     }
 
     def __init__(self, lado=32):
@@ -60,7 +60,14 @@ class AnimacionesNucleo:
         final = contexto.get("desafio_final") or {}
         if final.get("fase") == "victoria":
             return "sereno"
-        if final.get("fase") in ("preparacion", "activo", "reintento"):
+        if final.get("fase") == "activo":
+            batalla = final.get("batalla", {})
+            if batalla.get("fase") == 2 and batalla.get("turno") == "aviso" and batalla.get("segundos", 0) > 2.5:
+                return "cambio"
+            if batalla.get("turno") == "recarga":
+                return "carga"
+            return "saturado" if batalla.get("fase") == 2 else "inquieto"
+        if final.get("fase") in ("preparacion", "reintento"):
             return "carga" if "habitante" in final.get("hechos", []) else "inquieto"
         resultado = contexto.get("resultado") or {}
         if resultado.get("correcto"):

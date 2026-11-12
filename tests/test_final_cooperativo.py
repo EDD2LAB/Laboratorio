@@ -35,6 +35,7 @@ class ReglasFinal(unittest.TestCase):
 
     def iniciar(self):
         self.assertTrue(self.accion("guardian", "iniciar")["ok"])
+        self.f.batalla.turno, self.f.batalla.restante = "recarga", 99999
 
     def guardian(self):
         datos = self.f.privado("guardian")
@@ -48,8 +49,10 @@ class ReglasFinal(unittest.TestCase):
         for _ in range(5):
             self.accion("habitante", "mantener")
             self.p.actualizar(self.p.ultima + .5)
+            self.f.batalla.turno, self.f.batalla.restante = "recarga", 99999
 
     def mensajero(self):
+        self.f.batalla.turno, self.f.batalla.restante = "recarga", 99999
         self.assertTrue(self.accion("mensajero", "recoger")["ok"])
         for _ in range(3):
             self.assertTrue(self.accion("mensajero", "recargar")["ok"])
@@ -70,19 +73,22 @@ class ReglasFinal(unittest.TestCase):
         self.assertEqual(len(self.f.hechos), 4)
         self.assertEqual(self.p.mision.informe()["final_cooperativo"]["fase"], "victoria")
 
-    def test_sin_verificacion_no_se_recoge_y_sin_estacion_no_se_entrega(self):
+    def test_no_se_transporta_hasta_apagar_el_escudo_y_la_estacion_queda_estable(self):
         self.iniciar()
         self.assertFalse(self.accion("mensajero", "recoger")["ok"])
         self.guardian()
-        self.accion("mensajero", "recoger")
-        self.accion("mensajero", "recargar")
-        self.accion("mensajero", "recargar")
-        self.assertFalse(self.accion("mensajero", "recargar")["ok"])
-        self.assertNotIn("mensajero", self.f.hechos)
+        self.assertFalse(self.accion("mensajero", "recoger")["ok"])
+        self.habitante()
+        self.f.batalla.turno, self.f.batalla.restante = "recarga", 99999
+        self.f.estacion_hasta = 0
+        self.mensajero()
+        self.assertIn("mensajero", self.f.hechos)
 
     def test_no_se_puede_saltar_un_tramo_del_recorrido(self):
         self.iniciar()
         self.guardian()
+        self.habitante()
+        self.f.batalla.turno, self.f.batalla.restante = "recarga", 99999
         self.accion("mensajero", "recoger")
         ultimo = self.f.ruta[-1]
         self.p.jugadores["mensajero"].update(x=ultimo["x"], y=ultimo["y"])
@@ -102,7 +108,7 @@ class ReglasFinal(unittest.TestCase):
         self.assertEqual(self.f.carga, 0)
         self.habitante()
         self.assertIn("habitante", self.f.hechos)
-        self.assertTrue(self.f.publico()["estacion_activa"])
+        self.assertIn("habitante", self.f.publico()["hechos"])
 
     def test_role_sala_distancia_y_datos_invalidos_se_rechazan(self):
         self.iniciar()
@@ -127,17 +133,22 @@ class ReglasFinal(unittest.TestCase):
         self.assertIn("habitante", self.f.hechos)
         self.assertEqual(self.p.mision.expediente.publico(), arbol)
 
-    def test_pulso_recuperable_y_desconexion_no_secuestra_el_modulo(self):
+    def test_rayo_recuperable_y_desconexion_no_secuestra_el_modulo(self):
         self.iniciar()
         self.guardian()
+        self.habitante()
+        self.f.batalla.turno, self.f.batalla.restante = "recarga", 99999
         self.accion("mensajero", "recoger")
         self.accion("mensajero", "recargar")
         j = self.p.jugadores["mensajero"]
-        self.f.invulnerable_hasta = 0
+        self.f.batalla.turno, self.f.batalla.restante = "aviso", .01
+        self.f.batalla.blancos = [[j["x"], j["y"]]]
         self.f.actualizar(.1, self.p.jugadores, [(j["x"], j["y"])], self.p.mision._cerca_presente, set(ROLES))
         self.assertIsNone(self.f.portador)
         self.assertEqual(self.f.tramo, 1)
         self.assertEqual(self.f.integridad, 2)
+        self.f.batalla.turno, self.f.batalla.restante = "recarga", 99
+        self.f.batalla.derribados.clear()
         self.accion("mensajero", "recoger")
         self.f.actualizar(.1, self.p.jugadores, [], self.p.mision._cerca_presente, {"guardian"})
         self.assertIsNone(self.f.portador)
@@ -175,6 +186,8 @@ class ReglasFinal(unittest.TestCase):
     def test_quien_cubre_un_mensajero_desconectado_puede_terminar_la_entrega(self):
         self.iniciar()
         self.guardian()
+        self.habitante()
+        self.f.batalla.turno, self.f.batalla.restante = "recarga", 99999
         self.p.conectados.discard("mensajero")
         punto = self.f.recogida
         self.p.jugadores["guardian"].update(x=punto["x"], y=punto["y"])
@@ -202,14 +215,21 @@ class FinalConBots(unittest.TestCase):
             return p.actuar("aspirante", dict(accion="final_accion", rol="aspirante", ronda_final=f.ronda,
                            operacion=op, id_solicitud=uuid.uuid4().hex, **datos), p.ultima)
         self.assertTrue(enviar("iniciar")["ok"])
-        for campo, valor in CORRECTA.items():
-            self.assertTrue(enviar("elegir", campo=campo, valor=valor)["ok"])
         for _ in range(7000):
             p.actualizar(p.ultima + .1)
             gestor.actualizar(p.ultima, .1)
+            if f.batalla.turno == "aviso":
+                j = p.jugadores["aspirante"]
+                j.update(x=punto["x"] + 55, y=punto["y"])
+            elif f.batalla.turno == "recarga":
+                p.jugadores["aspirante"].update(x=punto["x"], y=punto["y"])
             if {"guardian", "habitante", "mensajero"}.issubset(f.hechos):
                 break
         self.assertTrue({"guardian", "habitante", "mensajero"}.issubset(f.hechos), [(b.rol, b.ultimo_error) for b in gestor.bots.values()])
+        f.batalla.turno, f.batalla.restante = "recarga", 22
+        p.jugadores["aspirante"].update(x=punto["x"], y=punto["y"])
+        for campo, valor in CORRECTA.items():
+            self.assertTrue(enviar("elegir", campo=campo, valor=valor)["ok"])
         self.assertTrue(enviar("autorizar")["ok"])
         self.assertTrue(enviar("activar")["ok"])
         for _ in range(2000):
@@ -287,6 +307,7 @@ class FinalPorInternet(unittest.TestCase):
                 p.jugadores[bienvenida["id"]].update(x=punto["x"], y=punto["y"])
             servidor.loop.call_soon_threadsafe(colocar)
             e = esperar(a, lambda e: e.get("mundo", {}).get("caso", {}).get("futuro", {}).get("desafio_final", {}).get("fase") == "activo")
+            e = esperar(a, lambda e: e.get("mundo", {}).get("caso", {}).get("futuro", {}).get("desafio_final", {}).get("batalla", {}).get("turno") == "recarga")
             tarjetas = e["mundo"]["privado"]["final_cooperativo"]["guardian"]
             campo = next(c for c in tarjetas["registro"] if tarjetas["registro"][c] != tarjetas["orden"][c])
             a.actuar("final_accion", rol="guardian", operacion="comparar", campo=campo, ronda_final=1)
@@ -318,6 +339,7 @@ class FinalPantallas(unittest.TestCase):
             f = p.mision.futuro.final
             for fase in ("preparacion", "activo", "reintento", "victoria"):
                 f.fase = fase
+                f.batalla.turno, f.batalla.fase = "recarga", 2
                 v.recibir({"mundo": p.estado(rol)})
                 v.transicion = None
                 v.panel.modo = "final_cooperativo"

@@ -65,7 +65,12 @@ def tarea_actual(vista):
                   "habitante": "Estabiliza y sostiene la estación", "aspirante": "Prepara la autorización humana"}[rol]
         if final["fase"] != "activo" or len(final.get("hechos", [])) == 4:
             titulo = "Ve a la pantalla central para " + ("recuperar la señal" if final["fase"] == "reintento" else "activar juntos" if final["fase"] == "activo" else "iniciar el final")
-        return dict(titulo=titulo, detalle="Sigue la luz y pulsa E. C también abre el menú del final.", objetivo=objetivo, tecla="E", logro=None)
+        batalla = final.get("batalla", {})
+        if final["fase"] == "activo" and batalla.get("turno") in ("aviso", "rayo"):
+            titulo = "¡Sal de las marcas! NÚCLEO va a disparar"
+        elif batalla.get("turno") == "recarga":
+            titulo = "¡Está recargando! " + titulo
+        return dict(titulo=titulo, detalle="Esquiva durante los ataques. Usa E en las estaciones durante la pausa.", objetivo=objetivo, tecla="E", logro=None)
     if vista.dimension == "futuro" and vista.interior:
         return {"titulo": "Consulta la mesa" if objetivo and objetivo["id"] != "salir" else "Vuelve a la ciudad",
                 "detalle": "La visita es opcional. Pulsa E junto a la mesa; usa E en la puerta para salir.",

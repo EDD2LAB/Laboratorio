@@ -16,7 +16,7 @@
 
 ## Trabajo restante
 
-El protocolo local actual es 15. Render conserva la última versión publicada
+El protocolo local actual es 16. Render conserva la última versión publicada
 hasta realizar el próximo push y despliegue.
 
 Las etapas 1 y 2 se publicaron y desplegaron en Render en `be2f6df`.

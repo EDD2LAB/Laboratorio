@@ -879,6 +879,15 @@ class VistaPartida:
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_l and not self.panel.activo:
             self.mostrar_nombres = not self.mostrar_nombres
             return True
+        if (evento.type == pygame.KEYDOWN and evento.key == pygame.K_e
+                and self.dimension == FUTURO and not self.interior and not self.panel.activo):
+            final = self.contexto().get("desafio_final") or {}
+            caidos = final.get("batalla", {}).get("derribados", [])
+            aliado = next((j for j in self.estado.get("mundo", {}).get("jugadores", [])
+                           if j["id"] in caidos and self.cerca(j)), None)
+            if aliado:
+                cliente.actuar("final_accion", operacion="auxiliar", aliado=aliado["id"], ronda_final=final["ronda"])
+                return True
         if self.panel.manejar(evento, posicion, cliente):
             return True
         if (evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1 and self.mostrar_hud
@@ -932,6 +941,11 @@ class VistaPartida:
     def actualizar(self, segundos, cliente):
         from interfaz.expediente import solicitar_detalle
         solicitar_detalle(self.panel, cliente)
+        final = self.contexto().get("desafio_final") or {}
+        if (self.dimension == FUTURO and not self.interior and final.get("fase") == "activo"
+                and final.get("batalla", {}).get("turno") in ("aviso", "rayo")):
+            # Abrir un libro o celular no detiene el servidor: deja visible el peligro.
+            self.panel.modo = None
         if hasattr(self.panel, "pantalla_final_coop"):
             self.panel.pantalla_final_coop.actualizar(cliente)
         self.datos_red["fps"] = (self.datos_red["fps"] * .9 + .1 / segundos) if segundos > 0 else self.datos_red["fps"]
@@ -956,6 +970,8 @@ class VistaPartida:
         dx = int(tecla_activa(teclas, pygame.K_d, pygame.K_RIGHT)) - int(tecla_activa(teclas, pygame.K_a, pygame.K_LEFT))
         dy = int(tecla_activa(teclas, pygame.K_s, pygame.K_DOWN)) - int(tecla_activa(teclas, pygame.K_w, pygame.K_UP))
         if not pygame.key.get_focused() or self.en_pausa or self.panel.activo or self.animacion_pocion or self.transicion:
+            dx = dy = 0
+        if (self.yo() or {}).get("id") in final.get("batalla", {}).get("derribados", []):
             dx = dy = 0
         correr = tecla_activa(teclas, pygame.K_LSHIFT, pygame.K_RSHIFT)
         cliente.mover(dx, dy, correr)
@@ -1237,9 +1253,8 @@ class VistaPartida:
             self._dibujar_nucleo(superficie, ahora_ms)
             self._dibujar_barreras_y_pulsos(superficie, ahora_ms)
             final = self.contexto().get("desafio_final") or {}
-            if final.get("fase") == "activo" and final.get("portador"):
-                for x, y in self.contexto().get("pulsos", []):
-                    pygame.draw.circle(superficie, (255, 133, 102), (round(x), round(y)), 16, 2)
+            from interfaz.batalla_cooperativa import dibujar_ataques
+            dibujar_ataques(superficie, final, self.estado.get("mundo", {}).get("jugadores", []))
             if final.get("fase") == "activo" and "guardian" in final.get("hechos", []) and "mensajero" not in final.get("hechos", []):
                 portador = next((j for j in self.estado.get("mundo", {}).get("jugadores", []) if j["id"] == final.get("portador")), None)
                 punto = portador or final.get("recogida")
@@ -1302,7 +1317,7 @@ class VistaPartida:
         elif ahora_ms < self.destello_barreras_hasta:
             for rect in mision.get("barreras", []):
                 pygame.draw.rect(superficie, (235, 255, 255), rect, 2)
-        for x, y in mision.get("pulsos", []):
+        for x, y in ([] if (mision.get("desafio_final") or {}).get("fase") != "bloqueado" else mision.get("pulsos", [])):
             pygame.draw.circle(superficie, (120, 240, 250), (x, y), 9, 2)
 
     def _dibujar_nucleo(self, superficie, ahora_ms):
@@ -1760,6 +1775,9 @@ class VistaPartida:
             if mensaje:
                 aviso = self.titulo.render(mensaje, True, (255, 207, 110))
                 superficie.blit(aviso, aviso.get_rect(center=(480, 45)))
+        if self.dimension == FUTURO and not self.interior:
+            from interfaz.batalla_cooperativa import dibujar_aviso
+            dibujar_aviso(superficie, self.contexto().get("desafio_final") or {}, self.fuente, self.yo())
         self.panel.dibujar(superficie)
         if time.monotonic() < self.panel.celebrar_hasta:
             from interfaz.guia import estrella

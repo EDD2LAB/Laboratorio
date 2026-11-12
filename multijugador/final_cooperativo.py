@@ -1,6 +1,6 @@
 """Recuperar el control: cuatro retos autoritativos, sin Pygame ni arte en red."""
-import math
 import random
+from multijugador.batalla_cooperativa import BatallaCooperativa
 
 ROLES = ("guardian", "mensajero", "habitante", "aspirante")
 PROPUESTA = {
@@ -14,6 +14,7 @@ CORRECTA = dict(prueba="informe", conexion="comprobada", limite="humana")
 class FinalCooperativo:
     def __init__(self, objetivos, semilla=None):
         self.azar = random.Random(semilla)
+        self.batalla = BatallaCooperativa()
         por_id = {o["id"]: o for o in objetivos}
         self.puntos = {rol: {k: v for k, v in por_id["futuro:" + tarea].items() if k in ("id", "nombre", "dimension", "x", "y")} for rol, tarea in
                        (("guardian", "archivos"), ("mensajero", "llave"),
@@ -89,23 +90,44 @@ class FinalCooperativo:
         if rol != jugador["rol"] and rol in ocupados and not transportando:
             raise ValueError("Esa tarea le corresponde a tu compañero.")
         objetivo = self.puntos["aspirante"] if operacion in ("iniciar", "reintentar", "activar") else self.objetivo(rol)
-        if not cerca(jugador, objetivo):
+        if operacion == "auxiliar":
+            aliado = solicitud.get("aliado")
+            objetivo = jugadores.get(aliado, {}) if type(aliado) is str else {}
+        if "x" not in objetivo or not cerca(jugador, objetivo):
             raise ValueError("Acércate a la estación indicada por la luz del mapa.")
+        if self.fase == "activo" and operacion not in ("iniciar", "reintentar"):
+            if identificador in self.batalla.derribados:
+                raise ValueError("Espera ayuda de un compañero o la siguiente recarga.")
+            if operacion not in ("auxiliar", "activar"):
+                if self.batalla.turno != "recarga":
+                    raise ValueError("¡Esquiva los rayos! Las consolas se usan durante la recarga.")
+                if rol in ("mensajero", "aspirante") and self.batalla.fase == 1:
+                    raise ValueError("Primero Guardián y Habitante deben apagar el escudo.")
         if operacion in ("iniciar", "reintentar") and self.fase == "activo":
             return dict(mensaje="El desafío ya está en marcha.", vista="final_cooperativo", silencioso=True)
         if operacion == "activar" and self.fase == "victoria":
             return dict(mensaje=self.avisos, vista="final_cooperativo", silencioso=True)
         if operacion == "iniciar" and self.fase == "preparacion":
             self.fase = "activo"
+            self.batalla.reiniciar(self.hechos)
             self.ronda += 1
-            self.avisos = "Guardián y Habitante pueden empezar a la vez."
+            self.avisos = "¡Sal de las marcas! Cuando NÚCLEO recargue, usen las estaciones."
         elif operacion == "reintentar" and self.fase == "reintento":
             self.integridad = 3
             self.fase = "activo"
+            self.batalla.reiniciar(self.hechos)
             self.ronda += 1
             self.avisos = "Señal recuperada. Continúen desde el último paso."
         elif self.fase != "activo":
             raise ValueError("Revisa el estado del desafío antes de continuar.")
+        elif operacion == "auxiliar":
+            aliado = solicitud.get("aliado")
+            otro = jugadores.get(aliado) if type(aliado) is str else None
+            if (not otro or aliado not in presentes or otro.get("dimension") != "futuro"
+                    or otro.get("interior") or aliado not in self.batalla.derribados or not cerca(jugador, otro)):
+                raise ValueError("Acércate a un compañero caído para ayudarlo.")
+            self.batalla.derribados.remove(aliado)
+            self.avisos = "¡Compañero recuperado! Salgan de las marcas."
         elif operacion == "activar":
             if len(self.hechos) != 4:
                 raise ValueError("Faltan tareas de los roles antes de activar.")
@@ -151,8 +173,8 @@ class FinalCooperativo:
                 self.tramo += 1
                 self.avisos = "Recarga guardada. Sigue hacia la siguiente luz."
             else:
-                if "habitante" not in self.hechos or self.estacion_hasta < self.reloj:
-                    raise ValueError("El Habitante debe mantener activa la estación con E.")
+                if "habitante" not in self.hechos:
+                    raise ValueError("El Habitante debe estabilizar primero la estación.")
                 self.hechos.add("mensajero")
                 self.portador = None
                 self.avisos = "¡Módulo entregado! Falta la autorización del consejo."
@@ -171,6 +193,8 @@ class FinalCooperativo:
             self.avisos = "¡Consejo autorizado! Reúnanse en la pantalla y activen juntos."
         else:
             raise ValueError("Esa acción no corresponde a este minijuego.")
+        if self.fase == "activo" and self.batalla.fase == 1 and {"guardian", "habitante"} <= self.hechos:
+            self.batalla.reiniciar(self.hechos)
         return dict(mensaje=self.avisos or "Ajuste guardado.", vista="final_cooperativo", silencioso=True)
 
     def actualizar(self, segundos, jugadores, pulsos, cerca, presentes=None):
@@ -185,28 +209,35 @@ class FinalCooperativo:
                 self.fase = "victoria"
                 self.avisos = "¡Lo lograron! NÚCLEO ayuda a la ciudad bajo supervisión humana."
                 return
+        golpes = self.batalla.actualizar(dt, jugadores, set(jugadores) if presentes is None else presentes, self.hechos)
+        if golpes:
+            if self.portador in golpes:
+                self.portador = None
+            self._fallo("Un rayo alcanzó al equipo. Ayuden a los caídos o esperen la recarga.")
+            if self.fase != "activo":
+                return
+        if self.batalla.turno != "recarga":
+            self.mantener_hasta = 0
+            return
         jugador = jugadores.get(self.operador)
         if jugador and self.valores == self.metas and (presentes is None or self.operador in presentes) and self.reloj <= self.mantener_hasta and cerca(jugador, self.puntos["habitante"]):
             self.carga = min(2, self.carga + dt)
             if self.carga >= 2:
                 self.hechos.add("habitante")
                 self.estacion_hasta = self.reloj + 10
-        portador = jugadores.get(self.portador)
-        if (portador and not portador.get("interior") and portador.get("dimension") == "futuro"
-                and self.reloj >= self.invulnerable_hasta and any(math.hypot(portador["x"] - x, portador["y"] - y) <= 16 for x, y in pulsos)):
-            self.portador = None
-            self.invulnerable_hasta = self.reloj + 3
-            self._fallo("Un pulso cortó la señal. Recupera el módulo en la última recarga.")
+                if self.batalla.fase == 1 and "guardian" in self.hechos:
+                    self.batalla.reiniciar(self.hechos)
 
     def publico(self):
         if self.fase == "bloqueado":
             return dict(fase=self.fase)
         return dict(fase=self.fase, ronda=self.ronda, evento_id=self.evento_id, integridad=self.integridad,
+                    batalla=self.batalla.publico(),
                     hechos=sorted(self.hechos), aviso=self.avisos, activaciones=sorted(self.activaciones),
                     puntos=self.puntos, ruta=self.ruta if "guardian" in self.hechos else [],
                     recogida=self.recogida, tramo=self.tramo, portador=self.portador,
                     modulo=self.modulo if "guardian" in self.hechos else None,
-                    carga=round(self.carga, 2), estacion_activa=self.estacion_hasta > self.reloj)
+                    carga=round(self.carga, 2), estacion_activa="habitante" in self.hechos)
 
     def privado(self, rol):
         if self.fase == "bloqueado":
