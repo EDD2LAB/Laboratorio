@@ -45,6 +45,7 @@ class PanelCooperativo:
         self.pequena = cargar_fuente(14)
         self.encabezado = cargar_fuente(24)
         self.toast = ""
+        self.color_toast = VERDE
         self.toast_hasta = 0
         self.aviso_id = 0
         self.resultado_visto = None
@@ -177,7 +178,10 @@ class PanelCooperativo:
             self.clasificacion_sonada.add((self.dimension, self.caso.get("ronda"), propia["opcion"]))
             self.vista.sonido({"tipo": "clasificacion", "correcta": bool(propia["correcta"])})
 
-    def notificar(self, texto):
+    def notificar(self, texto, ok=None):
+        if ok is not None:
+            texto = ("Listo: " if ok else "Atención: ") + texto
+        self.color_toast = (255, 192, 132) if ok is False else VERDE
         self.vista.narrador.decir(texto)
         self.toast, self.toast_hasta = texto, time.monotonic() + 6
 
@@ -193,7 +197,7 @@ class PanelCooperativo:
             return
         if acuse.get("silencioso"):
             return
-        self.notificar(acuse.get("mensaje", "Acción confirmada."))
+        self.notificar(acuse.get("mensaje", "Acción confirmada."), ok=acuse.get("ok"))
         if acuse.get("ok") and acuse.get("resultado") in ("acierto", "error"):
             self.estado_indicador = acuse["resultado"]
             self.indicador_hasta = time.monotonic() + CONFIG_REPARACION["duracion_resultado_ms"] / 1000
@@ -247,8 +251,12 @@ class PanelCooperativo:
         """Retrato real de quien habla; si no tiene, su sprite o el del jugador."""
         arte = self.vista.arte
         clave = nombre.lower().split(" · ")[0].split(":")[0]
+        for nombre_real, imagen in getattr(arte, "retratos_nombrados", {}).items():
+            if re.search(rf"\b{re.escape(nombre_real)}\b", clave) and imagen is not None:
+                return imagen
         # \b: "mirador" no es Mira.
-        for patron, frames in (("luma", arte.retratos["luma"]), ("mira", arte.retratos["mira"])):
+        for patron, frames in (("luma", arte.retratos["luma"]), ("mira", arte.retratos["mira"]),
+                               ("kael", arte.retratos["aspirante"]), ("tarek", arte.retratos["habitante"])):
             if re.search(rf"\b{patron}\b", clave) and frames:
                 return expresion(frames, pygame.time.get_ticks())
         if "darío" in clave and arte.retrato_agente is not None:
@@ -409,18 +417,18 @@ class PanelCooperativo:
             celular.dibujar(self, superficie)
             if time.monotonic() < self.toast_hasta:
                 pygame.draw.rect(superficie, (19, 39, 49), (20, 10, 920, 40), border_radius=7)
-                self.texto_lineas(superficie, self.toast, 32, 20, 895, self.pequena, (153, 222, 214))
+                self.texto_lineas(superficie, self.toast, 32, 20, 895, self.pequena, self.color_toast)
             return
         if self.activo and self.modo == "fuente" and self.vista.arte.marco_dialogo is not None:
             self._dibujar_dialogo(superficie)
             if time.monotonic() < self.toast_hasta:
                 pygame.draw.rect(superficie, (10, 30, 23), (20, 10, 920, 40), border_radius=7)
-                self.texto_lineas(superficie, self.toast, 32, 20, 895, self.pequena, VERDE)
+                self.texto_lineas(superficie, self.toast, 32, 20, 895, self.pequena, self.color_toast)
             return
         if self.activo and self._dibujar_pantalla_completa(superficie):
             if time.monotonic() < self.toast_hasta and self.modo not in ("clasificar", "clasificacion_resultado"):
                 pygame.draw.rect(superficie, (10, 30, 23), (20, 108, 920, 40), border_radius=7)
-                self.texto_lineas(superficie, self.toast, 32, 116, 895, self.pequena, VERDE)
+                self.texto_lineas(superficie, self.toast, 32, 116, 895, self.pequena, self.color_toast)
             return
         if not self.activo:
             if time.monotonic() < self.toast_hasta:
@@ -429,7 +437,7 @@ class PanelCooperativo:
                 fondo.fill((10, 30, 23, 228))
                 superficie.blit(fondo, (240, 150))
                 pygame.draw.rect(superficie, (70, 120, 90), (240, 150, 700, 50), 1, border_radius=8)
-                self.texto_lineas(superficie, self.toast, 254, 156, 672, self.pequena, VERDE)
+                self.texto_lineas(superficie, self.toast, 254, 156, 672, self.pequena, self.color_toast)
             return
         if self._velo is None:
             self._velo = pygame.Surface((960, 720), pygame.SRCALPHA)
@@ -572,7 +580,7 @@ class PanelCooperativo:
         self.boton(superficie, "cerrar", "Volver al mapa", 480, 638, 310)
         if time.monotonic() < self.toast_hasta:
             pygame.draw.rect(superficie, (10, 30, 23), (20, 3, 920, 49), border_radius=7)
-            self.texto_lineas(superficie, self.toast, 32, 8, 895, self.pequena, VERDE)
+            self.texto_lineas(superficie, self.toast, 32, 8, 895, self.pequena, self.color_toast)
 
     def _dibujar_dialogo(self, superficie):
         """Conversación con un personaje en el marco de diálogo del juego."""

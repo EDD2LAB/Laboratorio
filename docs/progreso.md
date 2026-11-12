@@ -257,3 +257,18 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   58,7 FPS / 9,54 ms (diferencia dentro del ruido).
 - La presentación del lienzo pasó a 4:3 centrado con bandas negras (commit
   aparte en `multijugador`).
+
+---
+
+# Etapa 5 - presentación visual sin música (2026-11-11)
+
+- Integrados cuatro retratos identificados, tarjetas de clasificación e iconos
+  del celular, y los estados animados de NÚCLEO con respaldo por código.
+- Diálogos de Kael y Tarek con su retrato, avisos de rechazo distinguibles por
+  texto y color, etiquetas de botones ajustadas y tamaños revisados visualmente.
+- 500 pruebas completas aprobadas (314,645 s); después de los últimos ajustes,
+  42 pruebas afectadas aprobadas (16,967 s). Sin cambios en paredes ni protocolo.
+- Música pendiente por petición del usuario. Mapas nuevos y retratos ambiguos
+  requieren geometría o identidad confirmada. Ver docs/presentacion_etapa5.md.
+- Solo local, sin push ni despliegue de esta etapa. Las etapas 3 y 4 sí se
+  publicaron y desplegaron junto con los cambios del equipo en bef84e9.

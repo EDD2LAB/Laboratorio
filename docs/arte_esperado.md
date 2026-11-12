@@ -17,14 +17,14 @@ La columna respaldo describe la alternativa actual o la prevista si dice por imp
 
 | Archivo esperado | Estado físico | Uso / tamaño previsto | Respaldo |
 | --- | --- | --- | --- |
-| `Imagenes/Futuro/nucleo_inquieto_8f.png` | Alternativa existente: `Imagenes/NPCS/Nucleo/NucleoInquieto.png`; adaptar | NÚCLEO animado | Avatar por código |
-| `Imagenes/Futuro/nucleo_sereno_8f.png` | Alternativa existente: `Imagenes/NPCS/Nucleo/NucleoSereno.png`; adaptar | NÚCLEO animado | Avatar por código |
-| `Imagenes/Futuro/nucleo_saturado_8f.png` | Alternativa existente: `Imagenes/NPCS/Nucleo/NucleoSaturado.png`; adaptar | NÚCLEO animado | Avatar por código |
-| `Imagenes/Clasificación/Aviso_comunitario.png` | Alternativa existente: `Imagenes/Clasificación/aviso_comunitario.png`; adaptar | Tarjeta de clasificación | Tarjeta generada |
-| `Imagenes/Clasificación/Generado_con_IA.png` | Existe; conexión pendiente | Tarjeta de clasificación | Tarjeta generada |
-| `Imagenes/Clasificación/Contenido_autentico.png` | Existe; conexión pendiente | Tarjeta de clasificación | Tarjeta generada |
-| `Imagenes/Clasificación/Contenido_manipulado.png` | Existe; conexión pendiente | Tarjeta de clasificación | Tarjeta generada |
-| `Imagenes/Clasificación/Suplantacion.png` | Alternativa existente: `Imagenes/Clasificación/suplantación.png`; adaptar | Tarjeta de clasificación | Tarjeta generada |
+| `Imagenes/Futuro/nucleo_inquieto_8f.png` | Integrado: `Imagenes/NPCS/Nucleo/NucleoInquieto.png`; celdas cuadradas | NÚCLEO animado | Avatar por código |
+| `Imagenes/Futuro/nucleo_sereno_8f.png` | Integrado: `Imagenes/NPCS/Nucleo/NucleoSereno.png`; celdas cuadradas | NÚCLEO animado | Avatar por código |
+| `Imagenes/Futuro/nucleo_saturado_8f.png` | Integrado: `Imagenes/NPCS/Nucleo/NucleoSaturado.png`; celdas cuadradas | NÚCLEO animado | Avatar por código |
+| `Imagenes/Clasificación/Aviso_comunitario.png` | Integrado: `Imagenes/Clasificación/aviso_comunitario.png`; proporciones conservadas | Tarjeta de clasificación | Tarjeta generada |
+| `Imagenes/Clasificación/Generado_con_IA.png` | Integrado: `Imagenes/Clasificación/Generado_con_IA.png`; proporciones conservadas | Tarjeta de clasificación | Tarjeta generada |
+| `Imagenes/Clasificación/Contenido_autentico.png` | Integrado: `Imagenes/Clasificación/Contenido_autentico.png`; proporciones conservadas | Tarjeta de clasificación | Tarjeta generada |
+| `Imagenes/Clasificación/Contenido_manipulado.png` | Integrado: `Imagenes/Clasificación/Contenido_manipulado.png`; proporciones conservadas | Tarjeta de clasificación | Tarjeta generada |
+| `Imagenes/Clasificación/Suplantacion.png` | Integrado: `Imagenes/Clasificación/suplantación.png`; proporciones conservadas | Tarjeta de clasificación | Tarjeta generada |
 | `Imagenes/Clasificación/Control_autonomo.png` | Existe; conexión pendiente | Tarjeta de clasificación | Tarjeta generada |
 | `Imagenes/Fondos/Inicio/pantalla_inicio_8f.png` | Alternativa existente: `Imagenes/Fondos/Mapas/fondoMenuInicio.png`; adaptar | Inicio animado | Fondo actual |
 | `Imagenes/Fondos/Carga/carga_guardian_8f.png` | Falta en ruta esperada | Transición de portal | Transición actual |
@@ -115,11 +115,11 @@ La columna respaldo describe la alternativa actual o la prevista si dice por imp
 ## Familias con nombres o formatos variables
 
 - Retratos: los seis roles/apariencias ya tienen carpetas de cuatro expresiones.
-  Kael y Tarek están registrados como aspirante y habitante; falta conectar sus diálogos.
+  Kael y Tarek usan sus retratos de aspirante y habitante en los diálogos.
   Nuevos retratos individuales abajo: no asumir cuatro expresiones ni identidad para NPC2.
 - Elia y Arel tienen sprites, pero falta agregarlos al mapa y al diálogo.
 - Teclas: faltan los recursos `Imagenes/Indicadores/tecla_<X>.png`; respaldo por código ya conectado en mapa y F1.
-  `tecla_E.png` también se usa junto al objetivo resaltado (1 o 2 cuadros, escalado a 24 px); mientras falte, se dibuja por código.
+  `tecla_E.png` también se usa junto al objetivo resaltado; respaldo por código si falta.
 - Icono animado: falta `Imagenes/Iconos/icono_animado_<N>f.png`; existe brillo por código.
 - Balanceo: las tiras existentes deben compararse contra el tamaño de cada puente antes de conectarlas.
 - `herramientas/componer_pantallas.py` no existe en esta revisión.
@@ -155,10 +155,10 @@ La columna respaldo describe la alternativa actual o la prevista si dice por imp
 
 | Personaje | Recurso físico / pendiente |
 | --- | --- |
-| Naira | `Imagenes/Retratos/NairaRetraro.png`; imagen individual, adaptar |
-| Odran | `Imagenes/Retratos/OdranRetrato.png`; imagen individual, adaptar |
-| Darek | `Imagenes/Retratos/DarekRetrato.png`; imagen individual, adaptar |
-| Ronaldo Vélez | `Imagenes/Retratos/RonaldoVelezRetrato.png`; imagen individual, adaptar |
+| Naira | `Imagenes/Retratos/NairaRetraro.png`; imagen individual integrada sin deformar |
+| Odran | `Imagenes/Retratos/OdranRetrato.png`; imagen individual integrada sin deformar |
+| Darek | `Imagenes/Retratos/DarekRetrato.png`; imagen individual integrada sin deformar |
+| Ronaldo Vélez | `Imagenes/Retratos/RonaldoVelezRetrato.png`; imagen individual integrada sin deformar |
 | Mateo Ríos | Candidato `Mensajero-urbano-Retraro.png`; confirmar identidad y adaptar |
 | Elías Vega y Tomás Red | Sin retrato identificado por nombre |
 | Elia y Arel | Hay sprites; sin retrato identificado por nombre |

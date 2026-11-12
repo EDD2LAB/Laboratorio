@@ -1,6 +1,7 @@
 """Botones reutilizables para todas las escenas de Timeless Glitch."""
 
 import pygame
+from functools import lru_cache
 
 
 CREMA = (255, 243, 210)
@@ -10,6 +11,34 @@ MADERA_HOVER = (166, 110, 58)
 MADERA_PRESIONADA = (92, 56, 33)
 BORDE = (42, 25, 17)
 DESACTIVADO = (72, 67, 58)
+
+
+@lru_cache(maxsize=256)
+def etiqueta_ajustada(fuente, texto, ancho, alto, color):
+    """Texto centrado que cabe dentro del botón, incluso con frases largas.
+
+    Se envuelve antes de reducirlo; la caché evita renderizarlo cada cuadro.
+    """
+    ancho, alto = max(1, ancho), max(1, alto)
+    lineas, linea = [], ""
+    for palabra in texto.split():
+        intento = (linea + " " + palabra).strip()
+        if linea and fuente.size(intento)[0] > ancho:
+            lineas.append(linea)
+            linea = palabra
+        else:
+            linea = intento
+    lineas.append(linea)
+    renders = [fuente.render(linea, True, color) for linea in lineas]
+    resultado = pygame.Surface((max(1, max(r.get_width() for r in renders)),
+                                max(1, fuente.get_linesize() * len(renders))), pygame.SRCALPHA)
+    for indice, render in enumerate(renders):
+        resultado.blit(render, render.get_rect(midtop=(resultado.get_width() // 2, indice * fuente.get_linesize())))
+    factor = min(1, ancho / resultado.get_width(), alto / resultado.get_height())
+    if factor < 1:
+        resultado = pygame.transform.scale(resultado, (max(1, round(resultado.get_width() * factor)),
+                                                       max(1, round(resultado.get_height() * factor))))
+    return resultado
 
 
 class Boton:
@@ -130,8 +159,10 @@ class Boton:
         borde = paleta.get("borde", ORO) if self.estado != "bloqueado" else (120, 112, 94)
         pygame.draw.rect(superficie, borde, self.rect, width=2, border_radius=8)
         if self.fuente:
-            etiqueta = self.fuente.render(self.texto, True, CREMA if not self.desactivado else (185, 177, 153))
-            superficie.blit(etiqueta, etiqueta.get_rect(center=self.rect.center))
+            etiqueta = etiqueta_ajustada(self.fuente, self.texto, self.rect.width - 20,
+                                         self.rect.height - 10, CREMA if not self.desactivado else (185, 177, 153))
+            centro = self.rect.move(0, 2 if self.estado == "presionado" else 0).center
+            superficie.blit(etiqueta, etiqueta.get_rect(center=centro))
 
     @staticmethod
     def _reproducir(sonido):

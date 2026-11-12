@@ -1241,6 +1241,10 @@ class VistaPartida:
         pantalla = next((o for o in mision.get("objetivos", []) if o["id"] == "futuro:pantalla"), None)
         if pantalla is None:
             return
+        frame = self.arte.nucleo.cuadro(mision, ahora_ms)
+        if frame is not None:
+            superficie.blit(frame, frame.get_rect(center=(round(pantalla["x"]), round(pantalla["y"] - 30))))
+            return
         resultado = mision.get("resultado") or {}
         calma = mision.get("pistas", 0) / max(1, mision.get("total_pistas", 1))  # cada terminal lo serena un poco
         if resultado.get("opcion") == "compartir":  # le dieron aún más control: saturado

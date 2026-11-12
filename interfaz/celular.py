@@ -213,9 +213,16 @@ def _comentarios(panel, superficie, *textos):
         superficie.blit(render, render.get_rect(midleft=(caja.x + 4, caja.centery)))
 
 
-def _boton(panel, superficie, clave, texto, centro, ancho=300, activo=True, alto=46):
-    boton = Boton(texto, centro=centro, fuente=panel.fuente, tamano=(ancho, alto), desactivado=not activo, paleta=PALETA)
+def _boton(panel, superficie, clave, texto, centro, ancho=300, activo=True, alto=46, imagen=None):
+    boton = Boton(texto if imagen is None else "", centro=centro, fuente=panel.fuente,
+                  tamano=(ancho, alto), desactivado=not activo, paleta=PALETA)
     boton.dibujar(superficie, panel.vista.mouse)
+    if imagen is not None:
+        from interfaz.boton import etiqueta_ajustada, CREMA
+        superficie.blit(imagen, imagen.get_rect(midleft=(boton.rect.left + 6, centro[1])))
+        etiqueta = etiqueta_ajustada(panel.fuente, texto, ancho - 60, alto - 10, CREMA)
+        superficie.blit(etiqueta, etiqueta.get_rect(center=(centro[0] + 20, centro[1])))
+        boton.texto = texto  # conserva la etiqueta para teclado, lectores y pruebas
     panel.botones[clave] = boton
 
 
@@ -385,8 +392,14 @@ def _clasificar(panel, superficie, contexto, arte):
     _texto(panel, superficie, contexto.get("noticia", ""), TEXTO_X, y + 6)
     _comentarios(panel, superficie, "Elige la categoría que consideres correcta.")
     opciones = contexto.get("clasificacion_opciones") or []
+    if not hasattr(arte, "categorias"):
+        from interfaz.presentacion_arte import tarjetas_disponibles
+        arte.categorias = tarjetas_disponibles((34, 38))
+    from nucleo.recursos import normalizar_ruta
     for i, opcion in enumerate(opciones):  # dos filas de dos: cada nombre cabe completo
-        _boton(panel, superficie, "clasificar:" + opcion, opcion, (192 + i % 2 * 292, 612 + i // 2 * 54), 280, alto=46)
+        imagen = arte.categorias.get(normalizar_ruta(opcion).replace(" ", "_"))
+        _boton(panel, superficie, "clasificar:" + opcion, opcion, (192 + i % 2 * 292, 612 + i // 2 * 54),
+               280, alto=46, imagen=imagen)
 
 
 def _clasificado(panel, superficie, contexto, arte):
