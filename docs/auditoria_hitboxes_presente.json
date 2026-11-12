@@ -3,7 +3,12 @@
   "paredes": {
     "MapaPresente_hitboxes.json": {
       "cantidad": 199,
-      "sha256": "7376aec7ed90a6b1119b6a87b33cd1e1c0f790ebf8e20f162d875266cf185991"
+      "sha256": "7376aec7ed90a6b1119b6a87b33cd1e1c0f790ebf8e20f162d875266cf185991",
+      "añadidas": {
+        "cantidad": 1,
+        "sha256": "90ecd30cd3a33b4e5aa519ee85ada78a4ee4b86aea1583417d0f646ecd038a84",
+        "motivo": "Autorizado por el usuario el 2026-11-12: cerrar el borde del suelo (se caminaba sobre paredes y muebles) o el hueco del bosque abierto con pies de 8 x 5. Se añaden al final, sin editar las originales."
+      }
     },
     "CaféDigitalInt_hitboxes.json": {
       "cantidad": 91,
@@ -15,15 +20,30 @@
     },
     "EstacionMensajeroInt_hitboxes.json": {
       "cantidad": 79,
-      "sha256": "4067ed6b6ea03f5caf9250e971b788465faa6a2a1847da93fe60ab57d11f502f"
+      "sha256": "4067ed6b6ea03f5caf9250e971b788465faa6a2a1847da93fe60ab57d11f502f",
+      "añadidas": {
+        "cantidad": 10,
+        "sha256": "283ef7d527d3637e533e5281b3ddfd8d5c970f55afe4590d27b0f4329aa02838",
+        "motivo": "Autorizado por el usuario el 2026-11-12: cerrar el borde del suelo (se caminaba sobre paredes y muebles) o el hueco del bosque abierto con pies de 8 x 5. Se añaden al final, sin editar las originales."
+      }
     },
     "EstudioInfluencerInt_hitboxes.json": {
       "cantidad": 79,
-      "sha256": "7cd0d9feafe245edd607db1b10f5e51e846d120a7f5f2a18cc11a7612cb886bd"
+      "sha256": "7cd0d9feafe245edd607db1b10f5e51e846d120a7f5f2a18cc11a7612cb886bd",
+      "añadidas": {
+        "cantidad": 12,
+        "sha256": "ce4b56c81a2cf5e0aa8f310e8afc7fbdfe2d7cdc1c6038797a1f7a23f937f3af",
+        "motivo": "Autorizado por el usuario el 2026-11-12: cerrar el borde del suelo (se caminaba sobre paredes y muebles) o el hueco del bosque abierto con pies de 8 x 5. Se añaden al final, sin editar las originales."
+      }
     },
     "SededelAspiranteInt_hitboxes.json": {
       "cantidad": 71,
-      "sha256": "cdc4b965e5dce2e36e63da557a5ecc15ebeff13900741b9dae65f6c55448bf23"
+      "sha256": "cdc4b965e5dce2e36e63da557a5ecc15ebeff13900741b9dae65f6c55448bf23",
+      "añadidas": {
+        "cantidad": 15,
+        "sha256": "0b8d3386df9ca0ecbe25175f61ee8d07705f76a2bf0532ef170201ee42ff8c76",
+        "motivo": "Autorizado por el usuario el 2026-11-12: cerrar el borde del suelo (se caminaba sobre paredes y muebles) o el hueco del bosque abierto con pies de 8 x 5. Se añaden al final, sin editar las originales."
+      }
     }
   },
   "la_copa": {

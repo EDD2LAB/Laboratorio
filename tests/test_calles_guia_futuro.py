@@ -42,7 +42,7 @@ class CallesFuturo(unittest.TestCase):
         for inicio, fin in (((250, 280), (320, 250)), ((600, 440), (700, 400))):
             self.assertFalse(self.m.trayecto_libre(self.punto(*inicio), self.punto(*fin)))
         self.assertEqual(self.m.tamano_pies, (8, 5))
-        self.assertEqual(ColisionesMapa(cargar_datos("presente")).tamano_pies, (12, 8))
+        self.assertEqual(ColisionesMapa(cargar_datos("presente")).tamano_pies, (8, 5))  # sin él no se cruzaba a la plaza oeste
         self.assertEqual(ColisionesMapa(cargar_interior("cafe_digital", "futuro")).tamano_pies, (12, 8))
 
     def test_la_guia_aprovecha_el_descansillo_central_sin_rodear_la_ciudad(self):

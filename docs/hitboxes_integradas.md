@@ -49,3 +49,29 @@ su hash sigue en auditoria_hitboxes_presente.json y las restauradas tienen su
 propio registro. El recorrido vuelve a 2379 celdas y todos los objetivos
 siguen alcanzables. Conviene que Keisy revise en el editor si prefiere cerrar
 esos bordes con su propio trazado.
+
+## Corrección posterior en Distrito Conecta
+
+Una prueba en partida mostró jugadores sobre las paredes y bots sobre muebles.
+El recorrido a pie desde cada aparición confirmó cuatro problemas:
+
+- **Exterior:** desde la aparición no se llegaba al Centro de Verificación ni a
+  la Sede del Aspirante. El paso entre la plaza central y la oeste mide unos
+  13 px y la caja de pies de 12 x 8 no cabía. El exterior usa ahora pies de
+  8 x 5, como el Futuro (`tamano_pies` en el JSON). Una pared nueva cierra el
+  hueco de 16 px entre la terraza del café y el seto, que con pies menores
+  dejaba entrar en el bosque.
+- **Sede del Aspirante:** la cadena de paredes pasaba por delante de la puerta
+  y solo se entraba rodeando los sofás y caminando por las paredes. La
+  aparición y la salida se sitúan dentro, frente a la puerta, y 15 paredes
+  cierran el borde del suelo (sin la sala de sofás, el escenario ni el porche).
+- **Estación del Mensajero:** la aparición estaba sobre la pared del fondo. Pasa
+  al felpudo, la salida baja al pie de la puerta y 10 paredes cierran el suelo.
+- **Estudio del Influencer:** 12 paredes cierran el suelo, el sofá y el hueco
+  bajo el escritorio.
+
+Café Digital y Centro de Verificación ya estaban cerrados. Ninguna pared
+original se edita: se añaden al final y auditoria_hitboxes_presente.json
+registra aparte las originales y las añadidas. Una prueba nueva recorre cada
+mapa a pie: los cinco edificios son alcanzables y ningún interior deja caminar
+por más de un tercio del cuadro.

@@ -27,7 +27,7 @@ class HitboxesIntegradas(unittest.TestCase):
                 d = json.loads(ruta.read_text(encoding='utf8'))
                 paredes = [b for b in d['hitboxes'] if b.get('role','wall') == 'wall']
                 # Paredes añadidas con autorización van al final; las originales no se tocan.
-                extra = esperado.get('restauradas', {'cantidad': 0, 'sha256': hashlib.sha256(b'[]').hexdigest()})
+                extra = esperado.get('restauradas') or esperado.get('añadidas') or {'cantidad': 0, 'sha256': hashlib.sha256(b'[]').hexdigest()}
                 self.assertEqual(len(paredes), esperado['cantidad'] + extra['cantidad'])
                 originales, restauradas = paredes[:esperado['cantidad']], paredes[esperado['cantidad']:]
                 self.assertEqual(hashlib.sha256(json.dumps(originales, sort_keys=True).encode()).hexdigest(), esperado['sha256'])
@@ -62,3 +62,48 @@ class HitboxesIntegradas(unittest.TestCase):
                 self.assertTrue(NavegadorBot(m).buscar_ruta(spawn_interior(m.datos), (j['x'],j['y']), radio=8))
                 x,y,w,h = rect_salida(m.datos)
                 self.assertTrue(NavegadorBot(m).buscar_ruta((j['x'],j['y']), (x+w/2,y+h/2), radio=58))
+
+
+def _recorrido(colisiones, inicio, paso=6):
+    """Celdas alcanzables a pie desde ``inicio`` con las mismas reglas del servidor."""
+    a = (round(inicio[0]) // paso, round(inicio[1]) // paso)
+    vistos, pila = {a}, [a]
+    while pila:
+        x, y = pila.pop()
+        for p in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            o, d = (x * paso + 3, y * paso + 3), (p[0] * paso + 3, p[1] * paso + 3)
+            if (p not in vistos and 0 <= p[0] < 960 // paso and 0 <= p[1] < 720 // paso
+                    and not colisiones.bloqueado(*d) and colisiones.puede_pasar(o, d)):
+                vistos.add(p)
+                pila.append(p)
+    return vistos
+
+
+class RecorridosDelPresente(unittest.TestCase):
+    """Sin caminar por paredes ni muebles y sin edificios aislados."""
+
+    def test_desde_la_aparicion_se_llega_a_pie_a_los_cinco_edificios(self):
+        from multijugador.dimensiones_red import cargar_datos, edificios_de
+        from multijugador.movimiento import ColisionesMapa
+        datos = cargar_datos('presente')
+        s, (x, y, w, h) = datos['spawn']['default'], datos['rect_mapa']
+        vistos = _recorrido(ColisionesMapa(datos), (x + (s['rx'] + s['rw'] / 2) * w, y + (s['ry'] + s['rh']) * h))
+        for clave, puerta in edificios_de(datos).items():
+            with self.subTest(edificio=clave):
+                cx, cy = round(puerta['x']) // 6, round(puerta['y']) // 6
+                self.assertTrue(any((cx + dx, cy + dy) in vistos for dx in range(-2, 3) for dy in range(-2, 3)))
+
+    def test_interiores_solo_dejan_caminar_por_el_suelo_y_se_puede_salir(self):
+        from multijugador.dimensiones_red import RADIO_SALIDA, cerca_de_rect
+        from multijugador.movimiento import ColisionesMapa
+        for clave in EDIFICIOS_PRESENTE:
+            with self.subTest(edificio=clave):
+                datos = cargar_interior(clave)
+                colisiones = ColisionesMapa(datos)
+                inicio = spawn_interior(datos)
+                self.assertFalse(colisiones.bloqueado(*inicio))
+                vistos = _recorrido(colisiones, inicio)
+                # Con fugas por las paredes se recorría más de la mitad del cuadro.
+                self.assertLess(len(vistos), (960 // 6) * (536 // 6) / 3)
+                self.assertTrue(any(cerca_de_rect(a * 6 + 3, b * 6 + 3, rect_salida(datos), RADIO_SALIDA)
+                                    for a, b in vistos))
