@@ -331,29 +331,27 @@ def dibujar_portal(panel, superficie, destinos, origen):
 
 
 class Transicion:
-    """Viaje por el túnel con fundido completo y nombre del destino."""
+    """Viaje por el túnel: avance, estrellas, glitch, emblema de la era y llegada."""
 
-    DURACION = 2.6
-
-    def __init__(self, nombre, emblema=None):
-        from interfaz.pantallas_viaje import PantallaViaje
+    def __init__(self, nombre, emblema=None, dimension=None):
+        from interfaz.tunel_viaje import DURACION, ViajeTunel
+        self.DURACION = DURACION
         self.nombre = nombre
-        self.pantalla = PantallaViaje("Fondos/Mapas/tunel.png")
-        self.capa = pygame.Surface((960, 720))
-        self.t = 0.0
+        self.viaje = ViajeTunel(nombre, emblema, dimension)
+
+    @property
+    def t(self):
+        return self.viaje.t
 
     @property
     def terminada(self):
-        return self.t >= self.DURACION
+        return self.viaje.terminada
 
     def actualizar(self, segundos, particulas):
-        self.t += segundos
+        self.viaje.actualizar(segundos)
 
     def dibujar(self, superficie, fuente):
-        self.pantalla.dibujar(self.capa, fuente, self.nombre, "Viajando entre dimensiones…")
-        alpha = round(255 * max(0, min(1, self.t / .45, (self.DURACION - self.t) / .55)))
-        self.capa.set_alpha(alpha)
-        superficie.blit(self.capa, (0, 0))
+        self.viaje.dibujar(superficie)
 
 
 def etiquetas_hud(dimension):

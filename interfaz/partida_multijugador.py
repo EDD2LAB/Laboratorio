@@ -487,7 +487,8 @@ class VistaPartida:
         self.inicio_reparacion = None
         from logica.dimensiones import DIMENSIONES
         from multijugador.presentacion import titulo_era
-        self.transicion = Transicion(titulo_era(dimension, DIMENSIONES[dimension]["nombre"]), self.arte.emblemas_viaje.get(dimension))
+        self.transicion = Transicion(titulo_era(dimension, DIMENSIONES[dimension]["nombre"]),
+                                     self.arte.emblemas_viaje.get(dimension), dimension)
         self.sonido_musica()
 
     def yo(self):

@@ -13,7 +13,7 @@ from interfaz.logo import LogoAnimado
 from interfaz.edicion_texto import EditorCampos
 from interfaz.menu_pausa import MenuPausa
 from interfaz.presentacion_pantalla import a_lienzo, presentar
-from interfaz.pantallas_viaje import PantallaViaje
+from interfaz.pantallas_viaje import FondoTresEras, PantallaCarga
 from multijugador.cliente import ClienteSala
 from multijugador.cliente_internet import ClienteInternet, validar_url
 from multijugador.servidor import ServidorSala
@@ -43,9 +43,9 @@ class MenuInicio:
         pygame.display.set_caption("Timeless Glitch")
         self.lienzo = pygame.Surface((960, 720))
         self.fuentes = {n: cargar_fuente(n) for n in (14, 16, 18, 20, 24, 32, 44)}
-        self.carga = PantallaViaje("Fondos/Mapas/fondoMenuInicio.png")
-        self.mostrar_carga("Preparando personajes y escenarios…")
-        self.fondo = self.imagen("Fondos/Multijugador/FondoFernado.png", (1080, 725), recortar=False)
+        self.carga = PantallaCarga()
+        self.mostrar_carga("Preparando personajes y escenarios…", .3)
+        self.fondo = FondoTresEras()
         self.iconos = [self.imagen("Iconos/Multijugador/" + nombre, (54, 54)) for nombre in (
             "IcRol-guardian.png", "IcRol-Mensajero.png", "IcRol-Habitante.png", "IcRol-Aspirante.png")]
         self.retratos = {clave: arte.cargar_retratos(clave, (105, 105)) for clave in (*ROLES, "mira", "luma")}
@@ -107,8 +107,8 @@ class MenuInicio:
         self.pausa.aplicar_volumenes(audio)
         return audio
 
-    def mostrar_carga(self, detalle):
-        self.carga.mostrar_carga(self.pantalla, self.lienzo, self.fuentes[32], detalle)
+    def mostrar_carga(self, detalle, progreso=None):
+        self.carga.mostrar(self.pantalla, self.lienzo, detalle, progreso)
 
     def _musica_menu(self):
         if self.audio:
@@ -291,7 +291,7 @@ class MenuInicio:
                 if evento.get("fase") == "partida":
                     try:
                         if self.partida is None:
-                            self.mostrar_carga("Entrando a la partida del equipo…")
+                            self.mostrar_carga("Entrando a la partida del equipo…", .85)
                             from interfaz.partida_multijugador import VistaPartida
                             self.partida = VistaPartida(self.identificador, evento, self.audio)
                             self.aplicar_preferencias()
@@ -360,7 +360,7 @@ class MenuInicio:
             try:
                 from interfaz.partida_multijugador import VistaPartida
                 from multijugador.partida_local import ClienteCampanaLocal
-                self.mostrar_carga("Preparando La Copa y tus compañeros…")
+                self.mostrar_carga("Preparando La Copa y tus compañeros…", .7)
                 self.limpiar_conexion()
                 self.cliente = ClienteCampanaLocal(
                     nombre,
@@ -416,9 +416,9 @@ class MenuInicio:
 
     def dibujar(self):
         self.botones, self.areas_campos = {}, {}
-        self.lienzo.blit(self.fondo, self.fondo.get_rect(center=(480, 360)))
+        self.fondo.dibujar(self.lienzo, pygame.time.get_ticks())
         velo = pygame.Surface((960, 720), pygame.SRCALPHA)
-        velo.fill((4, 17, 13, 120))
+        velo.fill((4, 12, 20, 95))
         self.lienzo.blit(velo, (0, 0))
         if self.vista == "principal":
             self.panel(pygame.Rect(240, 70, 480, 590))
