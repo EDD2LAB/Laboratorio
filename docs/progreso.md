@@ -289,3 +289,20 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   parcialmente pendiente; ver docs/exploracion_etapa6.md y su auditoría JSON.
 - Solo local, sin push ni despliegue. Al publicar hay que actualizar las PC y
   Render al protocolo 14. Música pendiente de selección del usuario.
+
+---
+
+# Etapa 7 - expediente AVL legible y animado (2026-11-11)
+
+- Ocho nodos sin solaparse con la leyenda, colores por era, ficha desplazable
+  y decisiones nombradas según la misión. Explicación breve y consecuencia real.
+- Animación de inserción y rotaciones reales simples y dobles, con repetición
+  local y descripción compacta del servidor. Protocolo 14 conservado.
+- Catálogo legal e Hitboxes intactos. Referencias legales pendientes del profesor.
+- Batería general: 513 de 514 aprobadas; la prueba restante esperaba la ficha
+  completa en una pantalla. Se adaptó para comprobar todas sus líneas al desplazar.
+  Verificación final: 44 pruebas afectadas aprobadas (21,922 s). No se volvió a
+  ejecutar la batería completa tras adaptar esa prueba.
+- Paquete aislado del servidor validado, dos humanos y dos bots, 200 ticks.
+  Estado de ocho fichas y cuatro jugadores: 22.723 bytes de un máximo de 32.768.
+- Solo local, sin push ni despliegue. Ver docs/expediente_etapa7.md.

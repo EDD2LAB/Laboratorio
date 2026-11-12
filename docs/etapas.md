@@ -44,6 +44,9 @@ La música queda pendiente por petición del usuario. Esto no completa las etapa
 La exploración de la etapa 6 está implementada localmente; el mapa exterior nuevo
 del Futuro sigue pendiente de revisión manual. Ver `docs/exploracion_etapa6.md`.
 
+La etapa 7 mejora el expediente compartido y su animación; ver
+`docs/expediente_etapa7.md`. El contenido legal sigue pendiente del profesor.
+
 ## Línea base del análisis previo
 
 En `5d1f74f`: 442 pruebas aprobadas. Medición headless de 15 s con cuatro

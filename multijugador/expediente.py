@@ -56,6 +56,7 @@ class ExpedientePartida:
         self.eventos[evento] = resultado.get("evento_id")
         ficha = ficha or ficha_resuelta(evento)
         datos = {"resultado": deepcopy(resultado), "pruebas": deepcopy(pruebas),
+                 "dimension": ("futuro" if evento == "nucleo_control" else "presente" if evento.startswith("presente_") else "la_copa"),
                  "tipo": ficha["tipo"], "ley": ficha["ley"], "sancion": ficha["sancion"],
                  "estado_normativo": ficha["estado_normativo"], "cita_corta": ficha["cita_corta"],
                  "conducta": ficha["conducta"], "nota": ficha["nota"], "con_delito": ficha["con_delito"]}
@@ -97,6 +98,7 @@ class ExpedientePartida:
         pendiente = self.pendientes[0] if self.pendientes else None
         ruta = self.arbol.ruta_insercion(pendiente) if pendiente else []
         estado.update(revision=self.revision, paso=self.paso, pendientes=len(self.pendientes),
+                      animacion=deepcopy(self.arbol.animacion),
                       pendiente=pendiente.publico() if pendiente else None,
                       comparar_con=ruta[self.paso]["nodo"] if ruta else None)
         return estado

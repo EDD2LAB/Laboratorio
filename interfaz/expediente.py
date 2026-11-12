@@ -1,100 +1,146 @@
-"""Libro compartido de La Copa: consulta y colocación de casos en el AVL."""
+"""Libro compartido: árbol legible, inserción animada y fichas con desplazamiento."""
 import pygame
 import time
 
-from interfaz.arte import NUEVOS, icono
+from interfaz.arbol_expediente import (AnimacionAVL, RADIO, aprendizaje,
+                                       dimension_caso, etiqueta_decision)
+from nucleo.recursos import envolver_texto
 
-X, ANCHO = 495, 390
 ORO = (237, 185, 87)
-GRIS_NOTA = (205, 214, 190)
+CREMA = (255, 243, 210)
+VERDE = (130, 222, 158)
+DETALLE = pygame.Rect(495, 130, 390, 320)
+ERAS = {"la_copa": "La Copa", "presente": "Distrito Conecta", "futuro": "Ciudad Núcleo"}
+COLORES_ERAS = {"la_copa": VERDE, "presente": (130, 207, 237), "futuro": (203, 175, 246)}
 
 
-def _ficha_legal(panel, superficie, datos, y):
-    """Conducta, ley, sanción y nota del caso, con sus iconos."""
-    if not hasattr(panel, "iconos_legales"):
-        panel.iconos_legales = {"ley": icono(NUEVOS + "icono_ley.png", (16, 16)),
-                                "sancion": icono(NUEVOS + "icono_sancion.png", (16, 16))}
-    if datos.get("conducta"):
-        y = panel.texto_lineas(superficie, datos["conducta"], X, y, ANCHO, panel.pequena)
-    for clave in ("ley", "sancion"):
-        if datos.get(clave):
-            if panel.iconos_legales[clave]:
-                superficie.blit(panel.iconos_legales[clave], (X, y + 7))
-            y = panel.texto_lineas(superficie, datos[clave], X + 22, y + 6, ANCHO - 22, panel.pequena, ORO)
-    if datos.get("nota"):
-        y = panel.texto_lineas(superficie, datos["nota"], X, y + 6, ANCHO, panel.pequena, GRIS_NOTA)
-    return y
+def _casos(nodo):
+    if not nodo:
+        return {}
+    return {**_casos(nodo["izquierda"]), nodo["caso"]["id"]: nodo["caso"], **_casos(nodo["derecha"])}
+
+
+def lineas_detalle(panel, caso):
+    datos = caso["datos"]
+    resultado = datos["resultado"]
+    pruebas = datos.get("pruebas", [])
+    ver_pruebas = bool(pruebas and getattr(panel, "expediente_ver_pruebas", False))
+    partes = [(caso["titulo"], ORO),
+              (ERAS[dimension_caso(caso)] + " · Caso " + str(caso["orden"] + 1), VERDE),
+              (datos["tipo"] + " · Gravedad " + str(caso["gravedad"]), CREMA),
+              ("Decisión del equipo: " + etiqueta_decision(caso, panel.caso), CREMA)]
+    if ver_pruebas:
+        indice = getattr(panel, "prueba_expediente", 0) % len(pruebas)
+        prueba = pruebas[indice]
+        partes += [(f"Prueba {indice + 1}/{len(pruebas)}: " + prueba["titulo"], ORO), (prueba["texto"], CREMA)]
+    else:
+        if resultado.get("texto"):
+            partes.append(("Qué ocurrió: " + resultado["texto"], CREMA))
+        partes.append(("Para recordar: " + aprendizaje(caso), VERDE))
+        if datos.get("conducta"):
+            partes.append(("Conducta del caso: " + datos["conducta"], CREMA))
+        for clave, titulo in (("ley", "Referencia del proyecto"), ("sancion", "Sanción registrada"), ("nota", "Nota")):
+            if datos.get(clave):
+                partes.append((titulo + ": " + datos[clave], CREMA))
+        if datos.get("ley"):
+            partes.append(("Contenido legal pendiente de revisión del profesor.", ORO))
+    lineas = []
+    for texto, color in partes:
+        lineas += [(linea, color) for linea in envolver_texto(texto, panel.pequena, DETALLE.width - 12)]
+        lineas.append(("", color))
+    return lineas, ver_pruebas
+
+
+def desplazar(panel, pasos):
+    limite = getattr(panel, "expediente_scroll_max", 0)
+    panel.expediente_scroll = max(0, min(limite, getattr(panel, "expediente_scroll", 0) + pasos))
 
 
 def dibujar(panel, superficie):
     estado = panel.caso.get("expediente") or {}
     pygame.draw.rect(superficie, (13, 35, 28), (20, 20, 920, 680), border_radius=14)
-    pygame.draw.rect(superficie, (237, 185, 87), (20, 20, 920, 680), 2, border_radius=14)
+    pygame.draw.rect(superficie, ORO, (20, 20, 920, 680), 2, border_radius=14)
     panel.texto_lineas(superficie, "EL LIBRO DE LOS CASOS", 50, 40, 850, panel.encabezado)
-    panel.texto_lineas(superficie, "T: abrir o cerrar · Guarda lo que descubrieron entre todos.", 50, 78, 850, panel.pequena)
-    nodos = []
+    panel.texto_lineas(superficie, "T: abrir o cerrar · Ocho casos, tres eras, un libro del equipo.", 50, 78, 850, panel.pequena)
+    for i, (era, nombre) in enumerate((("la_copa", "La Copa"), ("presente", "Conecta"), ("futuro", "Núcleo"))):
+        x = 65 + i * 130
+        pygame.draw.circle(superficie, COLORES_ERAS[era], (x, 131), 5)
+        superficie.blit(panel.pequena.render(nombre, True, COLORES_ERAS[era]), (x + 12, 123))
+    casos = _casos(estado.get("raiz"))
+    if not hasattr(panel, "animacion_expediente"):
+        panel.animacion_expediente = AnimacionAVL()
+    forma, puntos, aviso, animando = panel.animacion_expediente.actualizar(
+        estado, pygame.time.get_ticks(), getattr(panel, "expediente_repetir", False))
+    panel.expediente_repetir = False
+    panel.nodos_expediente = {}
 
-    def recorrer(nodo, nivel=0):
-        if not nodo:
+    def dibujar_ramas(nodo):
+        if nodo is None:
             return
-        recorrer(nodo["izquierda"], nivel + 1)
-        nodos.append((nodo, nivel))
-        recorrer(nodo["derecha"], nivel + 1)
-
-    recorrer(estado.get("raiz"))
-    posiciones = {n["caso"]["id"]: (65 + (i + .5) * 390 / max(1, len(nodos)), 170 + nivel * 100)
-                  for i, (n, nivel) in enumerate(nodos)}
-    for nodo, _ in nodos:
-        x, y = posiciones[nodo["caso"]["id"]]
-        for lado in ("izquierda", "derecha"):
-            if nodo[lado]:
-                pygame.draw.line(superficie, (135, 161, 130), (x, y), posiciones[nodo[lado]["caso"]["id"]], 3)
-    for nodo, _ in nodos:
-        caso = nodo["caso"]
-        x, y = posiciones[caso["id"]]
-        color = (237, 185, 87) if caso["id"] == estado.get("comparar_con") else (130, 222, 158)
-        pygame.draw.circle(superficie, color, (int(x), int(y)), 28)
+        for lado in ("i", "d"):
+            hijo = nodo[lado]
+            if hijo:
+                pygame.draw.line(superficie, (135, 161, 130), puntos[nodo["id"]], puntos[hijo["id"]], 2)
+                dibujar_ramas(hijo)
+    dibujar_ramas(forma)
+    for clave, (x, y) in puntos.items():
+        caso = casos.get(clave)
+        if not caso:
+            continue
+        color = ORO if clave == estado.get("comparar_con") else COLORES_ERAS[dimension_caso(caso)]
+        pygame.draw.circle(superficie, color, (round(x), round(y)), RADIO)
+        if clave == getattr(panel, "caso_expediente", None):
+            pygame.draw.circle(superficie, CREMA, (round(x), round(y)), RADIO + 4, 2)
         etiqueta = panel.fuente.render(str(caso["gravedad"]), True, (13, 35, 28))
-        superficie.blit(etiqueta, etiqueta.get_rect(center=(x, y)))
-        rect = pygame.Rect(x - 32, y - 32, 64, 64)
-        panel.nodos_expediente[caso["id"]] = rect
-        panel.texto_lineas(superficie, str(caso["orden"] + 1), x - 5, y + 32, 30, panel.pequena)
-
-    elegidos = {n["caso"]["id"]: n["caso"] for n, _ in nodos}
-    seleccionado = elegidos.get(getattr(panel, "caso_expediente", None))
+        superficie.blit(etiqueta, etiqueta.get_rect(center=(round(x), round(y))))
+        orden = panel.pequena.render(str(caso["orden"] + 1), True, CREMA)
+        superficie.blit(orden, orden.get_rect(midtop=(round(x), round(y + 22))))
+        if not animando:
+            panel.nodos_expediente[clave] = pygame.Rect(round(x) - 22, round(y) - 22, 44, 44)
+    panel.texto_lineas(superficie, "Pulsa un círculo para leer su caso.", 50, 425, 400, panel.pequena)
+    panel.texto_lineas(superficie, "Grande: gravedad (1 a 9). Debajo: orden del caso. Izquierda: menor; derecha: mayor.", 50, 458, 400, panel.pequena)
+    if aviso:
+        panel.texto_lineas(superficie, aviso, 50, 515, 400, panel.pequena, ORO)
+    elif estado.get("animacion"):
+        panel.boton(superficie, "expediente_repetir", "Ver cómo se ordenó", 245, 525, 330)
     pendiente = estado.get("pendiente")
-    detalle = seleccionado or pendiente or (nodos[0][0]["caso"] if nodos else None)
-    panel.texto_lineas(superficie, "Pulsa un círculo para leer el caso.", 50, 440, 400, panel.pequena)
-    panel.texto_lineas(superficie, "El número grande indica la gravedad (1 a 9). El pequeño indica cuándo lo resolvieron.", 50, 475, 400, panel.pequena)
+    detalle = casos.get(getattr(panel, "caso_expediente", None)) or pendiente or next(iter(casos.values()), None)
     if detalle:
-        y = panel.texto_lineas(superficie, detalle["titulo"], 495, 130, 390)
-        datos = detalle["datos"]
-        y = panel.texto_lineas(superficie, datos["tipo"] + " · Gravedad " + str(detalle["gravedad"]), 495, y + 6, 390, panel.pequena)
-        resultado = datos["resultado"]
-        opciones = {**(panel.caso.get("presente") or {}).get("opciones", {}), **panel.caso.get("opciones", {})}
-        y = panel.texto_lineas(superficie, "Decisión: " + opciones.get(resultado["opcion"], resultado["opcion"]), 495, y + 8, 390, panel.pequena)
-        pruebas = datos.get("pruebas", [])
-        indice = getattr(panel, "prueba_expediente", 0) % max(1, len(pruebas))
-        ver_pruebas = pruebas and (getattr(panel, "expediente_ver_pruebas", False) or not datos.get("ley"))
+        lineas, ver_pruebas = lineas_detalle(panel, detalle)
+        clave = (detalle["id"], ver_pruebas, getattr(panel, "prueba_expediente", 0))
+        if getattr(panel, "expediente_lectura", None) != clave:
+            panel.expediente_scroll = 0
+            panel.expediente_lectura = clave
+        alto = panel.pequena.get_linesize() + 3
+        visibles = max(1, DETALLE.height // alto)
+        panel.expediente_scroll_max = max(0, len(lineas) - visibles)
+        desplazar(panel, 0)
+        inicio = getattr(panel, "expediente_scroll", 0)
+        clip = superficie.get_clip()
+        superficie.set_clip(DETALLE.clip(clip))
+        for indice, (texto, color) in enumerate(lineas[inicio:inicio + visibles]):
+            imagen = panel.pequena.render(texto, True, color)
+            superficie.blit(imagen, (DETALLE.x, DETALLE.y + indice * alto))
+        superficie.set_clip(clip)
+        if panel.expediente_scroll_max:
+            barra = pygame.Rect(892, DETALLE.y, 6, DETALLE.height)
+            pygame.draw.rect(superficie, (49, 73, 63), barra, border_radius=3)
+            alto_marca = max(20, round(barra.height * visibles / len(lineas)))
+            marca_y = barra.y + round((barra.height - alto_marca) * inicio / panel.expediente_scroll_max)
+            pygame.draw.rect(superficie, ORO, (barra.x, marca_y, barra.width, alto_marca), border_radius=3)
+            panel.boton(superficie, "expediente_subir", "Arriba", 797, 480, 76)
+            panel.boton(superficie, "expediente_bajar", "Abajo", 881, 480, 76)
         if ver_pruebas:
-            prueba = pruebas[indice]
-            y = panel.texto_lineas(superficie, f"Prueba {indice + 1}/{len(pruebas)}: " + prueba["titulo"], 495, y + 12, 390, panel.pequena)
-            panel.texto_lineas(superficie, prueba["texto"], 495, y + 4, 390, panel.pequena)
-            panel.boton(superficie, "expediente_prueba", "Otra prueba", 690, 450, 230)
-        else:
-            _ficha_legal(panel, superficie, datos, y + 10)
-        if pruebas and datos.get("ley"):
-            panel.boton(superficie, "expediente_vista", "Ver la ley" if ver_pruebas else "Ver las pruebas", 690, 505, 230)
+            panel.boton(superficie, "expediente_prueba", "Otra prueba", 625, 480, 230)
+        if detalle["datos"].get("pruebas"):
+            panel.boton(superficie, "expediente_vista", "Ver el resumen" if ver_pruebas else "Ver las pruebas", 690, 525, 230)
     else:
-        panel.texto_lineas(superficie, "Resuelvan el primer caso. Aquí guardaremos sus descubrimientos.", 495, 150, 390)
+        panel.texto_lineas(superficie, "Resuelvan el primer caso. Aquí guardaremos lo que descubran.", 495, 150, 390)
     if pendiente:
-        titulo = "Por guardar: " + pendiente["titulo"] + " (gravedad " + str(pendiente["gravedad"]) + ")"
-        panel.texto_lineas(superficie, titulo, 50, 548, 850, panel.pequena)
-        panel.texto_lineas(superficie, "Menor: izquierda. Mayor: derecha. Si son iguales, el más nuevo va a la derecha.", 50, 576, 850, panel.pequena)
-        panel.boton(superficie, "expediente:izquierda", "Izquierda", 210, 635, 230)
-        panel.boton(superficie, "expediente:derecha", "Derecha", 490, 635, 230)
-    panel.boton(superficie, "expediente_cerrar", "Cerrar · T", 790, 635, 230)
-    if estado.get("rotaciones") and not pendiente:
-        panel.texto_lineas(superficie, "¡El árbol se equilibró para facilitar la búsqueda!", 50, 555, 800, panel.pequena)
-    if panel.toast:
-        panel.texto_lineas(superficie, panel.toast if time.monotonic() < panel.toast_hasta else "", 50, 102, 850, panel.pequena)
+        panel.texto_lineas(superficie, "Por guardar: " + pendiente["titulo"] + " · gravedad " + str(pendiente["gravedad"]), 50, 560, 850, panel.pequena)
+        panel.texto_lineas(superficie, "Compara con el círculo dorado. Si empatan, el más nuevo va a la derecha.", 50, 594, 850, panel.pequena)
+        panel.boton(superficie, "expediente:izquierda", "Izquierda", 210, 655, 230, activo=not animando)
+        panel.boton(superficie, "expediente:derecha", "Derecha", 490, 655, 230, activo=not animando)
+    panel.boton(superficie, "expediente_cerrar", "Cerrar · T", 790, 655, 230)
+    if panel.toast and time.monotonic() < panel.toast_hasta:
+        panel.texto_lineas(superficie, panel.toast, 50, 105, 850, panel.pequena)

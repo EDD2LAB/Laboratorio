@@ -700,6 +700,14 @@ class PanelCooperativo:
     def manejar(self, evento, posicion, cliente):
         if self.modo == "informe" and self.informe and informe_final.manejar_desplazamiento(self, evento, posicion):
             return True
+        if self.modo == "expediente":
+            from interfaz.expediente import DETALLE, desplazar
+            if evento.type == pygame.MOUSEWHEEL and DETALLE.collidepoint(posicion):
+                desplazar(self, -evento.y * 3)
+                return True
+            if evento.type == pygame.KEYDOWN and evento.key in (pygame.K_PAGEUP, pygame.K_PAGEDOWN):
+                desplazar(self, -6 if evento.key == pygame.K_PAGEUP else 6)
+                return True
         if self.modo == "dialogo_npc" and self.dialogo:
             return dialogo_npc.manejar(self, evento, posicion, cliente)
         if self.modo == "reparar" and evento.type == pygame.KEYDOWN:
@@ -762,6 +770,14 @@ class PanelCooperativo:
                 self.prueba_expediente += 1
             elif clave == "expediente_vista":
                 self.expediente_ver_pruebas = not getattr(self, "expediente_ver_pruebas", False)
+            elif clave == "expediente_subir":
+                from interfaz.expediente import desplazar
+                desplazar(self, -6)
+            elif clave == "expediente_bajar":
+                from interfaz.expediente import desplazar
+                desplazar(self, 6)
+            elif clave == "expediente_repetir":
+                self.expediente_repetir = True
             elif clave.startswith("expediente:"):
                 estado = self.caso.get("expediente") or {}
                 pendiente = estado.get("pendiente")
