@@ -397,13 +397,24 @@ class PlanificadorBot:
     def _llevar_llave(self, bot, futuro, terminal):
         """Va a la terminal, y se aparta si un pulso de vigilancia se le acerca."""
         posicion = bot.posicion
-        cercano = min(futuro.get("pulsos", []), key=lambda p: math.hypot(p[0] - posicion["x"], p[1] - posicion["y"]), default=None)
-        if cercano is not None:
-            distancia = math.hypot(cercano[0] - posicion["x"], cercano[1] - posicion["y"])
-            if 0 < distancia < DISTANCIA_PULSO:
-                factor = 80 / distancia
-                return {"estado": "ESQUIVANDO", "destino": {"id": "esquiva", "x": posicion["x"] + (posicion["x"] - cercano[0]) * factor,
-                                                            "y": posicion["y"] + (posicion["y"] - cercano[1]) * factor}, "esperar": True, "radio": 20}
+        escape = getattr(bot, "_escape_nucleo", None)
+        if escape and bot.ahora < escape[0]:
+            return {"estado": "ESQUIVANDO", "destino": escape[1], "esperar": True, "radio": 6}
+        pulsos = futuro.get("pulsos", [])
+        distancia = min((math.hypot(x-posicion["x"], y-posicion["y"]) for x, y in pulsos), default=999)
+        if distancia < DISTANCIA_PULSO:
+            mapa = bot._navegador.colisiones
+            origen = posicion["x"], posicion["y"]
+            candidatos = [{"id": "esquiva", "x": origen[0]+dx, "y": origen[1]+dy}
+                          for dx, dy in ((48, 0), (-48, 0), (0, 48), (0, -48), (40, 40), (-40, 40), (40, -40), (-40, -40))]
+            seguridad = lambda c: min(math.hypot(x-c["x"], y-c["y"]) for x, y in pulsos)
+            candidatos = [c for c in candidatos if not mapa.bloqueado(c["x"], c["y"])
+                          and mapa.trayecto_libre(origen, (c["x"], c["y"])) and seguridad(c) >= max(44, distancia+8)]
+            if candidatos:
+                destino = max(candidatos, key=lambda c: seguridad(c)-.15*math.hypot(c["x"]-terminal["x"], c["y"]-terminal["y"]))
+                bot._escape_nucleo = (bot.ahora + .65, destino)
+                return {"estado": "ESQUIVANDO", "destino": destino, "esperar": True, "radio": 6}
+        # Si no hay espacio seguro, seguir por la calle hacia la terminal; nunca buscar una salida dentro de una pared.
         return self._tarea("INVESTIGANDO", terminal, "futuro_resolver", terminal="llave")
 
     def _analizar_distrito(self, bot, estado, jugadores, memoria, dificultad):

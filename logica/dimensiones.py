@@ -64,7 +64,8 @@ EDIFICIOS_PRESENTE = {
 # Se reutilizan sus paredes editadas a mano; no se escriben archivos de Hitboxes.
 EDIFICIOS_FUTURO = {
     clave: dict(EDIFICIOS_PRESENTE[clave], nombre=nombre,
-                interior="Fondos/Mapas/Futuro/" + archivo)
+                interior="Fondos/Mapas/Futuro/" + archivo,
+                interior_hitboxes="Mapas/Futuro/" + archivo[:-4] + "_hitboxes.json")
     for clave, nombre, archivo in (
         ("centro_verificacion", "Centro de Supervisión", "Centro-Verif-FuturoInt.png"),
         ("estudio_influencer", "Observatorio de Mensajes", "estudioInflu-Futuroint.png"),
@@ -95,7 +96,7 @@ DIMENSIONES = {
     },
     DIMENSION_FUTURO: {
         "nombre": "Ciudad Núcleo",
-        "mapa": "Futuro/generado/MapaFuturo.png",
+        "mapa": "Fondos/Mapas/Futuro/MapaFuturo.png",
         "hitboxes": "Mapas/Futuro/MapaFuturo_hitboxes.json",
         "spawn": (480, 620),
         "musica": "ambiente_futuro",

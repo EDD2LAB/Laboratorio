@@ -67,6 +67,8 @@ class NavegadorBot:
                 px, py = self._posicion(vecino)
                 if self.colisiones.bloqueado(px, py):
                     continue
+                if not self.colisiones.trayecto_libre(posicion, (px, py)):
+                    continue
                 if dx and dy and (
                     self.colisiones.bloqueado(px, self._posicion(actual)[1])
                     or self.colisiones.bloqueado(self._posicion(actual)[0], py)

@@ -12,7 +12,7 @@ class Desenlace:
         from interfaz.presentacion_arte import AnimacionesNucleo
         self.nucleo = AnimacionesNucleo(128)
         self.fondos = {}
-        respaldos = {"futuro": "Futuro/generado/MapaFuturo.png", "presente": "Fondos/Mapas/Presente/MapaPresente.png",
+        respaldos = {"futuro": "Fondos/Mapas/Futuro/MapaFuturo.png", "presente": "Fondos/Mapas/Presente/MapaPresente.png",
                      "la_copa": "Fondos/Mapas/Pr_MañanaLumi.png"}
         for era, respaldo in respaldos.items():
             self.fondos[era] = cargar_imagen("Finales/epilogo_" + ("copa" if era == "la_copa" else era) + ".png", (960, 720), requerido=False)

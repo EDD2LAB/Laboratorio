@@ -19,7 +19,7 @@ DIMENSIONES_RED = {
               "hitboxes": RAIZ / "Hitboxes" / "Mapas" / "Pr_MañanaLumi_hitboxes.json"},
     PRESENTE: {"nombre": "Distrito Conecta", "epoca": "Presente", "disponible": True,
                "hitboxes": RAIZ / "Hitboxes" / "Mapas" / "Presente" / "MapaPresente_hitboxes.json"},
-    # Misma geometría que Distrito Conecta (ver docs/futuro.md).
+    # Geometría propia del exterior nuevo de Ciudad Núcleo.
     FUTURO: {"nombre": "Ciudad Núcleo", "epoca": "Futuro", "disponible": True,
              "hitboxes": RAIZ / "Hitboxes" / "Mapas" / "Futuro" / "MapaFuturo_hitboxes.json"},
 }
@@ -79,9 +79,14 @@ def cargar_datos(dimension):
     return datos
 
 
-def cargar_interior(edificio):
+def cargar_interior(edificio, dimension=PRESENTE):
     """Hitboxes de un interior, en el lienzo 960x720 (mismo escalado que el mapa)."""
-    datos = json.loads((CARPETA_INTERIORES / (INTERIORES[edificio] + "_hitboxes.json")).read_text(encoding="utf-8"))
+    if dimension == FUTURO:
+        from logica.dimensiones import EDIFICIOS_FUTURO
+        ruta = RAIZ / "Hitboxes" / EDIFICIOS_FUTURO[edificio]["interior_hitboxes"]
+    else:
+        ruta = CARPETA_INTERIORES / (INTERIORES[edificio] + "_hitboxes.json")
+    datos = json.loads(ruta.read_text(encoding="utf-8"))
     rect = rect_mapa_presente(datos)
     return dict(datos, hitboxes=[mapear_hitbox(h, rect) for h in datos.get("hitboxes", [])], decoracion=[], rect_mapa=list(rect))
 

@@ -204,10 +204,14 @@ class Arte(unittest.TestCase):
         presente = pygame.image.load(str(RAIZ / "Imagenes" / "Fondos" / "Mapas" / "Presente" / "MapaPresente.png"))
         self.assertEqual(futuro.get_size(), presente.get_size())
 
-    def test_las_hitboxes_son_las_del_presente(self):
-        origen = RAIZ / "Hitboxes" / "Mapas" / "Presente" / "MapaPresente_hitboxes.json"
-        copia = RAIZ / "Hitboxes" / "Mapas" / "Futuro" / "MapaFuturo_hitboxes.json"
-        self.assertEqual(origen.read_bytes(), copia.read_bytes())
+    def test_hitboxes_propias_del_futuro_coinciden_con_su_imagen(self):
+        import json
+        from logica.dimensiones import DIMENSIONES
+        config = DIMENSIONES["futuro"]
+        datos = json.loads((RAIZ / "Hitboxes" / config["hitboxes"]).read_text(encoding="utf-8"))
+        imagen = pygame.image.load(str(RAIZ / "Imagenes" / config["mapa"]))
+        self.assertEqual(imagen.get_size(), tuple(datos["image_size"]))
+        self.assertEqual(imagen.get_size(), (1048, 577))
 
     def test_la_vista_dibuja_el_mapa_y_cada_pantalla(self):
         from interfaz.partida_multijugador import VistaPartida

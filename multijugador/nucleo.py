@@ -143,6 +143,10 @@ class MisionNucleo:
         self.expediente = expediente
         hitboxes = {h.get("id"): h for h in datos.get("hitboxes", [])}
         ocupadas = []
+        from logica.zonas_caminables import componente, ancla
+        from .dimensiones_red import spawn_presente
+        origen = colisiones.inicio_libre(*spawn_presente(datos))
+        accesibles = componente(colisiones, origen)
 
         def sitio(entrada, respaldo=(480, 400)):
             hitbox = hitboxes.get(entrada)
@@ -152,7 +156,7 @@ class MisionNucleo:
                 punto = (x0 + hitbox["frente_rx"] * ancho, y0 + hitbox["frente_ry"] * alto)
             elif hitbox and hitbox.get("type", "rect") == "rect":
                 punto = ((hitbox["rx"] + hitbox["rw"] / 2) * 960, (hitbox["ry"] + hitbox["rh"]) * 720 + 12)
-            x, y = colisiones.inicio_libre(*punto, ocupadas)
+            x, y = ancla(accesibles, punto, ocupadas)
             ocupadas.append((x, y))
             return round(x), round(y)
 

@@ -1,0 +1,247 @@
+{
+  "origen": "04db4d8abb518286fadb508aa1e9aad33890b3fe",
+  "paredes": {
+    "CafefuturoInt_hitboxes.json": {
+      "cantidad": 88,
+      "sha256": "9bdb4fe9b8ba2bfe834618b558d574dbf6c8948a0bc5935cad0ecf67be06691b"
+    },
+    "Centro-Verif-FuturoInt_hitboxes.json": {
+      "cantidad": 53,
+      "sha256": "857ac0b510d6a46eb61638360214a8cb638791be96cf497320611bf2ace0e135"
+    },
+    "EstacióndeMensajeriaInt_hitboxes.json": {
+      "cantidad": 80,
+      "sha256": "f2dea971c97b109b19539f2505bc69effeada10f7a79261c5b0e35d05df0313c"
+    },
+    "estudioInflu-Futuroint_hitboxes.json": {
+      "cantidad": 82,
+      "sha256": "ffda2317395b74abd1172b44c8ea65fd8875267ac013405218bd11f7d08cbff2"
+    },
+    "MapaFuturo_hitboxes.json": {
+      "cantidad": 197,
+      "sha256": "4fadca47a0cb8d45307bcadf340ec69d979c272cc45ed3f24d5d575e4052c4cb"
+    },
+    "Sede-Aspirante-FuturoInt_hitboxes.json": {
+      "cantidad": 81,
+      "sha256": "2ce88eb061b17b67a67bfe36fb3d0a3c9c046ea7610849755fdf7f3cb077b8dc"
+    }
+  },
+  "exterior": {
+    "spawn": [
+      450.0,
+      244.0
+    ],
+    "rutas": [
+      {
+        "id": "futuro:conexiones",
+        "destino": [
+          416,
+          536
+        ],
+        "pasos": 117
+      },
+      {
+        "id": "futuro:archivos",
+        "destino": [
+          96,
+          360
+        ],
+        "pasos": 51
+      },
+      {
+        "id": "futuro:llave",
+        "destino": [
+          152,
+          208
+        ],
+        "pasos": 37
+      },
+      {
+        "id": "futuro:cuentas",
+        "destino": [
+          160,
+          536
+        ],
+        "pasos": 72
+      },
+      {
+        "id": "futuro:pantalla",
+        "destino": [
+          512,
+          312
+        ],
+        "pasos": 15
+      },
+      {
+        "id": "corredor_de_datos",
+        "destino": [
+          832,
+          376
+        ],
+        "pasos": 59
+      },
+      {
+        "id": "ciudadano_conectado",
+        "destino": [
+          160,
+          536
+        ],
+        "pasos": 72
+      },
+      {
+        "id": "archivista",
+        "destino": [
+          80,
+          376
+        ],
+        "pasos": 53
+      },
+      {
+        "id": "representante_humano",
+        "destino": [
+          248,
+          568
+        ],
+        "pasos": 81
+      },
+      {
+        "id": "centro_verificacion",
+        "destino": [
+          154,
+          207
+        ],
+        "pasos": 37
+      },
+      {
+        "id": "sede_aspirante",
+        "destino": [
+          94,
+          364
+        ],
+        "pasos": 52
+      },
+      {
+        "id": "estudio_influencer",
+        "destino": [
+          778,
+          204
+        ],
+        "pasos": 42
+      },
+      {
+        "id": "cafe_digital",
+        "destino": [
+          830,
+          371
+        ],
+        "pasos": 59
+      },
+      {
+        "id": "estacion_mensajero",
+        "destino": [
+          418,
+          535
+        ],
+        "pasos": 117
+      }
+    ],
+    "portal_accesible": true,
+    "cuatro_jugadores_conectados": true,
+    "portal_centro": {
+      "x": 461.56034869240347,
+      "y": 190.72163793103448
+    }
+  },
+  "interiores": {
+    "centro_verificacion": {
+      "spawn": [
+        480.0,
+        566.5833333333334
+      ],
+      "consulta": [
+        488,
+        480
+      ],
+      "ruta_consulta": 10,
+      "ruta_salida": 10,
+      "rect_mapa": [
+        0,
+        92,
+        960,
+        536
+      ]
+    },
+    "estudio_influencer": {
+      "spawn": [
+        429.7674418604651,
+        549.8333333333334
+      ],
+      "consulta": [
+        648,
+        496
+      ],
+      "ruta_consulta": 27,
+      "ruta_salida": 26,
+      "rect_mapa": [
+        0,
+        92,
+        960,
+        536
+      ]
+    },
+    "sede_aspirante": {
+      "spawn": [
+        348.8372093023256,
+        454.9166666666667
+      ],
+      "consulta": [
+        560,
+        496
+      ],
+      "ruta_consulta": 25,
+      "ruta_salida": 22,
+      "rect_mapa": [
+        0,
+        92,
+        960,
+        536
+      ]
+    },
+    "cafe_digital": {
+      "spawn": [
+        228.8372093023256,
+        371.1666666666667
+      ],
+      "consulta": [
+        416,
+        464
+      ],
+      "ruta_consulta": 22,
+      "ruta_salida": 22,
+      "rect_mapa": [
+        0,
+        92,
+        960,
+        536
+      ]
+    },
+    "estacion_mensajero": {
+      "spawn": [
+        426.9767441860465,
+        357.2083333333333
+      ],
+      "consulta": [
+        648,
+        520
+      ],
+      "ruta_consulta": 49,
+      "ruta_salida": 52,
+      "rect_mapa": [
+        0,
+        92,
+        960,
+        536
+      ]
+    }
+  }
+}

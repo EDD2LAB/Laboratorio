@@ -282,7 +282,7 @@ class PartidaMovimiento:
                 self.mision.futuro.edificios = edificios_de(datos)
                 for clave, puerta in self.mision.futuro.edificios.items():
                     puerta["nombre"] = EDIFICIOS_FUTURO[clave]["nombre"]
-                self.interiores_futuro = {e: ColisionesMapa(cargar_interior(e)) for e in INTERIORES}
+                self.interiores_futuro = {e: ColisionesMapa(cargar_interior(e, FUTURO)) for e in INTERIORES}
                 for clave, mapa in self.interiores_futuro.items():
                     x, y = mapa.inicio_libre(*spawn_interior(mapa.datos))
                     self.mision.futuro.edificios[clave]["salida"] = dict(x=round(x), y=round(y))
@@ -322,7 +322,8 @@ class PartidaMovimiento:
         mapa = interiores[edificio]
         ocupadas = [(j["x"], j["y"]) for j in self.jugadores.values()
                     if j.get("interior") == edificio and j.get("dimension") == jugador.get("dimension")]
-        self._colocar(identificador, *mapa.inicio_libre(*spawn_interior(mapa.datos), ocupadas), edificio)
+        colocar = mapa.inicio_alcanzable if jugador.get("dimension") == FUTURO else mapa.inicio_libre
+        self._colocar(identificador, *colocar(*spawn_interior(mapa.datos), ocupadas), edificio)
         return {"mensaje": "Entraste a " + puerta["nombre"] + ".", "silencioso": True}
 
     def salir_edificio(self, identificador):
@@ -419,6 +420,8 @@ class PartidaMovimiento:
             inicio = (px + pw // 2 - 9, py + ph + 3)
         else:
             inicio = spawn_presente(mapa.datos)
+            if destino == FUTURO:
+                inicio = mapa.inicio_libre(*inicio)
         viajeros = [i for i, j in self.jugadores.items() if j.get("dimension", LA_COPA) == origen]
         # Termina todo lo que estaba en curso en el mapa que se deja.
         if self.mision.puente.reparador in viajeros:

@@ -552,8 +552,6 @@ def cargar_mapa_edificio(edificio_id, dimension=DIMENSION_PRESENTE):
         raise ValueError(f"El edificio del presente no esta configurado: {edificio_id}")
 
     ruta_imagen = buscar_asset(edificio["interior"])
-    if dimension == "futuro" and not os.path.isfile(ruta_imagen):
-        ruta_imagen = buscar_asset(EDIFICIOS_PRESENTE[edificio_id]["interior"])
     if not os.path.isfile(ruta_imagen):
         raise FileNotFoundError(
             f"No existe el interior configurado para {edificio['nombre']}: {ruta_imagen}"

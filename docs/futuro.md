@@ -1,25 +1,59 @@
-# Ciudad Núcleo (Era III)
+# Ciudad Núcleo en protocolo 18
 
-El exterior sigue usando el mapa provisional generado a partir del Presente.
-Los cinco interiores nuevos ya se usan en la exploración del protocolo 14;
-las animaciones de NÚCLEO se conectaron en la etapa 5. Ver
-`exploracion_etapa6.md` y `auditoria_exploracion_etapa6.json`.
+El juego ya utiliza el exterior definitivo `Imagenes/Fondos/Mapas/Futuro/MapaFuturo.png`
+de 1048 x 577 y sus paredes propias. El mapa generado a partir del Presente se
+conserva como recurso histórico, pero no es el exterior activo.
 
-El mapa nuevo mide 1048 x 577 y el provisional 998 x 576: comprobar geometría,
-puertas y puntos caminables antes de sustituirlo. Las paredes de los JSON se
-editan a mano; esta etapa no las modifica. No ejecutar el generador sobre arte
-definitivo: su protección contra sobrescritura todavía está pendiente.
+## Geometría incorporada
 
-| Qué | Archivo a reemplazar | Nota |
-| --- | --- | --- |
-| Mapa | `Imagenes/Futuro/generado/MapaFuturo.png` | Misma resolución que `MapaPresente.png`. Si cambia la geometría, actualizar también las colisiones |
-| Colisiones | `Hitboxes/Mapas/Futuro/MapaFuturo_hitboxes.json` | Geometría del provisional; revisión manual antes de cambiar mapa |
-| Archivista | `Imagenes/Futuro/generado/NPCS/Archivista/` | Derivado del Agente de verificación |
-| Corredor de Datos | `Imagenes/Futuro/generado/NPCS/Corredor de Datos/` | Derivado del Mensajero urbano |
-| Ciudadano Conectado | `Imagenes/Futuro/generado/NPCS/Ciudadano Conectado/` | Derivado de la Habitante conectada |
-| Representante Humano | `Imagenes/Futuro/generado/NPCS/Representante Humano/` | Derivado del Aspirante contemporáneo |
+Se importaron exclusivamente los seis JSON de `Hitboxes/Mapas/Futuro/` entregados
+en `04db4d8abb518286fadb508aa1e9aad33890b3fe` (rama main). No se incorporaron los
+cambios de otras eras ni los cambios remotos de lógica de bots en esta etapa.
 
-El avatar de NÚCLEO usa sus animaciones reales, con respaldo por código si faltan.
+| Lugar | Imagen y JSON de hitboxes, con el mismo nombre base |
+| --- | --- |
+| Exterior | MapaFuturo |
+| Centro de Supervisión | Centro-Verif-FuturoInt |
+| Observatorio de Mensajes | estudioInflu-Futuroint |
+| Archivo del Consejo | Sede-Aspirante-FuturoInt |
+| Café de Datos | CafefuturoInt |
+| Estación de Enlaces | EstacióndeMensajeriaInt |
+
+Las imágenes están en `Imagenes/Fondos/Mapas/Futuro/` y los JSON en
+`Hitboxes/Mapas/Futuro/`. Cliente y servidor cargan los mismos archivos y usan
+la misma transformación al lienzo 960 x 720. Los interiores tienen resolución
+344 x 192; el editor guardó sus medidas ampliadas con proporción equivalente.
+La normalización y el rectángulo final de dibujo coinciden en ambos lados.
+
+Los cinco interiores traían paredes, sin apariciones ni salidas. Se añadieron
+solo el spawn, una salida junto a la entrada visible y una interacción de mesa.
+Las paredes originales se conservan exactamente: sus cantidades y hashes están
+en `auditoria_mapa_futuro.json`, junto con las rutas comprobadas.
+
+## Apariciones y rutas
+
+- La aparición exterior se corrige primero a una posición libre. A partir de
+  ella se colocan los cuatro participantes en el mismo componente conectado.
+- La misma regla se aplica al entrar varias personas a cada interior.
+- Las terminales y NPC del Futuro se anclan a zonas accesibles desde la entrada.
+  Se corrigieron dos NPC que quedaban aislados por las paredes nuevas.
+- Materiales, taller, mini-núcleos, recargas y consolas del final reutilizan esas
+  estaciones transitables. No hay puntos de combate inventados fuera del mapa.
+- Las cinco mesas se ubican junto al mobiliario visible y tienen una ruta de
+  regreso a la salida. El portal y las cinco puertas exteriores son alcanzables.
+- El análisis de conectividad se guarda en caché por geometría; no se repite
+  durante cada cuadro de juego.
+
+## Protección y publicación
+
+No se reemplaza una imagen interior ausente por una del Presente con otras
+paredes: se informa del recurso que falta. El generador provisional cancela su
+trabajo si ya existe el JSON exterior, para no destruir el trabajo manual.
+Las futuras modificaciones de paredes siguen haciéndose en el editor.
+
+El servidor empaqueta las seis hitboxes y `logica/zonas_caminables.py` con las
+reglas actuales del contexto de Docker. Protocolo 18 exige actualizar juego y
+servidor juntos. Implementación local no significa push ni despliegue.
 
 ## Misión `nucleo_control`
 
@@ -41,3 +75,5 @@ de completar los casos del Presente. Los puntos usan ids de hitboxes existentes:
 
 El caso entra al expediente con la ficha de `datos/casos_expediente.json`,
 incluidos los campos legales incorporados en el protocolo 12.
+
+Validación final: 564 pruebas aprobadas en 677,243 segundos.

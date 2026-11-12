@@ -189,3 +189,12 @@ Se reutiliza NPCS/Nucleo/NucleoSereno.png para la reconfiguración.
 
 Las pistas musica_nucleo.mp3, batalla_fase1.mp3 y batalla_fase2.mp3 se buscan en
 Audios/Música/, Audios/Musica/ y Audios/. Sin ellas se conserva Ambiente.mp3.
+
+
+## Mapa definitivo activado en protocolo 18
+
+El exterior de Ciudad Núcleo y sus cinco interiores ya usan las imágenes de
+Imagenes/Fondos/Mapas/Futuro/ y las hitboxes propias de Hitboxes/Mapas/Futuro/.
+Las menciones anteriores al exterior provisional describen etapas históricas.
+La geometría se validó junto a las estaciones y recorridos del final cooperativo.
+Detalles y hashes de las paredes originales: futuro.md y auditoria_mapa_futuro.json.

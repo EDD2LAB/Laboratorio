@@ -432,7 +432,7 @@ class VistaPartida:
         if clave not in self.interiores:
             from multijugador.dimensiones_red import cargar_interior, rect_salida
             from mundo.mapas import cargar_mapa_edificio
-            datos = cargar_interior(edificio)
+            datos = cargar_interior(edificio, self.dimension)
             self.interiores[clave] = {"fondo": cargar_mapa_edificio(edificio, self.dimension)["mapa"], "colisiones": ColisionesMapa(datos),
                                          "salida": pygame.Rect(rect_salida(datos))}
         if self.dimension not in self._personajes_interiores:

@@ -380,3 +380,33 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
   dos humanos, dos bots, ocho casos y 200 ticks sin Pygame. No es un build Docker.
 - Paredes y mapas sin cambios. Implementación local: sin push ni despliegue.
   Documentación vigente: desenlace_tres_eras.md.
+
+
+# Mapa definitivo y hitboxes de Ciudad Núcleo (2026-11-12)
+
+- Protocolo 18. Exterior definitivo de 1048 x 577 y cinco interiores con sus
+  hitboxes propias, incorporadas desde main, commit 04db4d8.
+- Conservadas las 581 paredes originales del equipo: hashes y cantidades en
+  auditoria_mapa_futuro.json. Solo se añadieron apariciones, salidas y puntos
+  de consulta en los interiores, y se corrigieron metadatos del portal y spawn.
+- Cliente y servidor usan el mismo JSON, escala y mapa. Los puntos del caso,
+  materiales, taller, recargas y consolas quedan en zonas conectadas.
+- Corregidos dos NPC aislados, la aparición del cuarto jugador tras una pared,
+  la entrada de varias personas a cada interior y la alineación del portal.
+- Navegación de bots: comprobar el segmento entre nodos y elegir esquivas
+  transitables de los pulsos, con un destino breve estable. Se resolvió el
+  atasco de transporte de la llave en el recorrido completo de tres eras.
+- El generador provisional cancela su ejecución cuando ya existe la geometría,
+  para no sobrescribir el trabajo manual ni su arte.
+- Auditoría de todas las terminales, NPC, puertas, portal y consultas. Revisión
+  visual del exterior y de los cinco interiores. Suite final: 564 pruebas
+  aprobadas en 677,243 s. El recorrido de cuatro bots por las tres eras pasó
+  también por separado en 10,591 s.
+- La primera ejecución completa detectó el desfase del portal y el atasco de
+  esquiva. Ambos quedaron corregidos y comprobados en la ejecución final.
+- Simulación del contexto del servidor: protocolo 18, 73 archivos, dos humanos,
+  dos bots, 200 ticks y ocho casos sin Pygame. No es un build real de Docker.
+- Solo se integraron archivos del Futuro desde main. Otros cambios remotos de
+  bots, audio y otras eras siguen fuera de esta integración.
+- Cambios locales: sin push ni despliegue. Para publicar, actualizar juntos
+  juego y servidor al protocolo 18. Ver futuro.md y auditoria_mapa_futuro.json.

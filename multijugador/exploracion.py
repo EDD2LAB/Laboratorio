@@ -48,11 +48,17 @@ class ExploracionInteriores:
                     frente = (mesa["cx"] * 960, mesa["cy"] * 720 + mesa["r"] * 960 + 14)
                 else:
                     frente = ((mesa["rx"] + mesa["rw"] / 2) * 960, (mesa["ry"] + mesa["rh"]) * 720 + 14)
-                candidato = mapa.inicio_libre(*frente)
-                from bots.navegador_bot import NavegadorBot
-                ruta = NavegadorBot(mapa).buscar_ruta(origen, candidato, radio=8)
-                if ruta:
+                if dimension == "futuro":
+                    from logica.zonas_caminables import componente, ancla
+                    candidato = ancla(componente(mapa, origen), frente)
+                    # El componente ya prueba la conexión; no repetir A* al crear cada sala.
                     x, y = candidato
+                else:
+                    candidato = mapa.inicio_libre(*frente)
+                    from bots.navegador_bot import NavegadorBot
+                    ruta = NavegadorBot(mapa).buscar_ruta(origen, candidato, radio=8)
+                    if ruta:
+                        x, y = candidato
             self.objetivos.append(dict(id="explorar:" + dimension + ":" + edificio,
                                        nombre=CONTENIDOS[edificio][0], dimension=dimension,
                                        interior=edificio, x=round(x), y=round(y)))

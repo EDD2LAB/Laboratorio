@@ -90,6 +90,9 @@ def tono_sprite(imagen, tono):
 
 
 def main():
+    if HITBOXES_DESTINO.exists():
+        print("[Futuro] Generación cancelada: se conserva la geometría existente y su arte. Usa el editor para cambios manuales.")
+        return
     pygame.init()
     pygame.display.set_mode((10, 10))
     SALIDA.mkdir(parents=True, exist_ok=True)
