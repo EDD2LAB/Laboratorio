@@ -74,7 +74,7 @@ def esperados():
         agregar(f"Audios/UI/{nombre}.wav", "Sonido de interfaz", "Silencio; conexión pendiente")
     for nombre in ("nucleo_carga", "nucleo_barrido", "rayo_aviso", "rayo_impacto", "mini_aparicion", "mini_disparo", "mini_explosion", "cambio_fase", "desfragmentador", "emp_onda", "escudo_activar", "escudo_bloqueo", "dron_curacion", "recoger_material", "fabricar", "derribado", "levantado", "nucleo_derrota"):
         agregar(f"Audios/Batalla/{nombre}.wav", "Batalla aún sin implementar", "Silencio")
-    agregar("Imagenes/Batalla/HUD/derribado_4f.png", "Jugador caído", "Corazón por código por implementar")
+    agregar("Imagenes/Batalla/HUD/derribado_4f.png", "Jugador caído", "Corazón roto en pixel art por código (interfaz/sprites_combate.py)")
     return filas
 
 

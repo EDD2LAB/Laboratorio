@@ -110,7 +110,7 @@ La columna respaldo describe la alternativa actual o la prevista si dice por imp
 | `Audios/Batalla/derribado.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
 | `Audios/Batalla/levantado.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
 | `Audios/Batalla/nucleo_derrota.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Imagenes/Batalla/HUD/derribado_4f.png` | Falta en ruta esperada | Jugador caído | Corazón por código por implementar |
+| `Imagenes/Batalla/HUD/derribado_4f.png` | Falta en ruta esperada | Jugador caído | Corazón roto en pixel art por código (interfaz/sprites_combate.py) |
 
 ## Familias con nombres o formatos variables
 

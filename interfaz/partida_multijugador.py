@@ -230,7 +230,9 @@ class VistaPartida:
                              for nombre, imagen in self.vecinos_exploracion.items() if imagen is not None}
         self._personajes_interiores = {}
         self.capa_efectos = pygame.Surface((960, 720), pygame.SRCALPHA)
-        self.fondo = pygame.transform.scale(self.fondo_zoom, (960, 720))
+        from interfaz.efectos_combate import EfectosCombate
+        self.efectos_combate = EfectosCombate()
+        self.fondo =pygame.transform.scale(self.fondo_zoom, (960, 720))
         self.fuente = cargar_fuente(16)
         self.boton_expediente = Boton("Casos · T", fuente=self.fuente, centro=(846, 626), tamano=(200, 36))
         self.etiquetas_jugadores = []
@@ -486,6 +488,15 @@ class VistaPartida:
 
     def yo(self):
         return next((j for j in self.estado.get("mundo", {}).get("jugadores", []) if j["id"] == self.identificador), None)
+
+    def _objetivo_blaster(self, final):
+        """(mini, apuntable) para la mira y la tecla F; el servidor vuelve a validarlo."""
+        from interfaz.efectos_combate import elegir_objetivo
+        yo = self.yo()
+        if not yo or final.get("fase") != "activo" or yo.get("interior"):
+            return None, False
+        return elegir_objetivo(final.get("aventura", {}).get("minis", []), (yo["x"], yo["y"]),
+                               self.colisiones.trayecto_libre)
 
     def destinos(self):
         from multijugador.dimensiones_red import destinos
@@ -921,10 +932,8 @@ class VistaPartida:
                 cliente.actuar("final_accion", operacion="municion", ronda_final=final["ronda"])
                 return True
             if final.get("fase") == "activo" and evento.key == pygame.K_f:
-                yo = self.yo() or {}
-                minis = aventura.get("minis", [])
-                if minis:
-                    mini = min(minis, key=lambda m: math.hypot(yo.get("x", 0)-m["x"], yo.get("y", 0)-m["y"]))
+                mini, _ = self._objetivo_blaster(final)
+                if mini:
                     cliente.actuar("final_accion", operacion="disparar", mini=mini["id"], ronda_final=final["ronda"])
                 return True
         if self.panel.manejar(evento, posicion, cliente):
@@ -1325,12 +1334,15 @@ class VistaPartida:
         self.adornos.ruta(superficie, self.ruta_guia, ahora_ms)
         if self.dimension == FUTURO and not self.interior:
             from interfaz.equipo_rebelion import dibujar
-            dibujar(superficie, self.contexto().get("desafio_final") or {}, self.estado.get("mundo", {}).get("jugadores", []))
+            final = self.contexto().get("desafio_final") or {}
+            jugadores = self.estado.get("mundo", {}).get("jugadores", [])
+            self.efectos_combate.actualizar(final, ahora_ms, self.identificador)
+            dibujar(superficie, final, jugadores, self.efectos_combate, ahora_ms, self._objetivo_blaster(final))
             self._dibujar_nucleo(superficie, ahora_ms)
             self._dibujar_barreras_y_pulsos(superficie, ahora_ms)
-            final = self.contexto().get("desafio_final") or {}
             from interfaz.batalla_cooperativa import dibujar_ataques
-            dibujar_ataques(superficie, final, self.estado.get("mundo", {}).get("jugadores", []))
+            dibujar_ataques(superficie, final, jugadores, self.efectos_combate, ahora_ms)
+            self.efectos_combate.dibujar(superficie)
             if final.get("fase") == "activo" and "guardian" in final.get("hechos", []) and "mensajero" not in final.get("hechos", []):
                 portador = next((j for j in self.estado.get("mundo", {}).get("jugadores", []) if j["id"] == final.get("portador")), None)
                 punto = portador or final.get("recogida")
@@ -1580,6 +1592,10 @@ class VistaPartida:
         self.objetivo_resaltado = self._calcular_resaltado()
         self._resaltado_hecho, self._ancla_resaltado, self._figura_resaltada = False, None, None
         vista = self.vista_camara()
+        if vista is not None and self.dimension == FUTURO and not self.interior:
+            dx, dy = self.efectos_combate.desplazamiento(ahora_ms)  # temblor por rayos e impactos
+            if dx or dy:
+                vista = vista.move(dx, dy).clamp(pygame.Rect(0, 0, 960, 720))
         escena = self.escenas_zoom.get(self.dimension) if vista is not None else None
         if escena is not None:
             anclas = self._mundo_ampliado(superficie, vista, ahora_ms, escena)
@@ -1867,7 +1883,8 @@ class VistaPartida:
                 superficie.blit(aviso, aviso.get_rect(center=(480, 45)))
         if self.dimension == FUTURO and not self.interior:
             from interfaz.batalla_cooperativa import dibujar_aviso
-            dibujar_aviso(superficie, self.contexto().get("desafio_final") or {}, self.fuente, self.yo())
+            dibujar_aviso(superficie, self.contexto().get("desafio_final") or {}, self.fuente, self.yo(),
+                          self.efectos_combate, pygame.time.get_ticks())
         self.panel.dibujar(superficie)
         if time.monotonic() < self.panel.celebrar_hasta:
             from interfaz.guia import estrella

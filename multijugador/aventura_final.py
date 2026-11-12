@@ -1,6 +1,8 @@
 """Preparación, combate auxiliar y desenlace compartido. Sin dependencias gráficas."""
 import math
 
+ALCANCE_BLASTER = 180  # px del mapa; el cliente lo usa para la mira.
+
 PIEZAS = (("bateria", "Batería", "guardian"), ("circuito", "Circuito", "habitante"),
           ("carcasa", "Carcasa", "aspirante"))
 RECONFIGURACION = (
@@ -86,7 +88,7 @@ class AventuraFinal:
         if (not mini or batalla.turno not in ("aviso", "rayo") or self.municion <= 0
                 or reloj < self.disparo_en.get(identificador, 0)):
             raise ValueError("Elige un mini-núcleo activo y espera a que recargue el bláster.")
-        if math.hypot(jugador["x"] - mini["x"], jugador["y"] - mini["y"]) > 180:
+        if math.hypot(jugador["x"] - mini["x"], jugador["y"] - mini["y"]) > ALCANCE_BLASTER:
             raise ValueError("Acércate al mini-núcleo para disparar.")
         if not linea_libre((jugador["x"], jugador["y"]), (mini["x"], mini["y"])):
             raise ValueError("Hay una pared entre el bláster y el mini-núcleo.")
