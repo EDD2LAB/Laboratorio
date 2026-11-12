@@ -369,16 +369,9 @@ class VistaPartida:
             self.sonido({"tipo": "caldero", "estado": "estable"})
         if self.audio:
             try:
-                final = self.contexto().get("desafio_final") or {}
-                etapa = final.get("aventura", {}).get("cierre", {}).get("etapa")
-                pista = "ambiente"
-                if self.dimension == FUTURO:
-                    pista = "musica_nucleo"
-                    if final.get("fase") == "activo":
-                        pista = "batalla_fase" + str(final.get("batalla", {}).get("fase", 1))
-                if etapa == "pantalla":
-                    from interfaz.finales import determinar_final
-                    pista = determinar_final(self.estado.get("mundo", {}).get("caso", {}).get("indicadores", {}))
+                from audio.musica_mapas import pista_actual
+                indicadores = self.estado.get("mundo", {}).get("caso", {}).get("indicadores", {})
+                pista = pista_actual(self.dimension, self.contexto(), indicadores)
                 self.audio.reproducir_musica(pista, en_bucle=True)
             except Exception as error:
                 print("[Multijugador] Sin música:", error)
@@ -616,6 +609,9 @@ class VistaPartida:
         completa = self.dimension_completa()
         self.final_sonado = completa
         self.panel.actualizar()
+        # También cambia al recibir una nueva fase o escena sin viajar de mapa.
+        # El gestor conserva la reproducción si la pista ya está sonando.
+        self.sonido_musica()
 
     def cerca(self, objetivo, radio=68):
         yo = self.yo()

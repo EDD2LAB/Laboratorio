@@ -34,7 +34,8 @@ class GestorAudio:
             "victoria": os.path.join(carpeta_audios, "victoria_la_copa_voces_en_las_alturas.mp3"),
             "game_over": os.path.join(carpeta_audios, "game_over_la_copa_voces_alturas.mp3"),
         }
-        for clave, archivo in (("musica_nucleo", "musica_nucleo.mp3"), ("batalla_fase1", "batalla_fase1.mp3"), ("batalla_fase2", "batalla_fase2.mp3")):
+        for clave, archivo in (("musica_presente", "musica_presente.mp3"), ("musica_nucleo", "musica_nucleo.mp3"),
+                               ("batalla_fase1", "batalla_fase1.mp3"), ("batalla_fase2", "batalla_fase2.mp3")):
             candidatos = [os.path.join(carpeta_audios, carpeta, archivo) for carpeta in ("Música", "Musica", "")]
             self.rutas_musica[clave] = next((ruta for ruta in candidatos if os.path.isfile(ruta)), self.rutas_musica["ambiente"])
         carpeta_pociones = os.path.join(carpeta_audios, "audios_pociones_la_copa")
