@@ -1051,7 +1051,9 @@ class VistaPartida:
         from interfaz.orientacion import tarea_actual
         destino = tarea_actual(self).get("objetivo")
         yo = self.yo()
-        if destino and yo:
+        if self.dimension == FUTURO:
+            self._actualizar_guia_futuro(destino)
+        elif destino and yo:
             clave = (destino["id"], round(destino["x"]), round(destino["y"]),
                      round(yo["x"]/24), round(yo["y"]/24), tuple(map(tuple, self.colisiones.bloqueos)))
             if destino["id"] != self.destino_ruta or (clave != self.clave_ruta and time.monotonic()-self.ultima_ruta > .8):
@@ -1069,6 +1071,26 @@ class VistaPartida:
             jugador["posicion"] = jugador["posicion"].lerp(jugador["destino"], factor)
             jugador["reloj"] += segundos
         self._seguir_camara(segundos)
+
+    def _actualizar_guia_futuro(self, destino):
+        from interfaz.guia import buscar_camino, conservar_camino
+        mio = self.jugadores.get(self.identificador)
+        if not destino or not mio:
+            self.ruta_guia, self.destino_ruta, self.clave_ruta = [], None, None
+            return
+        origen = tuple(mio["posicion"])
+        clave = (destino["id"], round(destino["x"]), round(destino["y"]),
+                 self.colisiones.firma, tuple(map(tuple, self.colisiones.bloqueos)))
+        ruta = conservar_camino(self.colisiones, origen, self.ruta_guia) if clave == self.clave_ruta else None
+        ahora = time.monotonic()
+        if ruta is None and (clave != self.clave_ruta or ahora - self.ultima_ruta >= .8):
+            radio = 40 if destino["id"] == "portal" else 24
+            ruta = buscar_camino(self.colisiones, origen, (destino["x"], destino["y"]),
+                                 radio=radio, paso=4, limite=40000)
+            self.ultima_ruta = ahora
+        # Si cambió el objetivo o abandonamos el camino, nunca mostrar el viejo.
+        self.ruta_guia = ruta or []
+        self.clave_ruta, self.destino_ruta = clave, destino["id"]
 
     # ---------------------------------------------------------- cámara
     def _rect_mapa(self):
@@ -1566,7 +1588,8 @@ class VistaPartida:
         mio = self.jugadores.get(self.identificador)
         destino = self._destino_flecha(vista)
         if destino and mio and not self.panel.activo:
-            origen = self.a_pantalla(mio["posicion"].x, mio["posicion"].y - 20, vista)
+            altura = 0 if self.dimension == FUTURO else 20
+            origen = self.a_pantalla(mio["posicion"].x, mio["posicion"].y - altura, vista)
             self.flecha.dibujar(superficie, origen, self.a_pantalla(*destino, vista), ahora_ms,
                                 limites=(40, 60, 920, 640))
         etiquetas = []

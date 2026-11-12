@@ -60,7 +60,7 @@ def tarea_actual(vista):
     titulo, detalle = vista._textos_objetivo(caso, privado, privado.get("guia", {}))
     final = contexto.get("desafio_final") or {}
     if vista.dimension == "futuro" and not vista.interior and final.get("fase") in ("preparacion", "activo", "reintento"):
-        rol = getattr(vista, "final_rol_guia", None) or (vista.yo() or {}).get("rol", "guardian")
+        rol = (vista.yo() or {}).get("rol", "guardian")
         titulo = {"guardian": "Compara las órdenes del consejo", "mensajero": "Lleva el módulo por las recargas",
                   "habitante": "Estabiliza y sostiene la estación", "aspirante": "Prepara la autorización humana"}[rol]
         if final["fase"] != "activo" or len(final.get("hechos", [])) == 4:
@@ -69,9 +69,13 @@ def tarea_actual(vista):
         if final["fase"] == "preparacion" and aventura.get("faltan"):
             titulo = "Vuelve por el portal: falta " + ", ".join(aventura["faltan"])
         elif final["fase"] == "preparacion" and not aventura.get("fabricado"):
-            titulo = "Ayuda a la rebelión: recoge y entrega las piezas en el taller"
+            titulo = objetivo["nombre"] if objetivo else "Tus compañeros llevan las piezas. Espera su entrega"
         elif len(final.get("hechos", [])) == 4:
-            titulo = "Ve a tu consola y confirma con E"
+            titulo = "Espera las confirmaciones de tu equipo" if (vista.yo() or {}).get("id") in final.get("activaciones", []) else "Ve a tu consola y confirma con E"
+        elif final["fase"] == "activo" and rol in final.get("hechos", []):
+            titulo = "Tu tarea está lista. Ayuda a tu equipo y esquiva"
+        elif final["fase"] == "activo" and rol in ("mensajero", "aspirante") and final.get("batalla", {}).get("fase", 1) == 1:
+            titulo = "Ayuda a esquivar mientras Guardián y Habitante apagan el escudo"
         batalla = final.get("batalla", {})
         if final["fase"] == "activo" and batalla.get("turno") in ("aviso", "rayo"):
             titulo = "¡Sal de las marcas! NÚCLEO va a disparar"

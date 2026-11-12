@@ -43,7 +43,13 @@ La flecha del Futuro sigue los tramos transitables de la ruta de luces, rodea
 paredes y sigue visible aunque el objetivo ya esté en cámara. Al llegar cede
 el lugar al marcador E. Si no hay ruta no apunta en línea recta a una pared.
 La cuadrícula de guía se afina a cuatro píxeles para detectar los descansillos;
-la ruta se conserva entre cuadros y solo se recalcula al cambiar de tramo.
+la ruta se conserva entre cuadros y se recalcula al cambiar el destino o perder
+el recorrido transitable.
+La guía conserva el recorrido mientras se siga caminando por él; no elige otro
+desvío al cruzar cada celda. Si cambia la misión, descarta inmediatamente la ruta
+anterior. Su dirección se calcula desde los pies del jugador. En el final señala
+el rol propio y las piezas disponibles, sin enviar a tareas terminadas, acciones
+todavía bloqueadas por la fase ni consolas que ya se hayan confirmado.
 
 ## Apariciones y rutas
 

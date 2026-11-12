@@ -16,26 +16,45 @@ def objetivo(vista, rol=None):
     final = estado(vista)
     if final.get("fase") in (None, "bloqueado", "victoria"):
         return None
-    rol = rol or getattr(vista, "final_rol_guia", None) or (vista.yo() or {}).get("rol", "guardian")
+    yo = vista.yo() or {}
+    rol = rol or yo.get("rol", "guardian")
     puntos = final.get("puntos", {})
     aventura = final.get("aventura", {})
+    nombre = "Final cooperativo · " + NOMBRES[rol]
     if final["fase"] == "preparacion" and aventura.get("faltan"):
         rect = vista.rect_portal()
         return dict(id="portal", nombre="Terminar las eras pendientes", x=rect.centerx, y=rect.centery) if rect else None
     if final["fase"] == "preparacion" and not aventura.get("fabricado") and not aventura.get("faltan"):
-        yo = vista.yo() or {}
-        punto = aventura.get("taller") if yo.get("id") in aventura.get("cargas", {}) or len(aventura.get("entregadas", [])) == 3 else next(iter(aventura.get("materiales", [])), aventura.get("taller"))
+        if yo.get("id") in aventura.get("cargas", {}) or len(aventura.get("entregadas", [])) == 3:
+            punto = aventura.get("taller")
+            nombre = "Entregar la pieza en el taller" if yo.get("id") in aventura.get("cargas", {}) else "Fabricar el equipo en el taller"
+        else:
+            materiales = aventura.get("materiales", [])
+            punto = next((m for m in materiales if m["id"] == getattr(vista, "_pieza_guia", None)), None)
+            if punto is None and materiales:
+                punto = min(materiales, key=lambda m: (m["x"]-yo.get("x", 0))**2 + (m["y"]-yo.get("y", 0))**2)
+            vista._pieza_guia = punto["id"] if punto else None
+            if punto:
+                nombre = "Recoger " + punto.get("nombre", "la pieza")
     elif len(final.get("hechos", [])) == 4:
+        if yo.get("id") in final.get("activaciones", []):
+            return None
         rol = (vista.yo() or {}).get("rol", rol)
         punto = puntos.get(rol)
     elif final["fase"] in ("preparacion", "reintento"):
         punto = puntos.get("aspirante")
+    elif rol in final.get("hechos", []):
+        return None
+    elif rol in ("mensajero", "aspirante") and final.get("batalla", {}).get("fase", 1) == 1:
+        return None
     elif rol == "mensajero" and rol not in final.get("hechos", []):
+        if final.get("portador") not in (None, yo.get("id")):
+            return None
         ruta = final.get("ruta") or []
         punto = final.get("recogida") if final.get("portador") is None else ruta[min(final.get("tramo", 0), len(ruta) - 1)] if ruta else None
     else:
         punto = puntos.get(rol)
-    return dict(punto, id="final:" + rol, nombre="Final cooperativo · " + NOMBRES[rol]) if punto else None
+    return dict(punto, id="final:" + rol, nombre=nombre) if punto else None
 
 
 class PantallaFinal:
@@ -199,7 +218,6 @@ class PantallaFinal:
             if operacion == "rol":
                 self.rol = partes[1]
             elif operacion == "mapa":
-                self.panel.vista.final_rol_guia = self.rol
                 self.panel.modo = None
                 self.manteniendo = False
             elif operacion == "informe":

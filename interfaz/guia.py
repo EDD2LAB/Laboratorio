@@ -60,6 +60,23 @@ def siguiente_paso(colisiones, origen, ruta, distancia=48):
     return siguiente if math.dist(origen, siguiente) >= 3 else None
 
 
+def conservar_camino(colisiones, origen, ruta, margen=18):
+    """Recorta lo recorrido sin volver a elegir entre desvíos equivalentes.
+
+    None pide una ruta nueva porque el jugador se alejó o apareció un bloqueo.
+    """
+    for distancia, indice in sorted((math.dist(origen, p), -i) for i, p in enumerate(ruta)):
+        if distancia > margen:
+            return None
+        indice = -indice
+        if colisiones.trayecto_libre(origen, ruta[indice]):
+            restante = ruta[indice:]
+            paso = siguiente_paso(colisiones, origen, restante)
+            if paso is not None or len(restante) == 1:
+                return restante
+    return None
+
+
 def estrella(superficie, centro, radio, color):
     import pygame
     puntos = []

@@ -8,7 +8,7 @@ os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
 import pygame
 
-from interfaz.guia import buscar_camino, siguiente_paso
+from interfaz.guia import buscar_camino, siguiente_paso, conservar_camino
 from multijugador.dimensiones_red import cargar_datos, cargar_interior
 from multijugador.movimiento import ColisionesMapa
 
@@ -76,6 +76,31 @@ class FlechaConRuta(unittest.TestCase):
     def test_no_inventa_direccion_si_no_hay_ruta(self):
         self.assertIsNone(siguiente_paso(self.m, (80, 110), []))
 
+    def test_conserva_el_recorrido_al_avanzar_en_vez_de_cambiar_de_desvio(self):
+        from interfaz.partida_multijugador import VistaPartida
+        m = ColisionesMapa({"hitboxes": []})
+        vista = SimpleNamespace(identificador="a", colisiones=m,
+                jugadores={"a": {"posicion": pygame.Vector2(100, 100)}},
+                ruta_guia=[], clave_ruta=None, destino_ruta=None, ultima_ruta=0)
+        objetivo = {"id": "terminal", "x": 300, "y": 100}
+        ruta = [(x, 100) for x in range(100, 281, 4)]
+        with patch("interfaz.guia.buscar_camino", return_value=ruta) as buscar:
+            VistaPartida._actualizar_guia_futuro(vista, objetivo)
+            vista.jugadores["a"]["posicion"].update(160, 100)
+            VistaPartida._actualizar_guia_futuro(vista, objetivo)
+            self.assertEqual(buscar.call_count, 1)
+            self.assertEqual(vista.ruta_guia[0], (160, 100))
+            # Un destino nuevo con el mismo id no espera el temporizador.
+            VistaPartida._actualizar_guia_futuro(vista, dict(objetivo, y=200))
+            self.assertEqual(buscar.call_count, 2)
+            VistaPartida._actualizar_guia_futuro(vista, None)
+            self.assertEqual(vista.ruta_guia, [])
+            self.assertIsNone(vista.clave_ruta)
+
+    def test_alejarse_o_una_pared_invalidan_el_camino(self):
+        self.assertIsNone(conservar_camino(self.m, (80, 110), [(200, 110)]))
+        self.assertIsNone(conservar_camino(self.m, (115, 110), [(137, 110)]))
+
     def test_flecha_persiste_con_objetivo_en_camara_y_desaparece_al_llegar(self):
         from interfaz.partida_multijugador import VistaPartida
         m = ColisionesMapa({"hitboxes": []})
@@ -86,3 +111,43 @@ class FlechaConRuta(unittest.TestCase):
             self.assertIsNotNone(VistaPartida._destino_flecha(vista, pygame.Rect(0, 0, 960, 720)))
             vista.jugadores["a"]["posicion"].update(280, 100)
             self.assertIsNone(VistaPartida._destino_flecha(vista, pygame.Rect(0, 0, 960, 720)))
+
+
+class ObjetivosUtiles(unittest.TestCase):
+    def vista(self, rol="mensajero", fase="activo"):
+        f = {"fase": fase, "hechos": [], "batalla": {"fase": 2},
+             "puntos": {r: {"x": 100+i*100, "y": 100} for i, r in enumerate(("guardian", "mensajero", "habitante", "aspirante"))},
+             "recogida": {"x": 200, "y": 100}, "ruta": [{"x": 300, "y": 100}], "aventura": {}}
+        v = SimpleNamespace(estado={"mundo": {"caso": {"futuro": {"desafio_final": f}}}},
+                            yo=lambda: {"id": "yo", "rol": rol, "x": 100, "y": 100}, final_rol_guia="guardian")
+        return v, f
+
+    def test_la_pestana_de_otro_rol_no_cambia_la_mision_propia(self):
+        from interfaz.final_cooperativo import objetivo
+        v, f = self.vista()
+        self.assertEqual(objetivo(v)["x"], 200)
+        f["batalla"]["fase"] = 1
+        self.assertIsNone(objetivo(v))
+
+    def test_no_senala_tarea_terminada_ni_consola_ya_confirmada(self):
+        from interfaz.final_cooperativo import objetivo
+        v, f = self.vista("guardian")
+        f["hechos"] = ["guardian"]
+        self.assertIsNone(objetivo(v))
+        f["hechos"] = ["guardian", "mensajero", "habitante", "aspirante"]
+        self.assertIsNotNone(objetivo(v))
+        f["activaciones"] = ["yo"]
+        self.assertIsNone(objetivo(v))
+
+    def test_pieza_fija_hasta_que_deje_de_estar_disponible(self):
+        from interfaz.final_cooperativo import objetivo
+        v, f = self.vista(fase="preparacion")
+        a, b = {"id": "a", "x": 110, "y": 100}, {"id": "b", "x": 190, "y": 100}
+        f["aventura"] = {"materiales": [a,b], "taller": {"x": 400, "y": 100}}
+        self.assertEqual(objetivo(v)["x"], 110)
+        f["aventura"]["materiales"] = [b,a]
+        self.assertEqual(objetivo(v)["x"], 110)
+        f["aventura"]["materiales"] = [b]
+        self.assertEqual(objetivo(v)["x"], 190)
+        f["aventura"]["materiales"] = []
+        self.assertIsNone(objetivo(v))
