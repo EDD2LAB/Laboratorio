@@ -55,3 +55,9 @@ Futuro sigue pendiente del trabajo de la compañera. Música pendiente del usuar
 La batalla y el Modo Feria con QR siguen fuera de esta etapa.
 
 Trabajo local: no implica push ni actualización de Render.
+
+## Validación previa a publicación (2026-11-11)
+
+La batería completa se volvió a ejecutar con la prueba adaptada: **514 pruebas
+aprobadas en 346,223 s**. Esto completa la comprobación general posterior a
+las etapas 5, 6 y 7. Se conserva el protocolo 14.

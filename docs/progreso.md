@@ -306,3 +306,15 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
 - Paquete aislado del servidor validado, dos humanos y dos bots, 200 ticks.
   Estado de ocho fichas y cuatro jugadores: 22.723 bytes de un máximo de 32.768.
 - Solo local, sin push ni despliegue. Ver docs/expediente_etapa7.md.
+
+---
+
+# Publicación de etapas 5, 6 y 7 - validación previa (2026-11-11)
+
+- 514 pruebas completas aprobadas en 346,223 s, incluida la comprobación de
+  lectura desplazable de referencias legales de los ocho casos.
+- Simulación del paquete del servidor aprobada: protocolo 14, dos humanos y
+  dos bots, 200 ticks, ocho casos, sin Pygame. No es un build real de Docker.
+- Se publican juntas presentación visual, exploración y expediente animado.
+  Música y geometría exterior nueva del Futuro siguen pendientes.
+- Los clientes y el servidor deben actualizarse al protocolo 14.
