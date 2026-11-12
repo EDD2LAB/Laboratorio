@@ -16,7 +16,7 @@
 
 ## Trabajo restante
 
-El protocolo local actual es 14. Render conserva la última versión publicada
+El protocolo local actual es 15. Render conserva la última versión publicada
 hasta realizar el próximo push y despliegue.
 
 Las etapas 1 y 2 se publicaron y desplegaron en Render en `be2f6df`.
@@ -53,3 +53,8 @@ En `5d1f74f`: 442 pruebas aprobadas. Medición headless de 15 s con cuatro
 clientes locales: 60 FPS y unos 4,1 KB/s por cliente. No es una medición de Render
 ni una validación con múltiples redes. La validación de esta etapa se registra
 en `docs/progreso.md`.
+
+El final cooperativo acordado con el usuario se implementa en
+`docs/final_cooperativo.md`: cuatro minijuegos enlazados y reintento sin perder
+casos. No implementa un prompt de batalla que no haya sido entregado. Música y
+mapa exterior nuevo del Futuro siguen pendientes.

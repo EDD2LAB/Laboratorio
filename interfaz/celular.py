@@ -229,6 +229,8 @@ def _boton(panel, superficie, clave, texto, centro, ancho=300, activo=True, alto
 def _menu(panel, superficie, contexto, inventario):
     """Tendencias es el menú del celular; las pistas se abren desde ahí."""
     filas = [("introduccion", "Misión"), ("inventario", "Mis pistas"), ("caldero", "Decidir")]
+    if (contexto.get("desafio_final") or {}).get("fase") not in (None, "bloqueado"):
+        filas.insert(0, ("final_cooperativo", "Final cooperativo"))
     if panel.dimension == "presente":
         filas.append(("analizar", "Analizar"))
     relleno = "CiudadNucleo" if panel.dimension == "futuro" else "DistritoConecta"

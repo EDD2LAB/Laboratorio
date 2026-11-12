@@ -147,7 +147,15 @@ class PanelCooperativo:
                 self.resultado_visto = clave
                 self.abrir("resultado")
         futuro = self.caso.get("futuro") or {}
-        if futuro.get("fin") and futuro["resultado"]["evento_id"] != self.evento_futuro_visto:
+        desafio = futuro.get("desafio_final") or {}
+        if desafio.get("fase") in ("reintento", "victoria") and getattr(self, "final_fase_vista", None) != desafio["fase"] and self.dimension == "futuro":
+            self.abrir("final_cooperativo")
+        self.final_fase_vista = desafio.get("fase")
+        if desafio.get("fase") not in (None, "bloqueado") and desafio.get("evento_id") != getattr(self, "final_visto", None):
+            self.final_visto = desafio["evento_id"]
+            if self.dimension == "futuro":
+                self.abrir("final_cooperativo")
+        if futuro.get("fin") and not desafio and futuro["resultado"]["evento_id"] != self.evento_futuro_visto:
             if self.evento_futuro_visto is not None or self.dimension == "futuro":
                 self.pedir_informe_en = time.monotonic() + SEGUNDOS_ANTES_DEL_INFORME
             self.evento_futuro_visto = futuro["resultado"]["evento_id"]
@@ -186,6 +194,11 @@ class PanelCooperativo:
         self.toast, self.toast_hasta = texto, time.monotonic() + 6
 
     def recibir(self, acuse):
+        if acuse.get("ok") and acuse.get("vista") == "expediente_ficha":
+            if not hasattr(self, "expediente_fichas"):
+                self.expediente_fichas = {}
+            self.expediente_fichas[acuse["ficha"]["id"]] = acuse["ficha"]
+            return
         if acuse.get("ok") and acuse.get("vista") == "informe":
             self.informe, self.informe_exportado = acuse["informe"], ""
             self.informe_scroll, self.informe_arrastre = 0, None
@@ -401,6 +414,10 @@ class PanelCooperativo:
 
     def dibujar(self, superficie):
         self.botones = {}
+        if self.modo == "final_cooperativo":
+            from interfaz.final_cooperativo import pantalla
+            pantalla(self).dibujar(superficie)
+            return
         if self.modo == "descubrimiento":
             velo = pygame.Surface(superficie.get_size(), pygame.SRCALPHA)
             velo.fill((5, 16, 22, 210))
@@ -698,6 +715,10 @@ class PanelCooperativo:
         return self.destinos_eco() if self.cerca_eco() and not self.destino_fijo else self.destinatarios()
 
     def manejar(self, evento, posicion, cliente):
+        if self.modo == "final_cooperativo":
+            from interfaz.final_cooperativo import pantalla
+            if pantalla(self).manejar(evento, posicion, cliente):
+                return True
         if self.modo == "informe" and self.informe and informe_final.manejar_desplazamiento(self, evento, posicion):
             return True
         if self.modo == "expediente":
@@ -788,7 +809,7 @@ class PanelCooperativo:
                 if self.privado.get("tutorial", {}).get("estado") == "pendiente" and self.caso.get("ronda", 0) == 0:
                     cliente.actuar("iniciar_tutorial")
                 self.modo = None
-            elif clave in ("inventario", "eco_mensajes", "introduccion", "actividad", "poder"):
+            elif clave in ("inventario", "eco_mensajes", "introduccion", "actividad", "poder", "final_cooperativo"):
                 self.abrir(clave)
             elif clave.startswith("recoger:"):
                 material = next(m for m in self.caso["encargo"]["materiales"] if m["id"] == clave.split(":")[1])

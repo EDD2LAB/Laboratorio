@@ -55,7 +55,11 @@ class ExpedientePartida:
             return
         self.eventos[evento] = resultado.get("evento_id")
         ficha = ficha or ficha_resuelta(evento)
-        datos = {"resultado": deepcopy(resultado), "pruebas": deepcopy(pruebas),
+        # La ficha ya conserva estos campos legales. No duplicarlos dentro
+        # del resultado de cada nodo: ocho fichas deben caber en un snapshot.
+        resultado_corto = {k: deepcopy(v) for k, v in resultado.items()
+                           if k not in ("norma", "pena", "cita_corta", "conducta", "nota", "con_delito")}
+        datos = {"resultado": resultado_corto, "pruebas": deepcopy(pruebas),
                  "dimension": ("futuro" if evento == "nucleo_control" else "presente" if evento.startswith("presente_") else "la_copa"),
                  "tipo": ficha["tipo"], "ley": ficha["ley"], "sancion": ficha["sancion"],
                  "estado_normativo": ficha["estado_normativo"], "cita_corta": ficha["cita_corta"],
@@ -93,6 +97,14 @@ class ExpedientePartida:
             return {"mensaje": "¡Caso guardado! El árbol se equilibra para encontrarlo fácilmente."}
         return {"mensaje": "¡Bien! Ahora compara con el siguiente caso."}
 
+    def leer(self, identificador):
+        if type(identificador) is not str:
+            raise ValueError("Elige un caso registrado.")
+        caso = self.arbol.casos.get(identificador) or next((c for c in self.pendientes if c.id == identificador), None)
+        if caso is None:
+            raise ValueError("Ese caso aún no se ha investigado.")
+        return caso.publico()
+
     def publico(self):
         estado = self.arbol.publico()
         pendiente = self.pendientes[0] if self.pendientes else None
@@ -102,3 +114,26 @@ class ExpedientePartida:
                       pendiente=pendiente.publico() if pendiente else None,
                       comparar_con=ruta[self.paso]["nodo"] if ruta else None)
         return estado
+
+
+def resumen_para_red(estado):
+    """El árbol viaja siempre; la ficha completa se consulta solo al abrirla.
+
+    La autoridad conserva pruebas y referencias. No truncar ni eliminar pruebas
+    para cumplir el límite de red: entregar cada ficha mediante expediente_leer.
+    """
+    def caso_resumido(caso):
+        datos = caso["datos"]
+        resultado = datos["resultado"]
+        return dict(caso, detalle_remoto=True, datos=dict(
+            tipo=datos["tipo"], dimension=datos.get("dimension"),
+            resultado={k: resultado[k] for k in ("opcion", "correcto", "evento_id") if k in resultado},
+            pruebas=[], total_pruebas=len(datos.get("pruebas", []))))
+
+    def nodo_resumido(nodo):
+        if nodo is None:
+            return None
+        return dict(nodo, caso=caso_resumido(nodo["caso"]),
+                    izquierda=nodo_resumido(nodo["izquierda"]), derecha=nodo_resumido(nodo["derecha"]))
+    return dict(estado, raiz=nodo_resumido(estado.get("raiz")),
+                pendiente=caso_resumido(estado["pendiente"]) if estado.get("pendiente") else None)

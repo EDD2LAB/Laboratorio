@@ -318,3 +318,15 @@ Línea base antes de empezar: 338 pruebas, 60,2 FPS, 246,9 KB/s por cliente.
 - Se publican juntas presentación visual, exploración y expediente animado.
   Música y geometría exterior nueva del Futuro siguen pendientes.
 - Los clientes y el servidor deben actualizarse al protocolo 14.
+
+# Final cooperativo - implementación local (2026-11-11)
+
+- Cuatro minijuegos: comparar órdenes, transportar el módulo, mantener la
+  estación y construir una propuesta con supervisión humana.
+- Estado validado por el servidor, roles privados, bots, reintentos y
+  activación conjunta. Disponible en campaña cooperativa y multijugador.
+- Dos imágenes nuevas; prompts documentados en arte_final_cooperativo.md.
+- Expediente completo consultado por ficha para respetar el límite de red.
+- 532 pruebas aprobadas en 544,922 s y revisión visual de las pantallas.
+- Protocolo 15: requiere publicar cliente y servidor juntos. Sin push ni
+  despliegue en esta etapa. No se modificaron música ni hitboxes exteriores.

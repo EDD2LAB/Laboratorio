@@ -64,6 +64,9 @@ def exportar(datos, carpeta=None, ahora=None):
             prefijo = {"titulo": "", "datos": "   ", "ley": "   Norma: ", "sancion": "   Pena: "}[tipo]
             lineas.append(prefijo + texto)
         lineas.append("")
+    final = datos.get("final_cooperativo") or {}
+    if final.get("fase") == "victoria":
+        lineas.extend(["FINAL COOPERATIVO: CIUDAD RECUPERADA", "Los cuatro roles devolvieron la supervisión de NÚCLEO a las personas.", ""])
     lineas.append(CIERRE)
     ruta.write_text("\n".join(lineas) + "\n", encoding="utf-8")
     return ruta

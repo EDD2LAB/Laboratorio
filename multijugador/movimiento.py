@@ -495,6 +495,11 @@ class PartidaMovimiento:
         sin_personas = not any(self._humano(i) for i in self.conectados)
         self.mision.presentes_presente = {i for i in self.presentes_en(PRESENTE) if sin_personas or self._humano(i)}
         self.mision.presentes_futuro = {i for i in self.presentes_en(FUTURO) if sin_personas or self._humano(i)}
+        self.mision.participantes_final = self.presentes_en(FUTURO)
+        if self.mision.futuro is not None:
+            self.mision.futuro.final.actualizar(ahora - desde, self.jugadores,
+                                               self.mision.futuro.posiciones_pulsos(), self.mision._cerca_presente,
+                                               self.mision.participantes_final)
         self.mision.resolver(copa)
         self.mision.actualizar(ahora - desde, copa)
         self._sincronizar_bloqueos()
@@ -506,6 +511,8 @@ class PartidaMovimiento:
 
     def estado(self, identificador=None):
         caso = self.mision.publico(self.conectados)
+        from .expediente import resumen_para_red
+        caso["expediente"] = resumen_para_red(caso["expediente"])
         if identificador in self.jugadores:  # solo los NPC del mapa en el que está
             dimension = self.jugadores[identificador].get("dimension", LA_COPA)
             caso["npcs"] = [n for n in caso.get("npcs", []) if n["dimension"] == dimension]

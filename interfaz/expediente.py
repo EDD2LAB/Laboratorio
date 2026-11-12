@@ -29,6 +29,8 @@ def lineas_detalle(panel, caso):
               (ERAS[dimension_caso(caso)] + " · Caso " + str(caso["orden"] + 1), VERDE),
               (datos["tipo"] + " · Gravedad " + str(caso["gravedad"]), CREMA),
               ("Decisión del equipo: " + etiqueta_decision(caso, panel.caso), CREMA)]
+    if caso.get("detalle_remoto"):
+        return [(caso["titulo"], ORO), ("Cargando la ficha completa con sus pruebas y referencias…", CREMA)], False
     if ver_pruebas:
         indice = getattr(panel, "prueba_expediente", 0) % len(pruebas)
         prueba = pruebas[indice]
@@ -54,6 +56,29 @@ def lineas_detalle(panel, caso):
 def desplazar(panel, pasos):
     limite = getattr(panel, "expediente_scroll_max", 0)
     panel.expediente_scroll = max(0, min(limite, getattr(panel, "expediente_scroll", 0) + pasos))
+
+
+def detalle_actual(panel, estado, casos=None):
+    casos = casos if casos is not None else _casos(estado.get("raiz"))
+    detalle = casos.get(getattr(panel, "caso_expediente", None)) or estado.get("pendiente") or next(iter(casos.values()), None)
+    if detalle and detalle.get("detalle_remoto"):
+        cache = getattr(panel, "expediente_fichas", {}).get(detalle["id"])
+        if cache and cache["datos"]["resultado"].get("evento_id") == detalle["datos"]["resultado"].get("evento_id"):
+            return cache
+    return detalle
+
+
+def solicitar_detalle(panel, cliente):
+    if panel.modo != "expediente":
+        return
+    detalle = detalle_actual(panel, panel.caso.get("expediente") or {})
+    if detalle and detalle.get("detalle_remoto"):
+        clave = (detalle["id"], detalle["datos"]["resultado"].get("evento_id"))
+        if not hasattr(panel, "expediente_solicitadas"):
+            panel.expediente_solicitadas = set()
+        if clave not in panel.expediente_solicitadas:
+            panel.expediente_solicitadas.add(clave)
+            cliente.actuar("expediente_leer", caso=detalle["id"])
 
 
 def dibujar(panel, superficie):
@@ -104,7 +129,7 @@ def dibujar(panel, superficie):
     elif estado.get("animacion"):
         panel.boton(superficie, "expediente_repetir", "Ver cómo se ordenó", 245, 525, 330)
     pendiente = estado.get("pendiente")
-    detalle = casos.get(getattr(panel, "caso_expediente", None)) or pendiente or next(iter(casos.values()), None)
+    detalle = detalle_actual(panel, estado, casos)
     if detalle:
         lineas, ver_pruebas = lineas_detalle(panel, detalle)
         clave = (detalle["id"], ver_pruebas, getattr(panel, "prueba_expediente", 0))

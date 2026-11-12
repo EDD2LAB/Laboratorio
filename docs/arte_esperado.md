@@ -8,7 +8,7 @@ conectado al juego ni tener geometría, cuadros o identidad ya validados.
 
 - Audios: 24 archivos.
 - Fuentes: 3 archivos.
-- Imagenes: 714 archivos.
+- Imagenes: 716 archivos.
 
 ## Recursos del plan
 

@@ -69,6 +69,11 @@ class PlanificadorBot:
     def planificar(self, bot, estado, jugadores, memoria, dificultad):
         if bot.posicion.get("dimension", "la_copa") != "la_copa":
             bot.orden = None
+            if bot.posicion.get("dimension") == "futuro":
+                from bots.final_cooperativo import planificar
+                final = planificar(bot, estado, jugadores, self._tarea)
+                if final is not None:
+                    return final
             tarea_de_era = self._tareas_nucleo if bot.posicion.get("dimension") == "futuro" else self._analizar_distrito
             return (self._distrito(bot, estado, jugadores, memoria)
                     or tarea_de_era(bot, estado, jugadores, memoria, dificultad)

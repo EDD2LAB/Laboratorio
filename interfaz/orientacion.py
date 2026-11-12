@@ -58,6 +58,14 @@ def tarea_actual(vista):
     objetivo = (privado.get("guia", {}).get("objetivo") if vista.dimension == "la_copa"
                 else vista._objetivo_presente())
     titulo, detalle = vista._textos_objetivo(caso, privado, privado.get("guia", {}))
+    final = contexto.get("desafio_final") or {}
+    if vista.dimension == "futuro" and not vista.interior and final.get("fase") in ("preparacion", "activo", "reintento"):
+        rol = getattr(vista, "final_rol_guia", None) or (vista.yo() or {}).get("rol", "guardian")
+        titulo = {"guardian": "Compara las órdenes del consejo", "mensajero": "Lleva el módulo por las recargas",
+                  "habitante": "Estabiliza y sostiene la estación", "aspirante": "Prepara la autorización humana"}[rol]
+        if final["fase"] != "activo" or len(final.get("hechos", [])) == 4:
+            titulo = "Ve a la pantalla central para " + ("recuperar la señal" if final["fase"] == "reintento" else "activar juntos" if final["fase"] == "activo" else "iniciar el final")
+        return dict(titulo=titulo, detalle="Sigue la luz y pulsa E. C también abre el menú del final.", objetivo=objetivo, tecla="E", logro=None)
     if vista.dimension == "futuro" and vista.interior:
         return {"titulo": "Consulta la mesa" if objetivo and objetivo["id"] != "salir" else "Vuelve a la ciudad",
                 "detalle": "La visita es opcional. Pulsa E junto a la mesa; usa E en la puerta para salir.",

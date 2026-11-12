@@ -111,6 +111,7 @@ class CampanaCopa(MisionPuente):
         self.dialogos = DialogosNPC(self, datos_mapa)
         from .exploracion import ExploracionInteriores
         self.exploracion = ExploracionInteriores()
+        self.participantes_final = set()
         self.ronda = 0
         self.metadatos_pruebas = self._metadatos(self.pruebas)
         self.resumen = []
@@ -208,6 +209,7 @@ class CampanaCopa(MisionPuente):
         filas.sort(key=lambda f: (f["gravedad"], f["orden"]))
         arbol = self.expediente.arbol.publico()
         return {"casos": filas, "raiz": arbol["raiz"], "total_arbol": arbol["total"],
+                "final_cooperativo": self.futuro.final.publico() if self.futuro else None,
                 "inorden": [c.id for c in self.expediente.arbol.inorden()]}
 
     def _clasificar(self, identificador, opcion):
@@ -257,6 +259,13 @@ class CampanaCopa(MisionPuente):
 
     def _ejecutar(self, identificador, solicitud, ahora, presentes):
         accion = solicitud.get("accion")
+        if accion == "final_accion":
+            if self.futuro is None:
+                raise ValueError("Ciudad Núcleo aún no está disponible.")
+            return self.futuro.final.ejecutar(identificador, self.jugadores[identificador], solicitud,
+                                              self.jugadores, self.participantes_final, self._cerca_presente)
+        if accion == "expediente_leer":
+            return dict(vista="expediente_ficha", ficha=self.expediente.leer(solicitud.get("caso")), silencioso=True)
         if accion == "expediente_paso":
             if identificador not in presentes:
                 raise ValueError("Debes estar conectado para ordenar un caso.")
@@ -563,6 +572,9 @@ class CampanaCopa(MisionPuente):
             estado["presente"] = self.presente.privado(identificador)
         if self.futuro is not None:
             estado["futuro"] = self.futuro.privado(identificador)
+            ocupados = {j["rol"] for i, j in self.jugadores.items() if i in self.participantes_final}
+            estado["final_cooperativo"] = {r: self.futuro.final.privado(r) for r in HABILIDADES
+                                            if r == rol or r not in ocupados or (r == "mensajero" and self.futuro.final.portador == identificador)}
         if self.fase == "preparacion" and self.encargo.materiales_colocados and not self.encargo.completo:
             estado["objetivo"] = dict(self.objetivo_puente)
             reparador = self.puente.reparador

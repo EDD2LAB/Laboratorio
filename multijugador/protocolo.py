@@ -1,7 +1,8 @@
 """Mensajes JSON delimitados por nueva línea; sin dependencias externas."""
 import json
 
-VERSION = 14  # 14: exploración e interiores del Futuro, Elia y Arel.
+VERSION = 15  # 15: final cooperativo autoritativo y cuatro minijuegos por rol.
+# 14: exploración e interiores del Futuro, Elia y Arel.
 # 13: ping/pong de aplicación, métricas de red y recuperación.
 # 12: resultado con campos legales (norma, pena, cita_corta, conducta, nota, con_delito). 11: estado por diferencias (mensaje "delta", control "pedir_snapshot") y acciones habilidad
 # en el futuro y pedir_informe. Ver multijugador/delta.py

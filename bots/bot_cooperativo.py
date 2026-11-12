@@ -32,6 +32,7 @@ ESTADOS_BOT = (
 )
 
 DEMORAS_MS = {
+    "final_accion": (350, 650),
     "interactuar": (800, 1200),
     "entregar": (500, 800),
     "habilidad": (600, 900),

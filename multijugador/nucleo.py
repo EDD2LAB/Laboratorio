@@ -194,6 +194,8 @@ class MisionNucleo:
         self.halladas = {}  # la llave del Corredor de Datos
         self.votos = {}
         self.resultado = None
+        from .final_cooperativo import FinalCooperativo
+        self.final = FinalCooperativo(self.objetivos)
 
     @property
     def completada(self):
@@ -272,6 +274,8 @@ class MisionNucleo:
         objetivo = self._objetivo(jugador, clave, cerca)
         if objetivo["tipo"] != "fuente":
             if self.completada:
+                if self.final.fase != "victoria":
+                    return {"mensaje": "Recuperemos el control juntos.", "vista": "final_cooperativo"}
                 return {"mensaje": "Pueden volver a Distrito Conecta cuando quieran.", "vista": "portal"}
             if not self.tareas_listas:
                 faltan = len(TERMINALES) - len(self.tareas)
@@ -346,6 +350,8 @@ class MisionNucleo:
                           "tipo_pocion": tipo_pocion(opcion), "evento_id": self.nuevo_evento(),
                           **campos_legales(ficha_resuelta(CASO))}
         self.votos.clear()
+        if self.completada:
+            self.final.preparar(self.resultado["evento_id"])
         if self.completada and self.expediente is not None:
             pruebas = [{"id": t[0], "titulo": t[2], "texto": t[3]} for t in TERMINALES]
             self.expediente.registrar(CASO, TITULO, self.resultado, pruebas)
@@ -355,6 +361,7 @@ class MisionNucleo:
 
     def publico(self, presentes):
         return {"objetivos": [dict(o) for o in self.objetivos], "edificios": self.edificios,
+                "desafio_final": self.final.publico(),
                 "pistas": len(self.tareas), "total_pistas": len(TERMINALES),
                 "titulo": TITULO, "noticia": NOTICIA, "evento": {"id": CASO, "tipo": "nucleo", "indice": 0, "total": 1},
                 "tareas": sorted(self.tareas), "opciones": dict(OPCIONES), "tipos_pocion": {o: tipo_pocion(o) for o in OPCIONES},

@@ -530,6 +530,8 @@ class VistaPartida:
 
     def dimension_completa(self):
         caso = self.estado.get("mundo", {}).get("caso", {})
+        if self.dimension == FUTURO and (caso.get(FUTURO) or {}).get("desafio_final"):
+            return (caso[FUTURO]["desafio_final"]).get("fase") == "victoria"
         if self.dimension != LA_COPA:
             return bool((caso.get(self.dimension) or {}).get("fin"))
         return bool(caso.get("dimension_completa"))
@@ -638,9 +640,14 @@ class VistaPartida:
             rect = self.rect_portal()
             objetivos.append({"id": "portal", "nombre": "Viajar por el portal", "x": rect.centerx, "y": rect.bottom})
         objetivos.extend(self._puertas_cercanas(yo))
+        if self.dimension == FUTURO and not self.interior:
+            from interfaz.final_cooperativo import objetivo
+            punto_final = objetivo(self)
+            if punto_final and self.cerca(punto_final):
+                objetivos.insert(0, punto_final)
         objetivos.extend(dict(o, nombre="Consultar: " + o["nombre"]) for o in caso.get("exploracion", []) if self.cerca(o))
         recomendado = mundo.get("privado", {}).get("guia", {}).get("objetivo") or {}
-        objetivos.sort(key=lambda o: math.hypot(yo["x"] - o["x"], yo["y"] - o["y"]) - (1000 if o["id"] == recomendado.get("id") or (o["id"] == "portal" and self.dimension_completa()) else 15 if o.get("rol") == yo["rol"] else 0))
+        objetivos.sort(key=lambda o: math.hypot(yo["x"] - o["x"], yo["y"] - o["y"]) - (2000 if o["id"].startswith("final:") else 1000 if o["id"] == recomendado.get("id") or (o["id"] == "portal" and self.dimension_completa()) else 15 if o.get("rol") == yo["rol"] else 0))
         return objetivos
 
     def _calcular_resaltado(self):
@@ -890,7 +897,11 @@ class VistaPartida:
             if evento.key == pygame.K_TAB and claves:
                 self.seleccion = claves[(claves.index(self.seleccion) + 1) % len(claves)]
             elif evento.key == pygame.K_e:
-                if self.seleccion == "portal":
+                if self.seleccion and self.seleccion.startswith("final:"):
+                    from interfaz.final_cooperativo import pantalla
+                    self.panel.abrir("final_cooperativo")
+                    pantalla(self.panel).rol = self.seleccion.split(":")[1]
+                elif self.seleccion == "portal":
                     self.panel.abrir("portal")
                 elif self.seleccion and self.seleccion.startswith("npc:"):
                     cliente.actuar("hablar_npc", npc=self.seleccion[4:])
@@ -919,6 +930,10 @@ class VistaPartida:
             self.mostrar_detalles and self.dimension == LA_COPA and self.boton_guia.collidepoint(posicion)))
 
     def actualizar(self, segundos, cliente):
+        from interfaz.expediente import solicitar_detalle
+        solicitar_detalle(self.panel, cliente)
+        if hasattr(self.panel, "pantalla_final_coop"):
+            self.panel.pantalla_final_coop.actualizar(cliente)
         self.datos_red["fps"] = (self.datos_red["fps"] * .9 + .1 / segundos) if segundos > 0 else self.datos_red["fps"]
         metricas = getattr(cliente, "metricas", None)
         es_red = isinstance(metricas, dict)
@@ -1030,6 +1045,11 @@ class VistaPartida:
     def _objetivo_presente(self):
         """Siguiente paso en Distrito Conecta: pista pendiente o pantalla."""
         presente = self.contexto()
+        if self.dimension == FUTURO and not self.interior:
+            from interfaz.final_cooperativo import objetivo
+            siguiente = objetivo(self)
+            if siguiente:
+                return siguiente
         if self.dimension == FUTURO and self.interior:
             objetivos = self.estado.get("mundo", {}).get("caso", {}).get("exploracion", [])
             pendiente = next((o for o in objetivos if o["dimension"] == FUTURO
@@ -1216,6 +1236,16 @@ class VistaPartida:
         if self.dimension == FUTURO and not self.interior:
             self._dibujar_nucleo(superficie, ahora_ms)
             self._dibujar_barreras_y_pulsos(superficie, ahora_ms)
+            final = self.contexto().get("desafio_final") or {}
+            if final.get("fase") == "activo" and final.get("portador"):
+                for x, y in self.contexto().get("pulsos", []):
+                    pygame.draw.circle(superficie, (255, 133, 102), (round(x), round(y)), 16, 2)
+            if final.get("fase") == "activo" and "guardian" in final.get("hechos", []) and "mensajero" not in final.get("hechos", []):
+                portador = next((j for j in self.estado.get("mundo", {}).get("jugadores", []) if j["id"] == final.get("portador")), None)
+                punto = portador or final.get("recogida")
+                if punto and self.arte.modulo_final is not None and not punto.get("interior"):
+                    imagen = self.arte.modulo_final
+                    superficie.blit(imagen, imagen.get_rect(midbottom=(round(punto["x"] + (16 if portador else 0)), round(punto["y"] - 8))))
         for punto in self.estado.get("mundo", {}).get("caso", {}).get("exploracion", []):
             if punto["dimension"] != self.dimension or punto["interior"] != self.interior:
                 continue

@@ -57,6 +57,11 @@ class AnimacionesNucleo:
 
     @staticmethod
     def estado(contexto):
+        final = contexto.get("desafio_final") or {}
+        if final.get("fase") == "victoria":
+            return "sereno"
+        if final.get("fase") in ("preparacion", "activo", "reintento"):
+            return "carga" if "habitante" in final.get("hechos", []) else "inquieto"
         resultado = contexto.get("resultado") or {}
         if resultado.get("correcto"):
             return "sereno"

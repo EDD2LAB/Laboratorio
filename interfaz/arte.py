@@ -100,6 +100,7 @@ class ArtePartida:
                                    for nombre, archivo in RETRATOS_NOMBRADOS.items()}
         from interfaz.presentacion_arte import AnimacionesNucleo
         self.nucleo = AnimacionesNucleo()
+        self.modulo_final = icono("FinalCooperativo/ModuloSupervision.png", (16, 24))
         self.retrato_agente = icono("Retratos/RetratoAgenteDVerif.png", (78, 88))
         self.marco = icono(NUEVOS + "panel_expediente.png", (112, 120))
         self.flecha_izq = icono(NUEVOS + "Boton_izq.png", (44, 44))
