@@ -1,7 +1,11 @@
 {
   "modo_pantalla": "maximizada",
-  "volumen_general": 0.6,
-  "volumen_musica": 0.15,
+  "volumen_general": 1.0,
+  "volumen_musica": 0.75,
   "volumen_ambiente": 0.45,
-  "volumen_efectos": 0.7
+  "volumen_efectos": 0.7,
+  "alto_contraste": false,
+  "narracion": false,
+  "apariencia_aspirante": "hombre",
+  "apariencia_habitante": "hombre"
 }
