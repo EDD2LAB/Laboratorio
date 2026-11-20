@@ -324,6 +324,7 @@ class VistaPartida:
         self.panel = PanelCooperativo(self)
         self.seleccion = None
         self.ultima_guia_seleccion = None
+        self.aviso_final_dado = False  # "Hora de acabar con el reinado de NÚCLEO" sale una vez
         from interfaz.resaltado import Resaltado
         self.resaltado = Resaltado()
         self.objetivo_resaltado = None  # lo que se elige con E, resaltado en dorado
@@ -577,6 +578,10 @@ class VistaPartida:
             self.seleccion = None
             self.ultima_guia_seleccion = destino_guia
         self._revisar_final()
+        from interfaz.orientacion import AVISO_FINAL, tres_eras_completas
+        if not self.aviso_final_dado and tres_eras_completas(self):
+            self.aviso_final_dado = True
+            self.panel.notificar(AVISO_FINAL + " Las tres eras están listas: vamos a Ciudad Núcleo.")
         self._lanzar_efectos(mundo.get("caso", {}))
         self.ultimo_paquete = time.monotonic()
         self.aviso_red = ""
@@ -646,6 +651,8 @@ class VistaPartida:
         # salvo que allí espere un objeto del encargo: ese siempre se puede recoger.
         objetivos = [dict(o) for o in self.contexto().get("objetivos", []) if self.cerca(o)
                      and not (o["id"] == "puente_1" and puente.get("estado") not in ("READY_TO_REPAIR", "REPAIR_MINIGAME"))
+                     # A una familia del reparto solo se le habla con una cesta en las manos.
+                     and not (o.get("tipo") == "familia" and not mundo.get("privado", {}).get("cesta"))
                      and not (o.get("tipo") == "fuente" and (o["x"], o["y"]) in junto_a_npc and o.get("rol") != yo["rol"]
                               and o["id"] not in recogibles)]
         objetivos.extend({"id": "npc:" + n["id"], "nombre": "Hablar con " + n["nombre"], "x": n["x"], "y": n["y"]} for n in npcs)
@@ -659,10 +666,15 @@ class VistaPartida:
                     o["nombre"] = "Entregar: " + encargo["destino"]["nombre"]
                 if o["id"] == "caldero":
                     o["nombre"] = "Confirmar el siguiente caso"
-        objetivos.extend({"id": "jugador:" + j["id"], "nombre": "Compartir con " + j["nombre"], "x": j["x"], "y": j["y"]}
+                if o.get("tipo") == "familia":
+                    o["nombre"] = "Dar la cesta a " + o.get("persona", "la familia")
+                if (o["id"] == encargo["destino"]["id"] and encargo.get("reparto") and encargo.get("materiales_listos")
+                        and not encargo.get("materiales_colocados")):
+                    o["nombre"] = "Tomar una cesta"
+        # En las tres eras: E sobre un compañero para pedirle algo en persona.
+        objetivos.extend({"id": "jugador:" + j["id"], "nombre": "Pedirle algo a " + j["nombre"], "x": j["x"], "y": j["y"]}
                          for j in (v["datos"] for v in self.jugadores.values())
-                         if j["id"] != self.identificador and j.get("conectado", True) and self.cerca(j, 64)
-                         and self.dimension == LA_COPA)
+                         if j["id"] != self.identificador and j.get("conectado", True) and self.cerca(j, 64))
         if self.cerca_portal():
             rect = self.rect_portal()
             objetivos.append({"id": "portal", "nombre": "Viajar por el portal", "x": rect.centerx, "y": rect.bottom})
@@ -707,9 +719,9 @@ class VistaPartida:
                         tipo="objeto", clave=opcion["id"])
         if opcion["id"].startswith("jugador:"):
             objetivo.update(tipo="jugador", clave=opcion["id"][8:])
-        elif opcion["id"].startswith("npc:"):
+        elif opcion["id"].startswith(("npc:", "familia:")):
             npc = next((n for n in self.estado.get("mundo", {}).get("caso", {}).get("npcs", [])
-                        if n["id"] == opcion["id"][4:]), None)
+                        if n["id"] == opcion["id"].split(":", 1)[1]), None)
             if npc and npc.get("jugador"):  # lo juega alguien: se resalta su personaje
                 objetivo.update(tipo="jugador", clave=npc["jugador"])
             elif npc:
@@ -1530,6 +1542,9 @@ class VistaPartida:
             carga = (caso.get("encargo") or {}).get("cargas", {}).get(datos["id"])
             if carga:
                 dibujar_carga(suelo, carga, (x + 22, y - 24))
+            reparto = (caso.get("encargo") or {}).get("reparto") or {}
+            if datos["id"] in reparto.get("cestas", []):  # lleva una cesta de agua y provisiones
+                dibujar_carga(suelo, "provisiones", (x + 22, y - 24))
             if datos["id"] in caso.get("tutorial_cargas", []):
                 dibujar_carga(suelo, "farol", (x + 22, y - 24))
             anclas.append((datos, color, (x, tope)))

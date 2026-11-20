@@ -39,7 +39,7 @@ class Datos(unittest.TestCase):
         resolver_copa(p)
         informe = p.mision.informe()
         self.assertEqual({f["era"] for f in informe["casos"]}, {"La Copa", "Distrito Conecta", "Ciudad Núcleo"})
-        self.assertEqual(len(informe["casos"]), 8)
+        self.assertEqual(len(informe["casos"]), 6)
         self.assertEqual(sum(f["resuelto"] for f in informe["casos"]), 1)
 
     def test_ordena_de_menor_a_mayor_gravedad(self):
@@ -61,7 +61,7 @@ class Datos(unittest.TestCase):
         acuse = accion(p, "pedir_informe")
         self.assertTrue(acuse["ok"])
         self.assertEqual(acuse["vista"], "informe")
-        self.assertEqual(len(acuse["informe"]["casos"]), 8)
+        self.assertEqual(len(acuse["informe"]["casos"]), 6)
 
 
 class Exportacion(unittest.TestCase):

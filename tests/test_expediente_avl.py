@@ -107,9 +107,7 @@ class SorteoTests(unittest.TestCase):
         self.assertEqual(random.getstate(), antes)
         self.assertEqual(a, SorteoPartida(935).casos(CASOS, VARIANTES))
         variantes = {tuple(c[3] for c in SorteoPartida(i).casos(CASOS, VARIANTES)) for i in range(30)}
-        self.assertEqual(len(variantes), 4)
-        self.assertEqual(a[-1][3], "corregir")
-        self.assertEqual(CASOS[-1][4]["aspirante"][0], "Inventario de Mira")
+        self.assertEqual(len(variantes), 2)  # solo el agua tiene variante
 
     def test_rechaza_semillas_invalidas(self):
         for semilla in (True, -1, 2**64, "123"):

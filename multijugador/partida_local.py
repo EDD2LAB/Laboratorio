@@ -3,14 +3,17 @@ from queue import Queue
 import uuid
 
 from bots.gestor_bots import GestorBots
+from .dimensiones_red import DIMENSIONES_RED, LA_COPA
 from .movimiento import PartidaMovimiento
 from .protocolo import NOMBRES_ROLES, ROLES
 
 
 class ClienteCampanaLocal:
-    def __init__(self, nombre, rol_humano, dificultad="normal", semilla=None, apariencia=None):
+    def __init__(self, nombre, rol_humano, dificultad="normal", semilla=None, apariencia=None, era=LA_COPA):
         if rol_humano not in ROLES:
             raise ValueError("El rol elegido no existe.")
+        if era not in DIMENSIONES_RED:
+            raise ValueError("La era elegida no existe.")
         jugadores = []
         for rol in ROLES:
             es_humano = rol == rol_humano
@@ -22,6 +25,9 @@ class ClienteCampanaLocal:
         self.identificador = "local"
         self.eventos = Queue(maxsize=128)
         self._partida = PartidaMovimiento(jugadores, 0, semilla=semilla)
+        if era != LA_COPA:
+            # Empezar directamente en la era elegida: todo el equipo viaja junto.
+            self._partida._viajar_equipo(LA_COPA, era)
         self._bots = GestorBots(self._partida, self.identificador, dificultad)
         self._movimiento = (0, 0)
         self._correr = False

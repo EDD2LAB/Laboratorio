@@ -283,13 +283,14 @@ class PortalTests(unittest.TestCase):
         presente = p.mision.presente
         self.assertEqual(presente.halladas, {})  # las pistas las reúne la persona
         self.assertIsNone(presente.resultado)  # la decisión no la toman ellos
-        humano = p.jugadores["local"]
         for identificador, bot in cliente._bots.bots.items():
-            # Quien aún tiene una pista espera dentro de su edificio; los demás acompañan.
-            self.assertIn(bot.estado, ("ACOMPANANDO", "ESPERANDO_EN_SU_EDIFICIO"))
+            # Quien aún tiene una pista espera dentro de su edificio; los demás se quedan
+            # en su zona: ningún bot sigue a la persona si no se lo pide.
+            self.assertIn(bot.estado, ("EN_SU_ZONA", "ESPERANDO_EN_SU_EDIFICIO"))
             j = p.jugadores[identificador]
-            if bot.estado == "ACOMPANANDO":
-                self.assertLessEqual(((j["x"] - humano["x"]) ** 2 + (j["y"] - humano["y"]) ** 2) ** .5, 110)
+            if bot.estado == "EN_SU_ZONA":
+                zona = bot.zonas[PRESENTE]
+                self.assertLessEqual(((j["x"] - zona["x"]) ** 2 + (j["y"] - zona["y"]) ** 2) ** .5, 45)
         cliente.cerrar()
 
     def test_con_dos_personas_los_bots_con_pista_las_esperan_dentro(self):
@@ -409,7 +410,7 @@ class PortalTests(unittest.TestCase):
             ruta = expediente.arbol.ruta_insercion(caso)
             expediente.paso_insercion(dict(caso=caso.id, revision=expediente.revision,
                                           paso=expediente.paso, direccion=ruta[expediente.paso]["direccion"]))
-        self.assertEqual(expediente.publico()["total"], 4)
+        self.assertEqual(expediente.publico()["total"], 2)
         tamano = len(json.dumps({"mundo": p.estado("0")}, ensure_ascii=False).encode())
         self.assertLess(tamano, MAX_MENSAJE)
 

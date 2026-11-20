@@ -17,7 +17,7 @@ def partida():
     p = PartidaMovimiento([dict(id=r, nombre=r, rol=r) for r in ROLES], 0)
     p._viajar_equipo("la_copa", "futuro")
     p.actualizar(.05)
-    p.mision.ronda = 3
+    p.mision.ronda, p.mision.encargo = len(p.mision.casos) - 1, None  # último caso de La Copa, ya repartido
     p.mision.resultado = dict(evento_id=29, opcion="corregir", correcto=True)
     p.mision.presente.indice = 2
     p.mision.presente.resultado = dict(evento_id=30, opcion="verificar", correcto=True)
@@ -448,7 +448,7 @@ class FinalPorInternet(unittest.TestCase):
                 sala = servidor.app[SERVICIO].salas[bienvenida["codigo"]]
                 p = sala.partida
                 p._viajar_equipo("la_copa", "futuro")
-                p.mision.ronda = 3
+                p.mision.ronda, p.mision.encargo = len(p.mision.casos) - 1, None  # último caso de La Copa, ya repartido
                 p.mision.resultado = dict(evento_id=97, opcion="corregir", correcto=True)
                 p.mision.presente.indice = 2
                 p.mision.presente.resultado = dict(evento_id=98, opcion="verificar", correcto=True)

@@ -8,7 +8,7 @@ from interfaz import analisis_manipulado, celular, dialogo_npc, informe_final, t
 from interfaz.arte import dibujar_icono, expresion
 from interfaz.boton import Boton
 from interfaz.suministros import dibujar_carga
-from multijugador.mision import TODOS
+from multijugador.mision import ORDENES_ECO, TODOS
 from multijugador.reparacion import CONFIGURACION as CONFIG_REPARACION
 
 ORO = (237, 185, 87)
@@ -232,7 +232,11 @@ class PanelCooperativo:
             return
         if acuse.get("ok") and acuse.get("vista"):
             self.terminal = acuse.get("terminal", self.terminal)
-            self.abrir("inventario" if acuse["vista"] == "compartir" else acuse["vista"])
+            # E sobre un compañero en La Copa: pedirle en persona lo mismo que por un tronco.
+            vista = acuse["vista"]
+            if vista == "compartir":
+                vista = "persona"
+            self.abrir(vista)
             self.titulo = acuse.get("titulo", "Testimonio")
             self.texto = acuse.get("mensaje", "")
             self.destino_fijo = acuse.get("destinatario")
@@ -454,7 +458,7 @@ class PanelCooperativo:
         if self.modo == "dialogo_npc" and self.dialogo:
             dialogo_npc.dibujar(self, superficie)
             return
-        if self.activo and self.digital and self.modo != "portal":
+        if self.activo and self.digital and self.modo not in ("portal", "persona"):
             celular.dibujar(self, superficie)
             if time.monotonic() < self.toast_hasta:
                 pygame.draw.rect(superficie, (19, 39, 49), (20, 10, 920, 40), border_radius=7)
@@ -488,12 +492,13 @@ class PanelCooperativo:
         pygame.draw.rect(superficie, (17, 39, 29), rect, border_radius=16)
         pygame.draw.rect(superficie, ORO, rect, 3, border_radius=16)
         titulos = {"introduccion": "TU SIGUIENTE AVENTURA", "inventario": "MIS PISTAS", "caldero": "¿QUÉ LE CONTAMOS A LA ALDEA?", "fuente": self.titulo,
-                   "eco": "EL TRONCO NOS CONECTA", "eco_mensajes": "UN MENSAJE PARA EL EQUIPO", "resultado": "¡LO HICIMOS EN EQUIPO!", "actividad": "¡MANOS A LA OBRA!"}
+                   "eco": "EL TRONCO NOS CONECTA", "eco_mensajes": "UN MENSAJE PARA EL EQUIPO", "persona": "PÍDESELO EN PERSONA", "resultado": "¡LO HICIMOS EN EQUIPO!", "actividad": "¡MANOS A LA OBRA!"}
         t = self.encabezado.render(titulos.get(self.modo, "AYUDEMOS A LA ALDEA"), True, ORO)
         if t.get_width() > 650:
             t = self.fuente.render(titulos.get(self.modo, "AYUDEMOS A LA ALDEA"), True, ORO)
         superficie.blit(t, t.get_rect(midtop=(480, 85)))
-        self.texto_lineas(superficie, self.caso.get("titulo", ""), 165, 127, 630, self.pequena, VERDE)
+        if self.modo != "persona":
+            self.texto_lineas(superficie, self.caso.get("titulo", ""), 165, 127, 630, self.pequena, VERDE)
         inventario = self.inventario()
         guia = self.privado.get("guia", {})
         tutorial = self.privado.get("tutorial", {})
@@ -601,6 +606,13 @@ class PanelCooperativo:
             for i, mensaje in enumerate(self.caso.get("mensajes_eco", [])):
                 self.boton(superficie, "eco:"+str(i), mensaje, 480, 205+i*62, 620)
             self.dibujar_selector_destino(superficie, 540)
+        elif self.modo == "persona":
+            nombre = self.nombre_destino_fijo()
+            self.texto_lineas(superficie, f"Estás junto a {nombre}. ¿Qué le pides?", 165, 172, 630)
+            botones = [] if self.digital else [("persona_pista", "Darle una de mis pistas")]
+            botones += [("persona:" + str(i), m) for i, m in self.mensajes_en_persona()]
+            for fila, (clave, texto) in enumerate(botones):
+                self.boton(superficie, clave, texto, 480, 232 + fila * 58, 620)
         elif self.modo == "actividad":
             self.dibujar_actividad(superficie)
         elif self.modo == "poder":
@@ -673,7 +685,9 @@ class PanelCooperativo:
             self.texto_lineas(superficie, m["nombre"] + (": ya llegó" if m["entregado"] else ": busca la luz del mapa"), 225, 314+i*45, 560, self.fuente, VERDE if m["entregado"] else CREMA)
         self.texto_lineas(superficie, "Llevas: " + (self.privado.get("carga") or "las manos libres"), 165, 417, 630, color=ORO)
         self.texto_lineas(superficie, "Destino: " + e.get("destino", {}).get("nombre", ""), 165, 458, 630)
-        if e.get("materiales_listos") and not e.get("completo"):
+        if e.get("reparto") and e.get("materiales_listos") and not e.get("materiales_colocados"):
+            self.dibujar_reparto(superficie, e, 502)
+        elif e.get("materiales_listos") and not e.get("completo"):
             self.boton(superficie, "actividad", "Hacer la actividad juntos", 480, 535, 540)
         elif e.get("completo"):
             self.texto_lineas(superficie, "¡Terminado! Ganaron una estrella por ayudar.", 165, 502, 630, self.pequena, VERDE)
@@ -681,8 +695,25 @@ class PanelCooperativo:
         else:
             self.texto_lineas(superficie, "Sigue las luces. E recoge y entrega. Cada uno lleva un material.", 165, 535, 630, self.fuente, VERDE)
 
+    def dibujar_reparto(self, superficie, e, y):
+        """Cestas a pie: qué familia ya recibió la suya y qué llevo yo."""
+        familias = e["reparto"]["familias"]
+        servidas = sum(f.get("servida", False) for f in familias)
+        llevo = self.privado.get("cesta")
+        self.texto_lineas(superficie, f"Cestas repartidas: {servidas} de {len(familias)}. " +
+                          ("Llevas una cesta: camina hasta una familia y pulsa E." if llevo else
+                           "Toma una cesta en el cesto (E) y llévala caminando."), 165, y, 630, self.pequena, ORO)
+        for i, f in enumerate(familias):
+            marca = "Lista: " if f.get("servida") else "Espera: "
+            self.texto_lineas(superficie, marca + f["nombre"], 175 + i * 210, y + 48, 200, self.pequena,
+                              VERDE if f.get("servida") else CREMA)
+
     def dibujar_actividad(self, superficie):
         e = self.caso.get("encargo") or {}
+        if e.get("reparto"):
+            self.texto_lineas(superficie, e.get("titulo", "Ayudemos a la aldea"), 165, 180, 630, color=ORO)
+            self.dibujar_reparto(superficie, e, 240)
+            return
         a = e.get("actividad", {})
         self.texto_lineas(superficie, e.get("titulo", "Ayudemos a la aldea"), 165, 180, 630, color=ORO)
         jugadores = self.vista.estado.get("mundo", {}).get("jugadores", [])
@@ -714,6 +745,18 @@ class PanelCooperativo:
         if self.destino_fijo:
             jugadores.sort(key=lambda j: j["id"] != self.destino_fijo)
         return jugadores
+
+    def mensajes_en_persona(self):
+        """Los mensajes del tronco; fuera de La Copa no hay caldero ni cesto."""
+        mensajes = list(enumerate(self.caso.get("mensajes_eco", [])))
+        if self.digital:
+            mensajes = [(i, m) for i, m in mensajes if ORDENES_ECO[i] not in ("caldero", "encargo")]
+        return mensajes
+
+    def nombre_destino_fijo(self):
+        jugador = next((j for j in self.vista.estado.get("mundo", {}).get("jugadores", [])
+                        if j["id"] == self.destino_fijo), None)
+        return jugador["nombre"] if jugador else "tu compañero"
 
     def destinos_eco(self):
         return [{"id": TODOS, "nombre": "Todos"}] + self.destinatarios()
@@ -850,6 +893,13 @@ class PanelCooperativo:
                     cliente.actuar("entregar", pista=pistas[self.indice_pista % len(pistas)]["id"],
                                    destinatario=destinos[self.indice_destino % len(destinos)]["id"],
                                    medio="eco" if self.cerca_eco() else "directo")
+            elif clave == "persona_pista":
+                destino = self.destino_fijo
+                self.abrir("inventario")
+                self.destino_fijo, self.indice_destino = destino, 0
+            elif clave.startswith("persona:"):
+                if self.destino_fijo:
+                    cliente.actuar("eco", mensaje=int(clave.split(":")[1]), destinatario=self.destino_fijo)
             elif clave.startswith("eco:"):
                 destinos = self.destinos_eco()
                 cliente.actuar("eco", mensaje=int(clave.split(":")[1]),

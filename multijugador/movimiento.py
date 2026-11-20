@@ -269,6 +269,8 @@ class PartidaMovimiento:
             self.colisiones_de(FUTURO)
             from .exploracion import colocar_vecinos
             colocar_vecinos(self.mision, self.colisiones)
+            from .exploracion import elegir_familias
+            self.mision.familias = elegir_familias(self.mision, self.colisiones)
         except (OSError, ValueError) as error:
             print("[Multijugador] Distrito Conecta no disponible:", error)
 
@@ -461,6 +463,9 @@ class PartidaMovimiento:
     def actuar(self, identificador, datos, ahora):
         self.actualizar(ahora)
         presentes = self.conectados if datos.get("accion") == "expediente_paso" else self.presentes_en(LA_COPA)
+        if datos.get("accion") == "eco":
+            # Un mensaje en persona llega a quien está en la misma era que el emisor.
+            presentes = self.presentes_en(self.jugadores.get(identificador, {}).get("dimension", LA_COPA))
         return self.mision.actuar(identificador, datos, ahora, presentes)
 
     def recibir(self, identificador, datos, ahora):

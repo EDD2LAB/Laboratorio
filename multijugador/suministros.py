@@ -14,18 +14,22 @@ ENCARGOS = (
      # Cada objeto es único (nadie puede llevar el que ya carga otro) y una
      # misma persona puede aportar más de uno, de a uno por vez.
      "objetos_unicos": True, "aportes_libres": True, "requiere_puente": True},
-    {"titulo": "Abastecer a las familias", "motivo": "Después de investigar el agua, reúnan en el cesto de la aldea agua segura y provisiones para repartirlas a las familias.",
+    # Segundo evento: reunir agua y provisiones y después repartir las cestas
+    # caminando hasta cada familia (una cesta por viaje).
+    {"titulo": "Abastecer a las familias", "motivo": "Después de investigar el agua, reúnan en el cesto de la aldea agua segura y provisiones. Luego tomen las cestas y llévenlas caminando a cada familia.",
      "materiales": (("agua", "Agua segura", "archivo"), ("provisiones", "Provisiones", "propuesta")),
-     "lugar": CESTO, "efecto": "Reserva comunitaria abastecida", "indicador": "confianza", "delta": 4, "sitio": "testigo", "desvio_bandera": (-36, -6)},
-    {"titulo": "Preparar un boletín verificado", "motivo": "Pongan por escrito el resultado de la alerta: reúnan pergaminos y tinta en el cesto de la aldea.",
-     "materiales": (("pergaminos", "Pergaminos", "testigo"), ("tinta", "Tinta", "propuesta")),
-     "lugar": CESTO, "efecto": "Boletín verificado publicado", "indicador": "desinformacion", "delta": -6, "sitio": "archivo", "desvio_bandera": (-38, -6)},
+     "lugar": CESTO, "efecto": "Reserva comunitaria abastecida", "indicador": "confianza", "delta": 4, "sitio": "testigo", "desvio_bandera": (-36, -6),
+     "reparto": True},
 )
 
 
 class EncargoSuministros:
-    def __init__(self, ronda, objetivos):
+    def __init__(self, ronda, objetivos, familias=()):
         self.config = ENCARGOS[ronda]
+        # Reparto a pie: quién lleva una cesta y qué familias ya recibieron la suya.
+        self.familias = [dict(f) for f in familias][:3] if self.config.get("reparto") else []
+        self.cestas = set()
+        self.servidas = {}
         self.cargas = {}
         self.entregados = {}  # material -> jugador; cada persona aporta una carga.
         self.recompensado = False
@@ -44,9 +48,62 @@ class EncargoSuministros:
         return len(self.entregados) == total and len(set(self.entregados.values())) >= aportantes
 
     @property
+    def reparto(self):
+        """El encargo termina repartiendo cestas a pie (si hay familias en el mapa)."""
+        return bool(self.familias)
+
+    @property
+    def total_actividad(self):
+        return len(self.familias) if self.reparto else 3
+
+    @property
+    def reparto_activo(self):
+        return self.reparto and self.materiales_listos and not self.materiales_colocados
+
+    @property
     def materiales_colocados(self):
-        """Materiales entregados y actividad de colocación terminada."""
-        return self.materiales_listos and self.progreso >= 3
+        """Materiales entregados y actividad terminada (o todas las cestas repartidas)."""
+        return self.materiales_listos and self.progreso >= self.total_actividad
+
+    def familias_pendientes(self):
+        return [dict(f, tipo="familia") for f in self.familias if f["id"] not in self.servidas]
+
+    def familia(self, clave):
+        familia = next((f for f in self.familias if f["id"] == clave), None)
+        if familia is None:
+            raise ValueError("Esa familia no espera una cesta.")
+        return familia
+
+    def tomar_cesta(self, jugador):
+        if not self.reparto_activo:
+            raise ValueError("Primero reúnan el agua y las provisiones en el cesto.")
+        if jugador in self.cestas:
+            raise ValueError("Ya llevas una cesta: llévala a una familia que la espera.")
+        if len(self.cestas) >= len(self.familias_pendientes()):
+            raise ValueError("Ya hay una cesta en camino para cada familia que falta.")
+        self.cestas.add(jugador)
+        return "Tomaste una cesta. Camina hasta una familia que la espera y pulsa E."
+
+    def entregar_cesta(self, jugador, clave):
+        familia = self.familia(clave)
+        if not self.reparto_activo:
+            raise ValueError("Ahora no hay cestas por repartir.")
+        if jugador not in self.cestas:
+            raise ValueError("Primero toma una cesta en el cesto de la aldea.")
+        if clave in self.servidas:
+            raise ValueError(familia["persona"] + " ya recibió su cesta.")
+        self.cestas.discard(jugador)
+        self.servidas[clave] = jugador
+        self.progreso += 1
+        faltan = self.total_actividad - self.progreso
+        return ("¡" + familia["persona"] + " recibió su cesta! " +
+                ("Faltan " + str(faltan) + ". Vuelve al cesto por otra." if faltan else "¡Repartieron todas las cestas!"))
+
+    def instruccion_reparto(self, jugador):
+        faltan = self.total_actividad - self.progreso
+        if jugador in self.cestas:
+            return "Llevas una cesta. Camina hasta una familia marcada y pulsa E. Faltan " + str(faltan) + "."
+        return "Toma una cesta en el cesto de la aldea (E) y llévala a una familia. Faltan " + str(faltan) + "."
 
     @property
     def completo(self):
@@ -54,6 +111,7 @@ class EncargoSuministros:
 
     def revisar_ayudante(self, presentes, jugadores):
         import math
+        self.cestas &= set(presentes)  # quien se fue suelta su cesta: otra persona puede llevarla
         j = jugadores.get(self.ayudante)
         if not j or self.ayudante not in presentes or math.hypot(j["x"]-self.destino["x"], j["y"]-self.destino["y"]) > 68:
             self.ayudante = None
@@ -122,6 +180,14 @@ class EncargoSuministros:
         return "Entrega confirmada: " + self.nombre(material) + "."
 
     def objetivo(self, jugador, jugadores):
+        if self.reparto_activo:
+            pendientes = self.familias_pendientes()
+            if jugador in self.cestas and pendientes:
+                yo = jugadores.get(jugador, self.destino)
+                import math
+                cercana = min(pendientes, key=lambda f: math.hypot(f["x"] - yo["x"], f["y"] - yo["y"]))
+                return dict(cercana, nombre="Llevar la cesta a " + cercana["persona"])
+            return dict(self.destino, nombre="Tomar una cesta del " + self.config["lugar"].lower())
         if self.materiales_listos and not self.materiales_colocados:
             return dict(self.destino, nombre=self.config["lugar"])
         if self.materiales_colocados and not self.completo:
@@ -162,8 +228,10 @@ class EncargoSuministros:
                                for m, nombre, _ in self.config["materiales"]],
                 "destino": dict(self.destino, nombre=self.config["lugar"]), "completo": self.completo,
                 "materiales_listos": self.materiales_listos,
-                "actividad": {"ayudante": self.ayudante, "progreso": self.progreso, "total": 3,
-                              "verbo": ("Colocar una tabla", "Repartir una cesta", "Pegar un sello")[ENCARGOS.index(self.config)]},
+                "actividad": {"ayudante": self.ayudante, "progreso": self.progreso, "total": self.total_actividad,
+                              "verbo": ("Colocar una tabla", "Repartir una cesta")[ENCARGOS.index(self.config)]},
+                "reparto": {"familias": [dict(f, servida=f["id"] in self.servidas) for f in self.familias],
+                            "cestas": sorted(self.cestas)} if self.reparto else None,
                 "efecto": self.config["efecto"], "cargas": dict(self.cargas), "sitio": self.sitio,
                 # Quién ya aportó y si una sola persona puede aportarlo todo (lo usan los bots).
                 "aportantes": sorted(set(self.entregados.values())), "aportes_libres": bool(self.config.get("aportes_libres"))}

@@ -76,7 +76,8 @@ class SeleccionCampana(unittest.TestCase):
     def test_conserva_nombre_dificultad_e_inicio(self):
         self.menu.dibujar()
         self.assertIn("nombre", self.menu.areas_campos)
-        for clave in ("dificultad_solo:facil", "dificultad_solo:dificil", "iniciar_campana_solo", "volver"):
+        for clave in ("dificultad_solo:facil", "dificultad_solo:dificil", "iniciar_campana_solo:la_copa",
+                      "iniciar_campana_solo:presente", "iniciar_campana_solo:futuro", "volver"):
             self.assertIn(clave, self.menu.botones)
         # Ningún control se solapa con otro.
         rects = [b.rect for b in self.menu.botones.values()]

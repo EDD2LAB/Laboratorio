@@ -36,7 +36,21 @@ class CampanaTests(unittest.TestCase):
             otro = next(j for j in p.jugadores if j != i)
             self.assertTrue(self.accion(p, otro, "entregar", pista="pista_" + p.jugadores[otro]["rol"], destinatario=i, medio="directo")["ok"])
 
+    def repartir_cestas(self, p, i="0"):
+        """Agua: cada cesta se toma en el cesto y se lleva caminando a una familia."""
+        e = p.mision.encargo
+        while e.reparto_activo:
+            p.jugadores[i].update(x=e.destino["x"], y=e.destino["y"])
+            self.assertTrue(self.accion(p, i, "interactuar", objetivo=e.destino["id"])["ok"])
+            familia = p.mision.privado(i)["objetivo"]
+            self.assertTrue(familia["id"].startswith("familia:"))
+            p.jugadores[i].update(x=familia["x"], y=familia["y"])
+            self.assertTrue(self.accion(p, i, "interactuar", objetivo=familia["id"])["ok"])
+
     def hacer_actividad(self, p):
+        if p.mision.encargo.reparto:
+            self.repartir_cestas(p)
+            return
         ids = list(p.jugadores)[:2]
         d = p.mision.encargo.destino
         for i in ids:
@@ -81,6 +95,8 @@ class CampanaTests(unittest.TestCase):
             self.assertTrue(self.accion(p, i, "depositar")["ok"])
         self.completar_materiales(p)
         self.hacer_actividad(p)
+        if p.mision.fase == "final":
+            return  # el último encargo cierra La Copa: no hay otro caso que confirmar
         for j in p.jugadores.values():
             j.update(x=480, y=380)
         for i in p.jugadores:
@@ -98,11 +114,15 @@ class CampanaTests(unittest.TestCase):
                     self.assertTrue(p.mision.resultado["correcto"])
                     self.assertIn(caso[5] if ronda else "no por Kael", p.mision.resultado["texto"])
                     if ronda < len(CASOS) - 1:
-                        self.avanzar(p)
+                        self.assertEqual(p.mision.fase, "preparacion")
+                    self.avanzar(p)
+                    if ronda < len(CASOS) - 1:
                         self.assertFalse(p.mision.conocidas["0"])
+                self.assertEqual(len(CASOS), 2)  # La Copa: puente norte y agua
                 self.assertEqual(p.mision.fase, "final")
-                self.assertEqual(len(p.mision.publico(p.conectados)["balance"]), 4)
-                self.assertEqual(p.mision.publico(p.conectados)["estrellas"], 11)
+                self.assertEqual(len(p.mision.publico(p.conectados)["balance"]), 2)
+                self.assertEqual(p.mision.publico(p.conectados)["estrellas"], 6)
+                self.assertEqual(len(p.mision.obras), 2)
 
     def test_suministros_distancia_dos_aportes_y_acuses_antiguos(self):
         p = self.crear(("guardian", "habitante"))
@@ -157,7 +177,6 @@ class CampanaTests(unittest.TestCase):
             with patch("logica.sorteo_partida.SorteoPartida.elegir", side_effect=lambda opciones: opciones[-1 if ultimo else 0]):
                 p = self.crear(("guardian", "habitante"))
             self.assertEqual(p.mision.casos[1][3], "difundir" if ultimo else "descartar")
-            self.assertEqual(p.mision.casos[2][3], "descartar" if ultimo else "difundir")
             self.assertNotIn("correcta", p.mision.publico(p.conectados))
 
     def test_rectificar_no_duplica_puntuacion_ni_reprocesa_solicitudes(self):
@@ -245,7 +264,7 @@ class CampanaRedTests(unittest.IsolatedAsyncioTestCase):
                         for i in range(2):
                             await actuar(i, "votar", opcion=caso[3])
                         self.assertTrue(p.mision.resultado["correcto"])
-                        if ronda < 3:
+                        if True:  # cada caso tiene su encargo; el del agua termina repartiendo cestas
                             for i, j in enumerate(sesiones):
                                 o = p.mision.privado(j["id"])["objetivo"]
                                 p.jugadores[j["id"]].update(x=o["x"], y=o["y"])
@@ -260,12 +279,21 @@ class CampanaRedTests(unittest.IsolatedAsyncioTestCase):
                                 await actuar(0, "recoger_suministro", objetivo=o["id"])
                                 p.jugadores[sesiones[0]["id"]].update(x=d["x"], y=d["y"])
                                 await actuar(0, "depositar")
-                            for j in p.jugadores.values():
-                                j.update(x=d["x"], y=d["y"])
-                            await actuar(0, "sujetar")
-                            for _ in range(3):
-                                await asyncio.sleep(.7)
-                                await actuar(1, "trabajar")
+                            if e.reparto:
+                                yo = sesiones[0]["id"]
+                                while e.reparto_activo:
+                                    p.jugadores[yo].update(x=d["x"], y=d["y"])
+                                    await actuar(0, "interactuar", objetivo=d["id"])
+                                    familia = p.mision.privado(yo)["objetivo"]
+                                    p.jugadores[yo].update(x=familia["x"], y=familia["y"])
+                                    await actuar(0, "interactuar", objetivo=familia["id"])
+                            else:
+                                for j in p.jugadores.values():
+                                    j.update(x=d["x"], y=d["y"])
+                                await actuar(0, "sujetar")
+                                for _ in range(3):
+                                    await asyncio.sleep(.7)
+                                    await actuar(1, "trabajar")
                             if e.config.get("requiere_puente"):
                                 o = p.mision.objetivo_puente
                                 p.jugadores[sesiones[0]["id"]].update(x=o["x"], y=o["y"])
@@ -276,6 +304,8 @@ class CampanaRedTests(unittest.IsolatedAsyncioTestCase):
                                     await actuar(0, "intento_reparacion", tiempo_aguja_ms=tiempo_acierto(p.mision.puente))
                                 await asyncio.sleep(1.0)
                                 self.assertTrue(p.mision.puente.reparado)
+                            if p.mision.fase == "final":
+                                break  # el reparto del agua cierra La Copa
                             for j in p.jugadores.values():
                                 j.update(x=480, y=380)
                             for i in range(2):

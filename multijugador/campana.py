@@ -2,7 +2,7 @@
 from .mision import MisionPuente
 from logica.sorteo_partida import SorteoPartida
 from .expediente import ExpedientePartida, campos_legales, ficha_resuelta
-from .suministros import EncargoSuministros
+from .suministros import ENCARGOS, EncargoSuministros
 from .guia import GuiaCooperativa
 from . import clasificacion
 from .dialogos import DialogosNPC
@@ -11,6 +11,7 @@ from .reparacion import PuenteRed
 from copy import deepcopy
 
 
+# La Copa tiene dos eventos: el puente norte y el agua con su reparto de provisiones.
 CASOS = (
     ("puente_norte", "¿Quién rompió el puente norte?",
      "Alguien dice que Kael rompió el puente por descuido y por eso lo cerraron. ¿Será verdad?", "corregir", None,
@@ -22,20 +23,6 @@ CASOS = (
          "habitante": ("Muestra comunitaria", "La muestra de hoy del manantial nuevo superó el control comunitario."),
          "aspirante": ("Acta de sustitución", "El depósito antiguo fue sustituido y desconectado de la red hace diez años."),
      }, "El aviso mezcla fechas y depósitos. Se retira ese aviso antiguo de la circulación."),
-    ("tormenta", "La tormenta se acerca",
-     "El consejo avisa: esta tarde habrá tormenta. ¿Debemos avisar a los vecinos?", "difundir", {
-         "guardian": ("Boletín firmado", "El boletín de hoy está firmado por dos observadores del consejo: tormenta esta tarde."),
-         "mensajero": ("Registro de señales", "Dos puestos independientes enviaron hoy la misma alerta de tormenta."),
-         "habitante": ("Observación del mirador", "Los observadores registraron hoy viento y nubes compatibles con el boletín."),
-         "aspirante": ("Plan preventivo", "El plan vigente confirma la alerta y pide asegurar suministros sin sembrar pánico."),
-     }, "La alerta es actual y está contrastada. Difundirla permite preparar a la aldea."),
-    ("ayuda", "¿Quién se quedó con la ayuda?",
-     "Dicen que Mira guardó para ella toda la ayuda. ¿Qué pasó con las entregas?", "corregir", {
-         "guardian": ("Libro de reparto", "El libro firmado registra entregas a tres familias; dos entregas siguen pendientes."),
-         "mensajero": ("Carga retenida", "Las dos entregas pendientes están en tránsito: una ruta quedó temporalmente interrumpida."),
-         "habitante": ("Recibos familiares", "Tres familias confirman que recibieron materiales hoy y conservan sus recibos."),
-         "aspirante": ("Inventario de Mira", "El inventario distingue entregado y pendiente. No hay materiales asignados a uso personal."),
-     }, "La acusación total era falsa: hubo entregas y retrasos. Se publica el estado real del reparto."),
 )
 
 HABILIDADES = {
@@ -52,12 +39,6 @@ VARIANTES = {
         "habitante": ("Control de muestras", "Dos muestras independientes de hoy dieron resultado no apto en el depósito señalado."),
         "aspirante": ("Protocolo de cuidado", "El consejo firmó hoy el aviso preventivo y garantiza una fuente alternativa de agua potable."),
     }, "La advertencia estaba contrastada. Se difunde junto con la ubicación del agua segura."),
-    "tormenta": ("tormenta", "La tormenta se acerca", "Un mensaje dice: ¡salgan de sus casas, viene una gran tormenta! ¿Es un aviso real?", "descartar", {
-        "guardian": ("Encabezado omitido", "El mensaje completo dice SIMULACRO. La copia eliminó ese encabezado."),
-        "mensajero": ("Registro del envío", "La copia procede del ensayo de alertas; no existe un aviso real de evacuación hoy."),
-        "habitante": ("Puesto del mirador", "Los dos observadores confirman condiciones estables. Participaron en un simulacro esta mañana."),
-        "aspirante": ("Calendario de ejercicios", "El consejo programó hoy un ejercicio de comunicación, sin evacuación de vecinos."),
-    }, "Se retira la copia descontextualizada del simulacro: no existe una orden real de evacuar."),
 }
 
 AVISOS_RECIENTES = {
@@ -116,6 +97,7 @@ class CampanaCopa(MisionPuente):
         self.metadatos_pruebas = self._metadatos(self.pruebas)
         self.resumen = []
         self.preparados = set()
+        self.familias = []  # personas que reciben las cestas (las coloca PartidaMovimiento)
         self.encargo = EncargoSuministros(0, self.objetivos)
         self.obras = []
         self.materiales = self.encargo.cargas
@@ -254,8 +236,8 @@ class CampanaCopa(MisionPuente):
     def fase(self):
         if not self.resultado:
             return "investigacion"
-        if self.ronda == len(self.casos) - 1:
-            return "final"
+        if self.ronda == len(self.casos) - 1 and (self.encargo is None or self.encargo.completo):
+            return "final"  # el último caso termina cuando el equipo reparte las provisiones
         return "preparacion"
 
     def _ejecutar(self, identificador, solicitud, ahora, presentes):
@@ -299,6 +281,9 @@ class CampanaCopa(MisionPuente):
         if accion in ("presente_votar", "presente_clasificar", "futuro_resolver") + ACCIONES_ANALISIS or (
                 accion == "interactuar" and isinstance(objetivo_pedido, str) and objetivo_pedido.startswith(("presente:", "futuro:"))):
             return self._ejecutar_presente(identificador, solicitud)
+        if accion == "interactuar" and isinstance(objetivo_pedido, str) and objetivo_pedido.startswith("jugador:"):
+            # E sobre un compañero, en cualquier era y fase: pedirle algo en persona.
+            return super()._ejecutar(identificador, solicitud, ahora, presentes)
         if solicitud.get("ronda", 0) != self.ronda:
             raise ValueError("La acción pertenece a otro caso. Revisa el objetivo actual.")
         accion = solicitud.get("accion")
@@ -322,10 +307,19 @@ class CampanaCopa(MisionPuente):
             self._premiar_encargo(presentes)
             return {"mensaje": mensaje, "vista": "actividad"}
         if accion == "interactuar" and self.fase == "preparacion":
+            if isinstance(objetivo_pedido, str) and objetivo_pedido.startswith("familia:"):
+                familia = self.encargo.familia(objetivo_pedido)
+                if not self._cerca(identificador, familia):
+                    raise ValueError("Acércate a " + familia["persona"] + " para darle la cesta.")
+                mensaje = self.encargo.entregar_cesta(identificador, objetivo_pedido)
+                self._premiar_encargo(presentes)
+                return {"mensaje": mensaje}
             objetivo = self._objetivo(identificador, solicitud.get("objetivo"))
             if objetivo["id"] == self.encargo.destino["id"]:
                 if identificador in self.encargo.cargas:
                     return self._ejecutar(identificador, {**solicitud, "accion": "depositar"}, ahora, presentes)
+                if self.encargo.reparto and self.encargo.materiales_listos and not self.encargo.materiales_colocados:
+                    return {"mensaje": self.encargo.tomar_cesta(identificador)}
                 if self.encargo.materiales_listos and not self.encargo.materiales_colocados:
                     return {"mensaje": "Uno ayuda y el otro hace la tarea. ¡Pueden turnarse!", "vista": "actividad"}
                 if self.encargo.materiales_colocados and not self.encargo.completo:
@@ -431,7 +425,8 @@ class CampanaCopa(MisionPuente):
         self.resumen.append({"caso": self.casos[self.ronda][1], **self.resultado})
         self.obras.append(self.encargo.obra())
         self.ronda += 1
-        self.encargo = EncargoSuministros(self.ronda, self.objetivos) if self.ronda < 3 else None
+        self.encargo = (EncargoSuministros(self.ronda, self.objetivos, self.familias)
+                        if self.ronda < len(ENCARGOS) else None)
         self.pruebas = self.casos[self.ronda][4]
         self.metadatos_pruebas = self._metadatos(self.pruebas)
         self.correcta = self.casos[self.ronda][3]
@@ -464,6 +459,8 @@ class CampanaCopa(MisionPuente):
         self.indicadores[nombre] = max(0, min(100, self.indicadores[nombre] + config["delta"]))
         self.puntos += 30
         self.acompanante.estrellas.add("encargo:" + str(self.ronda))
+        if self.ronda == len(self.casos) - 1:
+            self.obras.append(self.encargo.obra())  # el último encargo no pasa por _siguiente
         self._registrar(config["efecto"] + ": +30 puntos de cooperación.")
         self._avisar(presentes, "¡Lo hicieron juntos! " + config["efecto"] + ". Ganaron una estrella.", "logro")
 
@@ -476,7 +473,8 @@ class CampanaCopa(MisionPuente):
         if self.ronda:
             texto = (self.casos[self.ronda][5] if correcto else
                 "Las pistas cuentan otra cosa. " + ("La aldea sigue aprendiendo. Vamos a ayudar con la siguiente tarea." if self.rectificacion else "Pueden leer las pistas e intentarlo una vez más."))
-        return texto + " " + ("Campaña terminada. Revisen el balance del equipo." if self.ronda == len(self.casos) - 1 else "Ahora abran M: la aldea necesita materiales concretos en el destino señalado.")
+        sin_encargo = self.ronda >= len(ENCARGOS)
+        return texto + " " + ("Campaña terminada. Revisen el balance del equipo." if sin_encargo else "Ahora abran M: la aldea necesita materiales concretos en el destino señalado.")
 
     def actualizar(self, segundos, presentes):
         self.presentes = set(presentes)
@@ -539,7 +537,7 @@ class CampanaCopa(MisionPuente):
                       encargo=self.encargo.publico() if self.fase == "preparacion" else None, obras=list(self.obras),
                       suministros=len(self.depositos), preparados=len(self.decisores(presentes) & self.preparados),
                       balance=list(self.resumen) + ([{"caso": caso[1], **self.resultado}] if self.resultado else []),
-                      estrellas=len(self.acompanante.estrellas), estrellas_total=11,
+                      estrellas=len(self.acompanante.estrellas), estrellas_total=3 * len(self.casos),
                       tutorial_cargas=[i for i, t in self.acompanante.tutoriales.items() if t["estado"] == "activo" and t["paso"] == 2],
                       sin_prisa=self.ronda == 0, puntos=self.puntos, bono_equipo=self.bono_equipo,
                       proxima_oleada=max(0, 60 - int(self.presion % 60)),
@@ -553,6 +551,9 @@ class CampanaCopa(MisionPuente):
                       presente=self.presente.publico(self.presentes_presente) if self.presente else None,
                       futuro=self.futuro.publico(self.presentes_futuro) if self.futuro else None,
                       expediente=self.expediente.publico())
+        if self.fase == "preparacion" and self.encargo.reparto_activo:
+            # Las familias que esperan su cesta se eligen con E como cualquier objetivo.
+            estado["objetivos"] = estado["objetivos"] + self.encargo.familias_pendientes()
         return estado
 
     def privado(self, identificador):
@@ -591,7 +592,9 @@ class CampanaCopa(MisionPuente):
             estado["objetivo"] = objetivo
             carga = self.encargo.cargas.get(identificador)
             estado["carga"] = self.encargo.nombre(carga) if carga else None
+            estado["cesta"] = identificador in self.encargo.cestas
             estado["instruccion"] = ("Encargo completo. Confirmen en el caldero." if self.encargo.completo else
+                                      self.encargo.instruccion_reparto(identificador) if self.encargo.reparto_activo else
                                       "Tu aporte está entregado. Ayuda a coordinar al equipo." if identificador in self.depositos and objetivo.get("id") == "caldero" else
                                       "Llevas " + estado["carga"] + ". Ve a " + self.encargo.config["lugar"] + " y pulsa E." if carga and carga not in self.encargo.entregados else
                                       "Ve a " + objetivo["nombre"] + " y pulsa E.")

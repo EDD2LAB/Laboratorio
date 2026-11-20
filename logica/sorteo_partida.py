@@ -22,6 +22,8 @@ class SorteoPartida:
         # Se sortea a quién menciona la acusación, nunca quién es culpable.
         # Las pruebas siguen demostrando retrasos, no apropiación de la ayuda.
         persona = self.persona = self.elegir(("Mira", "Kael", "Luma", "Naira"))
+        if casos[-1][0] != "ayuda":
+            return tuple(casos)  # sin el caso de la ayuda no hay a quién mencionar
         ayuda = list(casos[-1])
         ayuda[2] = ayuda[2].replace("Mira", persona)
         ayuda[4] = dict(ayuda[4])

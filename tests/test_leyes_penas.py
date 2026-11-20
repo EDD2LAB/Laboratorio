@@ -129,7 +129,7 @@ class Catalogo(unittest.TestCase):
 
 class FichaSegunElCaso(unittest.TestCase):
     def test_agua_y_tormenta_usan_la_ficha_de_su_respuesta_y_su_gravedad(self):
-        for ronda, nombre in ((1, "agua"), (2, "tormenta")):
+        for ronda, nombre in ((1, "agua"),):
             for caso in (CASOS[ronda], VARIANTES[nombre]):
                 with self.subTest(caso=nombre, correcta=caso[3]):
                     p = partida()
@@ -141,17 +141,6 @@ class FichaSegunElCaso(unittest.TestCase):
                     self.assertEqual(guardado.datos["ley"], esperada["ley"])
                     self.assertEqual(m.resultado["cita_corta"], esperada["cita_corta"])
                     self.assertIs(m.resultado["con_delito"], esperada["con_delito"])
-
-    def test_la_conducta_de_ayuda_nombra_a_la_persona_sorteada(self):
-        vistas = set()
-        for semilla in range(40):
-            p = partida(semilla)
-            m = resolver_copa(p, 3, p.mision.casos[3], "corregir")
-            persona = m.sorteo.persona
-            vistas.add(persona)
-            self.assertIn(f"falsamente a {persona} ", m.resultado["conducta"])
-            self.assertNotIn("{persona}", json.dumps(guardados(m)["ayuda"].datos, ensure_ascii=False))
-        self.assertEqual(vistas, {"Mira", "Kael", "Luma", "Naira"})
 
     def test_cada_resolucion_trae_los_campos_legales(self):
         m = resolver_copa(partida(), 0, CASOS[0], "corregir")
@@ -299,7 +288,10 @@ class ExpedienteEInforme(unittest.TestCase):
         self.assertTrue(all(f["norma"] and f["pena"] for f in informe["casos"]))
         with tempfile.TemporaryDirectory() as carpeta:
             texto = Path(exportar(informe, Path(carpeta))).read_text(encoding="utf-8")
-        for _, ficha in self.fichas():
+        presentes = {f["id"] for f in informe["casos"]}  # La Copa ya no tiene tormenta ni ayuda
+        for caso, ficha in self.fichas():
+            if caso not in presentes:
+                continue
             self.assertIn("Norma: " + ficha["ley"], texto)
             self.assertIn("Pena: " + ficha["sancion"], texto)
 

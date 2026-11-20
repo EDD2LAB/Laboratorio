@@ -138,8 +138,8 @@ class MisionPuente:
                 receptor = destino.split(":", 1)[1]
                 otro = self.jugadores.get(receptor)
                 if not otro or receptor == identificador or not self._cerca(identificador, otro, 64):
-                    raise ValueError("Acércate al otro jugador para compartir pruebas.")
-                return {"mensaje": f"Puedes compartir una pista con {otro['nombre']}.", "vista": "compartir", "destinatario": receptor}
+                    raise ValueError("Acércate a ese compañero para pedirle algo.")
+                return {"mensaje": f"Puedes pedirle algo a {otro['nombre']}.", "vista": "compartir", "destinatario": receptor}
             objetivo = self._objetivo(identificador, destino)
             if objetivo.get("rol") == jugador["rol"]:
                 pista = "pista_" + jugador["rol"]
@@ -187,12 +187,17 @@ class MisionPuente:
                 self._registrar(f"{jugador['nombre']} compartió una prueba con {self.jugadores[nuevo]['nombre']}.")
             return {"mensaje": "¡El equipo recibió la pista!" if a_todos else "¡Tu compañero recibió la pista!"}
         if accion == "eco":
-            if not any(o["tipo"] == "eco" and self._cerca(identificador, o) for o in self.objetivos):
-                raise ValueError("Acércate a un Tronco de los Ecos.")
             indice = solicitud.get("mensaje")
+            destinatario = solicitud.get("destinatario", TODOS)
+            junto_al_tronco = any(o["tipo"] == "eco" and self._cerca(identificador, o) for o in self.objetivos)
+            # En persona (E sobre un compañero) se le pide lo mismo que por un tronco.
+            en_persona = (not junto_al_tronco and destinatario != TODOS and isinstance(destinatario, str)
+                          and destinatario in self.jugadores
+                          and self._cerca(identificador, self.jugadores[destinatario], 64))
+            if not junto_al_tronco and not en_persona:
+                raise ValueError("Acércate a un Tronco de los Ecos o a ese compañero.")
             if type(indice) is not int or not 0 <= indice < len(MENSAJES):
                 raise ValueError("Mensaje no permitido.")
-            destinatario = solicitud.get("destinatario", TODOS)
             if destinatario != TODOS and (not isinstance(destinatario, str) or destinatario == identificador
                                           or destinatario not in self.jugadores or destinatario not in presentes):
                 raise ValueError("El destinatario no está disponible.")
@@ -203,6 +208,9 @@ class MisionPuente:
             if destinatario == TODOS:
                 self._avisar(presentes, f"Eco de {jugador['nombre']}: {MENSAJES[indice]}", "eco", **datos)
                 return {"mensaje": "Eco recibido por los jugadores conectados."}
+            if en_persona:
+                self._avisar([destinatario], f"{jugador['nombre']} te dice: {MENSAJES[indice]}", "eco", **datos)
+                return {"mensaje": f"Se lo pediste a {self.jugadores[destinatario]['nombre']}."}
             self._avisar([destinatario], f"Eco de {jugador['nombre']} para ti: {MENSAJES[indice]}", "eco", **datos)
             return {"mensaje": f"Eco enviado a {self.jugadores[destinatario]['nombre']}."}
         if accion in ("votar", "rectificar"):

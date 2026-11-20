@@ -45,7 +45,7 @@ class ArbolAnimado(unittest.TestCase):
     def test_ocho_nodos_caben_sin_solaparse_ni_tocar_la_leyenda(self):
         estado = ocho_casos().publico()
         puntos = posiciones(forma_publica(estado["raiz"]))
-        self.assertEqual(len(puntos), 8)
+        self.assertEqual(len(puntos), 6)
         rects = [pygame.Rect(round(x) - 22, round(y) - 22, 44, 44) for x, y in puntos.values()]
         for i, rect in enumerate(rects):
             self.assertTrue(pygame.Rect(40, 130, 425, 285).contains(rect))

@@ -43,7 +43,7 @@ def ocho_resueltos():
 class CapacidadFinal(unittest.TestCase):
     def test_ocho_fichas_y_final_caben_para_los_cuatro_roles(self):
         p = ocho_resueltos()
-        self.assertEqual(len(p.mision.expediente.arbol.casos), 8)
+        self.assertEqual(len(p.mision.expediente.arbol.casos), 6)
         for caso in p.mision.expediente.arbol.casos.values():
             self.assertTrue(caso.datos["pruebas"], caso.id)
             self.assertIn("ley", caso.datos)

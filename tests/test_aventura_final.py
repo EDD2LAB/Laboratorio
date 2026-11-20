@@ -170,7 +170,7 @@ class Pantallas(unittest.TestCase):
             self.assertTrue(v.panel.botones)
             for b in v.panel.botones.values():
                 self.assertTrue(s.get_rect().contains(b.rect), (etapa, b.rect))
-        self.assertEqual(ui.resultado.casos, 8)
+        self.assertEqual(ui.resultado.casos, 6)
         # Reconexión directamente en el resultado, sin el informe en caché.
         v.panel.informe = None
         ui.resultado = None
@@ -179,5 +179,5 @@ class Pantallas(unittest.TestCase):
         v.recibir({"mundo": p.estado("0")})
         v.panel.modo = "desenlace"
         v.panel.dibujar(pygame.Surface((960, 720)))
-        self.assertEqual(ui.resultado.casos, 8)
+        self.assertEqual(ui.resultado.casos, 6)
         self.assertEqual(ui.resultado.lider, "Mira")

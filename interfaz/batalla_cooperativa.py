@@ -15,6 +15,48 @@ PANEL = (8, 22, 32)
 CREMA = (255, 240, 200)
 CIAN = (104, 243, 241)
 RECARGA = PAUSA
+POCO_TIEMPO = 5  # a partir de aquí el número sale muy grande en el centro
+_FUENTES = {}
+
+
+def _fuente(tamano):
+    """Letras grandes del reloj, cargadas una vez (nunca al importar)."""
+    fuente = _FUENTES.get(tamano)
+    if fuente is not None:
+        try:
+            fuente.size("0")
+            return fuente
+        except pygame.error:  # pygame se reinició: las letras viejas ya no sirven
+            _FUENTES.clear()
+    if tamano not in _FUENTES:
+        from nucleo.recursos import cargar_fuente
+        _FUENTES[tamano] = cargar_fuente(tamano)
+    return _FUENTES[tamano]
+
+
+def dibujar_tiempo(superficie, segundos_exactos, peligro, color, ahora_ms, caja=None):
+    """Reloj grande para que se note; con poco tiempo, un número enorme que late."""
+    segundos = max(0, math.ceil(segundos_exactos))
+    caja = caja or pygame.Rect(816, 170, 120, 60)
+    poco = 0 < segundos <= POCO_TIEMPO
+    borde = (255, 98, 109) if poco else (color if peligro else CIAN)
+    pygame.draw.rect(superficie, sprites.CONTORNO, caja.inflate(6, 6), border_radius=6)
+    pygame.draw.rect(superficie, (18, 38, 50), caja, border_radius=5)
+    pygame.draw.rect(superficie, borde, caja, 3, border_radius=5)
+    _texto(superficie, _fuente(40), f"{segundos} s", (255, 236, 120) if poco else CREMA, caja.center)
+    if not poco:
+        return
+    # Late con cada segundo: empieza grande y se encoge un poco hasta el siguiente.
+    fraccion = segundos_exactos - math.floor(segundos_exactos) if segundos_exactos % 1 else 1.0
+    tamano = 150 + round(60 * fraccion)
+    imagen = _fuente(tamano).render(str(segundos), True, (255, 236, 120))
+    sombra = _fuente(tamano).render(str(segundos), True, sprites.CONTORNO)
+    centro = (480, 300)
+    capa = pygame.Surface(imagen.get_size(), pygame.SRCALPHA)
+    capa.blit(imagen, (0, 0))
+    capa.set_alpha(215)
+    superficie.blit(sombra, sombra.get_rect(center=(centro[0] + 4, centro[1] + 5)))
+    superficie.blit(capa, capa.get_rect(center=centro))
 
 
 def _color(fase):
@@ -137,13 +179,8 @@ def dibujar_aviso(superficie, final, fuente, yo=None, efectos=None, ahora_ms=0):
         if perdio and i == integridad and (ahora_ms // 80) % 2:
             imagen = sprites.corazon(True, 3)
         superficie.blit(imagen, imagen.get_rect(midleft=(x + temblor, caja.centery)))
-    segundos = max(0, math.ceil(b.get("segundos", 0)))
-    reloj = pygame.Rect(caja.right - 96, caja.y + 8, 88, 24)
-    pygame.draw.rect(superficie, (18, 38, 50), reloj, border_radius=2)
-    pygame.draw.rect(superficie, color if peligro else CIAN, reloj, 2, border_radius=2)
-    _texto(superficie, fuente, f"{segundos} s", CREMA, reloj.center)
     izquierda = insignia.right + 12 + 3 * 31 + 8
-    ancho = reloj.x - 10 - izquierda
+    ancho = caja.right - 10 - izquierda
     tinta = (255, 236, 120) if peligro and parpadeo else CREMA
     _texto(superficie, fuente, _recortar(fuente, texto, ancho), tinta, (izquierda + ancho // 2, caja.centery))
     # Tiempo restante del turno como barra bajo el panel.
@@ -156,6 +193,8 @@ def dibujar_aviso(superficie, final, fuente, yo=None, efectos=None, ahora_ms=0):
         relleno = barra.inflate(-2, -2)
         relleno.width = round(relleno.width * fraccion)
         pygame.draw.rect(superficie, color if peligro else CIAN, relleno)
+    if turno in ("aviso", "recarga"):
+        dibujar_tiempo(superficie, b.get("segundos", 0), peligro, color, ahora_ms)
 
     # Barra inferior: bláster sin munición, con su recarga de 0,6 s y la tecla.
     abajo = pygame.Rect(230, 572, 500, 34)

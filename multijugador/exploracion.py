@@ -30,6 +30,29 @@ def colocar_vecinos(campana, colisiones):
                                               x=round(x), y=round(y), exploracion=True))
 
 
+FAMILIAS = ("elia", "arel", "darek", "naira", "sabio_de_las_raices")  # nunca un personaje jugable
+
+
+def elegir_familias(campana, colisiones, cantidad=3):
+    """Quienes reciben las cestas del reparto: personajes fijos del mapa, a pie desde el cesto."""
+    cesto = next(o for o in campana.objetivos if o["id"] == "cesto")
+    familias = []
+    for clave in FAMILIAS:
+        npc = next((n for n in campana.dialogos.npcs_copa if n["id"] == clave), None)
+        if npc is None:
+            continue
+        # Un punto caminable junto al personaje, desde el que se le entrega la cesta.
+        x, y = colisiones.inicio_alcanzable(npc["x"], npc["y"] + 6, [], separacion=0)
+        if colisiones.bloqueado(x, y) or abs(x - npc["x"]) + abs(y - npc["y"]) > 60:
+            continue
+        familias.append({"id": "familia:" + clave, "persona": npc["nombre"], "nombre": "Familia de " + npc["nombre"],
+                         "x": round(x), "y": round(y)})
+        if len(familias) == cantidad:
+            break
+    familias.sort(key=lambda f: (f["x"] - cesto["x"]) ** 2 + (f["y"] - cesto["y"]) ** 2)
+    return familias
+
+
 class ExploracionInteriores:
     def __init__(self):
         self.objetivos = []

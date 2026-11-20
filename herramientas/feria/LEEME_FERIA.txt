@@ -1,0 +1,57 @@
+TIMELESS GLITCH - GUIA PARA EL DIA DE LA FERIA
+==============================================
+
+1. INSTALAR
+   - Copia la carpeta TimelessGlitch completa a C:\TimelessGlitch\
+     (debe quedar C:\TimelessGlitch\TimelessGlitch.exe).
+   - No hace falta instalar Python ni nada mas.
+
+2. PREPARAR LA PC (una vez, al llegar)
+   - Abre PowerShell COMO ADMINISTRADOR y ejecuta:
+         cd C:\TimelessGlitch
+         powershell -ExecutionPolicy Bypass -File .\preparar_pc_feria.ps1
+   - Desactiva los atajos de Shift x5 y similares, deja la pantalla siempre
+     encendida, crea accesos directos a Feria.bat (escritorio e Inicio) y
+     permite el juego en el firewall para redes privadas.
+   - AL TERMINAR LA FERIA deja todo como estaba:
+         powershell -ExecutionPolicy Bypass -File .\preparar_pc_feria.ps1 -Deshacer
+
+3. A MANO (el script no lo hace)
+   - Pausar Windows Update (Configuracion > Windows Update > Pausar).
+   - Activar No molestar / Asistente de concentracion.
+   - Cerrar Discord, Steam y OneDrive (tambien en la bandeja del sistema).
+   - Poner de fondo de escritorio el logo del juego y ocultar los iconos
+     (clic derecho en el escritorio > Ver > Mostrar iconos del escritorio).
+
+4. JUGAR
+   - Abre "Timeless Glitch - Feria" (Feria.bat). El juego arranca en modo feria:
+     * "Demo rapida" empieza una campana con bots al instante.
+     * "Ver la batalla final" muestra el combate final; Esc vuelve al menu.
+     * Si nadie toca nada 2 minutos, pregunta "Sigues ahi?" y a los 10 s
+       vuelve solo al menu.
+     * Si alguien cierra el juego, Feria.bat lo vuelve a abrir en 2 segundos.
+   - Sin internet: usa "Campana con bots" o "Demo rapida".
+   - Varias PC: usa Multijugador por LAN con un router propio (no la red de la feria).
+
+5. SALIR DE VERDAD
+   - Primero cierra la ventana negra "Timeless Glitch - Feria".
+   - Despues cierra el juego (Esc en el menu > Salir > Si, cerrar).
+   - Si cierras primero el juego, Feria.bat lo reabre.
+
+6. CONTROLES (para imprimir junto al teclado)
+   Flechas / WASD ... Caminar (con Shift: correr)
+   E ............... Hablar, ayudar o usar lo que tienes cerca
+   Tab ............. Cambiar entre objetivos cercanos
+   I ............... Pistas
+   M ............... Tu tarea
+   T ............... Libro de casos y expediente AVL
+   Q ............... Habilidad de tu rol
+   B ............... Encargo: pedir que un companero lleve un objeto
+   C ............... Celular en Distrito Conecta y Ciudad Nucleo
+   F ............... Disparar el blaster (batalla final)
+   J ............... Detalles: tarea, indicadores y teclas
+   H ............... Ocultar o mostrar el HUD
+   L ............... Ocultar o mostrar los nombres
+   F1 .............. Ayuda y controles
+   F11 ............. Pantalla completa
+   Esc ............. Cerrar ventanas / menu

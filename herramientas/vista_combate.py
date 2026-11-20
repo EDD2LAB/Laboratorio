@@ -312,6 +312,43 @@ class Vista:
             pantalla.blit(imagen, rect)
 
 
+def jugar_desde_menu(lienzo, audio=None, cuadros=0):
+    """«Ver la batalla final» del modo feria: la misma vista, dentro de la ventana del menú.
+
+    No abre otra ventana ni toca servidor, campaña ni protocolo. Esc vuelve al
+    menú (devuelve None); cerrar la ventana devuelve "salir"."""
+    from interfaz.presentacion_pantalla import presentar
+    vista = Vista(sonido=False)
+    vista.audio = audio or None  # comparte el audio del menú en lugar de abrir otro
+    vista.ayuda = False
+    reloj, cuadro = pygame.time.Clock(), 0
+    try:
+        while True:
+            dt = reloj.tick(60) / 1000
+            ahora_ms = pygame.time.get_ticks()
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    return "salir"
+                if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+                    return None
+                if evento.type == pygame.KEYDOWN:
+                    vista.tecla(evento.key, ahora_ms)
+            vista.actualizar(dt, pygame.key.get_pressed(), ahora_ms)
+            vista.dibujar(lienzo, ahora_ms)
+            aviso = vista.fuente.render("Esc: volver al menú", True, (255, 240, 200))
+            lienzo.blit(aviso, aviso.get_rect(topright=(944, 40)))
+            pantalla = pygame.display.get_surface()
+            if pantalla is not None:
+                presentar(pantalla, lienzo)
+                pygame.display.flip()
+            cuadro += 1
+            if cuadros and cuadro >= cuadros:
+                return None
+    finally:
+        if vista.audio and vista.musica:
+            vista.audio.detener_musica()
+
+
 def main(argumentos=None):
     opciones = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     opciones.add_argument("--cuadros", type=int, default=0, help="termina tras N cuadros (pruebas)")

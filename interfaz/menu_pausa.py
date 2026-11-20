@@ -58,9 +58,10 @@ PAGINAS_COMO_JUGAR = (
         "5. Clasifica qué tipo de información era.",
         "6. Después ayuden a la aldea: lleva los materiales al lugar marcado (pulsa B para pedir que un bot lleve uno), haz la actividad "
         "en pareja (un bot ayuda y tú trabajas) y confirma en el caldero. En el primer caso también reparan el Puente 1: "
-        "pulsa E tres veces en la zona verde.",
+        "pulsa E tres veces en la zona verde. En el caso del agua, toma cada cesta del cesto (E) y llévala "
+        "caminando hasta una familia marcada.",
         "Pulsa T o el botón Casos del mapa para consultar lo que descubrieron y ordenar el expediente.",
-        "Son cuatro casos. Al terminar, la flecha dorada te lleva al portal.",
+        "Son dos casos: el puente norte y el agua. Al terminar, la flecha dorada te lleva al portal.",
     )),
     ("Distrito Conecta", (
         "Una imagen viral acusa a Ronaldo Vélez. ¿Es real? Aquí la cámara va cerca de tu "

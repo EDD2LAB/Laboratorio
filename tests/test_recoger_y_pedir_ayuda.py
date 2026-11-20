@@ -119,7 +119,7 @@ class BanderasDeObras(unittest.TestCase):
         puente = base["puente_1"]["bandera"]
         self.assertEqual(sitios[0], puente)  # en medio del Puente 1
         self.assertLess(abs(sitios[1][0] - base["testigo"]["x"]), 60)  # junto a Luma
-        self.assertLess(abs(sitios[2][0] - base["archivo"]["x"]), 60)  # junto a Naira
+        self.assertEqual(len(sitios), 2)  # puente y reparto del agua
         obras = [EncargoSuministros(r, mision.objetivos).obra() for r in range(len(ENCARGOS))]
         superficie = pygame.Surface((960, 720))
         dibujar_encargos(superficie, {"obras": obras, "encargo": None}, pygame.font.Font(None, 16))

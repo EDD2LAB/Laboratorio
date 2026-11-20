@@ -113,7 +113,10 @@ class GuiaCooperativa:
             e = m.encargo
             guia.update(paso="encargo", titulo="4. Ayuda a la aldea", detalle=estado["instruccion"],
                         objetivo=estado["objetivo"], boton="Ayudar · E", ayuda=not e.materiales_listos)
-            if e.materiales_listos and not e.materiales_colocados:
+            if e.reparto_activo:
+                guia.update(titulo="¡Repartan las cestas a las familias!", detalle=estado["instruccion"],
+                            objetivo=estado["objetivo"], boton="Entregar la cesta · E" if estado.get("cesta") else "Tomar una cesta · E")
+            elif e.materiales_listos and not e.materiales_colocados:
                 guia.update(titulo="¡Hagan la tarea juntos!", detalle="Uno ayuda y el otro trabaja. Acérquense al cesto.",
                             objetivo=dict(e.destino, nombre=e.config["lugar"]), boton="Abrir actividad · E")
             elif e.materiales_colocados and not e.completo:

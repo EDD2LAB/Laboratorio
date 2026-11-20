@@ -3,6 +3,7 @@
 Se leen y escriben solo cuando se piden; importar el módulo no toca disco.
 """
 import json
+import os
 
 from nucleo.rutas import RAIZ
 
@@ -40,7 +41,14 @@ def cargar():
     for clave in APARIENCIAS:
         if datos.get(clave) in ("hombre", "mujer"):
             preferencias[clave] = datos[clave]
+    if datos.get("modo_feria") is True:
+        preferencias["modo_feria"] = True  # solo se guarda si alguien lo pidió
     return preferencias
+
+
+def modo_feria(preferencias=None):
+    """Modo feria: lo activa TG_MODO_FERIA=1 (Feria.bat) o "modo_feria": true."""
+    return os.environ.get("TG_MODO_FERIA") == "1" or bool((preferencias or {}).get("modo_feria"))
 
 
 def guardar(preferencias):

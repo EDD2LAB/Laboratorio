@@ -51,7 +51,34 @@ def aviso_analisis(contexto):
     return f"Antes de decidir: Analizar, faltan {faltan} marcas."
 
 
+AVISO_FINAL = "¡Hora de acabar con el reinado de NÚCLEO!"
+
+
+def tres_eras_completas(vista):
+    """La Copa, Distrito Conecta y la investigación de Ciudad Núcleo ya terminaron."""
+    caso = vista.estado.get("mundo", {}).get("caso", {})
+    final = (caso.get("futuro") or {}).get("desafio_final") or {}
+    return (caso.get("fase") == "final" and bool((caso.get("presente") or {}).get("fin"))
+            and final.get("fase") in ("preparacion", "activo", "reintento"))
+
+
+def _hacia_el_final(vista):
+    """Fuera de la ciudad, la flecha lleva al portal (o a la salida) rumbo al final."""
+    if vista.interior:
+        salida = vista._interior(vista.interior)["salida"]
+        objetivo = dict(id="salir", nombre="Salida", x=salida.centerx, y=salida.centery)
+        titulo = AVISO_FINAL + " Sal del edificio"
+    else:
+        rect = vista.rect_portal()
+        objetivo = {"id": "portal", "x": rect.centerx, "y": rect.centery} if rect else None
+        titulo = AVISO_FINAL + " Viaja a Ciudad Núcleo"
+    return {"titulo": titulo, "detalle": "Las tres eras están listas. Usa el portal para ir a Ciudad Núcleo y enfrentar a NÚCLEO con tu equipo.",
+            "objetivo": objetivo, "tecla": "E", "logro": None}
+
+
 def tarea_actual(vista):
+    if tres_eras_completas(vista) and (vista.dimension != "futuro" or vista.interior):
+        return _hacia_el_final(vista)
     mundo = vista.estado.get("mundo", {})
     caso, privado = mundo.get("caso", {}), mundo.get("privado", {})
     contexto = vista.contexto()

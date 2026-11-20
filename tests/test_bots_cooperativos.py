@@ -85,6 +85,18 @@ class CampanaLocalBotsTests(unittest.TestCase):
         cliente.actuar("interactuar", objetivo=encargo.destino["id"])
         self.assertEqual(encargo.entregados.get(material), "local")
 
+    def repartir(self, cliente, partida):
+        """Agua: la persona toma cada cesta del cesto y la lleva caminando a una familia."""
+        encargo = partida.mision.encargo
+        self.avanzar_hasta(cliente, lambda: encargo.materiales_listos, "reunir el agua y las provisiones")
+        while encargo.reparto_activo:
+            self.ir(partida, encargo.destino)
+            cliente.actuar("interactuar", objetivo=encargo.destino["id"])
+            familia = partida.mision.privado("local")["objetivo"]
+            self.ir(partida, familia)
+            cliente.actuar("interactuar", objetivo=familia["id"])
+            cliente.actualizar(.15)
+
     def trabajar(self, cliente, partida, bots):
         encargo = partida.mision.encargo
         self.avanzar_hasta(cliente, lambda: encargo.ayudante in bots, "sujetar en la actividad")
@@ -132,9 +144,6 @@ class CampanaLocalBotsTests(unittest.TestCase):
             cliente.actuar("votar", opcion=caso[3])
             self.assertTrue(partida.mision.resultado["correcto"])
 
-            if ronda == len(partida.mision.casos) - 1:
-                continue
-
             encargo = partida.mision.encargo
             if encargo.config.get("aportes_libres"):
                 for material, *_ in encargo.config["materiales"]:
@@ -145,12 +154,18 @@ class CampanaLocalBotsTests(unittest.TestCase):
                 self.avanzar_hasta(cliente, lambda: encargo.materiales_listos, "aportar el otro material",
                                    limite=1500)
                 self.assertEqual(len(set(encargo.entregados.values()) & bots), 1)
-            self.trabajar(cliente, partida, bots)
+            if encargo.reparto:
+                self.repartir(cliente, partida)
+                self.assertEqual(set(encargo.servidas.values()), {"local"})  # los bots no reparten solos
+            else:
+                self.trabajar(cliente, partida, bots)
 
             if ronda == 0:
                 self.reparar_puente_a_mano(cliente, partida)
             self.assertTrue(encargo.completo)
             self.assertEqual(partida.mision.preparados, set())  # los bots no confirman
+            if ronda == len(partida.mision.casos) - 1:
+                continue  # repartir las cestas cierra La Copa
 
             self.ir(partida, caldero)
             cliente.actuar("continuar")

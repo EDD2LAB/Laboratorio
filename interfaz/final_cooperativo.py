@@ -86,9 +86,10 @@ class PantallaFinal:
         self.texto(superficie, "Señal: " + str(f.get("integridad", 3)) + "/3", 155, VERDE, x=740, ancho=145)
         batalla = f.get("batalla", {})
         if f.get("fase") == "activo" and batalla.get("turno") == "recarga":
-            import math
-            etiqueta = p.pequena.render("Pausa: " + str(math.ceil(batalla.get("segundos", 0))) + " s", True, ORO)
-            superficie.blit(etiqueta, (540, 158))
+            from interfaz.batalla_cooperativa import dibujar_tiempo
+            # El reloj de la pausa también se ve grande mientras usas tu estación.
+            dibujar_tiempo(superficie, batalla.get("segundos", 0), False, ORO, pygame.time.get_ticks(),
+                           pygame.Rect(560, 140, 120, 50))
         for i, rol in enumerate(ROLES):
             self.boton(superficie, "rol:" + rol, NOMBRES[rol] + (" · listo" if rol in f.get("hechos", []) else ""), 200 + i * 185, 215, 175)
             if rol == self.rol:

@@ -1,7 +1,9 @@
 """Mensajes JSON delimitados por nueva línea; sin dependencias externas."""
 import json
 
-VERSION = 23  # Distrito Conecta: pies 8x5 en el exterior, bordes de tres interiores y puertas accesibles.
+VERSION = 25  # La Copa con dos casos (puente norte y agua) y reparto de cestas a pie.
+# 24: E sobre un compañero: pedirle en persona lo mismo que por un Tronco de los Ecos.
+# 23: Distrito Conecta: pies 8x5 en el exterior, bordes de tres interiores y puertas accesibles.
 # 22: bláster sin munición: disparos ilimitados con 0,6 s de espera.
 # 21: Hitboxes editadas de La Copa y del exterior y cinco interiores del Presente.
 # 20: final con dos partes por rol, pausas de 15/14 s y victoria sin confirmar consolas.

@@ -34,9 +34,20 @@ def buscar_asset(nombre):
     return ruta
 
 
+_al_cargar = None  # aviso opcional tras cada imagen (pantallas de carga)
+
+
+def avisar_cada_carga(funcion):
+    """Instala (o quita con None) una función que se llama tras cargar cada imagen."""
+    global _al_cargar
+    _al_cargar = funcion
+
+
 def cargar_imagen(nombre, tamano=None, requerido=True):
     """Carga una imagen desde Imagenes/. Si no es requerida, permite placeholder."""
     ruta = buscar_asset(nombre)
+    if _al_cargar is not None:
+        _al_cargar()
     try:
         imagen = pygame.image.load(ruta).convert_alpha()
     except (pygame.error, FileNotFoundError) as error:
