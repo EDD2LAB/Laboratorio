@@ -6,8 +6,9 @@ from interfaz.boton import Boton
 
 AZUL_NOCHE = (12, 24, 48)
 CIAN = (90, 230, 230)
-PANEL = pygame.Rect(60, 60, 840, 590)
-AREA_GRAFO = pygame.Rect(120, 170, 720, 400)
+# Cubre todo el celular del arte (FeedRedSocial: 55..928 x 55..688) sin tapar «Guardar el celular».
+PANEL = pygame.Rect(44, 50, 892, 642)  # bajo la franja de avisos; «Guardar» se dibuja encima
+AREA_GRAFO = pygame.Rect(116, 180, 728, 460)
 BOTON_ARISTA = (72, 44)
 FILA_REGISTRO = 158
 

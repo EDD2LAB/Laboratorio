@@ -10,7 +10,7 @@ from interfaz.etiquetas_jugadores import colocar_etiquetas
 
 from multijugador.movimiento import ColisionesMapa
 from multijugador.dimensiones_red import FUTURO, LA_COPA, PRESENTE
-from multijugador.protocolo import ROLES, NOMBRES_ROLES
+from multijugador.protocolo import ROLES
 from multijugador.reparacion import CONFIGURACION as _CONFIG_REPARACION
 
 CONFIG_REPARACION_MS = _CONFIG_REPARACION["duracion_animacion_ms"]
@@ -185,7 +185,7 @@ class VistaPartida:
     def __init__(self, identificador, estado, audio=None):
         from mundo.mapas import cargar_fondo_unificado, cargar_mapa_principal, decoraciones_ampliadas, suavizar_cascada
         from mundo.personajes import cargar_variantes_tronco_eco, preparar_reposo
-        from nucleo.recursos import cargar_fuente, cargar_imagen
+        from nucleo.recursos import cargar_fuente
         from interfaz.arte import ArtePartida
         from interfaz.efectos_visuales import AdornosMapa, FlechaGuia
         from interfaz.escenas_multijugador import RecursosEscenas
@@ -287,6 +287,7 @@ class VistaPartida:
         self.particulas = SistemaParticulas(960, 720)
         self.animacion_pocion = None
         self.transicion = None
+        self._f2_pedido = 0.0  # primera pulsación de F2: se confirma con la segunda
         self.audio = audio  # gestor compartido del menú (None: se crea al sonar)
         self.estado_caldero = None
         self.reloj_caldero = 0.0
@@ -466,13 +467,12 @@ class VistaPartida:
 
     def cambiar_dimension(self, dimension):
         from interfaz.escenas_multijugador import Transicion
-        from multijugador.dimensiones_red import DIMENSIONES_RED
         try:
             mapa = self._cargar_dimension(dimension)
         except (ValueError, OSError, RuntimeError) as error:
             self.panel.notificar("No se pudo cargar la dimensión: " + str(error))
             return
-        self.dimension = dimension
+        origen, self.dimension = self.dimension, dimension
         self.interior = None
         self.fondo, self.decoraciones, self.colisiones = mapa["fondo"], mapa["decoraciones"], mapa["colisiones"]
         # Nadie de la dimensión anterior queda dibujado ni se interpola.
@@ -489,7 +489,7 @@ class VistaPartida:
         from logica.dimensiones import DIMENSIONES
         from multijugador.presentacion import titulo_era
         self.transicion = Transicion(titulo_era(dimension, DIMENSIONES[dimension]["nombre"]),
-                                     self.arte.emblemas_viaje.get(dimension), dimension)
+                                     self.arte.emblemas_viaje.get(dimension), dimension, origen)
         self.sonido_musica()
 
     def yo(self):
@@ -927,6 +927,16 @@ class VistaPartida:
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F3:
             self.depurar = not self.depurar
             return True
+        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F2:
+            # Atajo al final cooperativo: dos pulsaciones seguidas para no saltar sin querer.
+            ahora = time.monotonic()
+            if ahora - self._f2_pedido <= 3:
+                self._f2_pedido = 0.0
+                cliente.actuar("saltar_al_final")
+            else:
+                self._f2_pedido = ahora
+                self.panel.notificar("Pulsa F2 otra vez para saltar al final de Ciudad Núcleo.")
+            return True
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_h and not self.panel.activo:
             self.mostrar_hud = not self.mostrar_hud
             return True
@@ -947,7 +957,6 @@ class VistaPartida:
                 return True
         if (evento.type == pygame.KEYDOWN and not self.panel.activo and self.dimension == FUTURO and not self.interior):
             final = self.contexto().get("desafio_final") or {}
-            aventura = final.get("aventura", {})
             if final.get("fase") == "activo" and evento.key == pygame.K_f:
                 mini, _ = self._objetivo_blaster(final)
                 if mini:
@@ -1073,7 +1082,6 @@ class VistaPartida:
         rect = self.rect_portal()
         if rect and self.dimension_completa() and int(time.monotonic() * 2) != int((time.monotonic() - segundos) * 2):
             self.particulas.emitir(rect.centerx, rect.centery, 2)
-        mundo = self.estado.get("mundo", {})
         from interfaz.orientacion import tarea_actual
         destino = tarea_actual(self).get("objetivo")
         yo = self.yo()

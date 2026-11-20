@@ -1,5 +1,4 @@
 """Paneles de investigación y cooperación sobre el mapa compartido."""
-import math
 import re
 import time
 

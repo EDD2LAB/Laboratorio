@@ -523,7 +523,6 @@ def main():
             jugador["direccion"] = (
                 "izquierda" if objetivo["rect"].centerx < jugador["pies"].centerx else "derecha"
             )
-        estado_personaje = estado_personajes.get(nombre, {})
         dialogo, clave_dialogo_activo = construir_conversacion(
             nombre, estado, conversaciones_vistas
         )

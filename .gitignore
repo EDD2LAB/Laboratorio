@@ -219,3 +219,5 @@ __marimo__/
 preferencias_usuario.json
 # Informes exportados por el jugador
 informes/
+# Zonas caminables calculadas (se regeneran solas si cambia un mapa)
+cache/

@@ -333,11 +333,11 @@ def dibujar_portal(panel, superficie, destinos, origen):
 class Transicion:
     """Viaje por el túnel: avance, estrellas, glitch, emblema de la era y llegada."""
 
-    def __init__(self, nombre, emblema=None, dimension=None):
-        from interfaz.tunel_viaje import DURACION, ViajeTunel
+    def __init__(self, nombre, emblema=None, dimension=None, origen=None):
+        from interfaz.tunel_viaje import DURACION, ViajeTunel, mensaje_viaje
         self.DURACION = DURACION
         self.nombre = nombre
-        self.viaje = ViajeTunel(nombre, emblema, dimension)
+        self.viaje = ViajeTunel(nombre, emblema, dimension, mensaje_viaje(origen, dimension))
 
     @property
     def t(self):

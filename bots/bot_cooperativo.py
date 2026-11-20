@@ -80,6 +80,7 @@ class BotCooperativo:
         # Órdenes recibidas por los Troncos de los Ecos (ver PlanificadorBot).
         self.orden = None
         self.zonas = {}  # dimensión -> sitio donde se queda cuando nadie le pide nada
+        self.zonas_apartadas = {}  # (dimensión, ancla) -> sitio calculado lejos de lo interactuable
         self.sin_difundir = False
         self.convocado = False  # debe volver al caldero a elegir cuando pueda
         self.espera_ayuda_desde = None

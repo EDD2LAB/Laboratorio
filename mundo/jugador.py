@@ -4,7 +4,7 @@ import math
 import pygame
 from mundo.colisiones import jugador_bloqueado, puede_mover_pies
 from logica.movimiento_suave import desplazar
-from nucleo.config import ALTO, ANCHO, DISTANCIA_INTERACCION, VELOCIDAD_GUARDIAN
+from nucleo.config import DISTANCIA_INTERACCION, VELOCIDAD_GUARDIAN
 
 
 def ajustar_inicio_jugador(jugador, mundo):

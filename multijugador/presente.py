@@ -259,6 +259,15 @@ class MisionPresente:
         return {"mensaje": "Elijan juntos qué hacer con la publicación.",
                 "vista": "resultado" if self.completada else "caldero"}
 
+    def completar_por_atajo(self):
+        """Atajo F2: los casos quedan resueltos (verificados) sin tocar los indicadores."""
+        self.indice = len(EVENTOS) - 1
+        self._reiniciar_caso()
+        evento = self.evento
+        self.resultado = {"opcion": CORRECTA, "correcto": True, "texto": evento["textos"][CORRECTA], "efectos": {},
+                          "tipo_pocion": tipo_pocion(CORRECTA), "evento_id": self.nuevo_evento(),
+                          **campos_legales(ficha_resuelta(evento["id"]))}
+
     def analizar(self, identificador):
         if not self.analisis_disponible:
             raise ValueError("Primero consigue la pista del material original.")

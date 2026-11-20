@@ -4,6 +4,9 @@ import math
 from multijugador.movimiento import VELOCIDAD, orientacion_de
 
 
+LLEGADA_PUNTO = .05  # px: más cerca que esto, el punto de la ruta ya se alcanzó
+
+
 class NavegadorBot:
     PASO = 8
     RADIO_INTERACCION = 68
@@ -16,6 +19,7 @@ class NavegadorBot:
         self.error = ""
         self._reintento_ms = 0.0
         self._salida_bloqueo = None
+        self._fallos = (None, 0)  # (destino, búsquedas fallidas seguidas)
 
     @classmethod
     def _celda(cls, posicion):
@@ -28,6 +32,25 @@ class NavegadorBot:
     @staticmethod
     def _distancia(a, b):
         return math.hypot(a[0] - b[0], a[1] - b[1])
+
+    def _arista_libre(self, actual, vecino, posicion, destino):
+        """``trayecto_libre`` entre dos puntos de la cuadrícula, recordado por mapa.
+
+        Las paredes no cambian; si cambian los bloqueos (p. ej., el puente), se olvida."""
+        colisiones = self.colisiones
+        firma = tuple(map(tuple, colisiones.bloqueos))
+        memoria = getattr(colisiones, "_aristas_bot", None)
+        if memoria is None or memoria[0] != firma:
+            memoria = (firma, {})
+            colisiones._aristas_bot = memoria
+        aristas = memoria[1]
+        clave = (actual, vecino)
+        libre = aristas.get(clave)
+        if libre is None:
+            if len(aristas) > 400_000:
+                aristas.clear()
+            libre = aristas[clave] = colisiones.trayecto_libre(posicion, destino)
+        return libre
 
     def buscar_ruta(self, origen, destino, radio=None):
         radio = self.RADIO_INTERACCION if radio is None else radio
@@ -67,7 +90,7 @@ class NavegadorBot:
                 px, py = self._posicion(vecino)
                 if self.colisiones.bloqueado(px, py):
                     continue
-                if not self.colisiones.trayecto_libre(posicion, (px, py)):
+                if not self._arista_libre(actual, vecino, posicion, (px, py)):
                     continue
                 if dx and dy and (
                     self.colisiones.bloqueado(px, self._posicion(actual)[1])
@@ -89,7 +112,10 @@ class NavegadorBot:
             self.ruta = []
             self.error = "No se encontró una ruta transitable hasta el objetivo."
             self.destino = objetivo
-            self._reintento_ms = 750
+            # Buscar sin éxito recorre todo el mapa: al mismo destino, cada vez más espaciado.
+            fallos = self._fallos[1] + 1 if self._fallos[0] == objetivo else 1
+            self._fallos = (objetivo, fallos)
+            self._reintento_ms = min(6000, 750 * 2 ** (fallos - 1))
             return None
 
         camino = []
@@ -103,6 +129,7 @@ class NavegadorBot:
         self.destino = objetivo
         self.error = ""
         self._reintento_ms = 0
+        self._fallos = (None, 0)
         return list(self.ruta)
 
     def avanzar(self, jugador, destino, segundos, radio=None):
@@ -145,7 +172,9 @@ class NavegadorBot:
             actual = jugador["x"], jugador["y"]
             if self._distancia(actual, destino) <= radio:
                 return True
-            if self._distancia(actual, self.ruta[0]) <= 1e-5:
+            # Un residuo de coma flotante cuenta como llegada: si no, el paso diminuto
+            # parecía un choque y la ruta se recalculaba en cada cuadro.
+            if self._distancia(actual, self.ruta[0]) <= LLEGADA_PUNTO:
                 self.ruta.pop(0)
                 continue
             siguiente = self.ruta[0]

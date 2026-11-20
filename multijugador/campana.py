@@ -118,6 +118,7 @@ class CampanaCopa(MisionPuente):
         # Ganchos que instala PartidaMovimiento (portal y Distrito Conecta).
         self.viajar = None
         self.cancelar_viaje = None
+        self.saltar_al_final = None  # atajo F2 (ver PartidaMovimiento.saltar_al_final)
         self.presente = None
         self.presentes_presente = set()
         self.futuro = None
@@ -260,6 +261,10 @@ class CampanaCopa(MisionPuente):
             if self.viajar is None:
                 raise ValueError("El portal no está disponible.")
             return self.viajar(identificador, solicitud.get("destino"))
+        if accion == "saltar_al_final":
+            if self.saltar_al_final is None:
+                raise ValueError("El atajo al final no está disponible.")
+            return self.saltar_al_final(identificador)
         if accion == "cancelar_portal":
             if self.cancelar_viaje is None:
                 raise ValueError("El portal no está disponible.")

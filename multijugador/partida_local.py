@@ -5,7 +5,7 @@ import uuid
 from bots.gestor_bots import GestorBots
 from .dimensiones_red import DIMENSIONES_RED, LA_COPA
 from .movimiento import PartidaMovimiento
-from .protocolo import NOMBRES_ROLES, ROLES
+from .protocolo import ROLES
 
 
 class ClienteCampanaLocal:

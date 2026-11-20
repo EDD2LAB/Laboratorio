@@ -18,6 +18,9 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 - Servidor multijugador local: `.venv\Scripts\python.exe -m multijugador.servicio_internet`
   y en otra consola `$env:COPA_SERVIDOR_INTERNET="http://127.0.0.1:10000"`.
 - Benchmark: `.venv\Scripts\python.exe herramientas/benchmark.py --segundos 60`
+- En partida, F2 dos veces seguidas da por resueltas las tres eras y lleva al equipo al final
+  cooperativo (acción `saltar_al_final` del servidor).
+- Zonas caminables calculadas se guardan en `cache/` (ignorado por git; se regeneran si cambia un mapa).
 - Vista previa del combate final (sin servidor ni campaña): `.venv\Scripts\python.exe -m herramientas.vista_combate`.
   Sonidos de batalla provisionales: `herramientas/sintetizar_sonidos_batalla.py` (no pisa `.wav` existentes).
 - Editores: `.venv\Scripts\python.exe -m editores.hitbox_editor` (igual con

@@ -5,6 +5,32 @@ from .memoria_bot import MemoriaEquipo
 from .navegador_bot import NavegadorBot
 from .planificador_bot import PlanificadorBot
 
+# Puerta frente a la que espera cada rol cuando nadie le pide nada (hitbox de entrada del mapa).
+# En el Futuro es la misma calle que su personaje (multijugador.nucleo.NPCS).
+CASAS = {
+    "presente": {"guardian": "entrada_cafe_digital", "mensajero": "entrada_estacion_mensajero",
+                 "habitante": "entrada_centro_comunitario", "aspirante": "entrada_sede_aspirante"},
+    "futuro": {"guardian": "entrada_sede_aspirante", "mensajero": "entrada_cafe_digital",
+               "habitante": "entrada_centro_comunitario", "aspirante": "entrada_campana_ronaldo"},
+}
+SEPARACION_CASA = 40  # su sitio frente a la casa no tapa puertas, terminales ni personajes
+# Quieto y sin nada que hacer, el bot se aparta de lo que otros pueden usar.
+APARTARSE_DE_OBJETOS = {"la_copa": 40, "interior": 30, "otra": 26}
+ESTADOS_LIBRES = ("EN_SU_ZONA", "ESPERANDO_EQUIPO", "ESPERANDO", "ANALIZANDO_PRUEBAS", "ACOMPANANDO")
+
+
+def frente_de_entrada(datos, entrada):
+    """Punto de la calle delante de una entrada del mapa (None si no existe)."""
+    hitbox = next((h for h in datos.get("hitboxes", []) if h.get("id") == entrada), None)
+    if hitbox is None:
+        return None
+    if "frente_rx" in hitbox and datos.get("rect_mapa"):
+        x0, y0, ancho, alto = datos["rect_mapa"]
+        return x0 + hitbox["frente_rx"] * ancho, y0 + hitbox["frente_ry"] * alto
+    if hitbox.get("type", "rect") == "rect":
+        return (hitbox["rx"] + hitbox["rw"] / 2) * 960, (hitbox["ry"] + hitbox["rh"]) * 720 + 12
+    return None
+
 
 class GestorBots:
     def __init__(self, partida, identificador_humano, dificultad="normal"):
@@ -68,12 +94,55 @@ class GestorBots:
         for identificador, bot in self.bots.items():
             estado = estado_por_bot[identificador]
             estado["caso"] = estado_publico
+            self._zona_de_casa(bot, estado)
             bot.actualizar(ahora, segundos, estado, jugadores)
         NavegadorBot.rutas_disponibles = math.inf
-        self._separar_bots(segundos)
+        self._separar_bots(segundos, self._interactuables(estado_publico))
 
-    def _separar_bots(self, segundos):
-        """Los bots en reposo dejan espacio sin empujar humanos ni atravesar paredes."""
+    @staticmethod
+    def _interactuables(caso):
+        """dimensión -> objetos que se usan con E (fuentes, ecos, cestos, terminales, pantallas)."""
+        puntos = {"la_copa": caso.get("objetivos", [])}
+        for dimension in CASAS:
+            puntos[dimension] = (caso.get(dimension) or {}).get("objetivos", [])
+        return puntos
+
+    def _zona_de_casa(self, bot, estado):
+        """En Distrito Conecta y Ciudad Núcleo cada bot espera frente a su edificio, no en el portal."""
+        dimension = bot.posicion.get("dimension", "la_copa")
+        if dimension not in CASAS or dimension in bot.zonas or bot.rol not in CASAS[dimension]:
+            return
+        try:
+            colisiones = self.partida.colisiones_de(dimension)
+        except (AttributeError, OSError, ValueError):
+            return
+        frente = frente_de_entrada(colisiones.datos, CASAS[dimension][bot.rol])
+        if frente is None:
+            return
+        caso = estado["caso"]
+        mision = caso.get(dimension) or {}
+        puntos = list(mision.get("objetivos", [])) + list((mision.get("edificios") or {}).values())
+        puntos += [n for n in caso.get("npcs", []) if n.get("dimension") == dimension
+                   and not n.get("jugador") and not n.get("interior")]
+        puntos += [otro.zonas[dimension] for otro in self.bots.values() if otro is not bot and dimension in otro.zonas]
+        portal = (estado.get("portales") or {}).get(dimension)
+        if portal:
+            puntos.append({"x": portal[0] + portal[2] / 2, "y": portal[1] + portal[3]})
+        # Solo calles a las que se llega a pie desde la llegada del portal (como los NPC del Futuro).
+        from logica.zonas_caminables import ancla, componente
+        from multijugador.dimensiones_red import spawn_presente
+        try:
+            accesibles = componente(colisiones, colisiones.inicio_libre(*spawn_presente(colisiones.datos)))
+            ocupados = [(p["x"], p["y"]) for p in puntos if "x" in p and "y" in p]
+            x, y = ancla(accesibles, frente, ocupados, SEPARACION_CASA)
+        except ValueError:
+            return
+        bot.zonas[dimension] = {"id": "zona", "x": round(x), "y": round(y), "apartada": True}
+
+    def _separar_bots(self, segundos, interactuables=None):
+        """Los bots en reposo dejan espacio sin empujar humanos ni atravesar paredes.
+
+        Sin una acción pendiente, también se apartan de los objetos que se usan con E."""
         from multijugador.movimiento import VELOCIDAD
         dt = max(0, min(segundos, .15))
         if not dt:
@@ -88,16 +157,25 @@ class GestorBots:
             otros = [j for i, j in self.partida.jugadores.items() if i != bot.identificador
                      and i in self.partida.conectados and j.get("dimension", "la_copa") == dimension
                      and j.get("interior") == yo.get("interior")]
-            if not otros:
+            separacion = 34 if dimension == "la_copa" or yo.get("interior") else 20
+            objetos = []
+            if interactuables and not bot._accion and bot.estado in ESTADOS_LIBRES:
+                destino = bot.objetivo_actual or {}
+                objetos = [(o["x"], o["y"]) for o in interactuables.get(dimension, ())
+                           if o.get("interior") == yo.get("interior")
+                           and (o["x"], o["y"]) != (destino.get("x"), destino.get("y"))]
+            if not otros and not objetos:
                 continue
+            clave = "la_copa" if dimension == "la_copa" else "interior" if yo.get("interior") else "otra"
+            escala = separacion / APARTARSE_DE_OBJETOS[clave]  # distancia a objetos en unidades de separación
+            vecinos = [(j["x"], j["y"], 1.0) for j in otros] + [(x, y, escala) for x, y in objetos]
             def espacio(x, y):
-                return min(math.hypot(x - j["x"], y - j["y"]) for j in otros)
+                return min(math.hypot(x - a, y - b) * k for a, b, k in vecinos)
             actual = espacio(yo["x"], yo["y"])
-            separacion = 30 if dimension == "la_copa" or yo.get("interior") else 14
             if actual >= separacion:
                 continue
-            cercano = min(otros, key=lambda j: math.hypot(yo["x"] - j["x"], yo["y"] - j["y"]))
-            dx, dy = yo["x"] - cercano["x"], yo["y"] - cercano["y"]
+            cercano = min(vecinos, key=lambda v: math.hypot(yo["x"] - v[0], yo["y"] - v[1]) * v[2])
+            dx, dy = yo["x"] - cercano[0], yo["y"] - cercano[1]
             angulo = math.atan2(dy, dx) if dx or dy else indice * math.tau / max(1, len(self.bots))
             paso = min(20 * dt, separacion - actual)
             colisiones = self.partida.colisiones_de_jugador(yo)

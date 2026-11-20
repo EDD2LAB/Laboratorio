@@ -1,14 +1,52 @@
 """Anclas de interacción sobre el componente realmente accesible del mapa."""
 from collections import deque, OrderedDict
+import json
 import math
+from pathlib import Path
+import tempfile
 
 _CACHE = OrderedDict()
+# El componente solo depende del mapa (su firma), el origen y el paso: se guarda en
+# disco para no repetir segundos de geometría en cada carga. Un mapa editado tiene
+# otra firma, así que un archivo viejo nunca se usa por error.
+CARPETA_DISCO = Path(__file__).resolve().parent.parent / "cache" / "zonas_caminables"
+
+
+def _archivo(clave):
+    firma, origen, paso = clave
+    return f"{firma}_{origen[0]!r}_{origen[1]!r}_{paso}.json"
+
+
+def _leer_disco(clave):
+    for carpeta in (CARPETA_DISCO, Path(tempfile.gettempdir()) / "TimelessGlitch" / "zonas_caminables"):
+        try:
+            puntos = json.loads((carpeta / _archivo(clave)).read_text(encoding="utf-8"))
+            return tuple(tuple(p) for p in puntos)
+        except (OSError, ValueError, TypeError):
+            continue
+    return None
+
+
+def _guardar_disco(clave, puntos):
+    for carpeta in (CARPETA_DISCO, Path(tempfile.gettempdir()) / "TimelessGlitch" / "zonas_caminables"):
+        try:
+            carpeta.mkdir(parents=True, exist_ok=True)
+            (carpeta / _archivo(clave)).write_text(json.dumps(puntos, separators=(",", ":")), encoding="utf-8")
+            return
+        except OSError:
+            continue
 
 
 def componente(colisiones, origen, paso=8):
     clave = (colisiones.firma, tuple(origen), paso)
     if clave in _CACHE:
         return _CACHE[clave]
+    guardado = _leer_disco(clave)
+    if guardado:
+        _CACHE[clave] = guardado
+        if len(_CACHE) > 32:
+            _CACHE.popitem(last=False)
+        return guardado
     x0, y0, ancho, alto = colisiones.datos.get("rect_mapa", (0, 0, 960, 720))
     celda = round(origen[0] / paso), round(origen[1] / paso)
     inicios = [(celda[0]+dx, celda[1]+dy) for dx in (-1, 0, 1) for dy in (-1, 0, 1)]
@@ -30,6 +68,7 @@ def componente(colisiones, origen, paso=8):
     if not puntos:
         raise ValueError("El punto de aparición no conecta con el área caminable.")
     _CACHE[clave] = puntos
+    _guardar_disco(clave, puntos)
     # Exterior del Futuro y diez interiores activos: ocho entradas expulsaban
     # mapas que la siguiente sala volvía a calcular inmediatamente.
     if len(_CACHE) > 32:

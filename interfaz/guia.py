@@ -38,12 +38,26 @@ def buscar_camino(colisiones, origen, destino, limite=10000, radio=54, paso=8):
     return []
 
 
+_ULTIMOS_PASOS = {}  # la guía y la flecha lo piden con los mismos datos en cada cuadro
+
+
 def siguiente_paso(colisiones, origen, ruta, distancia=48):
     """Mira hacia el próximo tramo visible, sin señalar a través de paredes.
 
     La ruta puede tener unos cuadros de antigüedad: empezar en el punto más
     cercano que aún se alcanza evita que la flecha pida volver hacia atrás.
+    Mismo mapa, bloqueos, origen y ruta dan el mismo resultado: se recuerda.
     """
+    clave = (id(colisiones), getattr(colisiones, "firma", None), tuple(map(tuple, colisiones.bloqueos)), tuple(origen), tuple(map(tuple, ruta)), distancia)
+    if clave in _ULTIMOS_PASOS:
+        return _ULTIMOS_PASOS[clave]
+    if len(_ULTIMOS_PASOS) > 16:
+        _ULTIMOS_PASOS.clear()
+    resultado = _ULTIMOS_PASOS[clave] = _siguiente_paso(colisiones, origen, ruta, distancia)
+    return resultado
+
+
+def _siguiente_paso(colisiones, origen, ruta, distancia):
     candidatos = [(math.dist(origen, p), i) for i, p in enumerate(ruta)]
     for _, inicio in sorted(candidatos):
         if colisiones.trayecto_libre(origen, ruta[inicio]):

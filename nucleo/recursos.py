@@ -12,29 +12,39 @@ def normalizar_ruta(ruta):
     return "".join(caracter for caracter in texto if unicodedata.category(caracter) != "Mn")
 
 
+_INDICE = None  # (ruta relativa normalizada -> real, nombre normalizado -> primera real)
+
+
+def _indice_assets():
+    """Recorre Imagenes/ una sola vez, en el mismo orden que antes en cada búsqueda."""
+    global _INDICE
+    if _INDICE is None:
+        relativas, nombres = {}, {}
+        for carpeta, _, archivos in os.walk(RUTA_ASSETS):
+            for archivo in archivos:
+                ruta_real = os.path.join(carpeta, archivo)
+                relativas.setdefault(normalizar_ruta(os.path.relpath(ruta_real, RUTA_ASSETS)), ruta_real)
+                nombres.setdefault(normalizar_ruta(archivo), ruta_real)
+        _INDICE = relativas, nombres
+    return _INDICE
+
+
 def buscar_asset(nombre):
     """Busca tanto rutas históricas como recursos reubicados por carpetas."""
     ruta = os.path.join(RUTA_ASSETS, nombre)
     if os.path.isfile(ruta):
         return ruta
-
-    objetivo = normalizar_ruta(nombre)
-    objetivo_nombre = normalizar_ruta(os.path.basename(nombre))
-    coincidencia_por_nombre = None
-    for carpeta, _, archivos in os.walk(RUTA_ASSETS):
-        for archivo in archivos:
-            ruta_real = os.path.join(carpeta, archivo)
-            relativa = os.path.relpath(ruta_real, RUTA_ASSETS)
-            if normalizar_ruta(relativa) == objetivo:
-                return ruta_real
-            if coincidencia_por_nombre is None and normalizar_ruta(archivo) == objetivo_nombre:
-                coincidencia_por_nombre = ruta_real
-    if coincidencia_por_nombre:
-        return coincidencia_por_nombre
-    return ruta
+    relativas, nombres = _indice_assets()
+    return (relativas.get(normalizar_ruta(nombre))
+            or nombres.get(normalizar_ruta(os.path.basename(nombre)))
+            or ruta)
 
 
 _al_cargar = None  # aviso opcional tras cada imagen (pantallas de carga)
+# Hojas de sprites y emblemas que varias partes piden: se decodifican una vez.
+# Los fondos grandes no se guardan para no duplicar memoria.
+_DECODIFICADAS = {}
+MAX_PIXELES_MEMORIA = 1024 * 1024
 
 
 def avisar_cada_carga(funcion):
@@ -48,12 +58,18 @@ def cargar_imagen(nombre, tamano=None, requerido=True):
     ruta = buscar_asset(nombre)
     if _al_cargar is not None:
         _al_cargar()
-    try:
-        imagen = pygame.image.load(ruta).convert_alpha()
-    except (pygame.error, FileNotFoundError) as error:
-        if requerido:
-            raise RuntimeError(f"No se pudo cargar el recurso: {ruta}") from error
-        return None
+    decodificada = _DECODIFICADAS.get(ruta)
+    if decodificada is not None:
+        imagen = decodificada.copy()  # cada quien su copia: nadie altera la de otro
+    else:
+        try:
+            imagen = pygame.image.load(ruta).convert_alpha()
+        except (pygame.error, FileNotFoundError) as error:
+            if requerido:
+                raise RuntimeError(f"No se pudo cargar el recurso: {ruta}") from error
+            return None
+        if imagen.get_width() * imagen.get_height() <= MAX_PIXELES_MEMORIA:
+            _DECODIFICADAS[ruta] = imagen.copy()
     if tamano:
         imagen = pygame.transform.scale(imagen, tamano)
     return imagen

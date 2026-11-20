@@ -7,7 +7,7 @@ decisiones del equipo. Las coordenadas son las de ese arte en el lienzo 960x720.
 import pygame
 
 from interfaz import analisis_manipulado as analisis, terminal_nucleo
-from interfaz.arte import dibujar_icono, icono
+from interfaz.arte import icono
 from interfaz.boton import Boton
 from multijugador.presentacion import ORDEN_INDICADORES, POLARIDAD, cambio_favorable, texto_cambio
 from nucleo.recursos import cargar_imagen, cargar_spritesheet_frames, envolver_texto

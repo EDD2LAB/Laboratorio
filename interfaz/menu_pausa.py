@@ -413,7 +413,7 @@ class MenuPausa:
         tarjetas = (("WASD", "Caminar", "Flechas también"), ("E", "Hablar / usar", "Junto a la señal"),
                     ("SHIFT", "Correr", "Mientras caminas"), ("I", "Leer y compartir", "Tus pistas"),
                     ("C", "Abrir el celular", "Presente y Futuro"), ("Q", "Usar tu poder", "Según tu rol"),
-                    ("T", "Libro de casos", "Lo que descubrieron"), ("ESC", "Cerrar / pausa", "F1: esta ayuda"))
+                    ("T", "Libro de casos", "Lo que descubrieron"), ("ESC", "Cerrar / pausa", "F1: ayuda · F2 F2: ir al final"))
         for i, (tecla, nombre, detalle) in enumerate(tarjetas):
             rect = pygame.Rect(125 + i % 2 * 365, 165 + i // 2 * 96, 345, 84)
             pygame.draw.rect(menu.lienzo, (23, 50, 38), rect, border_radius=9)

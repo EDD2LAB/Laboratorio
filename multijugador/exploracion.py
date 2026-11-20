@@ -19,12 +19,19 @@ AYUDA_VECINOS = {
 }
 
 
+# Ajuste fino sobre el sitio calculado (sigue en el piso: se descarta si cae en una pared).
+DESPLAZAMIENTO_VECINOS = {"Elia": (-16, -14)}  # lejos del tronco del eco, hacia arriba a la izquierda
+
+
 def colocar_vecinos(campana, colisiones):
     """Puntos accesibles cercanos a fuentes existentes, sin editar el mapa."""
     ocupadas = [(n["x"], n["y"]) for n in campana.dialogos.npcs_copa]
     for nombre, rol in (("Elia", "habitante"), ("Arel", "mensajero")):
         ancla = next(o for o in campana.objetivos if o.get("rol") == rol)
         x, y = colisiones.inicio_alcanzable(ancla["x"], ancla["y"], ocupadas, separacion=48)
+        dx, dy = DESPLAZAMIENTO_VECINOS.get(nombre, (0, 0))
+        if (dx or dy) and colisiones._sitio_libre(x + dx, y + dy, ()) and colisiones.trayecto_libre((x, y), (x + dx, y + dy)):
+            x, y = x + dx, y + dy
         ocupadas.append((x, y))
         campana.dialogos.npcs_copa.append(dict(id=nombre.lower(), nombre=nombre, dimension="la_copa",
                                               x=round(x), y=round(y), exploracion=True))

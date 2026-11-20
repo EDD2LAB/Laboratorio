@@ -112,21 +112,20 @@ class ColisionesMapa:
 
     def bloqueado(self, x, y):
         # La posición pública representa el centro inferior de la hitbox de pies.
-        clave = (round(x), round(y))
-        rect = self.rect_pies(*clave)
         # Lo único que cambia durante la partida (p. ej., el Puente 1 roto).
-        if self.bloqueos and any(self.solapa(rect, bloqueo) for bloqueo in self.bloqueos):
-            return True
+        if self.bloqueos:
+            rect = self.rect_pies(round(x), round(y))
+            if any(self.solapa(rect, bloqueo) for bloqueo in self.bloqueos):
+                return True
         return self._fijo(x, y)
 
     def _fijo(self, x, y):
         clave = (round(x), round(y))
-        rect = self.rect_pies(*clave)
         resultado = self._memoria.get(clave)
         if resultado is None:
             if len(self._memoria) >= MAX_MEMORIA_COLISIONES:
                 self._memoria.clear()
-            resultado = self._memoria[clave] = self._bloqueado_fijo(rect)
+            resultado = self._memoria[clave] = self._bloqueado_fijo(self.rect_pies(*clave))
         return resultado
 
     def rect_pies(self, x, y):
@@ -188,6 +187,8 @@ class ColisionesMapa:
     def puede_pasar(self, origen, destino):
         if self._fijo(*destino):
             return False
+        if not self.bloqueos:  # sin bloqueos dinámicos basta con las paredes fijas
+            return True
         pies = lambda p: self.rect_pies(*p)
         return permite_salir_bloqueos(pies(origen), pies(destino), self.bloqueos)
 
@@ -258,6 +259,7 @@ class PartidaMovimiento:
         self.mision.linea_final = lambda jugador, a, b: self.colisiones_de_jugador(jugador).trayecto_libre(a, b)
         self.mision.viajar = self.viajar
         self.mision.cancelar_viaje = self.cancelar_viaje
+        self.mision.saltar_al_final = self.saltar_al_final
         self.mision.entrar_edificio = self.entrar_edificio
         self.mision.salir_edificio = self.salir_edificio
         self.interiores = {}
@@ -451,6 +453,42 @@ class PartidaMovimiento:
         self.viaje = None
         nombre = DIMENSIONES_RED[destino]["nombre"]
         self.mision._avisar(viajeros, "El equipo llegó a " + nombre + ". Los indicadores viajan con ustedes.", "logro")
+
+    def saltar_al_final(self, identificador):
+        """Atajo F2: da por resueltas las tres eras y lleva al equipo al final cooperativo."""
+        from .nucleo import CORRECTA, FIRMA, LLAVE, TERMINALES
+        m = self.mision
+        self.colisiones_de(PRESENTE)
+        self.colisiones_de(FUTURO)
+        if m.futuro is None or m.presente is None:
+            raise ValueError("Ciudad Núcleo no está disponible.")
+        if m.futuro.completada:
+            raise ValueError("El equipo ya está en el final de Ciudad Núcleo.")
+        # La Copa: último caso resuelto y reparto terminado.
+        m.ronda, m.encargo = len(m.casos) - 1, None
+        if not m.resultado:
+            m.resultado = {"opcion": "corregir", "correcto": True, "efectos": {}, "evento_id": m.siguiente_evento()}
+        m.presente.completar_por_atajo()
+        self.viaje = None
+        for origen in (LA_COPA, PRESENTE):
+            if any(j.get("dimension", LA_COPA) == origen for j in self.jugadores.values()):
+                self._viajar_equipo(origen, FUTURO)
+        for jugador in self.jugadores.values():
+            if jugador.get("interior"):
+                x, y = self.colisiones_de(FUTURO).inicio_libre(*spawn_presente(self.colisiones_de(FUTURO).datos))
+                jugador.update(x=x, y=y, interior=None, viaje=self.viajes)
+        # Ciudad Núcleo: terminales, pistas y la decisión correcta, por el camino normal del servidor.
+        futuro = m.futuro
+        for tarea, *_ in TERMINALES:
+            futuro.tareas.setdefault(tarea, identificador)
+        futuro.halladas.setdefault(FIRMA, identificador)
+        futuro.halladas.setdefault(LLAVE, identificador)
+        presentes = set(self.jugadores)
+        futuro.votos = {i: CORRECTA for i in presentes}
+        futuro.resolver(presentes)
+        m._avisar(list(self.jugadores), self.jugadores[identificador]["nombre"] +
+                  " usó el atajo F2: ¡comienza el final en Ciudad Núcleo!", "logro")
+        return {"mensaje": "¡Saltaron al final de Ciudad Núcleo!", "dimension": FUTURO}
 
     def publico_viaje(self):
         if not self.viaje:

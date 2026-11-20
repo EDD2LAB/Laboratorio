@@ -1,6 +1,5 @@
 """Colisiones del jugador con hitboxes y zonas caminables."""
 
-import math
 import pygame
 from nucleo.config import ALTO, ANCHO
 from logica.movimiento_suave import linea_toca_rect, rect_en_union, permite_salir_bloqueos

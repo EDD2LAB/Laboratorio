@@ -168,7 +168,7 @@ def tarea_actual(vista):
 
 def logros_actuales(vista):
     mundo = vista.estado.get("mundo", {})
-    caso, privado = mundo.get("caso", {}), mundo.get("privado", {})
+    privado = mundo.get("privado", {})
     personal = privado if vista.dimension == "la_copa" else privado.get(vista.dimension) or {}
     logros = {p["id"] for p in personal.get("inventario", [])}
     if len(logros) >= 2:

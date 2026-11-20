@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pygame  # noqa: E402
 
-from multijugador.aventura_final import ALCANCE_BLASTER, ESPERA_BLASTER  # noqa: E402
+from multijugador.aventura_final import ESPERA_BLASTER  # noqa: E402
 from multijugador.dimensiones_red import cargar_datos  # noqa: E402
 from multijugador.movimiento import FACTOR_VELOCIDAD_PRESENTE, ColisionesMapa  # noqa: E402
 

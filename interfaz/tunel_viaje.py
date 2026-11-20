@@ -12,7 +12,9 @@ import pygame
 from nucleo.recursos import cargar_imagen, cargar_fuente
 
 ARCHIVO = "Fondos/Mapas/tunel.png"
-DURACION = 3.2
+DURACION = 5.0
+# La coreografía se diseñó para 3,2 s; se estira para que el mensaje se lea con calma.
+ESCALA = DURACION / 3.2
 # Centro del vórtice en la imagen del túnel (fracción de su tamaño).
 VORTICE = (.53, .40)
 COLORES_ERA = {"la_copa": ((150, 230, 120), (240, 200, 90)),
@@ -20,6 +22,21 @@ COLORES_ERA = {"la_copa": ((150, 230, 120), (240, 200, 90)),
                "futuro": ((90, 245, 235), (200, 120, 255))}
 CREMA, OSCURO = (255, 243, 210), (4, 10, 20)
 _BASE = {}
+
+# Mensaje del viaje según (origen, destino); si no hay uno, el genérico.
+MENSAJES = {
+    ("la_copa", "presente"): "El presente guarda las huellas de lo que hicimos en La Copa…",
+    ("futuro", "presente"): "De regreso al presente: aún estamos a tiempo de cambiar el mañana…",
+    ("la_copa", "futuro"): "Saltando hacia un futuro no muy lejano…",
+    ("presente", "futuro"): "Viajando hacia un futuro no muy lejano… ¿qué hicimos con la verdad?",
+    ("presente", "la_copa"): "Volviendo al origen de todo, donde nació la primera historia…",
+    ("futuro", "la_copa"): "Volviendo al origen de todo, donde nació la primera historia…",
+}
+SUBTITULO = "Viajando entre dimensiones…"
+
+
+def mensaje_viaje(origen, destino):
+    return MENSAJES.get((origen, destino), SUBTITULO)
 
 
 def _base():
@@ -48,7 +65,7 @@ def _suave(x):
 
 
 class ViajeTunel:
-    def __init__(self, titulo, emblema=None, dimension=None, subtitulo="Viajando entre dimensiones…", semilla=None):
+    def __init__(self, titulo, emblema=None, dimension=None, subtitulo=SUBTITULO, semilla=None):
         self.titulo, self.subtitulo = titulo, subtitulo
         self.emblema = emblema.copy() if emblema is not None else None
         self.color, self.acento = COLORES_ERA.get(dimension, ((140, 230, 255), (255, 214, 120)))
@@ -64,19 +81,29 @@ class ViajeTunel:
             tam = (860, max(1, round(self.texto_titulo.get_height() * factor)))
             self.texto_titulo = pygame.transform.scale(self.texto_titulo, tam)
             self.sombra_titulo = pygame.transform.scale(self.sombra_titulo, tam)
-        self.texto_sub = cargar_fuente(18).render(subtitulo, True, (205, 232, 240))
+        self.texto_sub = cargar_fuente(20).render(subtitulo, True, (205, 232, 240))
+        if self.texto_sub.get_width() > 900:
+            factor = 900 / self.texto_sub.get_width()
+            self.texto_sub = pygame.transform.scale(
+                self.texto_sub, (900, max(1, round(self.texto_sub.get_height() * factor))))
         self.glitch_en = (1.15, 2.35)
+        self.franja = pygame.Surface((960, 112), pygame.SRCALPHA)
 
     @property
     def terminada(self):
         return self.t >= DURACION
+
+    @property
+    def fase(self):
+        """Tiempo de la coreografía original (0 a 3,2 s)."""
+        return self.t / ESCALA
 
     def _estrella(self, edad):
         return [self.azar.uniform(0, math.tau), edad, self.azar.uniform(.55, 1.4), self.azar.random() < .25]
 
     def actualizar(self, segundos):
         self.t += segundos
-        rapidez = .35 + 1.6 * _suave((self.t - .3) / 1.4)  # acelera durante el viaje
+        rapidez = .35 + 1.6 * _suave((self.fase - .3) / 1.4)  # acelera durante el viaje
         for estrella in self.estrellas:
             estrella[1] += segundos * rapidez * estrella[2]
             if estrella[1] >= 1:
@@ -100,7 +127,8 @@ class ViajeTunel:
 
     def _estrellas(self, superficie, centro):
         cx, cy = centro
-        estiramiento = 6 + 60 * _suave((self.t - .4) / 1.2) * (1 - _suave((self.t - 2.4) / .6))
+        fase = self.fase
+        estiramiento = 6 + 60 * _suave((fase - .4) / 1.2) * (1 - _suave((fase - 2.4) / .6))
         for angulo, edad, rapidez, acento in self.estrellas:
             distancia = 20 + (edad ** 2.2) * 760
             dx, dy = math.cos(angulo), math.sin(angulo)
@@ -116,7 +144,7 @@ class ViajeTunel:
     def _glitch(self, superficie):
         """Franjas desplazadas con separación de color, durante un instante."""
         for inicio in self.glitch_en:
-            avance = (self.t - inicio) / .16
+            avance = (self.fase - inicio) / .16
             if not 0 <= avance <= 1:
                 continue
             copia = superficie.copy()
@@ -136,10 +164,11 @@ class ViajeTunel:
             superficie.blit(azul, (-6, 0))
 
     def _llegada(self, superficie):
-        aparicion = _suave((self.t - .95) / .5)
+        fase = self.fase
+        aparicion = _suave((fase - .95) / .5)
         if aparicion <= 0:
             return
-        salida = 1 - _suave((self.t - 2.65) / .4)
+        salida = 1 - _suave((fase - 2.65) / .4)
         opacidad = round(255 * aparicion * salida)
         centro = (480, 300)
         # Anillo de luz que se abre y pulsa detrás del emblema.
@@ -155,7 +184,7 @@ class ViajeTunel:
         # Título que sube y se asienta.
         subida = round(26 * (1 - aparicion))
         rect = self.texto_titulo.get_rect(midtop=(480, 420 + subida))
-        franja = pygame.Surface((960, 112), pygame.SRCALPHA)
+        franja = self.franja
         franja.fill((*OSCURO, round(165 * aparicion * salida)))
         superficie.blit(franja, (0, 404))
         pygame.draw.rect(superficie, self.acento, (480 - round(220 * aparicion), 404, round(440 * aparicion), 2))
@@ -168,10 +197,12 @@ class ViajeTunel:
 
     def _destello(self, superficie):
         """Fogonazo breve al salir del túnel."""
-        brillo = max(0.0, 1 - abs(self.t - 2.7) / .2)
+        brillo = max(0.0, 1 - abs(self.fase - 2.7) / .2)
         if brillo > 0:
-            luz = pygame.Surface((960, 720))
-            luz.fill((255, 250, 235))
+            if "luz" not in _BASE:
+                _BASE["luz"] = pygame.Surface((960, 720)).convert()
+                _BASE["luz"].fill((255, 250, 235))
+            luz = _BASE["luz"]
             luz.set_alpha(round(230 * brillo))
             superficie.blit(luz, (0, 0))
 

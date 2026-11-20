@@ -2,7 +2,7 @@ from collections import Counter
 import math
 
 from multijugador import clasificacion
-from multijugador.nucleo import LLAVE, intento_bot as intento_nucleo
+from multijugador.nucleo import intento_bot as intento_nucleo
 from multijugador.presente import intento_bot
 from multijugador.reparacion import CONFIGURACION as CONFIG_PUENTE, angulo_objetivo
 
@@ -12,7 +12,11 @@ ESPERA_ORDEN = 12.0  # segundos que se queda donde lo llamaron si no hay más qu
 ESPERA_ALIADO = 25.0  # segundos que el Habitante espera compañero para su habilidad
 ORDENES_TODAS_LAS_ERAS = ("ayudar", "recibir")  # acudir a quien lo pidió, en cualquier era
 RADIO_ZONA = 40  # sin órdenes, el bot se queda a esta distancia del centro de su zona
+RADIO_ZONA_APARTADA = 18  # zona calculada lejos de lo interactuable: llega casi al centro
+SEPARACION_INTERACTUABLES = 56  # su zona queda al menos a esto de fuentes, ecos, cestos...
 DISTANCIA_PULSO = 44  # a menos de esto, un bot con la llave se aparta del pulso
+ESQUIVA_MAXIMA = 6.0  # s seguidos esquivando antes de seguir hacia la terminal
+AVANCE_SIN_ESQUIVAR = 3.0  # s que avanza sin apartarse tras esquivar demasiado
 ACIERTO_MARCA = {"facil": .55, "normal": .75, "dificil": .9}  # probabilidad de señalar bien
 
 
@@ -100,7 +104,8 @@ class PlanificadorBot:
         objetivo_rol = next(
             o for o in caso["objetivos"] if o.get("rol") == bot.rol
         )
-        bot.zonas["la_copa"] = {"id": "zona", "x": objetivo_rol["x"], "y": objetivo_rol["y"]}
+        # Su zona está junto a su fuente, pero sin taparla ni a ella ni a lo demás que se usa.
+        bot.zonas["la_copa"] = self.zona_apartada(bot, objetivo_rol, caso["objetivos"] + caso.get("npcs", []))
         caldero = next(o for o in caso["objetivos"] if o["id"] == "caldero")
 
         if caso["fase"] == "final":
@@ -437,7 +442,6 @@ class PlanificadorBot:
         interior = bot.posicion.get("interior")
         if interior:
             return self._tarea("INVESTIGANDO", futuro["edificios"][interior]["salida"], "salir_edificio", radio=30)
-        inventario = {p["id"] for p in (estado["privado"].get("futuro") or {}).get("inventario", [])}
         humanos = [j for j in jugadores if j.get("controlador") != "bot"
                    and j.get("dimension") == "futuro" and j.get("conectado", True)]
         pendientes = [o for o in futuro.get("objetivos", []) if o.get("tarea") and o["tarea"] not in futuro.get("tareas", [])
@@ -463,12 +467,23 @@ class PlanificadorBot:
     def _llevar_llave(self, bot, futuro, terminal):
         """Va a la terminal, y se aparta si un pulso de vigilancia se le acerca."""
         posicion = bot.posicion
+        # Esquivar en la calle que patrulla un pulso puede no acabar nunca: tras
+        # ESQUIVA_MAXIMA s esquivando en total, avanza un rato hacia la terminal
+        # aunque el pulso pueda tocarlo (solo devolvería la llave al Corredor).
+        paso = max(0.0, bot.ahora - getattr(bot, "_ultimo_paso_llave", bot.ahora))
+        bot._ultimo_paso_llave = bot.ahora
+        avanzar = bot.ahora < getattr(bot, "_avanzar_sin_esquivar", 0)
         escape = getattr(bot, "_escape_nucleo", None)
-        if escape and bot.ahora < escape[0]:
+        if escape and bot.ahora < escape[0] and not avanzar:
+            bot._tiempo_esquivando = getattr(bot, "_tiempo_esquivando", 0.0) + paso
+            if bot._tiempo_esquivando > ESQUIVA_MAXIMA:
+                bot._tiempo_esquivando = 0.0
+                bot._avanzar_sin_esquivar = bot.ahora + AVANCE_SIN_ESQUIVAR
+                return self._tarea("INVESTIGANDO", terminal, "futuro_resolver", terminal="llave")
             return {"estado": "ESQUIVANDO", "destino": escape[1], "esperar": True, "radio": 6}
         pulsos = futuro.get("pulsos", [])
         distancia = min((math.hypot(x-posicion["x"], y-posicion["y"]) for x, y in pulsos), default=999)
-        if distancia < DISTANCIA_PULSO:
+        if distancia < DISTANCIA_PULSO and not avanzar:
             mapa = bot._navegador.colisiones
             origen = posicion["x"], posicion["y"]
             candidatos = [{"id": "esquiva", "x": origen[0]+dx, "y": origen[1]+dy}
@@ -509,11 +524,29 @@ class PlanificadorBot:
         return dict(companero, estado="ANALIZANDO_PRUEBAS", accion="presente_marcar", datos=dict(bot.marca_planeada))
 
     @staticmethod
+    def zona_apartada(bot, ancla, puntos, colisiones=None, separacion=SEPARACION_INTERACTUABLES):
+        """Sitio a pie cerca de ``ancla`` y lejos de ``puntos`` (lo que la gente usa).
+
+        Se calcula una vez por ancla: el bot usa lo que necesita y se retira aquí."""
+        colisiones = colisiones or bot._navegador.colisiones
+        clave = (bot.posicion.get("dimension", "la_copa"), round(ancla["x"]), round(ancla["y"]))
+        zona = bot.zonas_apartadas.get(clave)
+        if zona is None:
+            ocupadas = [(p["x"], p["y"]) for p in puntos if "x" in p and "y" in p]
+            try:
+                x, y = colisiones.inicio_alcanzable(round(ancla["x"]), round(ancla["y"]), ocupadas, separacion)
+            except ValueError:
+                x, y = ancla["x"], ancla["y"]
+            zona = bot.zonas_apartadas[clave] = {"id": "zona", "x": round(x), "y": round(y), "apartada": True}
+        return dict(zona)
+
+    @staticmethod
     def _acompanar(bot, jugadores, estado=None):
         """Sin una orden, el bot se queda en su zona: no sigue a las personas.
 
         Solo acude si se lo piden (eco o E sobre él). En La Copa su zona es la
-        fuente de su rol; en las demás eras, el sitio donde llegó."""
+        fuente de su rol (apartado de ella); en las demás eras, frente a su edificio
+        (ver GestorBots._zonas_de_casa) o, si no lo tiene, el sitio donde llegó."""
         dimension, interior = bot.posicion.get("dimension", "la_copa"), bot.posicion.get("interior")
         humanos = [j for j in jugadores if j.get("controlador") != "bot" and j.get("dimension", "la_copa") == dimension
                    and j.get("interior") == interior and j.get("conectado", True)]
@@ -523,7 +556,8 @@ class PlanificadorBot:
         if interior:
             return {"estado": "EN_SU_ZONA"}
         zona = bot.zonas.setdefault(dimension, {"id": "zona", "x": bot.posicion["x"], "y": bot.posicion["y"]})
-        return {"estado": "EN_SU_ZONA", "destino": dict(zona), "esperar": True, "radio": RADIO_ZONA}
+        radio = RADIO_ZONA_APARTADA if zona.get("apartada") else RADIO_ZONA
+        return {"estado": "EN_SU_ZONA", "destino": dict(zona), "esperar": True, "radio": radio}
 
     # ------------------------------------------------------- preparación
     # Mismo flujo que la guía del jugador (campana.privado/encargo.objetivo):
