@@ -7,6 +7,8 @@ COPY logica/ /app/logica/
 COPY datos/ /app/datos/
 # Bots de relleno de las salas (sin Pygame).
 COPY bots/ /app/bots/
+# Feria de los Ecos QR: votos de los celulares por internet (sin Pygame).
+COPY feria/ /app/feria/
 RUN pip install --no-cache-dir -r /app/multijugador/requirements.txt
 ENV PYTHONUNBUFFERED=1
 ENV PORT=10000

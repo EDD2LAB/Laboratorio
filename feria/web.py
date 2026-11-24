@@ -6,6 +6,7 @@ modifica ninguna ruta ni mensaje del juego.
 """
 import asyncio
 import json
+import secrets
 import re
 import socket
 import threading
@@ -18,18 +19,23 @@ from feria.sesion import SesionFeria, VotoInvalido
 
 CODIGO = re.compile(r"^[A-Z0-9]{6}$")
 DURACION_SESION = 6 * 3600   # una jornada de feria
-MAX_SESIONES = 20
+MAX_SESIONES = 40
+SIN_ANFITRION = 10 * 60      # una sesión creada por internet muere si su pantalla deja de preguntar
 PUERTOS = (8080, 8081, 8090, 8765)
 
 
 class RegistroFerias:
-    """Sesiones activas por código; caducan solas para no acumular memoria."""
+    """Sesiones activas por código; caducan solas para no acumular memoria.
+
+    Cada entrada guarda ``[sesion, inicio, visto, remota]``. Las sesiones
+    ``remota`` (creadas por internet desde una pantalla grande) además mueren si
+    su pantalla lleva ``SIN_ANFITRION`` segundos sin preguntar por el estado."""
 
     def __init__(self):
         self.sesiones = {}
         self._candado = threading.Lock()
 
-    def crear(self):
+    def crear(self, remota=False):
         with self._candado:
             self._limpiar()
             if len(self.sesiones) >= MAX_SESIONES:
@@ -37,7 +43,8 @@ class RegistroFerias:
             sesion = SesionFeria()
             while sesion.codigo_sesion in self.sesiones:
                 sesion = SesionFeria()
-            self.sesiones[sesion.codigo_sesion] = (sesion, time.monotonic())
+            ahora = time.monotonic()
+            self.sesiones[sesion.codigo_sesion] = [sesion, ahora, ahora, remota]
             return sesion
 
     def obtener(self, codigo):
@@ -46,14 +53,24 @@ class RegistroFerias:
             entrada = self.sesiones.get(codigo)
             return entrada[0] if entrada else None
 
+    def anfitrion(self, codigo, token):
+        """La sesión si ``token`` es el de su pantalla grande (y la marca como viva)."""
+        with self._candado:
+            self._limpiar()
+            entrada = self.sesiones.get(codigo)
+            if entrada is None or type(token) is not str or                     not secrets.compare_digest(token.encode(), entrada[0].token_anfitrion.encode()):
+                return None
+            entrada[2] = time.monotonic()
+            return entrada[0]
+
     def cerrar(self, codigo):
         with self._candado:
             self.sesiones.pop(codigo, None)
 
     def _limpiar(self):
         ahora = time.monotonic()
-        for codigo, (_, inicio) in list(self.sesiones.items()):
-            if ahora - inicio > DURACION_SESION:
+        for codigo, (_, inicio, visto, remota) in list(self.sesiones.items()):
+            if ahora - inicio > DURACION_SESION or (remota and ahora - visto > SIN_ANFITRION):
                 del self.sesiones[codigo]
 
 
@@ -93,12 +110,62 @@ async def voto(request):
     return web.json_response({"ok": True})
 
 
+# --- Pantalla grande por internet ---------------------------------------------
+# La pantalla crea su sesión y la controla con el token secreto que recibe al
+# crearla; los celulares nunca lo ven (solo usan /ronda y /voto).
+def _token(request):
+    return request.headers.get("Authorization", "").removeprefix("Bearer ")
+
+
+def _anfitrion(request):
+    codigo = request.match_info["codigo"].upper()
+    sesion = request.app[REGISTRO].anfitrion(codigo, _token(request)) if CODIGO.match(codigo) else None
+    if sesion is None:
+        raise web.HTTPForbidden(text="Sesión terminada o clave de anfitrión incorrecta.", content_type="text/plain")
+    return sesion
+
+
+async def nueva(request):
+    try:
+        sesion = request.app[REGISTRO].crear(remota=True)
+    except RuntimeError as error:
+        return web.json_response({"mensaje": str(error)}, status=503)
+    return web.json_response({"codigo": sesion.codigo_sesion, "token": sesion.token_anfitrion,
+                              "estado": sesion.para_pantalla()}, headers={"Cache-Control": "no-store"})
+
+
+async def estado(request):
+    return web.json_response(_anfitrion(request).para_pantalla(), headers={"Cache-Control": "no-store"})
+
+
+async def control(request):
+    sesion = _anfitrion(request)
+    try:
+        datos = await request.json()
+        accion = datos.get("accion") if isinstance(datos, dict) else None
+    except (ValueError, json.JSONDecodeError):
+        accion = None
+    if accion == "cerrar":
+        sesion.cerrar_ronda()
+    elif accion == "abrir":
+        sesion.abrir_ronda()
+    elif accion == "terminar":
+        request.app[REGISTRO].cerrar(sesion.codigo_sesion)
+        return web.json_response({"ok": True})
+    else:
+        return web.json_response({"mensaje": "Acción desconocida."}, status=400)
+    return web.json_response(sesion.para_pantalla(), headers={"Cache-Control": "no-store"})
+
+
 def registrar(app, registro=None):
     app[REGISTRO] = registro or RegistroFerias()
+    app.router.add_post("/feria/nueva", nueva)
     app.router.add_get("/feria/{codigo}", pagina)
     app.router.add_get("/feria/{codigo}/", pagina)
     app.router.add_get("/feria/{codigo}/ronda", ronda)
     app.router.add_post("/feria/{codigo}/voto", voto)
+    app.router.add_get("/feria/{codigo}/estado", estado)
+    app.router.add_post("/feria/{codigo}/control", control)
     return app[REGISTRO]
 
 
@@ -119,6 +186,25 @@ def ip_local():
     except OSError:
         pass
     return "127.0.0.1"
+
+
+def ips_locales():
+    """IPv4 donde los celulares pueden encontrar este computador, la mejor primero.
+
+    Primero la zona con cobertura móvil de Windows (192.168.137.x): si el
+    computador comparte su propia Wi-Fi, los celulares se conectan a ella y no
+    dependen de una red que aísle a los dispositivos. Luego la red con salida.
+    Se descartan 127.x y 169.254.x (sin red real)."""
+    candidatas = []
+    try:
+        candidatas += [info[4][0] for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)]
+    except OSError:
+        pass
+    principal = ip_local()
+    candidatas.append(principal)
+    validas = list(dict.fromkeys(ip for ip in candidatas if not ip.startswith(("127.", "169.254."))))
+    validas.sort(key=lambda ip: (not ip.startswith("192.168.137."), ip != principal))
+    return validas or ["127.0.0.1"]
 
 
 class ServidorFeriaLocal:
@@ -151,6 +237,7 @@ class ServidorFeriaLocal:
             return
         self._listo.set()
         self._bucle.run_forever()
+        self._bucle.close()
 
     async def _arrancar(self):
         app = web.Application(client_max_size=4096)

@@ -216,5 +216,8 @@ def crear_app(servicio=None):
     app.router.add_get("/v1/estado", http)
     for ruta in ("crear", "unirse", "accion", "salir"):
         app.router.add_post("/v1/" + ruta, http)
+    # Feria de los Ecos QR: rutas aparte bajo /feria (no tocan salas ni protocolo).
+    from feria.web import registrar as registrar_feria
+    registrar_feria(app)
     app.cleanup_ctx.append(simulacion)
     return app

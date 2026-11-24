@@ -29,6 +29,12 @@
 !datos/*.json
 !bots/
 !bots/*.py
+!feria/
+!feria/__init__.py
+!feria/casos.py
+!feria/sesion.py
+!feria/movil.py
+!feria/web.py
 !Dockerfile.multijugador
 **/__pycache__/**
 **/*.pyc

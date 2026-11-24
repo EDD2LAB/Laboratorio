@@ -237,7 +237,8 @@ El visitante deja de ser espectador: se convierte en una voz de La Copa y observ
 | --- | --- |
 | `feria/casos.py` | Cuatro casos propios con categoría del árbol de La Copa, verdad y enseñanza |
 | `feria/sesion.py` | `SesionFeria` en memoria: un voto por celular y ronda, resultado colectivo |
-| `feria/web.py` | Rutas `/feria/{código}` (página, ronda y voto) y servidor local en un hilo |
+| `feria/web.py` | Rutas `/feria/...` (página, ronda, voto y control del anfitrión) y servidor local en un hilo |
+| `feria/remoto.py` | `SesionRemota`: la pantalla controla su sesión en Render desde un hilo |
 | `feria/movil.py` | Página del celular: HTML sin recursos externos ni datos personales |
 | `feria/qr.py` | QR con `segno`, módulos enteros y zona blanca |
 | `feria/pantalla.py` | Pantalla grande sobre La Copa con el arte de `Imagenes/Modo feria/` |
@@ -247,16 +248,31 @@ el menú del modo feria técnico). La pantalla corre su propio bucle y, al salir
 con Esc, detiene el servidor y borra la sesión. No toca campaña, expediente,
 preferencias, salas ni protocolo.
 
+**Votos por internet (Render) y respaldo local**
+
+El servidor de Render registra las mismas rutas bajo `/feria` (aditivas: no
+cambian las salas ni el protocolo). Al entrar a la feria la pantalla crea su
+sesión allí (`POST /feria/nueva`) y la controla con una clave que solo ella
+conoce (`/estado` y `/control`); los celulares abren
+`https://la-copa-salas.onrender.com/feria/CÓDIGO` con sus datos móviles, sin
+entrar a ninguna Wi-Fi. Si Render estaba dormido, la pantalla espera hasta 90 s;
+con **L** (o si no hay internet) usa el servidor local de antes. Una sesión de
+internet se borra al salir con Esc o tras 10 minutos sin su pantalla.
+`COPA_FERIA_SERVIDOR` elige otro servidor (vacía: solo red local). Hace falta
+desplegar Render a mano para que tenga estas rutas.
+
 **Cómo usarla en la feria**
 
-1. Conectar el computador y los celulares a la misma Wi-Fi (un punto de acceso
-   propio evita redes que aíslan a los clientes).
-2. La primera vez, Windows pregunta si Python puede recibir conexiones: aceptar
-   en **redes privadas**. Sin ese permiso los celulares no llegan a la página.
+1. Con internet en el computador no hace falta nada más: los visitantes usan
+   sus datos móviles. Abrir la feria unos minutos antes despierta a Render.
+2. Solo red local: computador y celulares en la misma Wi-Fi (la zona con
+   cobertura móvil de Windows evita redes que aíslan a los clientes; la tecla
+   **I** cambia de red). La primera vez, Windows pregunta si Python puede
+   recibir conexiones: aceptar.
 3. Menú → Feria de los Ecos QR. Los visitantes escanean y votan.
 4. Espacio o «Ver resultado» cierra la ronda; N o «Nueva ronda» abre la siguiente.
    «Votar aquí» permite votar con el ratón a quien no tenga celular.
 
-El servidor usa el puerto 8080 (o 8081, 8090, 8765 si está ocupado). Pendiente
-para fases siguientes: propagación por los puentes, temporizador y rondas
-automáticas, resumen de la sesión y, si se decide, votos por Render.
+El servidor local usa el puerto 8080 (o 8081, 8090, 8765 si está ocupado).
+Pendiente para fases siguientes: propagación por los puentes, temporizador y
+rondas automáticas y resumen de la sesión.

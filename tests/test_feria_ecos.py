@@ -10,6 +10,7 @@ import urllib.request
 
 os.environ.setdefault("SDL_VIDEODRIVER", "dummy")
 os.environ.setdefault("SDL_AUDIODRIVER", "dummy")
+os.environ["COPA_FERIA_SERVIDOR"] = ""   # las pruebas nunca salen a internet
 import pygame
 
 from nucleo.rutas import RAIZ
@@ -147,12 +148,142 @@ class Servidor(unittest.TestCase):
         import feria.web as web
         registro = web.RegistroFerias()
         primera = registro.crear()
-        registro.sesiones[primera.codigo_sesion] = (primera, -10 ** 9)  # muy vieja
+        registro.sesiones[primera.codigo_sesion][1] = -10 ** 9  # muy vieja
         self.assertIsNone(registro.obtener(primera.codigo_sesion))
         for _ in range(web.MAX_SESIONES):
             registro.crear()
         with self.assertRaises(RuntimeError):
             registro.crear()
+
+
+    def pedir(self, ruta, datos=None, token=None):
+        cabeceras = {"Content-Type": "application/json"}
+        if token:
+            cabeceras["Authorization"] = "Bearer " + token
+        cuerpo = None if datos is None else json.dumps(datos).encode()
+        peticion = urllib.request.Request(f"http://127.0.0.1:{self.servidor.puerto}{ruta}", cuerpo, cabeceras)
+        try:
+            with urllib.request.urlopen(peticion, timeout=5) as respuesta:
+                return respuesta.status, json.load(respuesta)
+        except urllib.error.HTTPError as error:
+            return error.code, None
+
+    def test_la_pantalla_por_internet_controla_su_sesion_solo_con_su_clave(self):
+        estado, nueva = self.pedir("/feria/nueva", {})
+        self.assertEqual(estado, 200)
+        codigo, token = nueva["codigo"], nueva["token"]
+        self.assertEqual(nueva["estado"]["ronda"], 1)
+        base = f"/feria/{codigo}"
+        self.assertEqual(self.pedir(base + "/estado")[0], 403)
+        self.assertEqual(self.pedir(base + "/estado", token="otra-clave")[0], 403)
+        self.assertEqual(self.pedir(base + "/control", {"accion": "cerrar"}, "otra-clave")[0], 403)
+        self.assertEqual(self.pedir(base + "/control", {"accion": "borrar_todo"}, token)[0], 400)
+        voto = dict(dispositivo="celular-remoto1", ronda=1, decision="detener", categoria="rumor_politico")
+        self.assertEqual(self.pedir(base + "/voto", voto)[0], 200)
+        self.assertEqual(self.pedir(base + "/estado", token=token)[1]["votos"], 1)
+        estado, cerrada = self.pedir(base + "/control", {"accion": "cerrar"}, token)
+        self.assertEqual((estado, cerrada["abierta"], cerrada["resultado"]["total"]), (200, False, 1))
+        self.assertEqual(self.pedir(base + "/control", {"accion": "abrir"}, token)[1]["ronda"], 2)
+        # El celular sigue sin ver la clave ni las respuestas.
+        self.assertNotIn(token, json.dumps(self.pedir(base + "/ronda")[1]))
+        self.assertEqual(self.pedir(base + "/control", {"accion": "terminar"}, token)[0], 200)
+        self.assertIsNone(self.servidor.registro.obtener(codigo))
+
+    def test_una_sesion_de_internet_sin_pantalla_caduca(self):
+        import feria.web as web
+        registro = web.RegistroFerias()
+        remota, local = registro.crear(remota=True), registro.crear()
+        for entrada in registro.sesiones.values():
+            entrada[2] -= web.SIN_ANFITRION + 1   # nadie preguntó en 10 minutos
+        self.assertIsNone(registro.obtener(remota.codigo_sesion))
+        self.assertIs(registro.obtener(local.codigo_sesion), local)  # la local la controla su pantalla
+
+    def test_sesion_remota_vota_cierra_abre_y_termina(self):
+        import time
+        from feria.remoto import SesionRemota
+        remota = SesionRemota.crear(f"http://127.0.0.1:{self.servidor.puerto}", timeout=5)
+        try:
+            servidora = self.servidor.registro.obtener(remota.codigo_sesion)
+            self.assertTrue(remota.url.endswith("/feria/" + remota.codigo_sesion))
+            remota.votar("pantalla-0001", remota.ronda_actual, "verificar", "rumor_politico")
+            servidora.votar("celular-xyz789", 1, "compartir", "rumor_politico")
+            remota.cerrar_ronda()
+            self.assertFalse(remota.abierta)   # la pantalla reacciona sin esperar a la red
+            limite = time.monotonic() + 8
+            while (remota.para_pantalla()["resultado"] or {}).get("total") != 2 and time.monotonic() < limite:
+                time.sleep(.05)
+            self.assertEqual(remota.para_pantalla()["resultado"]["total"], 2)
+            remota.abrir_ronda()
+            while remota.ronda_actual != 2 and time.monotonic() < limite:
+                time.sleep(.05)
+            self.assertEqual((remota.ronda_actual, remota.abierta, remota.problema), (2, True, ""))
+        finally:
+            remota.terminar()
+        self.assertIsNone(self.servidor.registro.obtener(remota.codigo_sesion))
+        self.assertFalse(remota._hilo.is_alive())
+
+
+class Render(unittest.TestCase):
+    def test_el_servidor_de_internet_ofrece_la_feria_sin_tocar_sus_rutas(self):
+        from multijugador.tiempo_real import crear_app
+        rutas = {r.resource.canonical for r in crear_app().router.routes()}
+        for ruta in ("/v1/juego", "/health", "/v1/estado", "/v1/crear", "/feria/nueva", "/feria/{codigo}/voto",
+                     "/feria/{codigo}/estado", "/feria/{codigo}/control"):
+            self.assertIn(ruta, rutas)
+
+    def test_la_imagen_de_docker_incluye_la_feria_sin_pygame(self):
+        dockerfile = (RAIZ / "Dockerfile.multijugador").read_text(encoding="utf-8")
+        ignorados = (RAIZ / "Dockerfile.multijugador.dockerignore").read_text(encoding="utf-8").splitlines()
+        self.assertIn("COPY feria/ /app/feria/", dockerfile)
+        for modulo in ("__init__", "casos", "sesion", "movil", "web"):
+            self.assertIn(f"!feria/{modulo}.py", ignorados)
+            codigo = (RAIZ / "feria" / f"{modulo}.py").read_text(encoding="utf-8")
+            self.assertNotRegex(codigo, r"(?m)^\s*(import|from) pygame")
+
+    def test_sin_internet_la_espera_pasa_a_la_red_local(self):
+        from feria.pantalla import _conectar_remoto
+        pygame.init()
+        pygame.event.clear()
+        sesion, aviso = _conectar_remoto(pygame.Surface((960, 720)), "http://127.0.0.1:1", limite=.5)
+        self.assertIsNone(sesion)
+        self.assertIn("misma Wi-Fi", aviso)
+
+    def test_render_sin_desplegar_la_feria_pasa_a_la_red_local_sin_esperar(self):
+        import threading
+        import time
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        from feria.pantalla import _conectar_remoto
+
+        class Viejo(BaseHTTPRequestHandler):   # servidor de salas sin las rutas /feria
+            def do_POST(self):
+                self.send_error(404)
+
+            def log_message(self, *args):
+                pass
+        viejo = HTTPServer(("127.0.0.1", 0), Viejo)
+        threading.Thread(target=viejo.serve_forever, daemon=True).start()
+        try:
+            pygame.init()
+            pygame.event.clear()
+            inicio = time.monotonic()
+            sesion, aviso = _conectar_remoto(pygame.Surface((960, 720)), f"http://127.0.0.1:{viejo.server_port}")
+            self.assertLess(time.monotonic() - inicio, 5)
+            self.assertIsNone(sesion)
+            self.assertIn("aún no tiene la feria", aviso)
+        finally:
+            viejo.shutdown()
+            viejo.server_close()
+
+
+class Redes(unittest.TestCase):
+    def test_prefiere_la_zona_movil_del_computador_y_descarta_ips_sin_red(self):
+        from unittest import mock
+        import feria.web as web
+        respuestas = [(2, 1, 6, "", (ip, 0)) for ip in ("169.254.41.200", "192.168.128.30", "192.168.137.1", "127.0.0.1")]
+        with mock.patch.object(web.socket, "getaddrinfo", return_value=respuestas),                 mock.patch.object(web, "ip_local", return_value="192.168.128.30"):
+            self.assertEqual(web.ips_locales(), ["192.168.137.1", "192.168.128.30"])
+        with mock.patch.object(web.socket, "getaddrinfo", side_effect=OSError),                 mock.patch.object(web, "ip_local", return_value="127.0.0.1"):
+            self.assertEqual(web.ips_locales(), ["127.0.0.1"])
 
 
 class Qr(unittest.TestCase):
@@ -207,6 +338,38 @@ class PantallaGrande(unittest.TestCase):
         finally:
             servidor.detener()
 
+    def test_pantalla_por_internet_y_al_salir_se_borra_la_sesion(self):
+        import time
+        from unittest import mock
+        from feria.pantalla import jugar_desde_menu
+        from feria.web import ServidorFeriaLocal
+        nube = ServidorFeriaLocal(PUERTOS_PRUEBA, host="127.0.0.1").iniciar()   # hace de Render
+        vistas = {}
+
+        def guion(pantalla, cuadro):
+            if cuadro == 0:
+                vistas["url"], vistas["codigo"] = pantalla.url, pantalla.sesion.codigo_sesion
+                pantalla.accionar("votar_aqui")
+                pantalla.accionar("decision:verificar")
+                pantalla.accionar("categoria:suceso_natural")
+                pantalla.accionar("enviar_pantalla")
+            elif cuadro == 2:
+                sesion = nube.registro.obtener(vistas["codigo"])
+                limite = time.monotonic() + 5
+                while sesion.para_pantalla()["votos"] < 1 and time.monotonic() < limite:
+                    time.sleep(.05)
+                vistas["votos"] = sesion.para_pantalla()["votos"]
+        try:
+            with mock.patch.dict(os.environ, {"COPA_FERIA_SERVIDOR": f"http://127.0.0.1:{nube.puerto}"}), \
+                    mock.patch("feria.web.ServidorFeriaLocal") as local:
+                self.assertIsNone(jugar_desde_menu(pygame.Surface((960, 720)), cuadros=4, al_dibujar=guion))
+            local.assert_not_called()   # con internet no se abre ningún puerto en el computador
+            self.assertEqual(vistas["url"], f"http://127.0.0.1:{nube.puerto}/feria/{vistas['codigo']}")
+            self.assertEqual(vistas["votos"], 1)
+            self.assertIsNone(nube.registro.obtener(vistas["codigo"]))
+        finally:
+            nube.detener()
+
     def test_un_error_dentro_de_la_feria_no_cierra_el_juego(self):
         import tempfile
         from pathlib import Path
@@ -255,6 +418,23 @@ class PantallaGrande(unittest.TestCase):
                 self.assertIsNone(pantalla.jugar_desde_menu(pygame.Surface((960, 720))))
         self.assertEqual(len(creados), 6)
         self.assertTrue(all(s.puerto == PUERTOS_PRUEBA[0] and not s._hilo.is_alive() for s in creados))
+
+    def test_el_texto_de_cada_caso_cabe_en_el_pergamino_y_la_tecla_i_cambia_de_red(self):
+        from feria.pantalla import PantallaFeria
+        sesion = SesionFeria()
+        pantalla = PantallaFeria(sesion, ["http://192.168.137.1:8080/feria/AB12CD", "http://10.0.0.5:8080/feria/AB12CD"])
+        instruccion = "Escanea el código con tu celular y decide qué hacer con este mensaje."
+        ancho = pantalla.hueco_qr.right - pantalla.hueco_qr.x - 10 - pantalla.qr.get_width() - 46
+        for caso in CASOS:
+            with self.subTest(caso=caso["id"]):
+                self.assertLessEqual(pantalla._alto_bloque(caso, instruccion, ancho, 16, 14), pantalla.hueco_qr.height - 14)
+        superficie = pygame.Surface((960, 720))
+        for _ in CASOS:
+            pantalla.dibujar(superficie, (0, 0), 0)
+            sesion.cerrar_ronda()
+            sesion.abrir_ronda()
+        pantalla.tecla(pygame.K_i)
+        self.assertEqual(pantalla.url, "http://10.0.0.5:8080/feria/AB12CD")
 
     def test_menu_ofrece_la_feria_en_sus_dos_versiones(self):
         from interfaz.inicio import MenuInicio
