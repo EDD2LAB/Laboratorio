@@ -287,6 +287,22 @@ class Redes(unittest.TestCase):
 
 
 class Qr(unittest.TestCase):
+    def test_sin_segno_instalado_usa_la_copia_incluida(self):
+        """Computador de un compañero: ni segno instalada ni .venv."""
+        codigo = (
+            "import sys, pygame\n"
+            "from pathlib import Path\n"
+            "sys.path[:] = [p for p in sys.path if 'site-packages' not in p]\n"
+            "real_file = Path.is_file\n"
+            "Path.is_file = lambda self: False if '.venv' in self.parts else real_file(self)\n"
+            "from feria.qr import segno_disponible\n"
+            "assert segno_disponible()\n"
+            "import segno\n"
+            "print(Path(segno.__file__).parent.parent.name)\n")
+        salida = subprocess.run([sys.executable, "-c", codigo], cwd=RAIZ, capture_output=True, text=True, timeout=60)
+        self.assertEqual(salida.stdout.strip().splitlines()[-1:], ["_vendor"], salida.stderr)
+        self.assertTrue((RAIZ / "feria" / "_vendor" / "segno" / "LICENSE").is_file())
+
     def test_qr_cuadrado_con_modulos_enteros_y_zona_blanca(self):
         import segno
         from feria.qr import ZONA_SILENCIO, superficie_qr

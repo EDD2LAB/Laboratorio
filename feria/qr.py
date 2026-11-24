@@ -10,17 +10,20 @@ ZONA_SILENCIO = 4  # módulos blancos alrededor: los lectores la necesitan
 def segno_disponible():
     """True si se puede importar segno.
 
-    Si el juego se abrió con otro Python (p. ej. el botón ▶ de VS Code con el
-    Python del sistema), se busca en el ``.venv`` del proyecto: segno es Python
-    puro, así que sirve igual. Solo se añade esa carpeta si allí está segno."""
+    Orden: la instalada en el Python que abrió el juego; la del ``.venv`` del
+    proyecto (si se abrió con el Python del sistema, p. ej. con ▶ de VS Code);
+    y la copia incluida en ``feria/_vendor`` (BSD, Python puro), para que la
+    feria funcione en cualquier computador sin instalar nada."""
     if importlib.util.find_spec("segno") is not None:
         return True
     from nucleo.rutas import RAIZ
-    paquetes = RAIZ / ".venv" / "Lib" / "site-packages"
-    if (paquetes / "segno").is_dir():
-        sys.path.append(str(paquetes))
-        importlib.invalidate_caches()
-    return importlib.util.find_spec("segno") is not None
+    for carpeta in (RAIZ / ".venv" / "Lib" / "site-packages", RAIZ / "feria" / "_vendor"):
+        if (carpeta / "segno" / "__init__.py").is_file():
+            sys.path.append(str(carpeta))
+            importlib.invalidate_caches()
+            if importlib.util.find_spec("segno") is not None:
+                return True
+    return False
 
 
 def superficie_qr(texto, lado_max):

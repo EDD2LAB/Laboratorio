@@ -261,6 +261,14 @@ internet se borra al salir con Esc o tras 10 minutos sin su pantalla.
 `COPA_FERIA_SERVIDOR` elige otro servidor (vacía: solo red local). Hace falta
 desplegar Render a mano para que tenga estas rutas.
 
+**En otros computadores**
+
+Basta con `git pull` y abrir el juego como siempre (Jugar.bat o ▶ de VS Code).
+El QR usa `segno`: si no está instalada, se toma del `.venv` del proyecto o de
+la copia incluida en `feria/_vendor` (BSD, Python puro), así que no hay que
+instalar nada nuevo. Con internet, los votos van por Render y no hace falta
+abrir el firewall.
+
 **Cómo usarla en la feria**
 
 1. Con internet en el computador no hace falta nada más: los visitantes usan
