@@ -328,8 +328,8 @@ def _anotar_error():
 
 def _jugar(lienzo, cuadros, servidor, al_dibujar):
     from feria.web import ServidorFeriaLocal, ips_locales
-    import importlib.util
-    if importlib.util.find_spec("segno") is None:
+    from feria.qr import segno_disponible
+    if not segno_disponible():
         # Se comprueba antes de abrir el servidor: así no queda ningún puerto ocupado.
         return _error_red(lienzo, "Falta la librería del QR (segno). Abre el juego con Jugar.bat o instala "
                                   "requirements.txt en el Python que uses.")
