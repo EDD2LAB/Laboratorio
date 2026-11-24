@@ -264,9 +264,35 @@ def jugar_desde_menu(lienzo, audio=None, cuadros=0, servidor=None, al_dibujar=No
     """Feria de los Ecos QR desde el menú. Esc vuelve (None); cerrar la ventana, "salir".
 
     Arranca un servidor local en este computador; al salir lo detiene y borra la
-    sesión, así que no queda ningún voto guardado."""
+    sesión, así que no queda ningún voto guardado. Un error inesperado nunca
+    cierra el juego: se explica en pantalla y se anota en cache/feria_error.log."""
+    try:
+        return _jugar(lienzo, cuadros, servidor, al_dibujar)
+    except Exception as error:  # noqa: BLE001 — el juego sigue aunque la feria falle
+        _anotar_error()
+        return _error_red(lienzo, f"{type(error).__name__}: {error}")
+
+
+def _anotar_error():
+    import traceback
+    from nucleo.rutas import RAIZ
+    try:
+        carpeta = RAIZ / "cache"
+        carpeta.mkdir(exist_ok=True)
+        with open(carpeta / "feria_error.log", "a", encoding="utf-8") as registro:
+            registro.write(time.strftime("%Y-%m-%d %H:%M:%S ") + traceback.format_exc() + "\n")
+    except OSError:
+        pass
+
+
+def _jugar(lienzo, cuadros, servidor, al_dibujar):
     from interfaz.presentacion_pantalla import a_lienzo, presentar
     from feria.web import ServidorFeriaLocal, ip_local
+    import importlib.util
+    if importlib.util.find_spec("segno") is None:
+        # Se comprueba antes de abrir el servidor: así no queda ningún puerto ocupado.
+        return _error_red(lienzo, "Falta la librería del QR (segno). Abre el juego con Jugar.bat o instala "
+                                  "requirements.txt en el Python que uses.")
     propio = servidor is None
     aviso_red = ""
     try:
@@ -274,12 +300,12 @@ def jugar_desde_menu(lienzo, audio=None, cuadros=0, servidor=None, al_dibujar=No
     except RuntimeError as error:
         return _error_red(lienzo, str(error))
     sesion = servidor.registro.crear()
-    ip = ip_local()
-    if ip.startswith("127."):
-        aviso_red = "Sin red: conecta este computador a una Wi-Fi para que los celulares puedan votar."
-    pantalla_feria = PantallaFeria(sesion, servidor.url(sesion.codigo_sesion, ip), aviso_red)
     reloj, cuadro = pygame.time.Clock(), 0
     try:
+        ip = ip_local()
+        if ip.startswith("127."):
+            aviso_red = "Sin red: conecta este computador a una Wi-Fi para que los celulares puedan votar."
+        pantalla_feria = PantallaFeria(sesion, servidor.url(sesion.codigo_sesion, ip), aviso_red)
         while True:
             reloj.tick(60)
             pantalla = pygame.display.get_surface()
@@ -334,8 +360,12 @@ def _error_red(lienzo, mensaje):
                 return None
         lienzo.fill((10, 24, 20))
         lienzo.blit(titulo.render("No se pudo abrir la Feria de los Ecos", True, ORO), (120, 280))
-        lienzo.blit(fuente.render(mensaje[:90], True, CREMA), (120, 340))
-        lienzo.blit(fuente.render("Pulsa cualquier tecla para volver al menú.", True, CREMA), (120, 380))
+        y = 340
+        for linea in envolver_texto(mensaje, fuente, 720)[:5]:
+            lienzo.blit(fuente.render(linea, True, CREMA), (120, y))
+            y += 28
+        lienzo.blit(fuente.render("El detalle queda en cache/feria_error.log.", True, CREMA), (120, y + 14))
+        lienzo.blit(fuente.render("Pulsa cualquier tecla para volver al menú.", True, CREMA), (120, y + 54))
         pantalla = pygame.display.get_surface()
         if pantalla is not None:
             presentar(pantalla, lienzo)

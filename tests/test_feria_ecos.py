@@ -207,6 +207,55 @@ class PantallaGrande(unittest.TestCase):
         finally:
             servidor.detener()
 
+    def test_un_error_dentro_de_la_feria_no_cierra_el_juego(self):
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+        import feria.pantalla as pantalla
+        with tempfile.TemporaryDirectory() as tmp,                 mock.patch("nucleo.rutas.RAIZ", Path(tmp)),                 mock.patch.object(pantalla, "PantallaFeria", side_effect=RuntimeError("fallo de prueba")):
+            from feria.web import ServidorFeriaLocal
+            servidor = ServidorFeriaLocal(PUERTOS_PRUEBA, host="127.0.0.1").iniciar()
+            try:
+                pygame.event.clear()
+                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE))
+                self.assertIsNone(pantalla.jugar_desde_menu(pygame.Surface((960, 720)), servidor=servidor))
+            finally:
+                servidor.detener()
+            registro = (Path(tmp) / "cache" / "feria_error.log").read_text(encoding="utf-8")
+            self.assertIn("fallo de prueba", registro)
+
+    def test_sin_la_libreria_del_qr_no_se_abre_ningun_servidor(self):
+        from unittest import mock
+        import importlib.util
+        import feria.pantalla as pantalla
+        original = importlib.util.find_spec
+        sin_segno = lambda nombre, *args, **kw: None if nombre == "segno" else original(nombre, *args, **kw)
+        with mock.patch("importlib.util.find_spec", sin_segno),                 mock.patch("feria.web.ServidorFeriaLocal") as servidor:
+            pygame.event.clear()
+            pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE))
+            self.assertIsNone(pantalla.jugar_desde_menu(pygame.Surface((960, 720))))
+        servidor.assert_not_called()
+
+    def test_errores_repetidos_no_dejan_puertos_ocupados(self):
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+        import feria.pantalla as pantalla
+        import feria.web as web
+        real = web.ServidorFeriaLocal
+        creados = []
+
+        def crear():
+            creados.append(real(PUERTOS_PRUEBA[:1], host="127.0.0.1"))
+            return creados[-1]
+        with tempfile.TemporaryDirectory() as tmp, mock.patch("nucleo.rutas.RAIZ", Path(tmp)),                 mock.patch.object(web, "ServidorFeriaLocal", side_effect=crear),                 mock.patch.object(pantalla, "PantallaFeria", side_effect=RuntimeError("fallo de prueba")):
+            for _ in range(6):  # con un solo puerto, una fuga haría fallar el segundo intento
+                pygame.event.clear()
+                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE))
+                self.assertIsNone(pantalla.jugar_desde_menu(pygame.Surface((960, 720))))
+        self.assertEqual(len(creados), 6)
+        self.assertTrue(all(s.puerto == PUERTOS_PRUEBA[0] and not s._hilo.is_alive() for s in creados))
+
     def test_menu_ofrece_la_feria_en_sus_dos_versiones(self):
         from interfaz.inicio import MenuInicio
         menu = MenuInicio()
