@@ -343,9 +343,9 @@ def main():
             "texto": "La agenda me sitúa en un debate, no en el lugar de la imagen.",
             "respuestas": [],
         },
-        "Tomás Red": {
-            "personaje": "Tomás Red",
-            "texto": "Suelo estar conectado a lo que comparte la comunidad; vi el post, no el hecho.",
+        "Tania Red": {
+            "personaje": "Tania Red",
+            "texto": "Suelo estar conectada a lo que comparte la comunidad; vi el post, no el hecho.",
             "respuestas": [],
         },
         "Lía Nova": {
@@ -1251,7 +1251,7 @@ def main():
                     ):
                         pistas_por_personaje = {
                             "Darío Veraz": "fuente_ausente",
-                            "Tomás Red": "testimonio_y_contexto",
+                            "Tania Red": "testimonio_y_contexto",
                             "Ronaldo Vélez": "respuesta_kael",
                         }
                         pista = pistas_por_personaje.get(personaje_que_respondio)
@@ -1763,7 +1763,7 @@ def main():
             ]
             if estado.dimension_actual == DIMENSION_PRESENTE:
                 controles.extend((
-                    "C: abre el celular/feed. Investiga a Darío, Tomás y Ronaldo antes de clasificar.",
+                    "C: abre el celular/feed. Investiga a Darío, Tania y Ronaldo antes de clasificar.",
                     "Q: difunde una corrección después de verificar la publicación.",
                 ))
             else:

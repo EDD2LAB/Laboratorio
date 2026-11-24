@@ -58,10 +58,17 @@ TERMINALES = (
     ("llave", "entrada_verificacion", "Llave de supervisión", "La llave devolvió la supervisión de NÚCLEO a las personas."),
     ("cuentas", "entrada_centro_comunitario", "Ataque coordinado", "Las cuentas eran de NÚCLEO. El Ciudadano no estaba solo contra la ciudad: estaba contra una máquina."),
 )
+# Poder (Q) de cada rol en Ciudad Núcleo: (nombre, qué hace). Ver MisionNucleo.habilidad.
+HABILIDADES_FUTURO = {
+    "guardian": ("Lupa de Memoria", "En la terminal de archivos, resalta la firma sospechosa."),
+    "mensajero": ("Impulso del Viento", "Mientras llevas la llave, corres más rápido hasta la terminal."),
+    "habitante": ("Voz Comunitaria", "En la terminal de cuentas, reconoce a la vecina real."),
+    "aspirante": ("Comunicado Público", "Tras la decisión correcta, el comunicado recorre la red de la ciudad."),
+}
 LLAVE = "llave_supervision"
 FIRMA = "firma_representante"
 GUIA_FIRMAS = "guia_de_firmas"
-TEXTO_LLAVE = "El Corredor de Datos te entregó la llave de supervisión. Llévala al Centro de Verificación."
+TEXTO_LLAVE = "El Corredor de Datos te entregó la llave de supervisión. Llévala al Centro de Supervisión."
 TEXTOS_PISTA = {
     GUIA_FIRMAS: ("Archivista · Cómo leer un registro", "Una orden vale si la firma quien tiene autoridad para darla. Mira primero la firma y luego la fecha."),
     FIRMA: ("Representante Humano · Firma", "El Representante Humano acepta firmar la reconfiguración: NÚCLEO seguirá, pero bajo supervisión."),

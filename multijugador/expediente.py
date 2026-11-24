@@ -18,7 +18,7 @@ def _avisar_una_vez(clave):
         logging.getLogger(__name__).warning("Falta la ficha legal de %s en casos_expediente.json", clave)
 
 
-def ficha_resuelta(evento, respuesta=None, persona=None):
+def ficha_resuelta(evento, respuesta=None):
     """La ficha del caso sorteado. Si falta, se registra una vez y el juego sigue."""
     base = CATALOGO.get(evento)
     if base is None:
@@ -31,8 +31,6 @@ def ficha_resuelta(evento, respuesta=None, persona=None):
             ficha = {**FICHA_VACIA, **versiones[respuesta]}
         else:
             _avisar_una_vez(f"{evento}/{respuesta}")
-    if ficha["conducta"]:
-        ficha["conducta"] = ficha["conducta"].replace("{persona}", persona or "una persona de la aldea")
     return ficha
 
 

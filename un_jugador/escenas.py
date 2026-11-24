@@ -200,7 +200,7 @@ def dibujar_transicion_dimension(
             "Ronaldo Vélez, descendiente de Kael, aspira a la Alcaldía.",
             "Darío Veraz sigue el legado de Odran como agente de verificación.",
             "Mateo Ríos comunica por la ciudad, como hacía el Mensajero.",
-            "Lía Nova difunde historias como influencer; Tomás Red participa en la comunidad.",
+            "Lía Nova difunde historias como influencer; Tania Red participa en la comunidad.",
             "La publicación no demuestra culpabilidad: reúne pruebas antes de compartir.",
         )
         for indice, linea in enumerate(lineas):

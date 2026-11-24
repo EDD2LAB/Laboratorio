@@ -15,7 +15,7 @@ from copy import deepcopy
 CASOS = (
     ("puente_norte", "¿Quién rompió el puente norte?",
      "Alguien dice que Kael rompió el puente por descuido y por eso lo cerraron. ¿Será verdad?", "corregir", None,
-     "El puente se dañó por el desgaste y la lluvia, no por Kael. Sigue abierto hoy; mañana habrá mantenimiento parcial."),
+     "El puente se dañó por el desgaste y la lluvia, no por Kael. El consejo lo cerró por seguridad hasta repararlo; Kael solo propuso revisarlo."),
     ("agua", "Agua bajo sospecha",
      "Un mensaje viejo dice que el agua de hoy está sucia. ¿Habla del mismo lugar?", "descartar", {
          "guardian": ("Fecha del informe", "El documento citado corresponde a un depósito clausurado hace diez años."),
@@ -25,10 +25,14 @@ CASOS = (
      }, "El aviso mezcla fechas y depósitos. Se retira ese aviso antiguo de la circulación."),
 )
 
+# Estrellas que se pueden ganar en La Copa: por caso, una por acertar y otra por
+# reunir dos pistas cada uno; y una por cada encargo de la aldea.
+ESTRELLAS_TOTALES = 2 * len(CASOS) + min(len(CASOS), len(ENCARGOS))
+
 HABILIDADES = {
     "guardian": ("Revisar mi pista", "Vuelve a Naira y revisa tu pista para reducir los rumores."),
     "mensajero": ("Correo urgente", "Manda tu pista a todos tus compañeros."),
-    "habitante": ("Reunir a los vecinos", "Ve con un compañero a ver a Luma. La aldea confiará más en ustedes."),
+    "habitante": ("Reunir a los vecinos", "Ve con un compañero a tu fuente de testimonios. La aldea confiará más en ustedes."),
     "aspirante": ("Explicar con pistas", "Lleva dos pistas al caldero. Ayudarás a que la aldea se lleve mejor."),
 }
 
@@ -43,15 +47,13 @@ VARIANTES = {
 
 AVISOS_RECIENTES = {
     "agua": "El punto de reparto de agua segura está atendido para recibir consultas.",
-    "tormenta": "El puesto del mirador está atendido para confirmar los avisos.",
-    "ayuda": "El equipo de reparto recibe consultas sobre las entregas pendientes.",
 }
 
 SEMANTICA_PRUEBAS = {
     "Acta del consejo": {"problema_parcial": True},
     "Registro de la ruta": {"problema_parcial": True},
     "Testimonio de Luma": {"problema_parcial": True},
-    "Propuesta de Mira": {"problema_parcial": True},
+    "Propuesta de Kael": {"problema_parcial": True},
     "Fecha del informe": {"antigua": True, "indica_descontextualizacion": True},
     "Ruta del suministro": {"fuente_actual_alternativa": True},
     "Muestra comunitaria": {"confirma_ausencia_de_riesgo": True},
@@ -60,23 +62,11 @@ SEMANTICA_PRUEBAS = {
     "Ruta alternativa": {"confirma_riesgo_actual": True},
     "Control de muestras": {"confirma_riesgo_actual": True},
     "Protocolo de cuidado": {"confirma_riesgo_actual": True},
-    "Boletín firmado": {"confirma_riesgo_actual": True},
-    "Registro de señales": {"confirma_riesgo_actual": True},
-    "Observación del mirador": {"confirma_riesgo_actual": True},
-    "Plan preventivo": {"confirma_riesgo_actual": True},
-    "Encabezado omitido": {"indica_descontextualizacion": True},
-    "Registro del envío": {"indica_descontextualizacion": True},
-    "Puesto del mirador": {"indica_descontextualizacion": True},
-    "Calendario de ejercicios": {"indica_descontextualizacion": True},
-    "Libro de reparto": {"problema_parcial": True},
-    "Carga retenida": {"problema_parcial": True},
-    "Recibos familiares": {"problema_parcial": True},
-    "Inventario de Mira": {"problema_parcial": True},
-    "Inventario del reparto": {"problema_parcial": True},
 }
 
 
-DECISION_CORTA = {"verificar": "Verificar", "reportar": "Reportar", "dejar_pendiente": "Ignorar", "compartir": "Publicar",
+# Los mismos nombres que muestran los botones del celular (interfaz/celular.py).
+DECISION_CORTA = {"verificar": "Verificar", "reportar": "Denunciar", "dejar_pendiente": "Ignorar", "compartir": "Publicar",
                   "corregir": "Corregir", "difundir": "Difundir", "descartar": "Descartar"}
 ACCIONES_ANALISIS = ("presente_analizar", "presente_marcar", "presente_siguiente")
 
@@ -524,8 +514,8 @@ class CampanaCopa(MisionPuente):
         super().resolver(presentes)
         if self.resultado:
             caso = self.casos[self.ronda]
-            # La ficha depende de la respuesta correcta y la persona sorteadas.
-            ficha = ficha_resuelta(caso[0], caso[3], self.sorteo.persona)
+            # La ficha depende de la respuesta correcta sorteada.
+            ficha = ficha_resuelta(caso[0], caso[3])
             self.resultado.update(campos_legales(ficha))
             pruebas = [{"id": pista, "titulo": self.pruebas[pista.removeprefix("pista_")][0],
                         "texto": self.pruebas[pista.removeprefix("pista_")][1]}
@@ -542,7 +532,7 @@ class CampanaCopa(MisionPuente):
                       encargo=self.encargo.publico() if self.fase == "preparacion" else None, obras=list(self.obras),
                       suministros=len(self.depositos), preparados=len(self.decisores(presentes) & self.preparados),
                       balance=list(self.resumen) + ([{"caso": caso[1], **self.resultado}] if self.resultado else []),
-                      estrellas=len(self.acompanante.estrellas), estrellas_total=3 * len(self.casos),
+                      estrellas=len(self.acompanante.estrellas), estrellas_total=ESTRELLAS_TOTALES,
                       tutorial_cargas=[i for i, t in self.acompanante.tutoriales.items() if t["estado"] == "activo" and t["paso"] == 2],
                       sin_prisa=self.ronda == 0, puntos=self.puntos, bono_equipo=self.bono_equipo,
                       proxima_oleada=max(0, 60 - int(self.presion % 60)),

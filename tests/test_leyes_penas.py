@@ -1,4 +1,4 @@
-"""Normas de los 8 casos, cita legal al resolver y diálogos de cada dimensión."""
+"""Normas de los casos, cita legal al resolver y diálogos de cada dimensión."""
 import json
 import os
 import queue
@@ -31,29 +31,21 @@ AGUA_DESCARTAR = {"tipo": "Alarma falsa", "gravedad": 3, "con_delito": True, "le
 ALERTA = {"tipo": "Alerta verificada", "gravedad": 1, "con_delito": False, "ley": "Sin delito",
           "conducta": "Difundir una alerta real y verificada", "sancion": "Ninguna",
           "cita_corta": "Alerta verificada · difundirla no es delito", "estado_normativo": V}
-TORMENTA_DESCARTAR = {"tipo": "Alarma falsa", "gravedad": 3, "con_delito": True, "ley": "Código Penal, art. 355 (Pánico)",
-                      "conducta": "Difundir un simulacro como si fuera una orden real de evacuar",
-                      "sancion": "Multa", "cita_corta": "Pánico, art. 355 CP · multa", "estado_normativo": V}
-POR_RESPUESTA = {"agua": {"descartar": AGUA_DESCARTAR, "difundir": ALERTA},
-                 "tormenta": {"difundir": ALERTA, "descartar": TORMENTA_DESCARTAR}}
+POR_RESPUESTA = {"agua": {"descartar": AGUA_DESCARTAR, "difundir": ALERTA}}
 SIMPLES = {
-    "puente_norte": {"tipo": "Acusación Personal", "gravedad": 4, "con_delito": True, "ley": "Código Penal, art. 220 (Injuria)",
+    "puente_norte": {"tipo": "Rumor Político", "gravedad": 4, "con_delito": True, "ley": "Código Penal, art. 220 (Injuria)",
                      "conducta": "Atribuir a Kael, sin pruebas, haber roto el puente por descuido: una imputación deshonrosa",
                      "sancion": "Prisión de 16 a 54 meses y multa de 13,33 a 1.500 SMLMV",
                      "cita_corta": "Injuria, art. 220 CP · prisión de 16 a 54 meses",
                      "nota": "Si dijeran que lo rompió a propósito, sería calumnia (art. 221): atribuir falsamente un delito.",
                      "estado_normativo": V},
-    "ayuda": {"tipo": "Acusación Personal", "gravedad": 5, "con_delito": True,
-              "ley": "Código Penal, art. 221 (Calumnia); art. 222 (quien la repite); art. 223 (agravante por difusión pública)",
-              "conducta": "Atribuir falsamente a {persona} haberse robado la ayuda y difundirlo en las tablillas",
-              "sancion": "Prisión de 16 a 72 meses y multa de 13,33 a 1.500 SMLMV, aumentada de una sexta parte a la mitad por difusión pública",
-              "cita_corta": "Calumnia, arts. 221 y 223 CP · prisión de 16 a 72 meses, agravada", "estado_normativo": V},
     "presente_video": {"tipo": "Acusación Personal", "gravedad": 6, "con_delito": True,
                        "ley": "Código Penal, art. 221 (Calumnia) y art. 223 (difusión pública)",
                        "conducta": "Atribuir falsamente un delito a Ronaldo con un video editado y difundirlo",
                        "sancion": "Prisión de 16 a 72 meses y multa de 13,33 a 1.500 SMLMV, agravada por difusión pública",
                        "cita_corta": "Calumnia, arts. 221 y 223 CP · prisión de 16 a 72 meses, agravada",
-                       "nota": "Es la misma conducta del rumor de La Copa: cambia la tecnología, no el delito.", "estado_normativo": V},
+                       "nota": "En La Copa, el rumor sobre Kael era injuria; aquí se le atribuye un delito, por eso es calumnia.",
+                       "estado_normativo": V},
     "presente_voz": {"tipo": "Suplantación", "gravedad": 6, "con_delito": True,
                      "ley": "Código Penal, art. 296 (Falsedad personal), modificado por la Ley 2502 de 2025",
                      "conducta": "Suplantar a una persona usando inteligencia artificial (clonar su voz)",
@@ -72,7 +64,7 @@ SIMPLES = {
                        "sancion": "Prisión de 72 a 168 meses, multa de 150 a 1.750 SMLMV e inhabilitación hasta por 3 años",
                        "cita_corta": "Ley 1273/2009, arts. 269B y 269H · prisión de 72 a 168 meses", "estado_normativo": V},
 }
-LOS_OCHO = ("puente_norte", "agua", "tormenta", "ayuda", "presente_video", "presente_voz", "presente_foto", "nucleo_control")
+LOS_CASOS = ("puente_norte", "agua", "presente_video", "presente_voz", "presente_foto", "nucleo_control")
 
 
 def partida(semilla=89):
@@ -104,10 +96,10 @@ class Catalogo(unittest.TestCase):
             self.assertEqual(CATALOGO[caso], esperada, caso)
         for caso, versiones in POR_RESPUESTA.items():
             self.assertEqual(CATALOGO[caso]["por_respuesta"], versiones, caso)
-        self.assertEqual(set(CATALOGO), set(LOS_OCHO))
+        self.assertEqual(set(CATALOGO), set(LOS_CASOS))
 
     def test_conserva_los_campos_que_usa_el_codigo(self):
-        for caso in LOS_OCHO:
+        for caso in LOS_CASOS:
             self.assertLessEqual({"tipo", "gravedad", "ley", "sancion", "estado_normativo"}, set(CATALOGO[caso]), caso)
 
     def test_se_lee_sin_pygame(self):
@@ -128,7 +120,7 @@ class Catalogo(unittest.TestCase):
 
 
 class FichaSegunElCaso(unittest.TestCase):
-    def test_agua_y_tormenta_usan_la_ficha_de_su_respuesta_y_su_gravedad(self):
+    def test_el_agua_usa_la_ficha_de_su_respuesta_y_su_gravedad(self):
         for ronda, nombre in ((1, "agua"),):
             for caso in (CASOS[ronda], VARIANTES[nombre]):
                 with self.subTest(caso=nombre, correcta=caso[3]):
@@ -150,10 +142,10 @@ class FichaSegunElCaso(unittest.TestCase):
         self.assertEqual(ficha_campos["cita_corta"], SIMPLES["presente_foto"]["cita_corta"])
 
     def test_ninguna_ficha_deja_culpables_a_kael_ni_a_mira(self):
-        fichas = [SIMPLES[c] for c in SIMPLES] + [AGUA_DESCARTAR, ALERTA, TORMENTA_DESCARTAR]
+        fichas = [SIMPLES[c] for c in SIMPLES] + [AGUA_DESCARTAR, ALERTA]
         for ficha in fichas:
             for persona in ("Kael", "Mira"):
-                texto = ficha["conducta"].replace("{persona}", persona)
+                texto = ficha["conducta"]
                 if persona in texto:
                     self.assertTrue("falsamente" in texto or "sin pruebas" in texto, texto)
 
@@ -232,8 +224,8 @@ class ExpedienteEInforme(unittest.TestCase):
         self.addCleanup(pygame.quit)
 
     def fichas(self):
-        for caso in LOS_OCHO:
-            yield caso, ficha_resuelta(caso, "descartar" if caso in POR_RESPUESTA else None, "Naira")
+        for caso in LOS_CASOS:
+            yield caso, ficha_resuelta(caso, "descartar" if caso in POR_RESPUESTA else None)
 
     def test_el_detalle_muestra_conducta_ley_sancion_y_nota_sin_salirse(self):
         from interfaz import expediente as tarjeta
@@ -279,7 +271,7 @@ class ExpedienteEInforme(unittest.TestCase):
             finally:
                 v.panel.pequena = originales
 
-    def test_el_informe_exportado_trae_ley_y_sancion_de_los_ocho(self):
+    def test_el_informe_exportado_trae_ley_y_sancion_de_todos_los_casos(self):
         from interfaz.informe_final import exportar
         m = partida().mision
         for orden, (caso, ficha) in enumerate(self.fichas()):
@@ -288,7 +280,7 @@ class ExpedienteEInforme(unittest.TestCase):
         self.assertTrue(all(f["norma"] and f["pena"] for f in informe["casos"]))
         with tempfile.TemporaryDirectory() as carpeta:
             texto = Path(exportar(informe, Path(carpeta))).read_text(encoding="utf-8")
-        presentes = {f["id"] for f in informe["casos"]}  # La Copa ya no tiene tormenta ni ayuda
+        presentes = {f["id"] for f in informe["casos"]}
         for caso, ficha in self.fichas():
             if caso not in presentes:
                 continue
@@ -327,7 +319,7 @@ class ColaDelCliente(unittest.TestCase):
 
 class DialogosPorDimension(unittest.TestCase):
     COPA = r"\b(Kael|Luma|Tarek|Odran|Naira|Darek|Mira(?! primero))\b|\baldea\b|Mensajero de antes|antiguo Mensajero"
-    PRESENTE = r"\b(Darío|Ronaldo|Tomás|Lía|Mateo|Elías)\b"
+    PRESENTE = r"\b(Darío|Ronaldo|Tania|Lía|Mateo|Elías)\b"
     FUTUROS = ("Archivista", "Representante Humano", "Corredor de Datos", "Ciudadano Conectado")
 
     def test_el_presente_y_el_futuro_no_hablan_de_la_copa(self):

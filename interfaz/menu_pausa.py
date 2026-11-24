@@ -33,8 +33,8 @@ CONTROLES = (
     ("I", "Pistas"),
     ("M", "Tu tarea"),
     ("T", "Libro de casos y expediente AVL"),
-    ("Q", "Habilidad de tu rol"),
-    ("B", "Encargo: pedir que un compañero lleve un objeto"),
+    ("Q", "Poder de tu rol (La Copa y Ciudad Núcleo)"),
+    ("B", "Encargo de La Copa: pedir que un compañero lleve un objeto"),
     ("J", "Detalles: tarea, indicadores y teclas"),
     ("H", "Ocultar o mostrar todo el HUD"),
     ("L", "Ocultar o mostrar los nombres"),
@@ -60,28 +60,31 @@ PAGINAS_COMO_JUGAR = (
         "en pareja (un bot ayuda y tú trabajas) y confirma en el caldero. En el primer caso también reparan el Puente 1: "
         "pulsa E tres veces en la zona verde. En el caso del agua, toma cada cesta del cesto (E) y llévala "
         "caminando hasta una familia marcada.",
-        "Pulsa T o el botón Casos del mapa para consultar lo que descubrieron y ordenar el expediente.",
+        "Q: tu poder, una vez por caso tras recoger tu pista. T o el botón Casos: lo descubierto y el expediente.",
         "Son dos casos: el puente norte y el agua. Al terminar, la flecha dorada te lleva al portal.",
     )),
     ("Distrito Conecta", (
-        "Una imagen viral acusa a Ronaldo Vélez. ¿Es real? Aquí la cámara va cerca de tu "
-        "personaje: recorre el mapa para descubrirlo.",
+        "Tres publicaciones virales usan la tecnología para engañar: un video editado, una voz clonada "
+        "y una foto robada. ¿Son reales? Aquí la cámara va cerca de tu personaje: recorre el mapa para descubrirlo.",
         "1. Para viajar, ve al portal de La Copa y pulsa E. Cada persona del equipo debe "
         "aceptar junto al portal; los bots viajan con ustedes.",
-        "2. Habla con las personas marcadas (E) hasta reunir las tres pistas: Darío Veraz, "
-        "Tomás Red y Ronaldo Vélez.",
-        "3. Tu celular (C) guarda las pistas. Junto a la pantalla pública decidan en él: Verificar, "
-        "Denunciar, Ignorar o Publicar. Las pistas, el análisis y la decisión les tocan a las personas; los bots las acompañan.",
+        "2. Habla con las personas marcadas (E) hasta reunir las pistas del caso. Cada caso tiene las suyas "
+        "y quien las tiene aparece marcado en el mapa.",
+        "3. Tu celular (C) guarda las pistas. Junto a la pantalla pública decidan en él: Publicar, "
+        "Verificar, Denunciar o Ignorar. Las pistas, el análisis y la decisión les tocan a las personas; los bots las acompañan.",
         "4. Clasifica la publicación. Si la dejaron pendiente, pueden volver a decidir.",
+        "En esta era Q no tiene poder: todo se hace hablando (E) y con el celular.",
         "Usa el portal para volver a La Copa. Los indicadores viajan contigo.",
     )),
     ("Ciudad Núcleo", (
         "Ciudad Núcleo es la época del futuro.",
         "1. Restaura las conexiones en la terminal marcada.",
         "2. Habla con el Archivista y revisa las firmas de los registros.",
-        "3. Lleva la llave del Corredor de Datos al Centro de Verificación.",
+        "3. Lleva la llave del Corredor de Datos al Centro de Supervisión.",
         "4. Ayuda al Ciudadano Conectado a investigar las cuentas.",
         "5. Habla con el Representante Humano. Decidan en la pantalla central.",
+        "Q: cada rol tiene un poder en esta era: Lupa de Memoria, Impulso del Viento, Voz Comunitaria "
+        "o Comunicado Público. Se usa una vez.",
     )),
 )
 
@@ -412,7 +415,7 @@ class MenuPausa:
         menu = self.menu
         tarjetas = (("WASD", "Caminar", "Flechas también"), ("E", "Hablar / usar", "Junto a la señal"),
                     ("SHIFT", "Correr", "Mientras caminas"), ("I", "Leer y compartir", "Tus pistas"),
-                    ("C", "Abrir el celular", "Presente y Futuro"), ("Q", "Usar tu poder", "Según tu rol"),
+                    ("C", "Abrir el celular", "Presente y Futuro"), ("Q", "Usar tu poder", "La Copa y Ciudad Núcleo"),
                     ("T", "Libro de casos", "Lo que descubrieron"), ("ESC", "Cerrar / pausa", "F1: ayuda · F2 F2: ir al final"))
         for i, (tecla, nombre, detalle) in enumerate(tarjetas):
             rect = pygame.Rect(125 + i % 2 * 365, 165 + i // 2 * 96, 345, 84)

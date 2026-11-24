@@ -13,7 +13,7 @@ RECONFIGURACION = (
     ("NÚCLEO", "Antes de actuar, preguntaré. Antes de compartir, verificaré."))
 EPILOGOS = (("futuro", "Ciudad Núcleo: caen las barreras. Cada pantalla muestra su fuente."),
             ("presente", "Distrito Conecta: lo verificado se distingue. Ronaldo Vélez recupera su nombre."),
-            ("la_copa", "La Copa: el puente sigue en pie y el Consejo vuelve a reunirse."))
+            ("la_copa", "La Copa: el puente reparado vuelve a unir la aldea y el Consejo vuelve a reunirse."))
 CIERRE = "Lo que empezó como un rumor cambió a toda una comunidad."
 
 

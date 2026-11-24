@@ -99,7 +99,7 @@ class Desplazamiento(unittest.TestCase):
         from interfaz.partida_multijugador import VistaPartida
         from multijugador.expediente import ficha_resuelta
         p = partida()
-        for orden, caso in enumerate(("puente_norte", "agua", "tormenta", "ayuda", "presente_video", "presente_voz", "presente_foto", "nucleo_control")):
+        for orden, caso in enumerate(("puente_norte", "agua", "presente_video", "presente_voz", "presente_foto", "nucleo_control")):
             p.mision.expediente.registrar(caso, "Caso " + caso, dict(opcion="corregir", correcto=True, evento_id=orden), [], ficha_resuelta(caso, "descartar"))
         self.v = VistaPartida("0", {"mundo": p.estado("0")})
         self.panel = self.v.panel

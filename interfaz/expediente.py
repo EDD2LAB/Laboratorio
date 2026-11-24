@@ -4,6 +4,7 @@ import time
 
 from interfaz.arbol_expediente import (AnimacionAVL, RADIO, aprendizaje,
                                        dimension_caso, etiqueta_decision)
+from multijugador.presentacion import numero_en_letras, total_casos
 from nucleo.recursos import envolver_texto
 
 ORO = (237, 185, 87)
@@ -12,6 +13,44 @@ VERDE = (130, 222, 158)
 DETALLE = pygame.Rect(495, 130, 390, 320)
 ERAS = {"la_copa": "La Copa", "presente": "Distrito Conecta", "futuro": "Ciudad Núcleo"}
 COLORES_ERAS = {"la_copa": VERDE, "presente": (130, 207, 237), "futuro": (203, 175, 246)}
+
+
+# Arte del libro (Imagenes/Expediente). Se carga una sola vez, al dibujar por
+# primera vez (nunca al importar); si falta un archivo se dibuja como antes.
+MEDALLONES = {"normal": "MedallonNormal.png", "nuevo": "MedallonNuevo.png",
+              "pendiente": "MedallonPendiente.png", "seleccionado": "MedallonSeleccionado.png"}
+DIAMETRO_MEDALLON = 2 * RADIO + 6  # parte visible de la moneda, sin brillo
+VISIBLE_MEDALLON = 97  # px de moneda en MedallonNormal.png (133 x 133)
+SELLO_NODO, SELLO_DETALLE = 20, 54
+_ARTE = None
+
+
+def _escalar(imagen, factor):
+    return pygame.transform.scale(imagen, (max(1, round(imagen.get_width() * factor)),
+                                           max(1, round(imagen.get_height() * factor))))
+
+
+def arte_expediente():
+    global _ARTE
+    if _ARTE is None:
+        from nucleo.recursos import cargar_imagen
+        _ARTE = {"medallones": {}, "sellos": {}}
+        for clave, archivo in MEDALLONES.items():
+            imagen = cargar_imagen("Expediente/" + archivo, requerido=False)
+            if imagen is not None:
+                _ARTE["medallones"][clave] = _escalar(imagen, DIAMETRO_MEDALLON / VISIBLE_MEDALLON)
+        for clave, archivo in (("correcto", "sello_correcto.png"), ("error", "sello_error.png")):
+            imagen = cargar_imagen("Expediente/" + archivo, requerido=False)
+            if imagen is not None:
+                imagen = imagen.subsurface(imagen.get_bounding_rect(min_alpha=40)).copy()
+                _ARTE["sellos"][clave] = {tam: pygame.transform.scale(imagen, (tam, tam)) for tam in (SELLO_NODO, SELLO_DETALLE)}
+    return _ARTE
+
+
+def _sello(caso, tamano):
+    correcto = ((caso.get("datos") or {}).get("resultado") or {}).get("correcto")
+    sellos = arte_expediente()["sellos"].get("correcto" if correcto else "error")
+    return sellos[tamano] if sellos else None
 
 
 def _casos(nodo):
@@ -86,7 +125,8 @@ def dibujar(panel, superficie):
     pygame.draw.rect(superficie, (13, 35, 28), (20, 20, 920, 680), border_radius=14)
     pygame.draw.rect(superficie, ORO, (20, 20, 920, 680), 2, border_radius=14)
     panel.texto_lineas(superficie, "EL LIBRO DE LOS CASOS", 50, 40, 850, panel.encabezado)
-    panel.texto_lineas(superficie, "T: abrir o cerrar · Ocho casos, tres eras, un libro del equipo.", 50, 78, 850, panel.pequena)
+    panel.texto_lineas(superficie, f"T: abrir o cerrar · {numero_en_letras(total_casos())} casos, tres eras, un libro del equipo.",
+                       50, 78, 850, panel.pequena)
     for i, (era, nombre) in enumerate((("la_copa", "La Copa"), ("presente", "Conecta"), ("futuro", "Núcleo"))):
         x = 65 + i * 130
         pygame.draw.circle(superficie, COLORES_ERAS[era], (x, 131), 5)
@@ -108,21 +148,36 @@ def dibujar(panel, superficie):
                 pygame.draw.line(superficie, (135, 161, 130), puntos[nodo["id"]], puntos[hijo["id"]], 2)
                 dibujar_ramas(hijo)
     dibujar_ramas(forma)
+    medallones = arte_expediente()["medallones"]
+    nuevo = max(casos.values(), key=lambda c: c["orden"])["id"] if casos else None
     for clave, (x, y) in puntos.items():
         caso = casos.get(clave)
         if not caso:
             continue
-        color = ORO if clave == estado.get("comparar_con") else COLORES_ERAS[dimension_caso(caso)]
-        pygame.draw.circle(superficie, color, (round(x), round(y)), RADIO)
-        if clave == getattr(panel, "caso_expediente", None):
-            pygame.draw.circle(superficie, CREMA, (round(x), round(y)), RADIO + 4, 2)
+        centro = (round(x), round(y))
+        seleccionado = clave == getattr(panel, "caso_expediente", None)
+        estado_nodo = ("seleccionado" if seleccionado else "pendiente" if clave == estado.get("comparar_con")
+                       else "nuevo" if clave == nuevo else "normal")
+        medallon = medallones.get(estado_nodo)
+        if medallon is not None:
+            # El anillo conserva el color de la era; la moneda dice el estado del nodo.
+            pygame.draw.circle(superficie, COLORES_ERAS[dimension_caso(caso)], centro, RADIO + 6, 2)
+            superficie.blit(medallon, medallon.get_rect(center=centro))
+        else:
+            color = ORO if clave == estado.get("comparar_con") else COLORES_ERAS[dimension_caso(caso)]
+            pygame.draw.circle(superficie, color, centro, RADIO)
+            if seleccionado:
+                pygame.draw.circle(superficie, CREMA, centro, RADIO + 4, 2)
+        sello = _sello(caso, SELLO_NODO)
+        if sello is not None:
+            superficie.blit(sello, sello.get_rect(center=(centro[0] + RADIO, centro[1] - RADIO)))
         etiqueta = panel.fuente.render(str(caso["gravedad"]), True, (13, 35, 28))
         superficie.blit(etiqueta, etiqueta.get_rect(center=(round(x), round(y))))
         orden = panel.pequena.render(str(caso["orden"] + 1), True, CREMA)
         superficie.blit(orden, orden.get_rect(midtop=(round(x), round(y + 22))))
         if not animando:
             panel.nodos_expediente[clave] = pygame.Rect(round(x) - 22, round(y) - 22, 44, 44)
-    panel.texto_lineas(superficie, "Pulsa un círculo para leer su caso.", 50, 425, 400, panel.pequena)
+    panel.texto_lineas(superficie, "Pulsa un medallón para leer su caso.", 50, 425, 400, panel.pequena)
     panel.texto_lineas(superficie, "Grande: gravedad (1 a 9). Debajo: orden del caso. Izquierda: menor; derecha: mayor.", 50, 458, 400, panel.pequena)
     if aviso:
         panel.texto_lineas(superficie, aviso, 50, 515, 400, panel.pequena, ORO)
@@ -131,6 +186,9 @@ def dibujar(panel, superficie):
     pendiente = estado.get("pendiente")
     detalle = detalle_actual(panel, estado, casos)
     if detalle:
+        sello = None if detalle.get("detalle_remoto") else _sello(detalle, SELLO_DETALLE)
+        if sello is not None and detalle is not pendiente:
+            superficie.blit(sello, sello.get_rect(center=(890, 62)))
         lineas, ver_pruebas = lineas_detalle(panel, detalle)
         clave = (detalle["id"], ver_pruebas, getattr(panel, "prueba_expediente", 0))
         if getattr(panel, "expediente_lectura", None) != clave:
@@ -163,7 +221,8 @@ def dibujar(panel, superficie):
         panel.texto_lineas(superficie, "Resuelvan el primer caso. Aquí guardaremos lo que descubran.", 495, 150, 390)
     if pendiente:
         panel.texto_lineas(superficie, "Por guardar: " + pendiente["titulo"] + " · gravedad " + str(pendiente["gravedad"]), 50, 560, 850, panel.pequena)
-        panel.texto_lineas(superficie, "Compara con el círculo dorado. Si empatan, el más nuevo va a la derecha.", 50, 594, 850, panel.pequena)
+        marca = "el medallón gris" if "pendiente" in arte_expediente()["medallones"] else "el círculo dorado"
+        panel.texto_lineas(superficie, f"Compara con {marca}. Si empatan, el más nuevo va a la derecha.", 50, 594, 850, panel.pequena)
         panel.boton(superficie, "expediente:izquierda", "Izquierda", 210, 655, 230, activo=not animando)
         panel.boton(superficie, "expediente:derecha", "Derecha", 490, 655, 230, activo=not animando)
     panel.boton(superficie, "expediente_cerrar", "Cerrar · T", 790, 655, 230)

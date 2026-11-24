@@ -9,7 +9,7 @@ import pygame
 from interfaz import analisis_manipulado as analisis, terminal_nucleo
 from interfaz.arte import icono
 from interfaz.boton import Boton
-from multijugador.presentacion import ORDEN_INDICADORES, POLARIDAD, cambio_favorable, texto_cambio
+from multijugador.presentacion import ETIQUETAS, ORDEN_INDICADORES, POLARIDAD, cambio_favorable, texto_cambio
 from nucleo.recursos import cargar_imagen, cargar_spritesheet_frames, envolver_texto
 
 TINTA = (31, 49, 62)
@@ -46,6 +46,11 @@ OPCIONES = {
     "reportar": ("Denunciar", pygame.Rect(345, 595, 130, 71), "Iconos/Nuevos/icono_sancion.png", None),
     "dejar_pendiente": ("Ignorar", pygame.Rect(488, 595, 130, 71), "Iconos/Nuevos/icono_tiempo.png", None),
 }
+
+# Cápsula de cada decisión (Imagenes/Pociones): la "poción" de las eras digitales.
+CAPSULAS = {"compartir": "colgar-capsula.png", "verificar": "Verificar-capsula.png",
+            "reportar": "Denunciar-capsula.png", "dejar_pendiente": "ignorar-capsula.png"}
+ALTO_CAPSULA, ALTO_CAPSULA_VOTO = 84, 40
 
 
 def nombre_opcion(clave):
@@ -121,6 +126,14 @@ class ArteCelular:
                 factor = min(100 / imagen.get_width(), 84 / imagen.get_height())
                 self.iconos[clave] = pygame.transform.scale(
                     imagen, (round(imagen.get_width() * factor), round(imagen.get_height() * factor)))
+        self.capsulas, self.capsulas_voto = {}, {}
+        for clave, archivo in CAPSULAS.items():
+            capsula = cargar_imagen("Pociones/" + archivo, requerido=False)
+            if capsula is None:
+                continue
+            capsula = capsula.subsurface(capsula.get_bounding_rect(min_alpha=40))
+            for destino, alto in ((self.capsulas, ALTO_CAPSULA), (self.capsulas_voto, ALTO_CAPSULA_VOTO)):
+                destino[clave] = pygame.transform.scale(capsula, (max(1, round(capsula.get_width() * alto / capsula.get_height())), alto))
         self.efectos = EfectosCelular({
             nombre: cargar_spritesheet_frames(f"Estados/fx_{nombre}_8f_1024x128.png", 8) for nombre in EFECTOS})
         self.pistas_vistas = 0
@@ -347,9 +360,13 @@ def _decidir(panel, superficie, contexto, arte):
             superficie.blit(velo, zona)
         if voto == clave:
             pygame.draw.rect(superficie, ORO, zona.inflate(6, 6), 3, border_radius=13)
+            capsula = getattr(arte, "capsulas_voto", {}).get(clave)
+            if capsula is not None:  # tu elección, con la cápsula de esa decisión
+                superficie.blit(capsula, capsula.get_rect(midbottom=(zona.right - 6, zona.top + 14)))
     from interfaz.orientacion import aviso_analisis, datos_votacion
     aviso = aviso_analisis(contexto)
-    estado_votos = datos_votacion(contexto, panel.vista.estado.get("mundo", {}).get("jugadores", []), panel.vista.identificador)
+    estado_votos = datos_votacion(contexto, panel.vista.estado.get("mundo", {}).get("jugadores", []), panel.vista.identificador,
+                                  panel.dimension)
     _comentarios(panel, superficie, aviso or apuntada or falta or estado_votos,
                  (apuntada or falta or estado_votos) if aviso else ("Tu elección: " + nombre_opcion(voto) if voto else estado_votos))
 
@@ -357,7 +374,8 @@ def _decidir(panel, superficie, contexto, arte):
 def _resultado(panel, superficie, contexto, arte):
     resultado = contexto.get("resultado") or {}
     _perfil(panel, superficie, "Consecuencia")
-    _imagen(superficie, arte.iconos.get(resultado.get("opcion")), arte)
+    opcion = resultado.get("opcion")
+    _imagen(superficie, getattr(arte, "capsulas", {}).get(opcion) or arte.iconos.get(opcion), arte)
     y = _texto(panel, superficie, resultado.get("texto", ""), TEXTO_X, TEXTO_Y)
     columna = 0
     for nombre in ORDEN_INDICADORES:
@@ -365,7 +383,7 @@ def _resultado(panel, superficie, contexto, arte):
         if not cambio or nombre not in POLARIDAD:
             continue
         color = FAVORABLE if cambio_favorable(nombre, cambio) else DESFAVORABLE
-        render = panel.pequena.render(texto_cambio(nombre, cambio, "presente"), True, color)
+        render = panel.pequena.render(texto_cambio(nombre, cambio, panel.dimension), True, color)
         superficie.blit(render, (TEXTO_X, y + 6 + columna * 20))
         columna += 1
     propia = panel.clasificacion_propia()
@@ -417,7 +435,8 @@ def _clasificado(panel, superficie, contexto, arte):
     y = _texto(panel, superficie, "En realidad era: " + str(propia["categoria"][-1]), TEXTO_X, y + 6, panel.pequena, TINTA)
     _texto(panel, superficie, (contexto.get("resultado") or {}).get("texto", ""), TEXTO_X, y + 6)
     sabiduria = propia.get("efectos", {}).get("sabiduria", 0)
-    _alcance(panel, superficie, f"Alfabetización digital {'+' if sabiduria > 0 else ''}{sabiduria}")
+    etiqueta = ETIQUETAS.get(panel.dimension, ETIQUETAS["presente"])["sabiduria"]
+    _alcance(panel, superficie, f"{etiqueta} {'+' if sabiduria > 0 else ''}{sabiduria}")
     _comentarios(panel, superficie, "Haz clic para continuar.")
 
 

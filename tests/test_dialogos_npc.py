@@ -219,7 +219,7 @@ class Ventana(unittest.TestCase):
         self.vista._cargar_dimension(PRESENTE)
         escena = self.vista.escenas_zoom[PRESENTE]
         con_animacion = {o["personaje"] for o in escena["decoraciones"] if o.get("cuadros_hablando")}
-        self.assertLessEqual({"Darío Veraz", "Lía Nova", "Ronaldo Vélez", "Tomás Red", "Mateo Ríos"}, con_animacion)
+        self.assertLessEqual({"Darío Veraz", "Lía Nova", "Ronaldo Vélez", "Tania Red", "Mateo Ríos"}, con_animacion)
 
 
 if __name__ == "__main__":

@@ -62,8 +62,8 @@ class RegistroTests(unittest.TestCase):
     def test_ruta_validada_version_y_turno_compartido(self):
         e = ExpedientePartida()
         self.registrar(e, "puente_norte")  # gravedad 4
-        self.registrar(e, "ayuda")  # gravedad 5: va a la derecha
-        datos = dict(caso="ayuda", revision=e.revision, paso=0, direccion="izquierda")
+        self.registrar(e, "presente_video")  # gravedad 6: va a la derecha
+        datos = dict(caso="presente_video", revision=e.revision, paso=0, direccion="izquierda")
         with self.assertRaises(ValueError):
             e.paso_insercion(datos)
         self.assertEqual(e.paso, 0)
@@ -86,7 +86,8 @@ class RegistroTests(unittest.TestCase):
 
     def test_cola_completa_y_rotaciones_sin_revelar_ruta(self):
         e = ExpedientePartida()
-        for evento in ("puente_norte", "agua", "tormenta", "ayuda"):
+        # Gravedades 4, 3, 6, 7 y 9: la última inserción obliga a rotar.
+        for evento in ("puente_norte", "agua", "presente_video", "presente_foto", "nucleo_control"):
             self.registrar(e, evento)
         while e.pendientes:
             caso = e.pendientes[0]
@@ -95,7 +96,7 @@ class RegistroTests(unittest.TestCase):
             self.assertNotIn("direccion", estado)
             e.paso_insercion(dict(caso=caso.id, revision=e.revision, paso=e.paso,
                                  direccion=ruta[e.paso]["direccion"]))
-        self.assertEqual(e.publico()["total"], 4)
+        self.assertEqual(e.publico()["total"], 5)
         AVLTests().verificar(e.arbol)
 
 
@@ -139,17 +140,17 @@ class IntegracionTests(unittest.TestCase):
     def test_solicitud_repetida_y_desconexion(self):
         p = self.crear()
         e = p.mision.expediente
-        for evento in ("puente_norte", "ayuda"):
+        for evento in ("puente_norte", "presente_video"):
             e.registrar(evento, evento, {"evento_id": evento}, [])
         solicitud = dict(accion="expediente_paso", id_solicitud=uuid.uuid4().hex,
-                         caso="ayuda", revision=1, paso=0, direccion="derecha")
+                         caso="presente_video", revision=1, paso=0, direccion="derecha")
         a = p.actuar("a", solicitud, 0)
         self.assertTrue(a["ok"])
         self.assertEqual(a, p.actuar("a", solicitud, 0))
         self.assertEqual(len(e.arbol.casos), 2)
-        e.registrar("tormenta", "Tormenta", {"evento_id": 3}, [])
+        e.registrar("presente_voz", "La nota de voz", {"evento_id": 3}, [])
         p.conectados.discard("b")
-        solicitud.update(id_solicitud=uuid.uuid4().hex, caso="tormenta", revision=e.revision, paso=0)
+        solicitud.update(id_solicitud=uuid.uuid4().hex, caso="presente_voz", revision=e.revision, paso=0)
         self.assertFalse(p.actuar("b", solicitud, 0)["ok"])
 
     def test_aviso_temporal_caduca_no_se_rejuvenece_al_compartir_y_se_renueva_en_fuente(self):

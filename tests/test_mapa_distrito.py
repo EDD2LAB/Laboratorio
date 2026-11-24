@@ -73,9 +73,9 @@ class SinDobles(unittest.TestCase):
 
     def test_sin_jugador_espera_dentro_de_su_edificio(self):
         p = partida(("guardian",))
-        tomas = next(n for n in p.mision.dialogos.publico() if n["nombre"] == "Tomás Red")
-        self.assertEqual(tomas["interior"], "estacion_mensajero")
-        self.assertNotIn("jugador", tomas)
+        tania = next(n for n in p.mision.dialogos.publico() if n["nombre"] == "Tania Red")
+        self.assertEqual(tania["interior"], "estacion_mensajero")
+        self.assertNotIn("jugador", tania)
 
     def test_en_el_futuro_el_personaje_jugado_no_tiene_doble(self):
         p = PartidaMovimiento([dict(id="0", nombre="A", rol="aspirante")], 0)

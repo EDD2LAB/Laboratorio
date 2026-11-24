@@ -306,7 +306,7 @@ class PortalTests(unittest.TestCase):
             ahora += .15
             p.actualizar(ahora)
             gestor.actualizar(ahora, .15)
-        # Tomás y Ronaldo son bots: guardan su pista y esperan en su edificio.
+        # Tania y Ronaldo son bots: guardan su pista y esperan en su edificio.
         self.assertEqual(p.mision.presente.halladas, {})
         self.assertEqual(p.jugadores["bot_habitante"]["interior"], "estacion_mensajero")
         self.assertEqual(p.jugadores["bot_aspirante"]["interior"], "sede_aspirante")

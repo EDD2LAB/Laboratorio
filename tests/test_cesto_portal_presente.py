@@ -147,7 +147,7 @@ class EventosDelPresente(ConPantalla):
         resultado = {"opcion": "verificar", "correcto": True, "texto": "T", "efectos": {"sabiduria": 5}}
         clasificacion = {"opcion": "Generado con IA", "correcta": True, "efectos": {"sabiduria": 8},
                          "categoria": ["Tablilla", "Contenido Digital", "Generado con IA"]}
-        pista = {"id": "p", "titulo": "Tomás Red · Testimonio", "texto": "T"}
+        pista = {"id": "p", "titulo": "Tania Red · Testimonio", "texto": "T"}
         for modo in ("introduccion", "inventario", "fuente", "caldero", "resultado", "clasificar", "clasificacion_resultado"):
             with self.subTest(modo=modo):
                 botones = self.dibujar(modo, {"resultado": resultado}, {"inventario": [pista], "clasificacion": clasificacion})
@@ -185,7 +185,7 @@ class EventosDelPresente(ConPantalla):
         from interfaz.celular import equipo_distrito
         self.assertEqual(equipo_distrito(self.vista.panel, incluir_yo=True), ["Elías Vega", "Mateo Ríos"])
         self.assertEqual(equipo_distrito(self.vista.panel), ["Mateo Ríos"])
-        self.dibujar("inventario", privado={"inventario": [{"id": "p", "titulo": "Tomás Red · Testimonio", "texto": "T"}]})
+        self.dibujar("inventario", privado={"inventario": [{"id": "p", "titulo": "Tania Red · Testimonio", "texto": "T"}]})
         self.assertNotIn("entregar", self.vista.panel.botones)  # todo el equipo ya la ve
 
 

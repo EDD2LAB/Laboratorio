@@ -9,11 +9,6 @@ CATEGORIA_EVENTO = {
     "puente_norte": ("Rumor Politico", "Sobre un Aspirante"),
     # Agua del depósito (aviso viejo o vigente): servicio comunitario.
     "agua": ("Aviso Comunitario", "Recursos y servicios"),
-    # Alerta (o simulacro) de tormenta: el tema es el clima.
-    "tormenta": ("Suceso Natural", "Clima"),
-    # "Mira se quedó con la ayuda": acusación a una persona concreta difundida
-    # por vecinos ("dicen que..."), por eso Entre Habitantes.
-    "ayuda": ("Acusacion Personal", "Entre Habitantes"),
     # Distrito Conecta: un video real editado, una voz clonada y una cara usurpada.
     "presente_video": ("Contenido Digital", "Contenido manipulado"),
     "presente_voz": ("Contenido Digital", "Suplantacion"),

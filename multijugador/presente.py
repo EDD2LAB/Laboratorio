@@ -50,7 +50,7 @@ EVENTOS = (
             # pista, personaje, edificio donde está, título, texto.
             ("fuente_ausente", "Darío Veraz", "centro_verificacion", "Fuente original",
              "Encontré el video original: Ronaldo mete monedas en la caja. Ya pueden compararlo en Analizar."),
-            ("testimonio_y_contexto", "Tomás Red", "estacion_mensajero", "Testimonio y contexto",
+            ("testimonio_y_contexto", "Tania Red", "estacion_mensajero", "Testimonio y contexto",
              "El testigo no presenció el hecho ni conoce quién subió el archivo."),
             ("respuesta_kael", "Ronaldo Vélez", "sede_aspirante", "Agenda de Ronaldo",
              "La agenda de Ronaldo confirma que ese día hizo una donación pública."),
@@ -86,7 +86,7 @@ EVENTOS = (
         "id": "presente_foto", "tipo": "foto", "marcas": "foto_manipulada", "minimo": 3,
         "etiqueta": "contenido_manipulado", "sello": "manipulado",
         "titulo": "La foto del perfil falso",
-        "noticia": "Un perfil con la cara de la Habitante conectada publica insultos y pide dinero a sus seguidores.",
+        "noticia": "Un perfil con la cara de Tania Red publica insultos y pide dinero a sus seguidores.",
         "pistas": (
             ("foto_original", "Elías Vega", "cafe_digital", "Foto original",
              "Esa selfie se tomó aquí, en el Café Digital. Tenemos la foto original para compararla."),

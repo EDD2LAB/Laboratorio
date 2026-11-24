@@ -8,10 +8,18 @@ import pygame
 from interfaz.boton import Boton
 from interfaz.etiquetas_jugadores import colocar_etiquetas
 
+from multijugador.campana import ESTRELLAS_TOTALES
 from multijugador.movimiento import ColisionesMapa
 from multijugador.dimensiones_red import FUTURO, LA_COPA, PRESENTE
 from multijugador.protocolo import ROLES
 from multijugador.reparacion import CONFIGURACION as _CONFIG_REPARACION
+
+# Qué se puede usar con E en cada era, cuando no hay nada cerca.
+AVISO_SIN_OBJETIVO = {
+    "la_copa": "Acércate a una fuente, al caldero, al portal o a otro jugador para pulsar E.",
+    "presente": "Acércate a una persona, a una puerta, a la pantalla pública, al portal o a otro jugador para pulsar E.",
+    "futuro": "Acércate a una persona, a una terminal, a la pantalla central, al portal o a otro jugador para pulsar E.",
+}
 
 CONFIG_REPARACION_MS = _CONFIG_REPARACION["duracion_animacion_ms"]
 
@@ -909,10 +917,11 @@ class VistaPartida:
         if (self.final_visto or caso.get("fase") != "final" or not (caso.get("presente") or {}).get("fin")
                 or not (caso.get("futuro") or {}).get("fin")):
             return
-        from interfaz.finales import PantallaFinal
+        from interfaz.finales import PantallaFinal, lider_de
         self.final_visto = True
         self.pantalla_final = PantallaFinal(caso.get("indicadores", {}), self.etiquetas.get(self.dimension, self.etiquetas[LA_COPA]),
-                                            self.escenas.r["fuente_resultado"], self.titulo)
+                                            self.escenas.r["fuente_resultado"], self.titulo,
+                                            lider=lider_de(self.estado.get("mundo", {}).get("jugadores", [])))
 
     def manejar_evento(self, evento, posicion, cliente):
         if self.pantalla_final is not None:
@@ -1003,7 +1012,7 @@ class VistaPartida:
                     else:
                         cliente.actuar("interactuar", objetivo=self.seleccion)
                 else:
-                    self.panel.notificar("Acércate a una fuente, al caldero, al portal o a otro jugador para pulsar E.")
+                    self.panel.notificar(AVISO_SIN_OBJETIVO.get(self.dimension, AVISO_SIN_OBJETIVO[LA_COPA]))
             return True
         return False
 
@@ -1650,11 +1659,9 @@ class VistaPartida:
                     self.adornos.marcador_local(superficie, (x, tope - 6), color, ahora_ms)
                 continue
             nombre = datos["nombre"] + (" (tú)" if datos["id"] == self.identificador else "")
-            if datos.get("controlador") == "bot" and self.dimension != LA_COPA:
-                from mundo.personajes import PERSONAJES_DISTRITO, PERSONAJES_FUTURO
-                nombre = "Bot · " + (PERSONAJES_FUTURO if self.dimension == FUTURO else PERSONAJES_DISTRITO)[datos["rol"]][0]
-            elif datos.get("controlador") == "bot":
-                nombre = "Bot · " + nombre.split(" · ", 1)[0]
+            if datos.get("controlador") == "bot":
+                from multijugador.dialogos import nombre_visible
+                nombre = nombre_visible(datos, self.dimension)
             if self.objetivo_resaltado and self.objetivo_resaltado["tipo"] == "jugador" \
                     and self.objetivo_resaltado["clave"] == datos["id"]:
                 from interfaz.resaltado import DORADO
@@ -1747,7 +1754,7 @@ class VistaPartida:
         # Arriba a la derecha: estrellas, reloj y poder.
         self._pastilla(superficie, pygame.Rect(762, 10, 186, 38))
         estrella(superficie, (782, 29), 9, (255, 215, 90))
-        estrellas = self.fuente.render(f"{caso.get('estrellas', 0)}/{caso.get('estrellas_total', 11)}", True, (255, 243, 210))
+        estrellas = self.fuente.render(f"{caso.get('estrellas', 0)}/{caso.get('estrellas_total', ESTRELLAS_TOTALES)}", True, (255, 243, 210))
         superficie.blit(estrellas, estrellas.get_rect(midleft=(796, 29)))
         if self.dimension == LA_COPA and not caso.get("sin_prisa"):
             arte_tiempo = self.arte.tiempo
@@ -1756,11 +1763,12 @@ class VistaPartida:
             segundos = self.fuente.render(f"{caso.get('proxima_oleada', 60)}s", True, (237, 185, 87))
             superficie.blit(segundos, segundos.get_rect(midleft=(864, 29)))
         rol = (self.yo() or {}).get("rol")
-        if self.dimension == LA_COPA and rol:
-            iconos = self.arte.poder_usado if privado.get("habilidad_usada") else self.arte.poder_listo
+        poder = self._poder(privado, rol)
+        if poder:
+            iconos = self.arte.poder_usado if poder["usado"] else self.arte.poder_listo
             if iconos.get(rol) is not None:
                 superficie.blit(iconos[rol], iconos[rol].get_rect(center=(928, 29)))
-            barra = self.arte.barra_recarga[self._estado_recarga(privado, rol)]
+            barra = self.arte.barra_recarga[poder["recarga"]]
             if barra is not None:
                 superficie.blit(barra, barra.get_rect(center=(915, 58)))
         if not self.mostrar_detalles:
@@ -1785,7 +1793,10 @@ class VistaPartida:
             }
             if (caso.get("puente") or {}).get("estado") in estados_puente:
                 derecha.append(estados_puente[caso["puente"]["estado"]])
-        for indice, linea in enumerate(derecha[:3]):
+        poder = self._poder(privado, (self.yo() or {}).get("rol"))
+        if poder:
+            derecha.append(f"Poder (Q): {poder['nombre']} · {'usado' if poder['usado'] else 'listo'}")
+        for indice, linea in enumerate(derecha[:4]):
             superficie.blit(self.hud.fuente.render(linea, True, (237, 185, 87)), (368, 112 + indice * 15))
         if not self.panel.activo:
             if self.dimension == LA_COPA:
@@ -1800,6 +1811,19 @@ class VistaPartida:
             self.hud.dibujar(superficie, 18, 176)
             self._texto_pastilla(superficie, "Shift: correr | E: ayudar | I: pistas | M: tarea | T: casos | Q: poder | H: HUD | L: nombres",
                                  self.hud.fuente, bottomleft=(22, 672))
+
+    def _poder(self, privado, rol):
+        """Nombre y estado del poder (Q) de la era actual; en Distrito Conecta no hay."""
+        if not rol:
+            return None
+        if self.dimension == LA_COPA:
+            return {"nombre": privado.get("habilidad", "Poder"), "usado": bool(privado.get("habilidad_usada")),
+                    "recarga": self._estado_recarga(privado, rol)}
+        if self.dimension == FUTURO:
+            from multijugador.nucleo import HABILIDADES_FUTURO
+            usado = bool((privado.get("futuro") or {}).get("habilidad_usada"))
+            return {"nombre": HABILIDADES_FUTURO[rol][0], "usado": usado, "recarga": "vacia" if usado else "llena"}
+        return None
 
     @staticmethod
     def _estado_recarga(privado, rol):

@@ -28,6 +28,18 @@ def titulo_era(dimension, nombre):
     return f"{ERAS[dimension]}: {nombre}"
 
 
+def total_casos():
+    """Casos de las tres eras, contados desde sus datos (hoy 2 + 3 + 1)."""
+    from .campana import CASOS
+    from .presente import EVENTOS
+    return len(CASOS) + len(EVENTOS) + 1  # Ciudad Núcleo tiene un solo caso (nucleo.CASO)
+
+
+def numero_en_letras(numero):
+    return {1: "Un", 2: "Dos", 3: "Tres", 4: "Cuatro", 5: "Cinco", 6: "Seis", 7: "Siete", 8: "Ocho",
+            9: "Nueve", 10: "Diez"}.get(numero, str(numero))
+
+
 TIPOS_POCION = ("colgar", "consultar", "quemar", "ignorar")
 
 # Clasificación de cada opción concreta en uno de los 4 tipos del modo de un
@@ -88,6 +100,13 @@ ETIQUETAS = {
         "confianza": "Confianza pública",
         "armonia": "Convivencia digital",
         "susurros_falsos": "Contenido viral dudoso",
+        "desinformacion": "Desinformación",
+    },
+    "futuro": {
+        "sabiduria": "Pensamiento crítico",
+        "confianza": "Supervisión humana",
+        "armonia": "Convivencia",
+        "susurros_falsos": "Cuentas automáticas",
         "desinformacion": "Desinformación",
     },
 }

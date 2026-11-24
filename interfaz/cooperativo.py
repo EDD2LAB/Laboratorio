@@ -7,6 +7,7 @@ from interfaz import analisis_manipulado, celular, dialogo_npc, informe_final, t
 from interfaz.arte import dibujar_icono, expresion
 from interfaz.boton import Boton
 from interfaz.suministros import dibujar_carga
+from multijugador.campana import ESTRELLAS_TOTALES
 from multijugador.mision import ORDENES_ECO, TODOS
 from multijugador.reparacion import CONFIGURACION as CONFIG_REPARACION
 
@@ -513,7 +514,7 @@ class PanelCooperativo:
                 self.dibujar_encargo(superficie)
             elif self.caso.get("fase") == "final":
                 self.texto_lineas(superficie, "¡Gracias por ayudar a la aldea!", 165, 180, 630, color=ORO)
-                self.texto_lineas(superficie, f"Estrellas del equipo: {self.caso.get('estrellas', 0)} de {self.caso.get('estrellas_total', 11)}", 165, 237, 630)
+                self.texto_lineas(superficie, f"Estrellas del equipo: {self.caso.get('estrellas', 0)} de {self.caso.get('estrellas_total', ESTRELLAS_TOTALES)}", 165, 237, 630)
                 dibujar_icono(superficie, self.vista.arte.sello, (760, 215))
                 insignia = self.vista.arte.insignia
                 dibujar_icono(superficie, insignia, (670, 215))
@@ -755,7 +756,8 @@ class PanelCooperativo:
     def nombre_destino_fijo(self):
         jugador = next((j for j in self.vista.estado.get("mundo", {}).get("jugadores", [])
                         if j["id"] == self.destino_fijo), None)
-        return jugador["nombre"] if jugador else "tu compañero"
+        from multijugador.dialogos import nombre_visible
+        return nombre_visible(jugador, self.dimension) if jugador else "tu compañero"
 
     def destinos_eco(self):
         return [{"id": TODOS, "nombre": "Todos"}] + self.destinatarios()

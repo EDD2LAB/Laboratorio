@@ -4,6 +4,29 @@ import pygame
 from nucleo.rutas import RAIZ
 from nucleo.recursos import cargar_imagen, envolver_texto
 from multijugador.aventura_final import RECONFIGURACION, EPILOGOS, CIERRE
+from multijugador.presentacion import numero_en_letras, total_casos
+
+
+# La licencia CC BY 3.0 de la fuente pide atribución (Fuentes/license.txt).
+ATRIBUCION_FUENTE = "Fuente «Determination» de anonymous-1438277 (fontstruct.com) · CC BY 3.0"
+
+
+def filas_creditos():
+    """Equipo, integrantes con su rol, profesora, asignatura y la atribución de la fuente."""
+    try:
+        datos = json.loads((RAIZ / "datos/creditos.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        datos = {}
+    if not isinstance(datos, dict):
+        datos = {}
+    filas = [str(datos["equipo"])] if datos.get("equipo") else []
+    filas += [str(p.get("nombre", "")) + " · " + str(p.get("rol", ""))
+              for p in datos.get("integrantes", []) if isinstance(p, dict) and p.get("nombre")]
+    if datos.get("profesora"):
+        filas.append("Dirigido por: " + str(datos["profesora"]))
+    if datos.get("asignatura"):
+        filas.append(str(datos["asignatura"]))
+    return filas + [ATRIBUCION_FUENTE]
 
 
 class Desenlace:
@@ -18,13 +41,7 @@ class Desenlace:
             self.fondos[era] = cargar_imagen("Finales/epilogo_" + ("copa" if era == "la_copa" else era) + ".png", (960, 720), requerido=False)
             if self.fondos[era] is None:
                 self.fondos[era] = cargar_imagen(respaldo, (960, 720), requerido=False)
-        self.creditos = []
-        try:
-            datos = json.loads((RAIZ / "datos/creditos.json").read_text(encoding="utf-8"))
-            self.creditos = [str(p.get("nombre", "")) + " · " + str(p.get("rol", ""))
-                             for p in datos.get("integrantes", []) if isinstance(p, dict) and p.get("nombre")]
-        except (OSError, ValueError, TypeError):
-            pass
+        self.creditos = filas_creditos()
         self.resultado = None
         self.informe_pedido = False
 
@@ -70,13 +87,11 @@ class Desenlace:
                 from interfaz.informe_final import dibujar
                 dibujar(p, s)
             else:
-                self.lineas(s, "Abriendo la historia de los ocho casos…", 300)
+                self.lineas(s, f"Abriendo la historia de los {numero_en_letras(total_casos()).lower()} casos…", 300)
         elif etapa == "pantalla":
             if self.resultado is None:
-                from interfaz.finales import PantallaFinal
-                jugadores = p.vista.estado.get("mundo", {}).get("jugadores", [])
-                aspirante = next((j for j in jugadores if j.get("rol") == "aspirante"), {})
-                lider = "Mira" if aspirante.get("apariencia") in ("mira", "mujer") else "Kael"
+                from interfaz.finales import PantallaFinal, lider_de
+                lider = lider_de(p.vista.estado.get("mundo", {}).get("jugadores", []))
                 expediente = p.caso.get("expediente", {})
                 resueltos = (sum(bool(f.get("resuelto")) for f in p.informe.get("casos", [])) if p.informe
                              else expediente.get("total", 0) + expediente.get("pendientes", 0))
@@ -85,7 +100,7 @@ class Desenlace:
             self.resultado.dibujar(s)
         elif etapa == "creditos":
             self.lineas(s, "TIMELESS GLITCH", 90)
-            filas = ["Los Guardianes de la Memoria", "Estructuras de Datos 2", *self.creditos, CIERRE]
+            filas = [*self.creditos, CIERRE]
             area = pygame.Rect(50, 180, 860, 395)
             s.set_clip(area)
             for i, texto in enumerate(filas):

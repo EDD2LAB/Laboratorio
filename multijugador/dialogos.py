@@ -15,10 +15,23 @@ PATRONES_COPA = (("/naira/", "Naira"), ("/odran/", "Sabio de las Raices"), ("/da
                  ("habitante mujer", "Luma"), ("habitante hombre", "Tarek"), ("aspirante mujer", "Mira"), ("aspirante hombre", "Kael"))
 NOMBRES_CON_TILDE = {"Sabio de las Raices": "Sabio de las Raíces"}
 # Quien juega un rol ya es ese personaje en Distrito Conecta.
-PERSONAJE_DE_ROL = {"guardian": "Elías Vega", "mensajero": "Mateo Ríos", "habitante": "Tomás Red", "aspirante": "Ronaldo Vélez"}
+PERSONAJE_DE_ROL = {"guardian": "Elías Vega", "mensajero": "Mateo Ríos", "habitante": "Tania Red", "aspirante": "Ronaldo Vélez"}
 PERSONAJE_FUTURO_DE_ROL = {"guardian": "Archivista", "mensajero": "Corredor de Datos", "habitante": "Ciudadano Conectado",
                            "aspirante": "Representante Humano"}
 VER_CUENTAS = "Ver las cuentas que te atacan"
+
+
+def nombre_visible(jugador, dimension):
+    """Nombre que ven los demás: un bot lleva el personaje de la era en la que está.
+
+    Así "Kael · Aspirante" no aparece en Distrito Conecta ni en Ciudad Núcleo.
+    Las personas conservan el nombre que escribieron.
+    """
+    nombre = str(jugador.get("nombre", ""))
+    if jugador.get("controlador") != "bot":
+        return nombre
+    tabla = {"presente": PERSONAJE_DE_ROL, "futuro": PERSONAJE_FUTURO_DE_ROL}.get(dimension, {})
+    return "Bot · " + tabla.get(jugador.get("rol"), nombre.split(" · ", 1)[0])
 CAMINOS = {"colgar": "Colgarla", "quemar": "Quemarla", "consultar": "Consultar", "ignorar": "Ignorarla"}
 
 

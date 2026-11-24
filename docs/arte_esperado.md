@@ -6,111 +6,122 @@ conectado al juego ni tener geometría, cuadros o identidad ya validados.
 
 ## Archivos encontrados
 
-- Audios: 24 archivos.
+- Audios: 41 archivos.
 - Fuentes: 3 archivos.
-- Imagenes: 716 archivos.
+- Imagenes: 744 archivos.
 
-## Recursos del plan
+## Lo que falta de verdad
 
-Las rutas alternativas se registran explícitamente: no se renombran ni se usan automáticamente.
-La columna respaldo describe la alternativa actual o la prevista si dice por implementar.
+Ni la ruta esperada ni otro archivo equivalente existen. El juego usa el respaldo.
 
-| Archivo esperado | Estado físico | Uso / tamaño previsto | Respaldo |
+| Archivo esperado | Uso / tamaño previsto | Respaldo actual |
+| --- | --- | --- |
+| `Imagenes/Fondos/Carga/carga_guardian_8f.png` | Transición de portal | Transición actual |
+| `Imagenes/Fondos/Carga/carga_mensajero_8f.png` | Transición de portal | Transición actual |
+| `Imagenes/Fondos/Carga/carga_habitante_8f.png` | Transición de portal | Transición actual |
+| `Imagenes/Fondos/Carga/carga_aspirante_8f.png` | Transición de portal | Transición actual |
+| `Imagenes/Fondos/Carga/carga_luma_8f.png` | Transición de portal | Transición actual |
+| `Imagenes/Fondos/Carga/carga_mira_8f.png` | Transición de portal | Transición actual |
+| `Imagenes/Intro/vineta1.png` | Intro breve | Texto resumido por implementar |
+| `Imagenes/Intro/vineta2.png` | Intro breve | Texto resumido por implementar |
+| `Imagenes/Intro/vineta3.png` | Intro breve | Texto resumido por implementar |
+| `Imagenes/Intro/vineta4.png` | Intro breve | Texto resumido por implementar |
+| `Imagenes/Futuro/Terminal/plaza_conectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/plaza_desconectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/estacion_conectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/estacion_desconectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/sede_conectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/sede_desconectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/verificacion_conectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/verificacion_desconectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/comunitario_conectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/comunitario_desconectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/cafe_conectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Futuro/Terminal/cafe_desconectado.png` | Terminal, 48x48 | Círculo actual |
+| `Imagenes/Indicadores/exclamacion_4f.png` | Objetivo visual | Indicador por código implementado |
+| `Imagenes/Indicadores/interrogacion_4f.png` | Objetivo visual | Indicador por código implementado |
+| `Imagenes/Indicadores/check_4f.png` | Objetivo visual | Indicador por código implementado |
+| `Imagenes/Iconos/Acciones/pista.png` | Acciones | Texto actual |
+| `Imagenes/Iconos/Acciones/compartir.png` | Acciones | Texto actual |
+| `Imagenes/Iconos/Acciones/pedir_pruebas.png` | Acciones | Texto actual |
+| `Imagenes/Iconos/Acciones/verificar.png` | Acciones | Texto actual |
+| `Imagenes/Iconos/Acciones/votar.png` | Acciones | Texto actual |
+| `Imagenes/Iconos/Acciones/entregar.png` | Acciones | Texto actual |
+| `Imagenes/Iconos/Acciones/rumor.png` | Acciones | Texto actual |
+| `Imagenes/Iconos/Acciones/aclaracion.png` | Acciones | Texto actual |
+| `Imagenes/Iconos/Acciones/eco.png` | Acciones | Texto actual |
+| `Fuentes/PixelifySans.ttf` | Tipografía por era | Fuente del sistema / Pygame |
+| `Fuentes/Nunito.ttf` | Tipografía por era | Fuente del sistema / Pygame |
+| `Fuentes/ShareTechMono.ttf` | Tipografía por era | Fuente del sistema / Pygame |
+| `Audios/Musica/musica_presente_tension.mp3` | Música por era / batalla | Ambiente.mp3 |
+| `Audios/UI/pista_obtenida.wav` | Sonido de interfaz | Silencio; conexión pendiente |
+| `Audios/UI/objetivo_cumplido.wav` | Sonido de interfaz | Silencio; conexión pendiente |
+| `Audios/UI/aun_no.wav` | Sonido de interfaz | Silencio; conexión pendiente |
+| `Audios/UI/compartir_eco.wav` | Sonido de interfaz | Silencio; conexión pendiente |
+| `Audios/UI/rumor_crece.wav` | Sonido de interfaz | Silencio; conexión pendiente |
+| `Audios/UI/aclaracion_llega.wav` | Sonido de interfaz | Silencio; conexión pendiente |
+| `Audios/UI/voto.wav` | Sonido de interfaz | Silencio; conexión pendiente |
+| `Audios/UI/notificacion_celular.wav` | Sonido de interfaz | Silencio; conexión pendiente |
+| `Audios/UI/terminal_nucleo.wav` | Sonido de interfaz | Silencio; conexión pendiente |
+| `Audios/UI/cambio_epoca.wav` | Sonido de interfaz | Silencio; conexión pendiente |
+| `Audios/Batalla/nucleo_carga.wav` | Sonido del combate final | Silencio |
+| `Audios/Batalla/nucleo_barrido.wav` | Sonido del combate final | Silencio |
+| `Audios/Batalla/desfragmentador.wav` | Sonido del combate final | Silencio |
+| `Audios/Batalla/emp_onda.wav` | Sonido del combate final | Silencio |
+| `Audios/Batalla/escudo_activar.wav` | Sonido del combate final | Silencio |
+| `Audios/Batalla/escudo_bloqueo.wav` | Sonido del combate final | Silencio |
+| `Audios/Batalla/dron_curacion.wav` | Sonido del combate final | Silencio |
+| `Audios/Batalla/nucleo_derrota.wav` | Sonido del combate final | Silencio |
+| `Imagenes/Batalla/HUD/derribado_4f.png` | Jugador caído | Corazón roto en pixel art por código (interfaz/sprites_combate.py) |
+
+## Existe, pero todavía no está conectado
+
+| Archivo esperado | Estado | Uso / tamaño previsto | Respaldo |
 | --- | --- | --- | --- |
-| `Imagenes/Futuro/nucleo_inquieto_8f.png` | Integrado: `Imagenes/NPCS/Nucleo/NucleoInquieto.png`; celdas cuadradas | NÚCLEO animado | Avatar por código |
-| `Imagenes/Futuro/nucleo_sereno_8f.png` | Integrado: `Imagenes/NPCS/Nucleo/NucleoSereno.png`; celdas cuadradas | NÚCLEO animado | Avatar por código |
-| `Imagenes/Futuro/nucleo_saturado_8f.png` | Integrado: `Imagenes/NPCS/Nucleo/NucleoSaturado.png`; celdas cuadradas | NÚCLEO animado | Avatar por código |
-| `Imagenes/Clasificación/Aviso_comunitario.png` | Integrado: `Imagenes/Clasificación/aviso_comunitario.png`; proporciones conservadas | Tarjeta de clasificación | Tarjeta generada |
-| `Imagenes/Clasificación/Generado_con_IA.png` | Integrado: `Imagenes/Clasificación/Generado_con_IA.png`; proporciones conservadas | Tarjeta de clasificación | Tarjeta generada |
-| `Imagenes/Clasificación/Contenido_autentico.png` | Integrado: `Imagenes/Clasificación/Contenido_autentico.png`; proporciones conservadas | Tarjeta de clasificación | Tarjeta generada |
-| `Imagenes/Clasificación/Contenido_manipulado.png` | Integrado: `Imagenes/Clasificación/Contenido_manipulado.png`; proporciones conservadas | Tarjeta de clasificación | Tarjeta generada |
-| `Imagenes/Clasificación/Suplantacion.png` | Integrado: `Imagenes/Clasificación/suplantación.png`; proporciones conservadas | Tarjeta de clasificación | Tarjeta generada |
-| `Imagenes/Clasificación/Control_autonomo.png` | Existe; conexión pendiente | Tarjeta de clasificación | Tarjeta generada |
 | `Imagenes/Fondos/Inicio/pantalla_inicio_8f.png` | Alternativa existente: `Imagenes/Fondos/Mapas/fondoMenuInicio.png`; adaptar | Inicio animado | Fondo actual |
-| `Imagenes/Fondos/Carga/carga_guardian_8f.png` | Falta en ruta esperada | Transición de portal | Transición actual |
-| `Imagenes/Fondos/Carga/carga_mensajero_8f.png` | Falta en ruta esperada | Transición de portal | Transición actual |
-| `Imagenes/Fondos/Carga/carga_habitante_8f.png` | Falta en ruta esperada | Transición de portal | Transición actual |
-| `Imagenes/Fondos/Carga/carga_aspirante_8f.png` | Falta en ruta esperada | Transición de portal | Transición actual |
-| `Imagenes/Fondos/Carga/carga_luma_8f.png` | Falta en ruta esperada | Transición de portal | Transición actual |
-| `Imagenes/Fondos/Carga/carga_mira_8f.png` | Falta en ruta esperada | Transición de portal | Transición actual |
-| `Imagenes/Intro/vineta1.png` | Falta en ruta esperada | Intro breve | Texto resumido por implementar |
-| `Imagenes/Intro/vineta2.png` | Falta en ruta esperada | Intro breve | Texto resumido por implementar |
-| `Imagenes/Intro/vineta3.png` | Falta en ruta esperada | Intro breve | Texto resumido por implementar |
-| `Imagenes/Intro/vineta4.png` | Falta en ruta esperada | Intro breve | Texto resumido por implementar |
-| `Imagenes/Elementos presente/Celular/capsula_publicar.png` | Falta en ruta esperada | Botón celular | Botón actual |
-| `Imagenes/Elementos presente/Celular/capsula_verificar.png` | Falta en ruta esperada | Botón celular | Botón actual |
-| `Imagenes/Elementos presente/Celular/capsula_reportar.png` | Falta en ruta esperada | Botón celular | Botón actual |
-| `Imagenes/Elementos presente/Celular/capsula_ignorar.png` | Falta en ruta esperada | Botón celular | Botón actual |
-| `Imagenes/Expediente/medallon_normal.png` | Falta en ruta esperada | Nodo AVL, 64x64 | Círculo actual |
-| `Imagenes/Expediente/medallon_seleccionado.png` | Falta en ruta esperada | Nodo AVL, 64x64 | Círculo actual |
-| `Imagenes/Expediente/medallon_pendiente.png` | Falta en ruta esperada | Nodo AVL, 64x64 | Círculo actual |
-| `Imagenes/Expediente/medallon_nuevo.png` | Falta en ruta esperada | Nodo AVL, 64x64 | Círculo actual |
-| `Imagenes/Expediente/sello_bien.png` | Falta en ruta esperada | Resultado, 48x48 | Texto de resultado |
-| `Imagenes/Expediente/sello_error.png` | Falta en ruta esperada | Resultado, 48x48 | Texto de resultado |
-| `Imagenes/Futuro/Terminal/plaza_conectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/plaza_desconectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/estacion_conectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/estacion_desconectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/sede_conectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/sede_desconectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/verificacion_conectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/verificacion_desconectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/comunitario_conectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/comunitario_desconectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/cafe_conectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Futuro/Terminal/cafe_desconectado.png` | Falta en ruta esperada | Terminal, 48x48 | Círculo actual |
-| `Imagenes/Indicadores Puente/ficha_vacio.png` | Falta en ruta esperada | Minijuego puente | Dibujo actual |
-| `Imagenes/Indicadores Puente/ficha_logrado.png` | Falta en ruta esperada | Minijuego puente | Dibujo actual |
-| `Imagenes/Indicadores Puente/aguja.png` | Falta en ruta esperada | Minijuego puente | Dibujo actual |
-| `Imagenes/Indicadores/exclamacion_4f.png` | Falta en ruta esperada | Objetivo visual | Indicador por código implementado |
-| `Imagenes/Indicadores/interrogacion_4f.png` | Falta en ruta esperada | Objetivo visual | Indicador por código implementado |
-| `Imagenes/Indicadores/check_4f.png` | Falta en ruta esperada | Objetivo visual | Indicador por código implementado |
-| `Imagenes/Iconos/Acciones/pista.png` | Falta en ruta esperada | Acciones | Texto actual |
-| `Imagenes/Iconos/Acciones/compartir.png` | Falta en ruta esperada | Acciones | Texto actual |
-| `Imagenes/Iconos/Acciones/pedir_pruebas.png` | Falta en ruta esperada | Acciones | Texto actual |
-| `Imagenes/Iconos/Acciones/verificar.png` | Falta en ruta esperada | Acciones | Texto actual |
-| `Imagenes/Iconos/Acciones/votar.png` | Falta en ruta esperada | Acciones | Texto actual |
-| `Imagenes/Iconos/Acciones/entregar.png` | Falta en ruta esperada | Acciones | Texto actual |
-| `Imagenes/Iconos/Acciones/rumor.png` | Falta en ruta esperada | Acciones | Texto actual |
-| `Imagenes/Iconos/Acciones/aclaracion.png` | Falta en ruta esperada | Acciones | Texto actual |
-| `Imagenes/Iconos/Acciones/eco.png` | Falta en ruta esperada | Acciones | Texto actual |
-| `Fuentes/PixelifySans.ttf` | Falta en ruta esperada | Tipografía por era | Fuente del sistema / Pygame |
-| `Fuentes/Nunito.ttf` | Falta en ruta esperada | Tipografía por era | Fuente del sistema / Pygame |
-| `Fuentes/ShareTechMono.ttf` | Falta en ruta esperada | Tipografía por era | Fuente del sistema / Pygame |
-| `Audios/Musica/musica_presente.mp3` | Falta en ruta esperada | Música por era / batalla | Ambiente.mp3; conexión pendiente |
-| `Audios/Musica/musica_presente_tension.mp3` | Falta en ruta esperada | Música por era / batalla | Ambiente.mp3; conexión pendiente |
-| `Audios/Musica/musica_nucleo.mp3` | Falta en ruta esperada | Música por era / batalla | Ambiente.mp3; conexión pendiente |
-| `Audios/Musica/batalla_fase1.mp3` | Falta en ruta esperada | Música por era / batalla | Ambiente.mp3; conexión pendiente |
-| `Audios/Musica/batalla_fase2.mp3` | Falta en ruta esperada | Música por era / batalla | Ambiente.mp3; conexión pendiente |
-| `Audios/UI/pista_obtenida.wav` | Falta en ruta esperada | Sonido de interfaz | Silencio; conexión pendiente |
-| `Audios/UI/objetivo_cumplido.wav` | Falta en ruta esperada | Sonido de interfaz | Silencio; conexión pendiente |
-| `Audios/UI/aun_no.wav` | Falta en ruta esperada | Sonido de interfaz | Silencio; conexión pendiente |
-| `Audios/UI/compartir_eco.wav` | Falta en ruta esperada | Sonido de interfaz | Silencio; conexión pendiente |
-| `Audios/UI/rumor_crece.wav` | Falta en ruta esperada | Sonido de interfaz | Silencio; conexión pendiente |
-| `Audios/UI/aclaracion_llega.wav` | Falta en ruta esperada | Sonido de interfaz | Silencio; conexión pendiente |
-| `Audios/UI/voto.wav` | Falta en ruta esperada | Sonido de interfaz | Silencio; conexión pendiente |
-| `Audios/UI/notificacion_celular.wav` | Falta en ruta esperada | Sonido de interfaz | Silencio; conexión pendiente |
-| `Audios/UI/terminal_nucleo.wav` | Falta en ruta esperada | Sonido de interfaz | Silencio; conexión pendiente |
-| `Audios/UI/cambio_epoca.wav` | Falta en ruta esperada | Sonido de interfaz | Silencio; conexión pendiente |
-| `Audios/Batalla/nucleo_carga.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/nucleo_barrido.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/rayo_aviso.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/rayo_impacto.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/mini_aparicion.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/mini_disparo.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/mini_explosion.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/cambio_fase.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/desfragmentador.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/emp_onda.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/escudo_activar.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/escudo_bloqueo.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/dron_curacion.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/recoger_material.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/fabricar.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/derribado.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/levantado.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Audios/Batalla/nucleo_derrota.wav` | Falta en ruta esperada | Batalla aún sin implementar | Silencio |
-| `Imagenes/Batalla/HUD/derribado_4f.png` | Falta en ruta esperada | Jugador caído | Corazón roto en pixel art por código (interfaz/sprites_combate.py) |
+
+## Ya conectado (a veces con otro nombre)
+
+Los archivos no se renombran ni se mueven: el código usa el nombre real.
+
+| Ruta del plan | Archivo que usa el juego | Uso |
+| --- | --- | --- |
+| `Imagenes/Futuro/nucleo_inquieto_8f.png` | `Imagenes/NPCS/Nucleo/NucleoInquieto.png` | NÚCLEO animado |
+| `Imagenes/Futuro/nucleo_sereno_8f.png` | `Imagenes/NPCS/Nucleo/NucleoSereno.png` | NÚCLEO animado |
+| `Imagenes/Futuro/nucleo_saturado_8f.png` | `Imagenes/NPCS/Nucleo/NucleoSaturado.png` | NÚCLEO animado |
+| `Imagenes/Clasificación/Aviso_comunitario.png` | `Imagenes/Clasificación/aviso_comunitario.png` | Tarjeta de clasificación |
+| `Imagenes/Clasificación/Generado_con_IA.png` | `Imagenes/Clasificación/Generado_con_IA.png` | Tarjeta de clasificación |
+| `Imagenes/Clasificación/Contenido_autentico.png` | `Imagenes/Clasificación/Contenido_autentico.png` | Tarjeta de clasificación |
+| `Imagenes/Clasificación/Contenido_manipulado.png` | `Imagenes/Clasificación/Contenido_manipulado.png` | Tarjeta de clasificación |
+| `Imagenes/Clasificación/Suplantacion.png` | `Imagenes/Clasificación/suplantación.png` | Tarjeta de clasificación |
+| `Imagenes/Clasificación/Control_autonomo.png` | `Imagenes/Clasificación/Control_autonomo.png` | Tarjeta de clasificación |
+| `Imagenes/Elementos presente/Celular/capsula_publicar.png` | `Imagenes/Pociones/colgar-capsula.png` | Botón celular |
+| `Imagenes/Elementos presente/Celular/capsula_verificar.png` | `Imagenes/Pociones/Verificar-capsula.png` | Botón celular |
+| `Imagenes/Elementos presente/Celular/capsula_reportar.png` | `Imagenes/Pociones/Denunciar-capsula.png` | Botón celular |
+| `Imagenes/Elementos presente/Celular/capsula_ignorar.png` | `Imagenes/Pociones/ignorar-capsula.png` | Botón celular |
+| `Imagenes/Expediente/medallon_normal.png` | `Imagenes/Expediente/MedallonNormal.png` | Nodo AVL, 64x64 |
+| `Imagenes/Expediente/medallon_seleccionado.png` | `Imagenes/Expediente/MedallonSeleccionado.png` | Nodo AVL, 64x64 |
+| `Imagenes/Expediente/medallon_pendiente.png` | `Imagenes/Expediente/MedallonPendiente.png` | Nodo AVL, 64x64 |
+| `Imagenes/Expediente/medallon_nuevo.png` | `Imagenes/Expediente/MedallonNuevo.png` | Nodo AVL, 64x64 |
+| `Imagenes/Expediente/sello_bien.png` | `Imagenes/Expediente/sello_correcto.png` | Resultado, 48x48 |
+| `Imagenes/Expediente/sello_error.png` | `Imagenes/Expediente/sello_error.png` | Resultado, 48x48 |
+| `Imagenes/Indicadores Puente/ficha_vacio.png` | `Imagenes/Expediente/Indicadores-puente/ficha_vacio.png` | Minijuego puente |
+| `Imagenes/Indicadores Puente/ficha_logrado.png` | `Imagenes/Expediente/Indicadores-puente/ficha_logrado.png` | Minijuego puente |
+| `Imagenes/Indicadores Puente/aguja.png` | `Imagenes/Expediente/Indicadores-puente/aguja7.png` | Minijuego puente |
+| `Audios/Musica/musica_presente.mp3` | `Audios/Música/musica_presente.mp3` | Música por era / batalla |
+| `Audios/Musica/musica_nucleo.mp3` | `Audios/Música/musica_nucleo.mp3` | Música por era / batalla |
+| `Audios/Musica/batalla_fase1.mp3` | `Audios/Música/batalla_fase1.mp3` | Música por era / batalla |
+| `Audios/Musica/batalla_fase2.mp3` | `Audios/Música/batalla_fase2.mp3` | Música por era / batalla |
+| `Audios/Batalla/rayo_aviso.wav` | `Audios/Batalla/rayo_aviso.wav` | Sonido del combate final |
+| `Audios/Batalla/rayo_impacto.wav` | `Audios/Batalla/rayo_impacto.wav` | Sonido del combate final |
+| `Audios/Batalla/mini_aparicion.wav` | `Audios/Batalla/mini_aparicion.wav` | Sonido del combate final |
+| `Audios/Batalla/mini_disparo.wav` | `Audios/Batalla/mini_disparo.wav` | Sonido del combate final |
+| `Audios/Batalla/mini_explosion.wav` | `Audios/Batalla/mini_explosion.wav` | Sonido del combate final |
+| `Audios/Batalla/cambio_fase.wav` | `Audios/Batalla/cambio_fase.wav` | Sonido del combate final |
+| `Audios/Batalla/recoger_material.wav` | `Audios/Batalla/recoger_material.wav` | Sonido del combate final |
+| `Audios/Batalla/fabricar.wav` | `Audios/Batalla/fabricar.wav` | Sonido del combate final |
+| `Audios/Batalla/derribado.wav` | `Audios/Batalla/derribado.wav` | Sonido del combate final |
+| `Audios/Batalla/levantado.wav` | `Audios/Batalla/levantado.wav` | Sonido del combate final |
 
 ## Familias con nombres o formatos variables
 
@@ -160,7 +171,7 @@ La columna respaldo describe la alternativa actual o la prevista si dice por imp
 | Darek | `Imagenes/Retratos/DarekRetrato.png`; imagen individual integrada sin deformar |
 | Ronaldo Vélez | `Imagenes/Retratos/RonaldoVelezRetrato.png`; imagen individual integrada sin deformar |
 | Mateo Ríos | Candidato `Mensajero-urbano-Retraro.png`; confirmar identidad y adaptar |
-| Elías Vega y Tomás Red | Sin retrato identificado por nombre |
+| Elías Vega y Tania Red | Sin retrato identificado por nombre |
 | Elia y Arel | Hay sprites; sin retrato identificado por nombre |
 | Archivista, Corredor de Datos, Ciudadano Conectado, Representante Humano | Sin retratos propios identificados por nombre; posible reutilización por confirmar |
 
@@ -172,23 +183,19 @@ con paredes, puertas y puntos de aparición antes de reemplazarlo. Los estados
 de NÚCLEO no deben dividirse suponiendo ocho cuadros: comprobar cada tira.
 
 
-## Cierre de las tres eras en protocolo 17
+## Cierre de las tres eras (protocolo 17)
 
-| Archivo opcional | Uso | Respaldo sin el archivo |
-| --- | --- | --- |
-| Imagenes/Finales/epilogo_futuro.png | Viñeta de Ciudad Núcleo | Mapa del Futuro oscurecido |
-| Imagenes/Finales/epilogo_presente.png | Viñeta de Distrito Conecta | Mapa del Presente oscurecido |
-| Imagenes/Finales/epilogo_copa.png | Viñeta de La Copa | Fondo de La Copa oscurecido |
-| Imagenes/Finales/Final_tres_eras.png | Resultado positivo | Final_positivo.jpeg |
-| Imagenes/Finales/Final_humo_tres_eras.png | Resultado de humo | Game_over.jpeg |
+| Archivo opcional | Uso | Estado | Respaldo sin el archivo |
+| --- | --- | --- | --- |
+| Imagenes/Finales/epilogo_futuro.png | Viñeta de Ciudad Núcleo | Falta | Mapa del Futuro oscurecido |
+| Imagenes/Finales/epilogo_presente.png | Viñeta de Distrito Conecta | Falta | Mapa del Presente oscurecido |
+| Imagenes/Finales/epilogo_copa.png | Viñeta de La Copa | Falta | Fondo de La Copa oscurecido |
+| Imagenes/Finales/Final_tres_eras.png | Resultado positivo | Falta | Final_positivo.jpeg |
+| Imagenes/Finales/Final_humo_tres_eras.png | Resultado de humo | Falta | Game_over.jpeg |
 
-Las cinco ilustraciones se ajustan a 960 x 720 con transform.scale, una vez al
-cargar. No se encontraron en esta copia local. Las piezas, blásteres, cajas,
-mini-núcleos y consolas tienen gráficos por código: no exigen imágenes nuevas.
-Se reutiliza NPCS/Nucleo/NucleoSereno.png para la reconfiguración.
-
-Las pistas musica_nucleo.mp3, batalla_fase1.mp3 y batalla_fase2.mp3 se buscan en
-Audios/Música/, Audios/Musica/ y Audios/. Sin ellas se conserva Ambiente.mp3.
+Las ilustraciones se ajustan a 960 x 720 con transform.scale, una vez al cargar.
+Las piezas, blásteres, cajas, mini-núcleos y consolas tienen gráficos por código: no exigen
+imágenes nuevas. Se reutiliza NPCS/Nucleo/NucleoSereno.png para la reconfiguración.
 
 
 ## Mapa definitivo activado en protocolo 18

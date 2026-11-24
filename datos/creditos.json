@@ -1,8 +1,11 @@
 {
+  "equipo": "Glitch Hunters",
+  "asignatura": "Estructuras de Datos II · 2026-30",
+  "profesora": "Katherine Ospino",
   "integrantes": [
-    {"nombre": "", "rol": ""},
-    {"nombre": "", "rol": ""},
-    {"nombre": "", "rol": ""},
-    {"nombre": "", "rol": ""}
+    {"nombre": "Sebastian Ariza", "rol": "Programación principal"},
+    {"nombre": "Fernando Cabrera", "rol": "Programación"},
+    {"nombre": "Keisy Polo", "rol": "Análisis de la encuesta"},
+    {"nombre": "Jimara Urzola", "rol": "Arte y diseño visual"}
   ]
 }

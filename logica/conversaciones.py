@@ -2,48 +2,58 @@
 
 TESTIMONIOS = {
     "Rumor Politico": {
-        "Kael": ("Revisé con el consejo las tablas del puente norte. ¿Quién te contó que yo lo rompí?", "Una propuesta, una discusión y una decisión no son lo mismo. Pide que te expliquen cuál ocurrió."),
-        "Mira": ("Escuché que Kael rompió el puente, pero yo no estaba allí.", "Mi información viene de otra persona. No deberías presentarla como si yo hubiera visto la reunión."),
-        "Tarek": ("Vi gente reunida cerca del puente. No pude escuchar lo que discutían.", "Que hubiera una reunión no demuestra que hayan decidido cerrar el paso."),
-        "Luma": ("El mensaje llegó por los Ecos sin decir quién escuchó a Kael.", "Cada vez que lo repiten suena más seguro, aunque sigue faltando la fuente original."),
-        "Mensajero": ("Crucé el puente esta mañana. Estaba abierto cuando pasé.", "Puedo confirmar cómo estaba esta mañana, pero eso no prueba qué planea el consejo para después."),
-        "Naira": ("Las familias necesitan saber si podrán cruzar. Una noticia incompleta puede asustarlas.", "Pregunta también cuándo ocurriría el supuesto cierre; sin fecha no podemos organizar las rutas."),
+        "Kael": ("Le propuse al consejo revisar las tablas del puente norte porque la lluvia las había dañado. ¿Quién te contó que yo lo rompí?",
+                 "Proponer una revisión no es romper un puente. El consejo lo cerró por seguridad hasta repararlo."),
+        "Mira": ("Escuché que Kael rompió el puente, pero yo no estaba allí.",
+                 "Mi información viene de otra persona. No deberías presentarla como si yo hubiera visto lo que pasó."),
+        "Tarek": ("Después de la lluvia vi las tablas del puente mojadas y astilladas. No vi a nadie golpearlas.",
+                  "Desde que lo cerraron cruzamos por otra ruta. Pregunta al consejo por qué lo cerró."),
+        "Luma": ("El mensaje llegó por los Ecos sin decir quién vio a Kael romper el puente.",
+                 "Cada vez que lo repiten suena más seguro, aunque sigue faltando la fuente original."),
+        "Mensajero": ("Desde que el consejo cerró el puente llevo los mensajes por otra ruta.",
+                      "Puedo confirmar que el puente está cerrado, no quién tuvo la culpa. Pregunta por qué lo cerraron."),
+        "Naira": ("Las familias necesitan saber por dónde cruzar mientras reparan el puente. Una noticia incompleta puede asustarlas.",
+                  "El consejo cerró el puente por seguridad. Lo que falta comprobar es por qué se dañó, no si está cerrado."),
+        "Darek": ("Oí el rumor sobre Kael junto al cesto, pero nadie dijo quién lo vio.",
+                  "Si nadie lo vio, no podemos contarlo como si fuera cierto."),
+        "Sabio de las Raíces": ("Las lluvias de esta temporada pudrieron más de una tabla. Antes de culpar a alguien, revisa el puente.",
+                                "La madera vieja cede sola. Un rumor no explica una tabla podrida."),
     },
-    "Suceso Natural": {
-        "Kael": ("Antes de cambiar las rutas necesitamos saber dónde cayó el rayo.", "Un aviso preciso ayuda más que decir que toda la aldea está en peligro."),
-        "Mira": ("Escuché el trueno anoche. Todavía no he visto los daños.", "Haber oído el trueno no me permite decir qué golpeó el rayo."),
-        "Tarek": ("Vi un destello cerca del Mirador Alto anoche y después escuché el trueno.", "Puedo señalar dónde vi el destello. No alcancé a ver qué objeto recibió el impacto."),
-        "Luma": ("Los Ecos hablan de un rayo cerca del Mirador Alto; algunas versiones ya dicen que destruyó el puente.", "Conviene separar el aviso original de los daños que otros añadieron al repetirlo."),
-        "Mensajero": ("Puedo llevar el aviso a las plataformas cercanas al Mirador Alto.", "El mensaje debe indicar el lugar y la hora, sin añadir daños que nadie comprobó."),
-        "Naira": ("Podemos revisar los caminos cercanos al Mirador antes de usarlos.", "Avisar a tiempo permite preparar las rutas sin provocar miedo innecesario."),
-    },
-    "Acusacion Personal": {
-        "Kael": ("Antes de juzgar a Mira, quiero escuchar qué ocurrió y quién estuvo presente.", "Una acusación puede dañar su reputación incluso después de corregirla."),
-        "Mira": ("Quiero que escuchen mi versión antes de repetir lo que dice esa tablilla.", "Pregunta a quienes estuvieron allí y compara sus relatos con el mío."),
-        "Tarek": ("No presencié lo que se cuenta de Mira. No puedo confirmarlo.", "Que muchas personas lo repitan no me convierte en testigo."),
-        "Luma": ("La historia sobre Mira cambia cada vez que pasa por un Eco.", "Busca la primera versión y pregunta qué partes se añadieron después."),
-        "Mensajero": ("Puedo llevar una consulta a quienes estuvieron con Mira.", "Un mensaje privado permite pedir detalles sin difundir primero la acusación."),
-        "Naira": ("Escuchemos a Mira y a las personas involucradas antes de decidir.", "Necesitamos hechos concretos, no comentarios sobre cómo creemos que es ella."),
+    # El caso del agua tiene dos variantes (aviso viejo o aviso de hoy): ningún
+    # testimonio revela cuál salió; todos invitan a comparar fecha y depósito.
+    "Aviso Comunitario": {
+        "Kael": ("Escuché el aviso del agua, pero nadie me dijo de qué depósito hablaba.",
+                 "Antes de decidir, pregunta la fecha del aviso y qué depósito nombra."),
+        "Mira": ("El aviso del agua me llegó por los Ecos. No sé si es de hoy o de hace tiempo.",
+                 "Un aviso sin fecha puede proteger o puede asustar sin razón. Hay que compararlo con las pistas."),
+        "Tarek": ("Escuché el aviso en el tronco, pero no dijo de qué depósito hablaba.",
+                  "Pregunta quién tomó las muestras y cuándo lo hizo."),
+        "Luma": ("En los Ecos el aviso del agua suena cada vez más urgente, pero nadie cita la fuente.",
+                 "Busca el primer mensaje: ¿qué fecha tiene y quién lo firmó?"),
+        "Mensajero": ("Puedo llevar el aviso del agua, pero primero quiero saber si es de hoy.",
+                      "Repetir un aviso viejo confunde; callar uno real también hace daño. Por eso hay que verificarlo."),
+        "Naira": ("El archivo del consejo guarda los informes del agua con su fecha. Compara la del aviso con la de hoy.",
+                  "Un informe dice de qué depósito habla y cuándo se escribió. Esos dos datos deciden qué hacer."),
+        "Darek": ("Mi familia ya está guardando agua por si acaso. ¿Alguien sabe de qué depósito habla el aviso?",
+                  "No quiero difundir algo que asuste sin razón, ni callar algo que nos proteja."),
+        "Sabio de las Raíces": ("El agua de La Copa ha salido de varios depósitos a lo largo de los años.",
+                                "Pregunta qué depósito nombra el aviso y si todavía está conectado a la red."),
     },
 }
 
+# Lo que comentan los vecinos sobre la última decisión (por tipo de poción).
 REACCIONES = {
     "Rumor Politico": {
-        "Colgarla": "La noticia sobre Kael se difundió sin verificar y ahora hay dudas entre las familias.",
-        "Quemarla": "La tablilla desapareció, pero seguimos sin saber si lo que decía era cierto.",
+        "Colgarla": "La acusación contra Kael se difundió sin verificar y ahora hay dudas entre las familias.",
+        "Quemarla": "Se corrigió el rumor: el puente se cerró por el daño de la lluvia, no por culpa de Kael.",
         "Consultar": "Consultar la tablilla permitió revisar el rumor antes de tomar una decisión.",
+        "Ignorarla": "Descartaron el rumor, pero también lo cierto: algunas familias no saben que el puente sigue cerrado.",
     },
-    "Suceso Natural": {
-        "Colgarla": "El aviso del rayo llegó a la aldea y pudimos prepararnos.",
-        "Quemarla": "Al desaparecer el aviso del rayo, las plataformas se quedaron sin información útil.",
-        "Consultar": "El suceso se confirmó y las plataformas cercanas recibieron el aviso.",
-        "Ignorarla": "El aviso llegó tarde y algunas rutas quedaron sin preparar.",
-    },
-    "Acusacion Personal": {
-        "Colgarla": "El mensaje sobre Mira se está propagando y aumenta la desconfianza.",
-        "Quemarla": "La tablilla ya no circula y se evitó un conflicto entre habitantes.",
-        "Consultar": "La consulta aportó información antes de juzgar a Mira.",
-        "Ignorarla": "La tablilla se perdió entre otras, pero las dudas sobre Mira siguen circulando.",
+    "Aviso Comunitario": {
+        "Colgarla": "El aviso del agua se difundió por toda la aldea.",
+        "Quemarla": "Se corrigió el aviso del agua antes de que siguiera circulando.",
+        "Consultar": "Revisar el aviso del agua permitió comparar fechas y depósitos.",
+        "Ignorarla": "El aviso del agua dejó de circular.",
     },
 }
 
@@ -56,8 +66,8 @@ TESTIMONIOS_PRESENTE = {
         "Aspiro a la Alcaldía. Ese día hice una donación pública; mi agenda lo confirma.",
         "Lo que circula no demuestra culpabilidad. Compárenlo con el material original antes de creerlo.",
     ),
-    "Tomás Red": (
-        "Estoy conectado a lo que comparte la comunidad. Vi la publicación, pero no el hecho ni su archivo original.",
+    "Tania Red": (
+        "Estoy conectada a lo que comparte la comunidad. Vi la publicación, pero no el hecho ni su archivo original.",
         "No vi a Ronaldo en ese lugar. Comprueba el contexto antes de compartir la imagen.",
     ),
     "Lía Nova": (
@@ -81,7 +91,7 @@ TESTIMONIOS_PRESENTE = {
         "No queremos apagarlo. Queremos que alguien pueda revisar lo que decide.",
     ),
     "Corredor de Datos": (
-        "Antes de que NÚCLEO bloqueara los sectores saqué la llave de supervisión. Llévala a la terminal del Centro de Verificación.",
+        "Antes de que NÚCLEO bloqueara los sectores saqué la llave de supervisión. Llévala a la terminal del Centro de Supervisión.",
         "La llave no apaga a NÚCLEO: solo hace que las personas vuelvan a revisar lo que decide.",
     ),
     "Ciudadano Conectado": (
@@ -111,13 +121,7 @@ def construir_conversacion(nombre, estado, vistas):
         "Revisa de dónde viene cada mensaje antes de compartirlo.",
     ))
     texto = ampliacion if clave in vistas else inicial
-    if categoria == "Acusacion Personal" and "reparar" in estado.texto_actual().lower():
-        texto = {
-            "Mira": "Propuse ayudar a reparar el puente. Pregunta al consejo qué ayuda se necesita antes de repetir otras versiones.",
-            "Kael": "Podemos discutir la propuesta de reparación de Mira con el consejo. Primero hay que revisar los daños.",
-            "Mensajero": "Puedo llevar al consejo la propuesta de Mira para reparar el puente.",
-        }.get(nombre, "La tablilla habla de reparar el puente. Comparemos la propuesta de Mira con lo que escuchó el consejo.")
-    elif "Consultar" in estado.camino_decision_actual:
+    if "Consultar" in estado.camino_decision_actual:
         texto = ampliacion
     if (
         not estado.tablillas_resueltas
@@ -146,12 +150,9 @@ def construir_mensajes_eco(estado):
     ruta = estado.ruta_categoria_actual()
     categoria = ruta[1] if len(ruta) > 1 else ""
     tema, consulta = {
-        "Rumor Politico": ("Kael y el puente norte", "¿Quién escuchó la propuesta de Kael sobre el puente?"),
-        "Suceso Natural": ("el rayo del Mirador Alto", "¿Quién vio el rayo y dónde cayó?"),
-        "Acusacion Personal": ("la tablilla sobre Mira", "Escuchemos a Mira y a quienes estuvieron presentes."),
+        "Rumor Politico": ("Kael y el puente norte", "¿Quién vio lo que pasó con el puente norte?"),
+        "Aviso Comunitario": ("el aviso del agua", "¿De qué depósito y de qué fecha habla el aviso del agua?"),
     }.get(categoria, ("las noticias de la aldea", "Comparemos las fuentes de las noticias."))
-    if categoria == "Acusacion Personal" and "reparar" in estado.texto_actual().lower():
-        tema, consulta = "la reparación del puente", "¿Qué propone Mira para reparar el puente?"
     mensajes = [
         ("consulta_fuente", consulta),
         ("verificar_tablilla", f"Necesito verificar lo que se dice sobre {tema}."),

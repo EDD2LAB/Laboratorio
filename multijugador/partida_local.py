@@ -41,7 +41,7 @@ class ClienteCampanaLocal:
     def _nombre_bot(rol):
         return {
             "guardian": "Guardián",
-            "mensajero": "Mateo · Mensajero",
+            "mensajero": "Mensajero",
             "habitante": "Tarek · Habitante",
             "aspirante": "Kael · Aspirante",
         }[rol]

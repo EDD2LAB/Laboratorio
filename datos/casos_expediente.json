@@ -1,6 +1,6 @@
 {
   "puente_norte": {
-    "tipo": "Acusación Personal",
+    "tipo": "Rumor Político",
     "gravedad": 4,
     "con_delito": true,
     "ley": "Código Penal, art. 220 (Injuria)",
@@ -42,48 +42,6 @@
       }
     }
   },
-  "tormenta": {
-    "tipo": "Alerta verificada",
-    "gravedad": 1,
-    "con_delito": false,
-    "ley": "Sin delito",
-    "conducta": "Difundir una alerta real y verificada",
-    "sancion": "Ninguna",
-    "cita_corta": "Alerta verificada · difundirla no es delito",
-    "estado_normativo": "verificado",
-    "por_respuesta": {
-      "difundir": {
-        "tipo": "Alerta verificada",
-        "gravedad": 1,
-        "con_delito": false,
-        "ley": "Sin delito",
-        "conducta": "Difundir una alerta real y verificada",
-        "sancion": "Ninguna",
-        "cita_corta": "Alerta verificada · difundirla no es delito",
-        "estado_normativo": "verificado"
-      },
-      "descartar": {
-        "tipo": "Alarma falsa",
-        "gravedad": 3,
-        "con_delito": true,
-        "ley": "Código Penal, art. 355 (Pánico)",
-        "conducta": "Difundir un simulacro como si fuera una orden real de evacuar",
-        "sancion": "Multa",
-        "cita_corta": "Pánico, art. 355 CP · multa",
-        "estado_normativo": "verificado"
-      }
-    }
-  },
-  "ayuda": {
-    "tipo": "Acusación Personal",
-    "gravedad": 5,
-    "con_delito": true,
-    "ley": "Código Penal, art. 221 (Calumnia); art. 222 (quien la repite); art. 223 (agravante por difusión pública)",
-    "conducta": "Atribuir falsamente a {persona} haberse robado la ayuda y difundirlo en las tablillas",
-    "sancion": "Prisión de 16 a 72 meses y multa de 13,33 a 1.500 SMLMV, aumentada de una sexta parte a la mitad por difusión pública",
-    "cita_corta": "Calumnia, arts. 221 y 223 CP · prisión de 16 a 72 meses, agravada",
-    "estado_normativo": "verificado"
-  },
   "presente_video": {
     "tipo": "Acusación Personal",
     "gravedad": 6,
@@ -92,7 +50,7 @@
     "conducta": "Atribuir falsamente un delito a Ronaldo con un video editado y difundirlo",
     "sancion": "Prisión de 16 a 72 meses y multa de 13,33 a 1.500 SMLMV, agravada por difusión pública",
     "cita_corta": "Calumnia, arts. 221 y 223 CP · prisión de 16 a 72 meses, agravada",
-    "nota": "Es la misma conducta del rumor de La Copa: cambia la tecnología, no el delito.",
+    "nota": "En La Copa, el rumor sobre Kael era injuria; aquí se le atribuye un delito, por eso es calumnia.",
     "estado_normativo": "verificado"
   },
   "presente_voz": {

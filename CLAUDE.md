@@ -1,7 +1,7 @@
 # Timeless Glitch
 
 Juego académico 2D en Python + pygame-ce, adaptación del laboratorio "Alcalde
-Digital" del equipo "Los Guardianes de la Memoria".
+Digital" del equipo "Glitch Hunters".
 La primera dimensión sigue llamándose La Copa (Era I).
 
 ## Cómo ejecutar

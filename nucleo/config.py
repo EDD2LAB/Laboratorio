@@ -73,5 +73,5 @@ CONTINUIDAD_PERSONAJES = (
     ("Odran, Sabio de las Raíces", "Darío Veraz", "Agente de verificación digital"),
     ("Mensajero", "Mateo Ríos", "Mensajero urbano y comunicador"),
     ("Luma", "Lía Nova", "Influencer"),
-    ("Tarek", "Tomás Red", "Habitante conectado"),
+    ("Tarek", "Tania Red", "Habitante conectada, descendiente de Tarek"),
 )

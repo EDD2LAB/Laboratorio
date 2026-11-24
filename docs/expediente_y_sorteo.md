@@ -28,9 +28,8 @@ informe y las animaciones de rotación se integrarán después.
 ## Sorteo
 
 `SorteoPartida` usa un generador independiente por partida y una semilla
-aleatoria de 64 bits creada en el servidor. Sortea las variantes coherentes
-del agua y la tormenta, y a quién menciona la acusación sobre la ayuda.
-La persona mencionada no se convierte en culpable. El primer caso conserva
+aleatoria de 64 bits creada en el servidor. Sortea la variante coherente
+del agua (aviso viejo o aviso de hoy). El primer caso conserva
 su función de tutorial. Las pruebas y los metadatos para los bots corresponden
 siempre a la variante seleccionada. No se comparte la semilla durante la partida.
 
@@ -52,18 +51,15 @@ son complementarios, para investigar con calma. Se usa el reloj del servidor.
 
 Normas verificadas en fuentes oficiales; rangos con agravantes calculados aplicando las fracciones de la ley. Pendiente: revisión del profesor.
 
-Agua y tormenta tienen una ficha por cada respuesta correcta posible (`por_respuesta`).
+El agua tiene una ficha por cada respuesta correcta posible (`por_respuesta`).
 El servidor la elige según la respuesta correcta del caso sorteado y esa ficha fija la
-gravedad con la que el caso entra al AVL. En «ayuda», `{persona}` es la persona sorteada.
+gravedad con la que el caso entra al AVL.
 
 | Caso | Tipo | Gravedad | Norma | Pena |
 | --- | --- | --- | --- | --- |
-| puente_norte | Acusación Personal | 4 | Código Penal, art. 220 (Injuria) | Prisión de 16 a 54 meses y multa de 13,33 a 1.500 SMLMV |
+| puente_norte | Rumor Político | 4 | Código Penal, art. 220 (Injuria) | Prisión de 16 a 54 meses y multa de 13,33 a 1.500 SMLMV |
 | agua (descartar) | Alarma falsa | 3 | Código Penal, art. 355 (Pánico) | Multa |
 | agua (difundir) | Alerta verificada | 1 | Sin delito | Ninguna |
-| tormenta (difundir) | Alerta verificada | 1 | Sin delito | Ninguna |
-| tormenta (descartar) | Alarma falsa | 3 | Código Penal, art. 355 (Pánico) | Multa |
-| ayuda | Acusación Personal | 5 | Código Penal, art. 221 (Calumnia); art. 222 (quien la repite); art. 223 (agravante por difusión pública) | Prisión de 16 a 72 meses y multa de 13,33 a 1.500 SMLMV, aumentada de una sexta parte a la mitad por difusión pública |
 | presente_video | Acusación Personal | 6 | Código Penal, art. 221 (Calumnia) y art. 223 (difusión pública) | Prisión de 16 a 72 meses y multa de 13,33 a 1.500 SMLMV, agravada por difusión pública |
 | presente_voz | Suplantación | 6 | Código Penal, art. 296 (Falsedad personal), modificado por la Ley 2502 de 2025 | Multa, aumentada hasta en una tercera parte por usar IA |
 | presente_foto | Suplantación | 7 | Ley 1273 de 2009, art. 269F (Violación de datos personales) | Prisión de 48 a 96 meses y multa de 100 a 1.000 SMLMV |

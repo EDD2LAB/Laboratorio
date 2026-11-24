@@ -63,7 +63,7 @@ def construir_contenido_codice(estado, mundo, pagina, conversaciones_vistas=()):
             lineas.append(
                 f"Pistas reunidas: {len(mision['pistas'])}/"
                 f"{len(estado.PISTAS_PARA_VERIFICAR)}. "
-                "Habla con Darío Veraz, Tomás Red y Ronaldo Vélez."
+                "Habla con Darío Veraz, Tania Red y Ronaldo Vélez."
             )
             if mision["estado"] == "completada":
                 lineas.append("Clasificación: " + (mision.get("clasificacion") or "resuelta").replace("_", " ") + ".")

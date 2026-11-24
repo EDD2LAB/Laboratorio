@@ -68,7 +68,7 @@ def main():
         ("Pista del agua: fecha del informe", "El informe habla de un depósito cerrado hace diez años."),
         ("Pista del agua: sustitución", "El depósito antiguo fue desconectado. El agua actual viene del manantial nuevo."),
         ("Pista del video original", "El video original muestra a Ronaldo poniendo monedas. Compáralo en Analizar."),
-        ("Pista de la llave de supervisión", "El Corredor te dio la llave. Llévala al Centro de Verificación."),
+        ("Pista de la llave de supervisión", "El Corredor te dio la llave. Llévala al Centro de Supervisión."),
         ("Pista sobre firmas de registros", "Revisa quién firma y cuándo. La firma debe ser de alguien autorizado."),
         ("Entrega del farol en el tutorial", "Lleva el farol al tronco brillante. Pulsa E para entregarlo."),
         ("Solicitud de una segunda pista", "Pide otra pista con I. Comparte también la tuya."),

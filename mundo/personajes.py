@@ -271,7 +271,7 @@ PERSONAJES_PRESENTES = (
     },
     {
         "clave": "Habitante Conectada",
-        "nombre": "Tomás Red",
+        "nombre": "Tania Red",
         "sprite": os.path.join(
             "NPCS",
             "Habitante Conectada",
@@ -316,7 +316,7 @@ PERSONAJES_PRESENTES = (
 PERSONAJES_DISTRITO = {
     "guardian": ("Elías Vega", "NPCS/NPC Mundo2/NPC2-mundo2-Fila{fila}.png", 5),
     "mensajero": ("Mateo Ríos", "NPCS/Mensajero urbano/Mensajero_urbano-Fila{fila}.png", 9),
-    "habitante": ("Tomás Red", "NPCS/Habitante Conectada/Habitante_conectada-Fila{fila}.png", 9),
+    "habitante": ("Tania Red", "NPCS/Habitante Conectada/Habitante_conectada-Fila{fila}.png", 9),
     "aspirante": ("Ronaldo Vélez", "NPCS/Aspirante Contempóraneo/Aspirante_contemporaneo-Fila{fila}.png", 9),
 }
 _NPCS_FUTURO = "Futuro/generado/NPCS/"

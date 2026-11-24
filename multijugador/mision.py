@@ -19,10 +19,10 @@ MENSAJES = ("¿Me ayudas a buscar una pista?", "Ven al caldero para comparar pis
 ORDENES_ECO = ("ayudar", "caldero", "recibir", "no_difundir", "encargo")
 TODOS = "todos"  # destinatario de un eco que llega a todo el equipo
 PRUEBAS = {
-    "guardian": ("Acta del consejo", "El papel del consejo dice: mañana arreglarán unas tablas. Hoy el puente está abierto."),
-    "mensajero": ("Registro de la ruta", "Hoy llevé mensajes por el puente. Mañana revisarán unas tablas."),
-    "habitante": ("Testimonio de Luma", "Luma cuenta: crucé hoy sin problemas. El aviso dice que mañana arreglarán unas tablas."),
-    "aspirante": ("Propuesta de Mira", "Mira pidió arreglar unas tablas mañana. No pidió cerrar hoy el puente."),
+    "guardian": ("Acta del consejo", "El acta dice: la lluvia y el desgaste dañaron las tablas. El puente queda cerrado por seguridad hasta repararlo."),
+    "mensajero": ("Registro de la ruta", "Desde que cerraron el puente llevo los mensajes por otra ruta. Vi las tablas podridas por la lluvia."),
+    "habitante": ("Testimonio de Luma", "Luma cuenta: vi las tablas mojadas y gastadas antes del cierre. Nadie vio a Kael romper nada."),
+    "aspirante": ("Propuesta de Kael", "Kael pidió al consejo revisar las tablas dañadas. Solo propuso revisarlo; no rompió el puente."),
 }
 
 
@@ -55,7 +55,7 @@ class MisionPuente:
             {"id": "caldero", "nombre": "Caldero · decisión del equipo", "tipo": "caldero", "x": 480, "y": 380},
             {"id": "archivo", "nombre": "Naira · archivo del consejo", "tipo": "fuente", "rol": "guardian", "x": 786, "y": 261},
             {"id": "testigo", "nombre": "Luma · testimonio", "tipo": "fuente", "rol": "habitante", "x": 808, "y": 562},
-            {"id": "propuesta", "nombre": "Archivo de propuestas de Mira", "tipo": "fuente", "rol": "aspirante", "x": 205, "y": 531},
+            {"id": "propuesta", "nombre": "Archivo de propuestas del consejo", "tipo": "fuente", "rol": "aspirante", "x": 205, "y": 531},
         ]
         patrones = {"naira": "archivo", "habitante mujer": "testigo", "aspirante mujer": "propuesta"}
         ecos = []
@@ -254,16 +254,16 @@ class MisionPuente:
         correcto = opcion == self.correcta
         if correcto:
             efectos = {"confianza": 8 if self.rectificacion else 12, "armonia": 8, "susurros_falsos": -5, "desinformacion": -10}
-            texto = "El puente se dañó por el desgaste y la lluvia, no por Kael. Sigue abierto hoy; mañana habrá mantenimiento parcial."
+            texto = "El puente se dañó por el desgaste y la lluvia, no por Kael. El consejo lo cerró por seguridad hasta repararlo; Kael solo propuso revisarlo."
             self.estado_puente = "revision_programada"
         elif opcion == "difundir":
             efectos = {"confianza": -12, "armonia": -8, "susurros_falsos": 10, "desinformacion": 20}
-            texto = "Se difundió un cierre que no ocurrió. La alarma confundió a la comunidad."
+            texto = "Se difundió que Kael rompió el puente. La acusación falsa confundió a la comunidad."
             texto += " La rectificación también fue incorrecta; el caso terminó." if self.rectificacion else " Todavía pueden rectificar una vez."
             self.estado_puente = "alarma_injustificada"
         else:
             efectos = {"confianza": -6, "armonia": -4, "susurros_falsos": 4, "desinformacion": 8}
-            texto = "Descartaron también el aviso útil de mantenimiento. La comunidad sigue sin saber qué ocurrirá mañana."
+            texto = "Descartaron también lo cierto: el puente sigue cerrado hasta repararlo. La comunidad no sabe por dónde cruzar."
             if self.rectificacion:
                 texto += " La oportunidad de rectificación terminó."
             self.estado_puente = "aviso_pendiente"

@@ -132,7 +132,7 @@ class GestorDimensionesTests(unittest.TestCase):
             "Darío Veraz",
             "Mateo Ríos",
             "Lía Nova",
-            "Tomás Red",
+            "Tania Red",
         ):
             self.assertTrue(any(nombre in linea for linea in continuidad))
 
@@ -218,7 +218,7 @@ class GestorDimensionesTests(unittest.TestCase):
         for nombre, antepasado in (
             ("Darío Veraz", "Odran"),
             ("Ronaldo Vélez", "Kael"),
-            ("Tomás Red", "Tarek"),
+            ("Tania Red", "Tarek"),
             ("Lía Nova", "Luma"),
             ("Mateo Ríos", "Mensajero de antes"),
         ):
@@ -544,14 +544,14 @@ class GestorDimensionesTests(unittest.TestCase):
         )
         self.assertEqual(tamanos_npc["Mateo Ríos"], (24, 28))
         self.assertEqual(tamanos_npc["Darío Veraz"], (29, 33))
-        self.assertEqual(tamanos_npc["Tomás Red"], (29, 33))
+        self.assertEqual(tamanos_npc["Tania Red"], (29, 33))
         self.assertEqual(tamanos_npc["Lía Nova"], (29, 33))
         self.assertEqual(
             {actor["personaje"] for actor in mundo["personajes"]},
             {
                 "Darío Veraz",
                 "Ronaldo Vélez",
-                "Tomás Red",
+                "Tania Red",
                 "Lía Nova",
                 "Mateo Ríos",
             },

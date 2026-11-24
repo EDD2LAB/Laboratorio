@@ -11,7 +11,7 @@ La campaña local con bots usa la misma lógica sin depender de Render.
 
 | Era | Contenido |
 | --- | --- |
-| La Copa | 4 casos: puente, agua, tormenta y ayuda; variantes, pistas privadas, avisos temporales, intercambio, votos, suministros, reparación y habilidades |
+| La Copa | 2 casos: puente norte y agua; variantes, pistas privadas, avisos temporales, intercambio, votos, suministros, reparación y habilidades |
 | Distrito Conecta | 3 casos: video, voz y perfil/foto; interiores, fuentes, análisis de manipulación, decisión y clasificación desde el celular |
 | Ciudad Núcleo | 1 caso con 4 tareas: conexiones, registro, llave y cuentas; barreras, pulsos, habilidades y decisión sobre supervisión humana |
 

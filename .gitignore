@@ -221,3 +221,5 @@ preferencias_usuario.json
 informes/
 # Zonas caminables calculadas (se regeneran solas si cambia un mapa)
 cache/
+# Notas y prompts de trabajo locales
+Claude outputs/

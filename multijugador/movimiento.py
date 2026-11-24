@@ -11,6 +11,7 @@ from logica.movimiento_suave import (desplazar, linea_toca_rect, permite_salir_b
 from .dimensiones_red import (DIMENSIONES_RED, FUTURO, INTERIORES, LA_COPA, PRESENTE, RADIO_PUERTA, RADIO_SALIDA, cargar_datos,
                               cargar_interior, cerca_de_rect, destinos, edificios_de, rect_portal, rect_salida, spawn_interior,
                               spawn_presente)
+from .dialogos import nombre_visible
 
 ANCHO, ALTO = 960, 720
 VELOCIDAD = 155.0
@@ -397,12 +398,12 @@ class PartidaMovimiento:
             self.viaje = {"origen": origen, "destino": destino, "aceptan": set(), "propone": identificador}
             otros = [i for i in self.presentes_en(origen) if i != identificador and self._humano(i)]
             if otros:
-                self.mision._avisar(otros, jugador["nombre"] + " quiere viajar a " + nombre +
+                self.mision._avisar(otros, nombre_visible(jugador, origen) + " quiere viajar a " + nombre +
                                     ". Vayan al portal y pulsen E para aceptar.", "logro")
         self.viaje["aceptan"].add(identificador)
         faltan = self.faltan_viaje()
         if faltan:
-            nombres = ", ".join(self.jugadores[i]["nombre"] for i in faltan)
+            nombres = ", ".join(nombre_visible(self.jugadores[i], origen) for i in faltan)
             return {"mensaje": "Aceptaste viajar a " + nombre + ". Esperando a: " + nombres + "."}
         self._viajar_equipo(origen, destino)
         return {"mensaje": "¡El equipo viaja junto a " + nombre + "!", "dimension": destino}
@@ -486,7 +487,7 @@ class PartidaMovimiento:
         presentes = set(self.jugadores)
         futuro.votos = {i: CORRECTA for i in presentes}
         futuro.resolver(presentes)
-        m._avisar(list(self.jugadores), self.jugadores[identificador]["nombre"] +
+        m._avisar(list(self.jugadores), nombre_visible(self.jugadores[identificador], FUTURO) +
                   " usó el atajo F2: ¡comienza el final en Ciudad Núcleo!", "logro")
         return {"mensaje": "¡Saltaron al final de Ciudad Núcleo!", "dimension": FUTURO}
 
@@ -496,7 +497,7 @@ class PartidaMovimiento:
         destino = self.viaje["destino"]
         return {"origen": self.viaje["origen"], "destino": destino, "nombre": DIMENSIONES_RED[destino]["nombre"],
                 "aceptan": sorted(self.viaje["aceptan"]),
-                "faltan": [self.jugadores[i]["nombre"] for i in self.faltan_viaje()]}
+                "faltan": [nombre_visible(self.jugadores[i], self.viaje["origen"]) for i in self.faltan_viaje()]}
 
     def actuar(self, identificador, datos, ahora):
         self.actualizar(ahora)

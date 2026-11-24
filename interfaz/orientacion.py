@@ -27,9 +27,10 @@ def objetivo_nucleo(contexto, conocidas, npcs):
     return next((o for o in objetivos if o.get("id") == "futuro:pantalla"), None)
 
 
-def datos_votacion(contexto, jugadores, identificador):
+def datos_votacion(contexto, jugadores, identificador, dimension="la_copa"):
+    from multijugador.dialogos import nombre_visible
     faltan = set(contexto.get("faltan_votar", []))
-    nombres = [j["nombre"] for j in jugadores if j.get("id") in faltan]
+    nombres = [nombre_visible(j, dimension) for j in jugadores if j.get("id") in faltan]
     if contexto.get("empate"):
         return "Eligieron distinto. Hablen y cambien un voto para llegar a un acuerdo."
     if identificador in faltan:

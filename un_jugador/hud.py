@@ -223,7 +223,7 @@ def objetivo_mision_actual(
 
     personaje_por_pista = {
         "fuente_ausente": "Darío Veraz",
-        "testimonio_y_contexto": "Tomás Red",
+        "testimonio_y_contexto": "Tania Red",
         "respuesta_kael": "Ronaldo Vélez",
     }
     if any(pista not in mision["pistas"] for pista in personaje_por_pista):

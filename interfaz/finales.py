@@ -5,9 +5,15 @@ from nucleo.recursos import cargar_imagen
 
 CREMA = (255, 243, 210)
 ORO = (237, 185, 87)
-TEXTOS = {"victoria": ("LAS TRES ERAS FLORECEN", "{lider} guía al Consejo; NÚCLEO trabaja bajo supervisión humana."),
+TEXTOS = {"victoria": ("LAS TRES ERAS FLORECEN", "{lider} guía al Consejo de La Copa, Ronaldo recupera su nombre y NÚCLEO trabaja bajo supervisión humana."),
           "game_over": ("LA CONFIANZA SE CUBRE DE HUMO", "NÚCLEO fue corregido, pero los rumores dejaron heridas.")}
 IMAGENES = {"victoria": "Finales/Final_positivo.jpeg", "game_over": "Finales/Game_over.jpeg"}
+
+
+def lider_de(jugadores):
+    """Kael o Mira, según la apariencia de quien juega al Aspirante."""
+    aspirante = next((j for j in jugadores if j.get("rol") == "aspirante"), {})
+    return "Mira" if aspirante.get("apariencia") in ("mira", "mujer") else "Kael"
 
 
 def determinar_final(indicadores):
@@ -18,8 +24,10 @@ def determinar_final(indicadores):
 
 
 class PantallaFinal:
-    def __init__(self, indicadores, etiquetas, fuente_titulo, fuente, lider="Kael", casos=8):
-        self.lider, self.casos = lider, casos
+    def __init__(self, indicadores, etiquetas, fuente_titulo, fuente, lider="Kael", casos=None, total=None):
+        from multijugador.presentacion import total_casos
+        self.total = total if total is not None else total_casos()
+        self.lider, self.casos = lider, self.total if casos is None else casos
         self.resultado = determinar_final(indicadores)
         self.indicadores = dict(indicadores)
         self.etiquetas = etiquetas
@@ -45,7 +53,7 @@ class PantallaFinal:
         from nucleo.recursos import envolver_texto
         for i, linea in enumerate(envolver_texto(detalle.format(lider=self.lider), self.fuente, 860)):
             self._centrado(superficie, self.fuente, linea, 124 + i * 25, CREMA)
-        self._centrado(superficie, self.fuente, f"Casos resueltos: {self.casos} de 8", 465, CREMA)
+        self._centrado(superficie, self.fuente, f"Casos resueltos: {self.casos} de {self.total}", 465, CREMA)
         resumen = pygame.Rect(300, 496, 360, 132)
         capa = pygame.Surface(resumen.size, pygame.SRCALPHA)
         capa.fill((10, 24, 17, 220))
