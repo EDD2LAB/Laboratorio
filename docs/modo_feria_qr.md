@@ -228,3 +228,35 @@ La idea central para explicar el modo a un jurado es:
 > No usamos árboles y grafos solo como requisito técnico. Los convertimos en la manera en que una comunidad clasifica, comparte, verifica o distorsiona información.
 
 El visitante deja de ser espectador: se convierte en una voz de La Copa y observa en tiempo real cómo una decisión aparentemente pequeña puede proteger o afectar a toda una comunidad conectada.
+
+## Estado de la implementación
+
+**Fase 1 implementada** en el paquete `feria/` (aparte del juego):
+
+| Archivo | Contenido |
+| --- | --- |
+| `feria/casos.py` | Cuatro casos propios con categoría del árbol de La Copa, verdad y enseñanza |
+| `feria/sesion.py` | `SesionFeria` en memoria: un voto por celular y ronda, resultado colectivo |
+| `feria/web.py` | Rutas `/feria/{código}` (página, ronda y voto) y servidor local en un hilo |
+| `feria/movil.py` | Página del celular: HTML sin recursos externos ni datos personales |
+| `feria/qr.py` | QR con `segno`, módulos enteros y zona blanca |
+| `feria/pantalla.py` | Pantalla grande sobre La Copa con el arte de `Imagenes/Modo feria/` |
+
+Del juego solo cambia el menú: el botón **Feria de los Ecos QR** (también en
+el menú del modo feria técnico). La pantalla corre su propio bucle y, al salir
+con Esc, detiene el servidor y borra la sesión. No toca campaña, expediente,
+preferencias, salas ni protocolo.
+
+**Cómo usarla en la feria**
+
+1. Conectar el computador y los celulares a la misma Wi-Fi (un punto de acceso
+   propio evita redes que aíslan a los clientes).
+2. La primera vez, Windows pregunta si Python puede recibir conexiones: aceptar
+   en **redes privadas**. Sin ese permiso los celulares no llegan a la página.
+3. Menú → Feria de los Ecos QR. Los visitantes escanean y votan.
+4. Espacio o «Ver resultado» cierra la ronda; N o «Nueva ronda» abre la siguiente.
+   «Votar aquí» permite votar con el ratón a quien no tenga celular.
+
+El servidor usa el puerto 8080 (o 8081, 8090, 8765 si está ocupado). Pendiente
+para fases siguientes: propagación por los puentes, temporizador y rondas
+automáticas, resumen de la sesión y, si se decide, votos por Render.

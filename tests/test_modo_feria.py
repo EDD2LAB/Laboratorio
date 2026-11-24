@@ -11,7 +11,7 @@ import pygame  # noqa: E402
 from interfaz import inicio  # noqa: E402
 from nucleo import preferencias  # noqa: E402
 
-BOTONES_NORMALES = {"campana_local", "multi", "ajustes", "ayuda_f1", "salir"}
+BOTONES_NORMALES = {"campana_local", "multi", "feria_qr", "ajustes", "ayuda_f1", "salir"}  # feria_qr: modo aparte
 
 
 def menu(feria):

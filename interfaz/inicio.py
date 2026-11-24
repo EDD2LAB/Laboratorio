@@ -416,6 +416,12 @@ class MenuInicio:
             nombre = self.campos["nombre"].strip() or "Visitante"
             self.iniciar_campana(nombre, self.rol_solo, "normal", LA_COPA, "principal")
             return
+        if clave == "feria_qr":
+            # Modo aparte: su propio bucle y su sesión temporal; no toca la campaña.
+            from feria.pantalla import jugar_desde_menu as feria_de_los_ecos
+            resultado = feria_de_los_ecos(self.lienzo, self.audio)
+            self._musica_menu()
+            return resultado
         if clave == "ver_batalla":
             from herramientas.vista_combate import jugar_desde_menu
             resultado = jugar_desde_menu(self.lienzo, self.audio)
@@ -536,16 +542,15 @@ class MenuInicio:
                 destacado.center = (480, 286)
                 pygame.draw.rect(self.lienzo, VERDE, destacado.inflate(10, 10), 3, border_radius=12)
                 self.boton("demo_rapida", "Demo rápida", (480, 286), 290, alto=48, tamano_fuente=24)
-                for i, (clave, texto) in enumerate((("campana_local", "Campaña con bots"), ("multi", "Multijugador"),
-                                                    ("ver_batalla", "Ver la batalla final"), ("ajustes", "Ajustes"),
-                                                    ("ayuda_f1", "Ayuda · F1"), ("salir", "Salir"))):
-                    self.boton(clave, texto, (480, 350 + i * 50), alto=42, tamano_fuente=18)
+                for i, (clave, texto) in enumerate((("feria_qr", "Feria de los Ecos QR"), ("campana_local", "Campaña con bots"),
+                                                    ("multi", "Multijugador"), ("ver_batalla", "Ver la batalla final"),
+                                                    ("ajustes", "Ajustes"), ("ayuda_f1", "Ayuda · F1"), ("salir", "Salir"))):
+                    self.boton(clave, texto, (480, 345 + i * 44), alto=38, tamano_fuente=18)
             else:
-                self.boton("campana_local", "Campaña con bots", (480, 300))
-                self.boton("multi", "Multijugador", (480, 380))
-                self.boton("ajustes", "Ajustes", (480, 460))
-                self.boton("ayuda_f1", "Ayuda · F1", (480, 525))
-                self.boton("salir", "Salir", (480, 600))
+                for i, (clave, texto) in enumerate((("campana_local", "Campaña con bots"), ("multi", "Multijugador"),
+                                                    ("feria_qr", "Feria de los Ecos QR"), ("ajustes", "Ajustes"),
+                                                    ("ayuda_f1", "Ayuda · F1"), ("salir", "Salir"))):
+                    self.boton(clave, texto, (480, 292 + i * 62))
         elif self.vista == "confirmar_salir":
             self.panel(pygame.Rect(250, 200, 460, 300))
             self.texto("¿Cerrar el juego?", 480, 235, 32, ORO, True)

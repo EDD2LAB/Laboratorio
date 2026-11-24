@@ -50,8 +50,9 @@ foreach ($carpeta in "Imagenes", "Audios", "Fuentes", "Hitboxes", "datos") {
     $Datos += "--add-data"; $Datos += "$carpeta;$carpeta"
 }
 $Datos += "--add-data"; $Datos += "multijugador\configuracion.json;multijugador"
-# Importados solo dentro de funciones (botón "Ver la batalla final" y audio).
-$Ocultos = @("--hidden-import", "herramientas.vista_combate", "--hidden-import", "audio.audio_manager")
+# Importados solo dentro de funciones (botones "Ver la batalla final" y "Feria de los Ecos QR", y audio).
+$Ocultos = @("--hidden-import", "herramientas.vista_combate", "--hidden-import", "audio.audio_manager",
+             "--hidden-import", "feria.pantalla", "--hidden-import", "feria.qr", "--hidden-import", "segno")
 
 function Invoke-PyInstaller($Script, $Nombre, $Destino, $Extra) {
     & $Python -m PyInstaller $Script --name $Nombre --onedir --noconfirm --clean `

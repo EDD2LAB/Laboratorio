@@ -21,6 +21,8 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 - En partida, F2 dos veces seguidas da por resueltas las tres eras y lleva al equipo al final
   cooperativo (acción `saltar_al_final` del servidor).
 - Zonas caminables calculadas se guardan en `cache/` (ignorado por git; se regeneran si cambia un mapa).
+- Feria de los Ecos QR (modo aparte, paquete `feria/`): botón del menú; servidor local en el puerto 8080,
+  ver `docs/modo_feria_qr.md`. No debe tocar campaña, expediente, preferencias ni protocolo.
 - Vista previa del combate final (sin servidor ni campaña): `.venv\Scripts\python.exe -m herramientas.vista_combate`.
   Sonidos de batalla provisionales: `herramientas/sintetizar_sonidos_batalla.py` (no pisa `.wav` existentes).
 - Editores: `.venv\Scripts\python.exe -m editores.hitbox_editor` (igual con
