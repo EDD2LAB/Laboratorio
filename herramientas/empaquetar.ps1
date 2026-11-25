@@ -69,6 +69,13 @@ if ($Diagnostico) {
 $Juego = Join-Path $Raiz "dist\TimelessGlitch"
 $Interno = Join-Path $Juego "_internal"
 
+# Originales pesados de Gemini: el juego usa las versiones ya preparadas
+# (herramientas\preparar_arte_esencial.py), así que no van en el ejecutable.
+foreach ($Salida in $Juego, (Join-Path $Raiz "dist\diagnostico\TimelessGlitchDiag")) {
+    $Originales = Join-Path $Salida "_internal\Imagenes\assets finales"
+    if (Test-Path -LiteralPath $Originales) { Remove-Item -LiteralPath $Originales -Recurse -Force }
+}
+
 # 3. Preferencias de feria (claves reales de nucleo/preferencias.py), UTF-8 sin BOM.
 $Preferencias = @"
 {

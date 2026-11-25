@@ -97,6 +97,8 @@ class MenuInicio:
         self.rol_solo = ROLES[0]
         self.dificultad_solo = "normal"
         self.feria = modo_feria(self.pausa.preferencias)
+        self.intro = None  # intro de dos viñetas (local, solo al empezar una partida nueva)
+        self.salas_con_intro = set()  # al volver a una sala ya vista no se repite
         self.ultima_actividad = time.monotonic()
         self.mensaje = ""
         self.error = False
@@ -265,6 +267,7 @@ class MenuInicio:
         self.estado = {"jugadores": [], "iniciada": False}
         volvio_de_partida = self.partida is not None
         self.partida = None
+        self.intro = None
         self.campana_local = False
         self.conectando = False
         if volvio_de_partida:
@@ -346,6 +349,7 @@ class MenuInicio:
                                 "Entrando a la partida del equipo…", lambda: None,
                                 lambda _: VistaPartida(self.identificador, evento, self.audio), desde=.5)
                             self.aplicar_preferencias()
+                            self.empezar_intro(self.codigo_sala or self.campos["sala"])
                         else:
                             self.partida.recibir(evento)
                         self.vista = "partida"
@@ -484,12 +488,25 @@ class MenuInicio:
             self.estado = self.partida.estado
             self.aplicar_preferencias()
             self.vista = "partida"
+            self.empezar_intro()
             self.registrar_actividad()
             pygame.key.stop_text_input()
         except (OSError, ValueError, RuntimeError) as error:
             self.limpiar_conexion()
             self.vista = vista_error
             self.mensaje, self.error = str(error), True
+
+    def empezar_intro(self, sala=None):
+        """Intro de dos viñetas al empezar una partida nueva (no al viajar ni al reconectar).
+
+        ``sala`` identifica una sala en línea o LAN: si ya se vio su intro, no se repite."""
+        self.intro = None
+        if not self.pausa.preferencias.get("ver_intro", True) or (sala and sala in self.salas_con_intro):
+            return
+        from interfaz.intro import Intro
+        self.intro = Intro.crear(feria=self.feria)
+        if sala:
+            self.salas_con_intro.add(sala)
 
     # ------------------------------------------------------------ modo feria
     def registrar_actividad(self, ahora=None):
@@ -614,6 +631,8 @@ class MenuInicio:
             self.parrafo(self.mensaje, pygame.Rect(215, 560, 535, 95), 16, (255, 161, 145) if self.error else CREMA)
         elif self.vista == "sala":
             self.dibujar_sala()
+        elif self.vista == "partida" and self.partida and self.intro is not None:
+            self.intro.dibujar(self.lienzo)
         elif self.vista == "partida" and self.partida:
             titulo = "CAMPAÑA LOCAL" if self.campana_local else self.codigo_sala
             self.partida.dibujar(self.lienzo, titulo, self.mouse)
@@ -694,11 +713,16 @@ class MenuInicio:
                 tamano = self.pantalla.get_size()
                 self.mouse = a_lienzo(pygame.mouse.get_pos(), tamano)
                 self.recibir()
+                if self.intro is not None:
+                    self.intro.actualizar(segundos)
+                    if self.intro.terminada or self.vista != "partida":
+                        self.intro = None
                 # Preparar las áreas clicables antes de procesar la entrada.
                 if self.vista == "partida" and self.partida and self.cliente:
-                    self.partida.en_pausa = self.pausa.activo
+                    # Durante la intro la persona no se mueve; en línea la partida sigue para los demás.
+                    self.partida.en_pausa = self.pausa.activo or self.intro is not None
                     self.partida.actualizar(segundos, self.cliente)
-                    if self.campana_local and not self.pausa.activo:  # la campaña local se detiene
+                    if self.campana_local and not self.pausa.activo and self.intro is None:  # la campaña local se detiene
                         self.cliente.actualizar(segundos)
                         self.recibir()
                 aviso_inactividad = self.revisar_inactividad()
@@ -711,6 +735,12 @@ class MenuInicio:
                         if aviso_inactividad is not None:
                             aviso_inactividad = None  # esa tecla solo responde "sigo aquí"
                             continue
+                    if self.intro is not None and self.vista == "partida":
+                        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F11:
+                            self.pausa.alternar_pantalla_completa()
+                        else:
+                            self.intro.manejar_evento(evento)  # la intro consume la entrada
+                        continue
                     if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F1:
                         self.pausa.abrir("ayuda_f1")
                         continue

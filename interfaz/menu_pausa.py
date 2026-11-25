@@ -189,7 +189,7 @@ class MenuPausa:
             self.vista = clave
         elif clave.startswith("pestana:"):
             self.pestana_ayuda = clave.split(":", 1)[1]
-        elif clave in ("alto_contraste", "narracion"):
+        elif clave in ("alto_contraste", "narracion", "ver_intro"):
             self.preferencias[clave] = not self.preferencias[clave]
             preferencias.guardar(self.preferencias)
             self.menu.aplicar_preferencias()
@@ -359,18 +359,20 @@ class MenuPausa:
     def _dibujar_accesibilidad(self):
         from audio.narracion import disponible
         menu = self.menu
-        menu.panel(pygame.Rect(170, 90, 620, 540))
-        menu.texto("ACCESIBILIDAD", 480, 116, 32, ORO, True)
+        menu.panel(pygame.Rect(170, 70, 620, 590))
+        menu.texto("ACCESIBILIDAD", 480, 94, 32, ORO, True)
         p = self.preferencias
-        self._fila_opcion(200, "contraste", "Alto contraste", "alto_contraste", "Activado" if p["alto_contraste"] else "Apagado")
+        self._fila_opcion(170, "contraste", "Alto contraste", "alto_contraste", "Activado" if p["alto_contraste"] else "Apagado")
         voz = disponible()
-        self._fila_opcion(255, "audio", "Narración de mensajes", "narracion",
+        self._fila_opcion(222, "audio", "Narración de mensajes", "narracion",
                           ("Activada" if p["narracion"] else "Apagada") if voz else "No disponible", voz)
         if not voz:
-            menu.texto("Instala pyttsx3 para activar la narración.", 480, 282, 14, ROJO, True)
-        menu.texto("Apariencia de tu personaje en La Copa", 480, 320, 20, ORO, True)
+            menu.texto("Instala pyttsx3 para activar la narración.", 480, 248, 14, ROJO, True)
+        self._fila_opcion(292, "libro", "Ver la intro al empezar", "ver_intro",
+                          "Activada" if p.get("ver_intro", True) else "Apagada")
+        menu.texto("Apariencia de tu personaje en La Copa", 480, 340, 20, ORO, True)
         for fila, (nombre, opcion) in enumerate((("Aspirante", "apariencia_aspirante"), ("Habitante", "apariencia_habitante"))):
-            y = 385 + fila * 62
+            y = 400 + fila * 62
             imagen = menu.iconos_ajustes.get("apariencia")
             if imagen is not None:
                 menu.lienzo.blit(imagen, imagen.get_rect(center=(205, y)))
@@ -379,8 +381,8 @@ class MenuPausa:
                 texto = valor.capitalize()
                 self._boton(f"apariencia:{opcion}:{valor}", f"» {texto} «" if p[opcion] == valor else texto,
                             (540 + columna * 170, y), 155, alto=38, tamano_fuente=18)
-        menu.texto("La apariencia se aplica al elegir tu personaje en la próxima partida.", 480, 500, 14, CREMA, True)
-        self._boton("ajustes", "Volver", (480, 572), 220, alto=40)
+        menu.texto("La apariencia se aplica al elegir tu personaje en la próxima partida.", 480, 515, 14, CREMA, True)
+        self._boton("ajustes", "Volver", (480, 600), 220, alto=40)
 
     def _dibujar_como_jugar(self):
         menu = self.menu
