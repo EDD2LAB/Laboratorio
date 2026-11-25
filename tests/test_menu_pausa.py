@@ -51,6 +51,10 @@ class MenuPausaCampanaTests(unittest.TestCase):
         self.menu.accionar("campana_local")
         self.menu.accionar("iniciar_campana_solo")
         self.assertEqual(self.menu.vista, "partida")
+        # Las viñetas de la intro (interfaz/intro.py) se prueban en test_viñetas_antes_de_la_pausa;
+        # aquí se dan por vistas para probar la pausa como antes.
+        self.intro_inicial = self.menu.intro
+        self.menu.intro = None
 
     def tearDown(self):
         self.menu.limpiar_conexion()
@@ -78,6 +82,29 @@ class MenuPausaCampanaTests(unittest.TestCase):
             return self.menu.ejecutar()
         finally:
             pygame.display.flip, pygame.mouse.set_cursor = original_flip, original_cursor
+
+    def test_viñetas_antes_de_la_pausa(self):
+        """Esc salta las viñetas; mientras se ven, la campaña local espera."""
+        from nucleo.rutas import IMAGENES
+        if not (IMAGENES / "Intro" / "vineta1.png").is_file():
+            self.skipTest("Falta correr herramientas/preparar_arte_esencial.py")
+        self.assertIsNotNone(self.intro_inicial)
+        self.menu.intro = self.intro_inicial
+        llamadas = []
+        actualizar = self.menu.cliente.actualizar
+        self.menu.cliente.actualizar = lambda s: (llamadas.append(s), actualizar(s))
+        registro = {}
+
+        def anotar(clave):
+            return lambda: registro.update({clave: (self.menu.intro is not None, len(llamadas), self.menu.pausa.activo)})
+        resultado = self.correr({2: lambda: pygame.event.post(tecla(pygame.K_SPACE)), 6: anotar("viñeta2"),
+                                 8: lambda: pygame.event.post(tecla(pygame.K_ESCAPE)), 12: anotar("despues")}, 16)
+        self.assertEqual(resultado, "salir")
+        self.assertEqual(registro["viñeta2"], (True, 0, False))  # Espacio pasó de viñeta; bots quietos
+        intro_visible, llamadas_despues, pausa = registro["despues"]
+        self.assertFalse(intro_visible)  # Esc saltó la intro sin abrir la pausa
+        self.assertFalse(pausa)
+        self.assertGreater(llamadas_despues, 0)  # la campaña siguió
 
     def test_escape_abre_pausa_y_detiene_la_campana(self):
         llamadas = []

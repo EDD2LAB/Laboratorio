@@ -52,6 +52,8 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 - Juego 2D en pygame; nunca 3D ni cambio de motor.
 - El Aspirante puede ser Kael (predeterminado) o Mira, y el Habitante Tarek (predeterminado) o Luma, solo en La Copa; el Guardián y el Mensajero no eligen. El que no se elige queda como NPC y el elegido no se duplica. En La Copa se rumora que Kael rompió el puente y que alguien se robó la ayuda: los rumores son falsos o exagerados. Ni Kael ni Mira son culpables ni enemigos en ningún resultado. En el Presente, Ronaldo Vélez (descendiente de Kael) es el Aspirante.
 - Pixel art: `pygame.transform.scale`, nunca `smoothscale`; escalar una vez al cargar.
+  Excepción: las ilustraciones de Gemini se preparan con `herramientas/preparar_arte_esencial.py`
+  (Pillow, LANCZOS, una sola vez, desde `Imagenes/assets finales/`); el juego ya las carga a su tamaño final.
 - Multijugador con servidor autoritativo; por red solo viajan ids, estados y eventos, nunca imágenes ni audio.
 - Rutas con pathlib relativas a la raíz (`nucleo.rutas.RAIZ`); no inventar rutas, archivos, coordenadas ni resultados de pruebas.
 - Ningún módulo carga imágenes, fuentes ni sonidos al importarse: solo después de `pygame.init()`/`set_mode()`.

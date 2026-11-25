@@ -16,6 +16,11 @@ if not getattr(sys, "frozen", False):  # también se puede correr desde el códi
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
+ARTE_ESENCIAL = ("Indicadores Puente/Indicador_base.png", "Indicadores Puente/Aguja_base.png",
+                 "Intro/vineta1.png", "Intro/vineta2.png", "Finales/Final_tres_eras.png",
+                 "Finales/Final_humo_tres_eras.png")
+
+
 def paso(texto):
     print("[diagnóstico]", texto, flush=True)
 
@@ -40,6 +45,12 @@ def main():
             raise RuntimeError("Falta la carpeta " + carpeta)
     if not (RAIZ / "multijugador" / "configuracion.json").is_file():
         raise RuntimeError("Falta multijugador/configuracion.json")
+    faltan = [ruta for ruta in ARTE_ESENCIAL if not (RAIZ / "Imagenes" / ruta).is_file()]
+    if faltan:
+        raise RuntimeError("Falta el arte esencial: " + ", ".join(faltan))
+    paso("arte esencial presente: " + ", ".join(ARTE_ESENCIAL))
+    if getattr(sys, "frozen", False) and (RAIZ / "Imagenes" / "assets finales").exists():
+        raise RuntimeError("Imagenes/assets finales no debe ir en el ejecutable")
     pygame.init()
     from interfaz.inicio import MenuInicio
     menu = MenuInicio()
@@ -51,6 +62,12 @@ def main():
     if menu.vista != "partida":
         raise RuntimeError("No se creó la campaña local: " + menu.mensaje)
     paso(f"campaña local creada en {time.monotonic() - inicio:.1f} s; caso: {menu.estado['mundo']['caso']['titulo']}")
+    if menu.pausa.preferencias.get("ver_intro", True):
+        if menu.intro is None:
+            raise RuntimeError("La intro no se creó al empezar la campaña")
+        menu.dibujar()
+        paso("intro de dos viñetas dibujada; se salta para recorrer las eras")
+        menu.intro = None
     partida = menu.cliente._partida
     for destino in ("presente", "futuro"):
         for _ in range(20):  # unos cuadros de juego reales en la era actual

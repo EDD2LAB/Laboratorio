@@ -6,8 +6,6 @@ resultado de clasificación) pasando un adaptador con la misma interfaz que
 ``EstadoJuego``. Por red solo llegan ids, tipos y estados; los sprites y
 sonidos se cargan aquí una sola vez.
 """
-import math
-
 import pygame
 
 from multijugador.presentacion import (ETIQUETAS, NOMBRES_POCION, ORDEN_INDICADORES, POLARIDAD, color_cambio,
@@ -122,30 +120,9 @@ class RecursosEscenas:
             "susurros_falsos": cargar_icono_hud("Barra_susurros_falsos.png"),
             "desinformacion": cargar_icono_hud("Barra_desinformación.png"),
         }
-        indicador = {estado: cargar("Indicadores Puente/" + archivo, (220, 220), requerido=False)
-                     for estado, archivo in (("normal", "Indicador.png"), ("acierto", "IndicadorAcierto.png"),
-                                             ("error", "IndicadorError.png"))}
-        self.indicadores_puente = indicador
-        # Aguja y fichas de aciertos (Imagenes/Expediente/Indicadores-puente); sin ellas, se dibujan por código.
-        carpeta = "Expediente/Indicadores-puente/"
-        aguja = cargar(carpeta + "aguja7.png", requerido=False)
-        self.aguja_puente = None
-        if aguja is not None:
-            aguja = aguja.subsurface(aguja.get_bounding_rect(min_alpha=40))
-            largo = LARGO_AGUJA
-            ancho = max(4, round(aguja.get_width() * largo / aguja.get_height()))
-            aguja = pygame.transform.scale(aguja, (ancho, largo))
-            # Lienzo cuadrado con el eje (la perilla, abajo) en el centro y la punta hacia arriba.
-            lienzo = pygame.Surface((2 * largo, 2 * largo), pygame.SRCALPHA)
-            lienzo.blit(aguja, aguja.get_rect(midbottom=(largo, largo + ancho // 2)))
-            self.aguja_puente = lienzo
-        self._agujas = {}
-        self.fichas_puente = {}
-        for estado, archivo in (("logrado", "ficha_logrado.png"), ("vacio", "ficha_vacio.png")):
-            ficha = cargar(carpeta + archivo, requerido=False)
-            if ficha is not None:
-                ficha = ficha.subsurface(ficha.get_bounding_rect(min_alpha=128))
-                self.fichas_puente[estado] = pygame.transform.scale(ficha, TAMANO_FICHA)
+        # Medidor fijo, zona verde por código, aguja y fichas (interfaz/minijuego_puente.py).
+        from interfaz.minijuego_puente import RecursosPuente
+        self.puente = RecursosPuente(cargar)
         self.puente_roto = cargar("Puentes/Puente1Roto.png", requerido=False)
         self.puente_det = cargar("Puentes/Puente1Det.png", requerido=False)
         self.efecto_reparacion = cargar_spritesheet_frames("Animaciones/Efectos/EfectoReparacion.png", 8)
@@ -155,29 +132,6 @@ class RecursosEscenas:
         except (RuntimeError, ValueError) as error:
             print("[Multijugador] Sin sprites de materiales:", error)
             self.materiales = {}
-        self._rotados = {}
-
-    def aguja_rotada(self, angulo):
-        """La aguja apuntando a ``angulo`` (radianes, eje y hacia abajo), en pasos de 2 grados."""
-        if self.aguja_puente is None:
-            return None
-        grados = round((-math.degrees(angulo) - 90) / 2) * 2
-        if grados not in self._agujas:
-            self._agujas[grados] = pygame.transform.rotate(self.aguja_puente, grados)
-        return self._agujas[grados]
-
-    def indicador_rotado(self, estado, progreso):
-        base = self.indicadores_puente.get(estado) or self.indicadores_puente.get("normal")
-        if base is None or not progreso:
-            return base
-        clave = (estado, progreso)
-        if clave not in self._rotados:
-            grados = math.degrees(progreso * CONFIG_REPARACION["rotacion_objetivo_por_acierto"])
-            rotada = pygame.transform.rotate(base, grados)
-            lienzo = pygame.Surface(base.get_size(), pygame.SRCALPHA)
-            lienzo.blit(rotada, rotada.get_rect(center=lienzo.get_rect().center))
-            self._rotados[clave] = lienzo
-        return self._rotados[clave]
 
 
 class AnimacionPocion:
@@ -286,53 +240,18 @@ def dibujar_consecuencia(panel, superficie, resultado, dimension):
     return rect
 
 
-LARGO_AGUJA = 84  # px desde la perilla hasta la punta
-TAMANO_FICHA = (46, 25)
-
-
 def dibujar_minijuego(panel, superficie, puente, tiempo_aguja_ms, estado_indicador):
-    """Mismo minijuego que SistemaReparacionPuente.dibujar_interfaz."""
+    """Mismo minijuego que SistemaReparacionPuente.dibujar_interfaz (dibujo en minijuego_puente)."""
+    import time
+    from interfaz.minijuego_puente import dibujar_panel
     recursos = panel.vista.escenas
-    fuente, titulo_f = recursos.r["fuente_mapa"], recursos.r["fuente_panel_titulo"]
-    rect = pygame.Rect(260, 145, 440, 425)
-    velo = pygame.Surface(superficie.get_size(), pygame.SRCALPHA)
-    velo.fill((0, 0, 0, 105))
-    superficie.blit(velo, (0, 0))
-    pygame.draw.rect(superficie, (19, 38, 31), rect, border_radius=14)
-    pygame.draw.rect(superficie, ORO, rect, 3, border_radius=14)
-    titulo = titulo_f.render("REPARAR EL PUENTE", True, (255, 228, 148))
-    superficie.blit(titulo, titulo.get_rect(center=(rect.centerx, rect.y + 30)))
-    progreso = puente.get("progreso", 0)
-    indicador = recursos.indicador_rotado(estado_indicador, progreso)
-    if indicador:
-        caja = indicador.get_rect(center=(rect.centerx, rect.y + 215))
-        superficie.blit(indicador, caja)
-        angulo = angulo_aguja(tiempo_aguja_ms)
-        aguja = recursos.aguja_rotada(angulo)
-        if aguja is not None:
-            superficie.blit(aguja, aguja.get_rect(center=caja.center))
-        else:
-            extremo = (round(caja.centerx + math.cos(angulo) * 78), round(caja.centery + math.sin(angulo) * 78))
-            pygame.draw.line(superficie, (255, 249, 218), caja.center, extremo, 5)
-            pygame.draw.circle(superficie, (43, 35, 27), caja.center, 10)
-            pygame.draw.circle(superficie, (255, 211, 100), caja.center, 6)
-    else:
-        panel.texto_lineas(superficie, "Falta Indicadores Puente/Indicador.png", rect.x + 30, rect.y + 200, 380, fuente)
-    total = puente.get("total", 3)
-    fichas = recursos.fichas_puente
-    paso = TAMANO_FICHA[0] + 8 if len(fichas) == 2 else 44
-    for i in range(total):
-        centro = (rect.centerx - (total - 1) * paso // 2 + i * paso, rect.bottom - 70)
-        if len(fichas) == 2:
-            ficha = fichas["logrado" if i < progreso else "vacio"]
-            superficie.blit(ficha, ficha.get_rect(center=centro))
-            continue
-        pygame.draw.circle(superficie, (102, 200, 112) if i < progreso else (42, 69, 49), centro, 13)
-        pygame.draw.circle(superficie, ORO, centro, 13, 2)
-    texto = fuente.render(f"Aciertos: {progreso}/{total}    Pulsa E en la zona verde", True, CREMA)
-    superficie.blit(texto, texto.get_rect(center=(rect.centerx, rect.bottom - 34)))
-    ayuda = recursos.r["fuente_panel"].render("ESC: dejar que otro compañero lo intente", True, VERDE)
-    superficie.blit(ayuda, ayuda.get_rect(center=(rect.centerx, rect.y + 56)))
+    fase = None
+    hasta = getattr(panel, "indicador_hasta", 0)
+    if hasta and estado_indicador != "normal":  # avance del destello o las chispas (0 → 1)
+        duracion = CONFIG_REPARACION["duracion_resultado_ms"] / 1000
+        fase = min(1.0, max(0.0, 1 - (hasta - time.monotonic()) / duracion))
+    dibujar_panel(superficie, recursos.puente, recursos.r, puente, angulo_aguja(tiempo_aguja_ms),
+                  estado_indicador, fase)
 
 
 def dibujar_portal(panel, superficie, destinos, origen):
