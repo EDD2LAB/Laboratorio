@@ -1,0 +1,567 @@
+{
+  "fecha": "2026-11-25 18:46",
+  "python": "3.14.2",
+  "pygame": "2.5.8",
+  "resultados": [
+    {
+      "segundos": 60.0,
+      "participantes": "clientes",
+      "fps_medio": 59.5,
+      "frame_ms": {
+        "p50": 5.51,
+        "p95": 7.42,
+        "p99": 15.33,
+        "medio": 5.98
+      },
+      "tick_servidor_ms": {
+        "p50": 0.69,
+        "p95": 1.09,
+        "max": 1.67,
+        "ticks": 1167
+      },
+      "por_cliente": [
+        {
+          "mensajes_s": 19.8,
+          "bytes_s": 4387
+        },
+        {
+          "mensajes_s": 19.8,
+          "bytes_s": 4387
+        },
+        {
+          "mensajes_s": 19.8,
+          "bytes_s": 4387
+        },
+        {
+          "mensajes_s": 19.8,
+          "bytes_s": 4387
+        }
+      ],
+      "ping_ms": 1.4
+    },
+    {
+      "segundos": 60.0,
+      "participantes": "mixto",
+      "fps_medio": 59.3,
+      "frame_ms": {
+        "p50": 5.62,
+        "p95": 7.65,
+        "p99": 16.68,
+        "medio": 6.12
+      },
+      "tick_servidor_ms": {
+        "p50": 1.33,
+        "p95": 1.68,
+        "max": 4.1,
+        "ticks": 1166
+      },
+      "por_cliente": [
+        {
+          "mensajes_s": 19.8,
+          "bytes_s": 3048
+        },
+        {
+          "mensajes_s": 19.8,
+          "bytes_s": 3048
+        }
+      ],
+      "ping_ms": 1.3
+    },
+    {
+      "escenario": "campana_la_copa",
+      "tamano_pantalla": [
+        960,
+        720
+      ],
+      "segundos": 60.0,
+      "fps_medio": 52.3,
+      "cuadro_ms": {
+        "p50": 18.3,
+        "p95": 21.17,
+        "p99": 31.79,
+        "max": 536.43,
+        "medio": 19.12,
+        "cuadros": 3136,
+        "tirones_50ms": 3
+      },
+      "cuadro_por_fase_ms": {
+        "la_copa": {
+          "p50": 18.3,
+          "p95": 21.17,
+          "p99": 31.79,
+          "max": 536.43,
+          "medio": 19.12,
+          "cuadros": 3136,
+          "tirones_50ms": 3
+        }
+      },
+      "paso_servidor_local_ms": {
+        "p50": 1.21,
+        "p95": 1.41,
+        "p99": 1.86,
+        "max": 519.83,
+        "medio": 1.52,
+        "cuadros": 3137,
+        "tirones_50ms": 3
+      },
+      "gc_pausas_ms": {
+        "cantidad": 75,
+        "max": 27.51,
+        "mas_de_5ms": 2
+      },
+      "carga_s": {
+        "imports": 0.01,
+        "menu": 0.44,
+        "campana": 2.31
+      },
+      "memoria_mb": {
+        "menu": {
+          "trabajo": 142.8,
+          "privada": 126.1
+        },
+        "inicio_partida": {
+          "trabajo": 413.2,
+          "privada": 400.2
+        },
+        "fin": {
+          "trabajo": 459.3,
+          "privada": 447.7
+        }
+      }
+    },
+    {
+      "escenario": "campana_la_copa",
+      "tamano_pantalla": [
+        1920,
+        1080
+      ],
+      "segundos": 60.0,
+      "fps_medio": 49.1,
+      "cuadro_ms": {
+        "p50": 19.55,
+        "p95": 22.33,
+        "p99": 31.86,
+        "max": 573.33,
+        "medio": 20.36,
+        "cuadros": 2945,
+        "tirones_50ms": 3
+      },
+      "cuadro_por_fase_ms": {
+        "la_copa": {
+          "p50": 19.55,
+          "p95": 22.33,
+          "p99": 31.86,
+          "max": 573.33,
+          "medio": 20.36,
+          "cuadros": 2945,
+          "tirones_50ms": 3
+        }
+      },
+      "paso_servidor_local_ms": {
+        "p50": 1.22,
+        "p95": 1.4,
+        "p99": 1.83,
+        "max": 553.12,
+        "medio": 1.56,
+        "cuadros": 2946,
+        "tirones_50ms": 3
+      },
+      "gc_pausas_ms": {
+        "cantidad": 71,
+        "max": 18.11,
+        "mas_de_5ms": 2
+      },
+      "carga_s": {
+        "imports": 0.01,
+        "menu": 0.49,
+        "campana": 2.53
+      },
+      "memoria_mb": {
+        "menu": {
+          "trabajo": 148.0,
+          "privada": 131.2
+        },
+        "inicio_partida": {
+          "trabajo": 418.5,
+          "privada": 405.4
+        },
+        "fin": {
+          "trabajo": 464.5,
+          "privada": 453.0
+        }
+      }
+    },
+    {
+      "escenario": "campana_presente",
+      "tamano_pantalla": [
+        960,
+        720
+      ],
+      "segundos": 60.0,
+      "fps_medio": 56.6,
+      "cuadro_ms": {
+        "p50": 15.62,
+        "p95": 21.89,
+        "p99": 36.02,
+        "max": 890.24,
+        "medio": 16.9,
+        "cuadros": 3394,
+        "tirones_50ms": 7
+      },
+      "cuadro_por_fase_ms": {
+        "presente": {
+          "p50": 15.62,
+          "p95": 21.89,
+          "p99": 36.02,
+          "max": 890.24,
+          "medio": 16.9,
+          "cuadros": 3394,
+          "tirones_50ms": 7
+        }
+      },
+      "paso_servidor_local_ms": {
+        "p50": 1.03,
+        "p95": 1.29,
+        "p99": 1.59,
+        "max": 813.63,
+        "medio": 1.44,
+        "cuadros": 3395,
+        "tirones_50ms": 4
+      },
+      "gc_pausas_ms": {
+        "cantidad": 84,
+        "max": 21.87,
+        "mas_de_5ms": 3
+      },
+      "carga_s": {
+        "imports": 0.02,
+        "menu": 0.46,
+        "campana": 2.73
+      },
+      "memoria_mb": {
+        "menu": {
+          "trabajo": 142.7,
+          "privada": 125.9
+        },
+        "inicio_partida": {
+          "trabajo": 537.4,
+          "privada": 525.8
+        },
+        "fin": {
+          "trabajo": 562.7,
+          "privada": 551.2
+        }
+      }
+    },
+    {
+      "escenario": "campana_presente",
+      "tamano_pantalla": [
+        1920,
+        1080
+      ],
+      "segundos": 60.0,
+      "fps_medio": 54.2,
+      "cuadro_ms": {
+        "p50": 17.06,
+        "p95": 23.06,
+        "p99": 38.56,
+        "max": 899.0,
+        "medio": 18.42,
+        "cuadros": 3254,
+        "tirones_50ms": 9
+      },
+      "cuadro_por_fase_ms": {
+        "presente": {
+          "p50": 17.06,
+          "p95": 23.06,
+          "p99": 38.56,
+          "max": 899.0,
+          "medio": 18.42,
+          "cuadros": 3254,
+          "tirones_50ms": 9
+        }
+      },
+      "paso_servidor_local_ms": {
+        "p50": 1.01,
+        "p95": 1.19,
+        "p99": 1.59,
+        "max": 820.55,
+        "medio": 1.45,
+        "cuadros": 3255,
+        "tirones_50ms": 4
+      },
+      "gc_pausas_ms": {
+        "cantidad": 81,
+        "max": 17.78,
+        "mas_de_5ms": 3
+      },
+      "carga_s": {
+        "imports": 0.01,
+        "menu": 0.46,
+        "campana": 2.82
+      },
+      "memoria_mb": {
+        "menu": {
+          "trabajo": 147.7,
+          "privada": 131.0
+        },
+        "inicio_partida": {
+          "trabajo": 542.7,
+          "privada": 531.3
+        },
+        "fin": {
+          "trabajo": 567.3,
+          "privada": 556.4
+        }
+      }
+    },
+    {
+      "escenario": "campana_futuro",
+      "tamano_pantalla": [
+        960,
+        720
+      ],
+      "segundos": 60.0,
+      "fps_medio": 55.7,
+      "cuadro_ms": {
+        "p50": 16.36,
+        "p95": 20.62,
+        "p99": 35.06,
+        "max": 1158.22,
+        "medio": 17.82,
+        "cuadros": 3342,
+        "tirones_50ms": 6
+      },
+      "cuadro_por_fase_ms": {
+        "futuro": {
+          "p50": 16.36,
+          "p95": 20.62,
+          "p99": 35.06,
+          "max": 1158.22,
+          "medio": 17.82,
+          "cuadros": 3342,
+          "tirones_50ms": 6
+        }
+      },
+      "paso_servidor_local_ms": {
+        "p50": 1.05,
+        "p95": 1.32,
+        "p99": 1.67,
+        "max": 740.21,
+        "medio": 1.69,
+        "cuadros": 3343,
+        "tirones_50ms": 3
+      },
+      "gc_pausas_ms": {
+        "cantidad": 83,
+        "max": 18.15,
+        "mas_de_5ms": 3
+      },
+      "carga_s": {
+        "imports": 0.01,
+        "menu": 0.47,
+        "campana": 2.81
+      },
+      "memoria_mb": {
+        "menu": {
+          "trabajo": 142.6,
+          "privada": 125.8
+        },
+        "inicio_partida": {
+          "trabajo": 534.8,
+          "privada": 523.2
+        },
+        "fin": {
+          "trabajo": 561.7,
+          "privada": 550.0
+        }
+      }
+    },
+    {
+      "escenario": "campana_futuro",
+      "tamano_pantalla": [
+        1920,
+        1080
+      ],
+      "segundos": 60.0,
+      "fps_medio": 52.1,
+      "cuadro_ms": {
+        "p50": 17.74,
+        "p95": 21.75,
+        "p99": 36.18,
+        "max": 1235.96,
+        "medio": 19.19,
+        "cuadros": 3125,
+        "tirones_50ms": 3
+      },
+      "cuadro_por_fase_ms": {
+        "futuro": {
+          "p50": 17.74,
+          "p95": 21.75,
+          "p99": 36.18,
+          "max": 1235.96,
+          "medio": 19.19,
+          "cuadros": 3125,
+          "tirones_50ms": 3
+        }
+      },
+      "paso_servidor_local_ms": {
+        "p50": 1.03,
+        "p95": 1.21,
+        "p99": 1.54,
+        "max": 783.18,
+        "medio": 1.7,
+        "cuadros": 3126,
+        "tirones_50ms": 3
+      },
+      "gc_pausas_ms": {
+        "cantidad": 78,
+        "max": 19.77,
+        "mas_de_5ms": 2
+      },
+      "carga_s": {
+        "imports": 0.01,
+        "menu": 0.48,
+        "campana": 2.83
+      },
+      "memoria_mb": {
+        "menu": {
+          "trabajo": 148.0,
+          "privada": 131.1
+        },
+        "inicio_partida": {
+          "trabajo": 540.2,
+          "privada": 528.7
+        },
+        "fin": {
+          "trabajo": 566.3,
+          "privada": 554.6
+        }
+      }
+    },
+    {
+      "escenario": "final",
+      "tamano_pantalla": [
+        960,
+        720
+      ],
+      "segundos": 90.0,
+      "fps_medio": 56.9,
+      "cuadro_ms": {
+        "p50": 16.05,
+        "p95": 20.34,
+        "p99": 34.15,
+        "max": 961.29,
+        "medio": 17.21,
+        "cuadros": 5119,
+        "tirones_50ms": 9
+      },
+      "cuadro_por_fase_ms": {
+        "preparacion": {
+          "p50": 16.05,
+          "p95": 20.34,
+          "p99": 34.15,
+          "max": 961.29,
+          "medio": 17.21,
+          "cuadros": 5119,
+          "tirones_50ms": 9
+        }
+      },
+      "paso_servidor_local_ms": {
+        "p50": 1.47,
+        "p95": 1.78,
+        "p99": 2.33,
+        "max": 871.09,
+        "medio": 1.91,
+        "cuadros": 5120,
+        "tirones_50ms": 5
+      },
+      "gc_pausas_ms": {
+        "cantidad": 129,
+        "max": 26.77,
+        "mas_de_5ms": 4
+      },
+      "carga_s": {
+        "imports": 0.01,
+        "menu": 0.45,
+        "campana": 2.79
+      },
+      "memoria_mb": {
+        "menu": {
+          "trabajo": 142.4,
+          "privada": 125.7
+        },
+        "inicio_partida": {
+          "trabajo": 535.2,
+          "privada": 523.6
+        },
+        "fin": {
+          "trabajo": 563.2,
+          "privada": 551.5
+        }
+      }
+    },
+    {
+      "escenario": "final",
+      "tamano_pantalla": [
+        1920,
+        1080
+      ],
+      "segundos": 90.0,
+      "fps_medio": 54.6,
+      "cuadro_ms": {
+        "p50": 17.11,
+        "p95": 20.41,
+        "p99": 36.12,
+        "max": 952.55,
+        "medio": 18.29,
+        "cuadros": 4918,
+        "tirones_50ms": 10
+      },
+      "cuadro_por_fase_ms": {
+        "preparacion": {
+          "p50": 17.11,
+          "p95": 20.41,
+          "p99": 36.12,
+          "max": 952.55,
+          "medio": 18.29,
+          "cuadros": 4918,
+          "tirones_50ms": 10
+        }
+      },
+      "paso_servidor_local_ms": {
+        "p50": 1.45,
+        "p95": 1.67,
+        "p99": 2.24,
+        "max": 857.24,
+        "medio": 1.89,
+        "cuadros": 4919,
+        "tirones_50ms": 5
+      },
+      "gc_pausas_ms": {
+        "cantidad": 124,
+        "max": 15.1,
+        "mas_de_5ms": 4
+      },
+      "carga_s": {
+        "imports": 0.01,
+        "menu": 0.48,
+        "campana": 2.9
+      },
+      "memoria_mb": {
+        "menu": {
+          "trabajo": 147.9,
+          "privada": 131.0
+        },
+        "inicio_partida": {
+          "trabajo": 540.1,
+          "privada": 528.6
+        },
+        "fin": {
+          "trabajo": 568.1,
+          "privada": 556.5
+        }
+      }
+    }
+  ]
+}
