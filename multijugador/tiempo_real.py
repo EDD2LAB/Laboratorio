@@ -48,7 +48,10 @@ class Buzon:
 
 async def http(request):
     try:
-        datos = await request.json() if request.method == "POST" else {}
+        try:
+            datos = await request.json() if request.method == "POST" else {}
+        except ValueError as error:
+            raise ValueError("Solicitud inválida.") from error
         if not isinstance(datos, dict):
             raise ValueError("Solicitud inválida.")
         token = request.headers.get("Authorization", "").removeprefix("Bearer ")

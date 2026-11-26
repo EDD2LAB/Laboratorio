@@ -348,7 +348,9 @@ class PlanificadorBot:
 
     @staticmethod
     def _sin_personas(jugadores):
-        return not any(j.get("controlador") != "bot" and j.get("conectado", True) for j in jugadores)
+        # Quien perdió la conexión sigue en la partida durante su gracia: los bots lo esperan
+        # en vez de jugar solos (la persona sale de la lista al terminar la gracia).
+        return not any(j.get("controlador") != "bot" for j in jugadores)
 
     @staticmethod
     def _al_portal(bot, estado, destino):

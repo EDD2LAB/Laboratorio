@@ -147,13 +147,14 @@ class NpcEnDialogo(ConPartida):
 
 class Bots(unittest.TestCase):
     def test_un_bot_obtiene_el_testimonio_por_la_misma_ruta(self):
-        # Solo sin personas conectadas: con una persona, las pistas son tarea suya.
+        # Solo sin personas en la partida: con una persona (aunque haya perdido la
+        # conexión y esté en su gracia), las pistas son tarea suya.
         p = PartidaMovimiento([dict(id="0", nombre="A", rol="guardian")]
                               + [dict(id="bot_" + r, nombre=r, rol=r, controlador="bot") for r in ROLES[1:]], 0)
         gestor = GestorBots(p, {"0"})
         p.colisiones_de(PRESENTE)
         p._viajar_equipo(LA_COPA, PRESENTE)
-        p.conectados.discard("0")
+        p.quitar("0")
         original = p.actuar
         vistas = []
         p.actuar = lambda i, s, a: vistas.append(s["accion"]) or original(i, s, a)

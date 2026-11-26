@@ -238,14 +238,20 @@ class MisionPuente:
         raise ValueError("Acción desconocida.")
 
     def decisores(self, presentes):
-        """Con personas en la partida deciden ellas: los bots no votan ni confirman."""
+        """Con personas en la partida deciden ellas: los bots no votan ni confirman.
+
+        Si las personas perdieron la conexión (siguen en la partida durante su gracia),
+        no decide nadie: los bots las esperan en lugar de resolver por su cuenta."""
         presentes = set(presentes) & self.jugadores.keys()
-        return {i for i in presentes if self.jugadores[i].get("controlador") != "bot"} or presentes
+        personas = {i for i in presentes if self.jugadores[i].get("controlador") != "bot"}
+        if personas or any(j.get("controlador") != "bot" for j in self.jugadores.values()):
+            return personas
+        return presentes
 
     def resolver(self, presentes):
         presentes = set(presentes) & self.jugadores.keys()
         decisores = self.decisores(presentes)
-        if self.resultado or len(presentes) < 2 or not decisores.issubset(self.votos):
+        if self.resultado or len(presentes) < 2 or not decisores or not decisores.issubset(self.votos):
             return
         conteo = Counter(self.votos[i] for i in decisores)
         opcion, cantidad = conteo.most_common(1)[0]

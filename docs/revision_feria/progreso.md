@@ -36,6 +36,12 @@ Si la sesión se corta, retomar desde aquí.
 6. Cortes de conexión: **los bots esperan a las personas** mientras sigan en la partida (servidor, Manual Deploy).
 7. AVL: **completar el árbol al ganar** con los casos pendientes.
 8. Modo feria: **no guardar ajustes**; se restauran al volver al menú por inactividad.
+9. Visitante: **Enter/E en el panel inicial**, **HUD más grande**, **confirmar al cerrar en feria** e
+   **inactividad solo en la campaña local**.
+10. Bots en línea: **reintento espera a las personas**, **un bot cubre a quien se va**,
+    **la sala pasa a otra persona si sale el anfitrión** y **margen de unos segundos en microcortes**.
+11. Feria QR: **arreglos mínimos** (pasar a local tras fallos de red, cerrar la sesión cancelada, mensaje del log).
+12. Firewall: **solo documentar** (el LEEME explica cómo marcar la red como Privada).
 
 ## Fase 2: correcciones
 

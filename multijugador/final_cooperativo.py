@@ -31,7 +31,7 @@ PRUEBAS = {
     "cuentas": ("Cuentas coordinadas", "Creadas hoy, en el mismo minuto, sin seguidores reales.", True),
     "conexion": ("Sector Puerto", "Restauramos la conexión y comprobamos que volvió a la red.", True),
     "firma_rep": ("Firma del Representante", "Acepta reconfigurar con supervisión humana. Firmado.", True),
-    "orden": ("Orden de autorización", "\"Control absoluto aprobado.\" La firma la propia NÚCLEO.", False),
+    "orden": ("Orden de autorización", "\"Control absoluto aprobado.\" La firma el propio NÚCLEO.", False),
     "voz": ("Post de @ciudad_segura_01", "\"NÚCLEO nos protege a todos.\" Cuenta sin historial.", False),
     "rumor": ("Mensaje reenviado", "\"Dicen que el Ciudadano exagera.\" No dice quién lo escribió.", False),
     "captura": ("Captura de pantalla", "Imagen sin fecha, sin autor y sin enlace al original.", False),
@@ -200,9 +200,11 @@ class FinalCooperativo:
             raise ValueError("Primero investiguen el caso de NÚCLEO y tomen una decisión.")
         if type(solicitud.get("ronda_final")) is not int or solicitud["ronda_final"] != self.ronda:
             raise ValueError("El desafío cambió. Revisa el intento actual.")
-        if jugador.get("dimension") != "futuro" or jugador.get("interior"):
-            raise ValueError("Vuelve a la ciudad para participar en el final.")
         operacion = solicitud.get("operacion")
+        # Avanzar el cierre se puede desde cualquier sitio: la victoria puede llegar con la
+        # persona dentro de un edificio y la pantalla del desenlace no la deja salir.
+        if operacion != "continuar" and (jugador.get("dimension") != "futuro" or jugador.get("interior")):
+            raise ValueError("Vuelve a la ciudad para participar en el final.")
         if operacion == "continuar":
             if (self.fase != "victoria" or type(solicitud.get("revision_cierre")) is not int
                     or solicitud.get("revision_cierre") != self.aventura.revision):

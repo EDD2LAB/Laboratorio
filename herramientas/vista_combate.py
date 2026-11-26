@@ -312,21 +312,28 @@ class Vista:
             pantalla.blit(imagen, rect)
 
 
-def jugar_desde_menu(lienzo, audio=None, cuadros=0):
+def jugar_desde_menu(lienzo, audio=None, cuadros=0, inactividad=None):
     """«Ver la batalla final» del modo feria: la misma vista, dentro de la ventana del menú.
 
     No abre otra ventana ni toca servidor, campaña ni protocolo. Esc vuelve al
-    menú (devuelve None); cerrar la ventana devuelve "salir"."""
+    menú (devuelve None); cerrar la ventana devuelve "salir". Con ``inactividad`` (modo
+    feria), tantos segundos sin tocar nada también vuelven al menú."""
+    import time
     from interfaz.presentacion_pantalla import presentar
     vista = Vista(sonido=False)
     vista.audio = audio or None  # comparte el audio del menú en lugar de abrir otro
     vista.ayuda = False
     reloj, cuadro = pygame.time.Clock(), 0
+    ultima_actividad = time.monotonic()
     try:
         while True:
             dt = reloj.tick(60) / 1000
             ahora_ms = pygame.time.get_ticks()
+            if inactividad and time.monotonic() - ultima_actividad > inactividad:
+                return None
             for evento in pygame.event.get():
+                if evento.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                    ultima_actividad = time.monotonic()
                 if evento.type == pygame.QUIT:
                     return "salir"
                 if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:

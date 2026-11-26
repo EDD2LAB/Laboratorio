@@ -61,6 +61,12 @@ def tecla_activa(teclas, *codigos):
     return False
 
 
+def atajo_secreto(evento):
+    """Ctrl y Shift pulsados a la vez (atajos del equipo: F2 y F3)."""
+    modificadores = getattr(evento, "mod", 0)
+    return bool(modificadores & pygame.KMOD_CTRL) and bool(modificadores & pygame.KMOD_SHIFT)
+
+
 def separar_frames(imagen, cantidad=8):
     """Usar los espacios transparentes para separar hojas de cuadros desiguales."""
     ocupadas = [imagen.subsurface((x, 0, 1, imagen.get_height())).get_bounding_rect().height > 0
@@ -933,10 +939,13 @@ class VistaPartida:
                     and self.animacion_pocion and self.animacion_pocion.datos["tiempo_transcurrido"] > .6:
                 self.animacion_pocion = None  # se puede saltar tras verla empezar
             return True
-        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F3:
+        # Atajos del equipo (depuración y salto al final): solo con Ctrl+Shift, para que
+        # un visitante no los pulse sin querer. No aparecen en la ayuda.
+        secreto = evento.type == pygame.KEYDOWN and atajo_secreto(evento)
+        if secreto and evento.key == pygame.K_F3:
             self.depurar = not self.depurar
             return True
-        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F2:
+        if secreto and evento.key == pygame.K_F2:
             # Atajo al final cooperativo: dos pulsaciones seguidas para no saltar sin querer.
             ahora = time.monotonic()
             if ahora - self._f2_pedido <= 3:
@@ -944,7 +953,7 @@ class VistaPartida:
                 cliente.actuar("saltar_al_final")
             else:
                 self._f2_pedido = ahora
-                self.panel.notificar("Pulsa F2 otra vez para saltar al final de Ciudad Núcleo.")
+                self.panel.notificar("Pulsa Ctrl+Shift+F2 otra vez para saltar al final de Ciudad Núcleo.")
             return True
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_h and not self.panel.activo:
             self.mostrar_hud = not self.mostrar_hud

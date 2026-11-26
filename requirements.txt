@@ -1,4 +1,4 @@
-# Cliente, editores y pruebas. Python 3.12; no instalar pygame junto a pygame-ce.
+# Cliente, editores y pruebas. Python 3.14 (el servidor de Render usa 3.12); no instalar pygame junto a pygame-ce.
 pygame-ce==2.5.8
 -r multijugador/requirements.txt
 # Código QR del modo Feria de los Ecos.

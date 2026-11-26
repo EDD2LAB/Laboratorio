@@ -43,7 +43,7 @@ def ruta_evento(evento_id):
 
 def evaluar(evento_id, opcion, dimension="la_copa"):
     opciones = OPCIONES[dimension]
-    if opcion not in opciones:
+    if not isinstance(opcion, str) or opcion not in opciones:
         raise ValueError("Clasificación inválida.")
     elegida = opciones[opcion]
     real = CATEGORIA_EVENTO[evento_id]

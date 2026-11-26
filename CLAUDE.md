@@ -8,7 +8,7 @@ La primera dimensión sigue llamándose La Copa (Era I).
 
 Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aiohttp):
 
-- Instalación: `py -3.12 -m venv .venv` y `.venv\Scripts\python.exe -m pip install -r requirements.txt`.
+- Instalación (Python 3.14 para el juego y el `.exe`; Render usa 3.12 en Docker): `py -3.14 -m venv .venv` y `.venv\Scripts\python.exe -m pip install -r requirements.txt`.
 - Narración opcional: `requirements-voz.txt`. No instalar pygame y pygame-ce juntos.
 
 - Juego: `.venv\Scripts\python.exe juego.py`
@@ -18,8 +18,12 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 - Servidor multijugador local: `.venv\Scripts\python.exe -m multijugador.servicio_internet`
   y en otra consola `$env:COPA_SERVIDOR_INTERNET="http://127.0.0.1:10000"`.
 - Benchmark: `.venv\Scripts\python.exe herramientas/benchmark.py --segundos 60`
-- En partida, F2 dos veces seguidas da por resueltas las tres eras y lleva al equipo al final
-  cooperativo (acción `saltar_al_final` del servidor).
+- En partida, Ctrl+Shift+F2 dos veces seguidas da por resueltas las tres eras y lleva al equipo al
+  final cooperativo (acción `saltar_al_final` del servidor). Ctrl+Shift+F3: depuración. No salen en la ayuda.
+- Modo feria (`TG_MODO_FERIA=1`): la Demo rápida juega La Copa y salta sola al final; no se guardan ajustes.
+- Errores: `nucleo/registro.py` los guarda en `logs/` y el menú vuelve al inicio en vez de cerrarse.
+- Prueba larga: `.venv\Scripts\python.exe herramientas/prueba_larga.py --minutos 30`; benchmark por
+  escenarios: `herramientas/benchmark.py --escenario todos`. Revisión de feria: `docs/revision_feria/`.
 - Zonas caminables calculadas se guardan en `cache/` (ignorado por git; se regeneran si cambia un mapa).
 - Feria de los Ecos QR (modo aparte, paquete `feria/`): botón del menú; votos por Render (rutas `/feria`) y, sin internet, servidor local en el puerto 8080,
   ver `docs/modo_feria_qr.md`. No debe tocar campaña, expediente, preferencias ni protocolo.
@@ -44,7 +48,7 @@ Todo desde la raíz del proyecto, con el entorno `.venv` (tiene pygame-ce y aioh
 | `bots/` | Bots cooperativos (campaña local y relleno de roles libres en salas en línea) |
 | `graficos/`, `audio/` | Partículas/animaciones y gestor de audio |
 | `editores/` | Editores de hitboxes, alineación y personajes |
-| `herramientas/` | Benchmark |
+| `herramientas/` | Benchmark y prueba larga, empaquetado del `.exe` y su diagnóstico, kit de feria, verificador del contexto Docker, preparación del arte |
 | `legado/` | Prototipos sin uso (no se importan) |
 
 ## Reglas permanentes

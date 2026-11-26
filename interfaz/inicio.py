@@ -21,7 +21,7 @@ from multijugador.servidor import ServidorSala
 from multijugador.protocolo import PUERTO, ROLES, NOMBRES_ROLES
 from multijugador.dimensiones_red import DIMENSIONES_RED, LA_COPA, PRESENTE, FUTURO
 from nucleo import portapapeles
-from nucleo.preferencias import modo_feria
+from nucleo.preferencias import cargar as preferencias_guardadas, modo_feria
 from nucleo import recursos
 from nucleo.recursos import cargar_fuente
 
@@ -363,6 +363,8 @@ class MenuInicio:
                         continue
                 if evento["iniciada"]:
                     self.mensaje, self.error = "Todos los jugadores confirmaron el equipo.", False
+            elif tipo == "aviso":
+                self.mensaje, self.error = evento["mensaje"], False
             elif tipo in ("reconectando", "conexion_recuperada"):
                 self.mensaje, self.error = evento["mensaje"], False
                 if self.partida:
@@ -419,9 +421,8 @@ class MenuInicio:
             self.iniciar_campana(nombre, self.rol_solo, self.dificultad_solo, era, "campana_rol")
             return
         if clave == "demo_rapida":
-            # Modo feria: la misma campaña con bots, en dificultad normal y sin formularios.
-            nombre = self.campos["nombre"].strip() or "Visitante"
-            self.iniciar_campana(nombre, self.rol_solo, "normal", LA_COPA, "principal")
+            # Modo feria: La Copa con bots y luego la batalla final, sin formularios.
+            self.iniciar_campana("Visitante", ROLES[0], "normal", LA_COPA, "principal", demo=True)
             return
         if clave == "feria_qr":
             # Modo aparte: su propio bucle y su sesión temporal; no toca la campaña.
@@ -431,7 +432,8 @@ class MenuInicio:
             return resultado
         if clave == "ver_batalla":
             from herramientas.vista_combate import jugar_desde_menu
-            resultado = jugar_desde_menu(self.lienzo, self.audio)
+            resultado = jugar_desde_menu(self.lienzo, self.audio, inactividad=INACTIVIDAD if self.feria else None)
+            self.registrar_actividad()
             self._musica_menu()
             return resultado
         if clave == "salir":
@@ -456,9 +458,13 @@ class MenuInicio:
                 self.vista = "principal"
                 pygame.key.stop_text_input()
             elif self.campana_local:
+                destino = getattr(self, "vista_al_salir", "campana_rol")
                 self.limpiar_conexion()
-                self.vista = "campana_rol"
-                pygame.key.start_text_input()
+                self.vista = destino  # la Demo rápida vuelve al menú principal
+                if destino == "campana_rol":
+                    pygame.key.start_text_input()
+                else:
+                    pygame.key.stop_text_input()
             else:
                 self.limpiar_conexion()
                 self.vista = "principal" if self.vista == "multijugador" else "multijugador"
@@ -473,8 +479,8 @@ class MenuInicio:
         elif clave == "iniciar" and self.cliente:
             self.cliente.enviar("iniciar")
 
-    def iniciar_campana(self, nombre, rol, dificultad, era, vista_error):
-        """Campaña local con bots (también la Demo rápida de la feria)."""
+    def iniciar_campana(self, nombre, rol, dificultad, era, vista_error, demo=False):
+        """Campaña local con bots (también la Demo rápida de la feria: ``demo=True``)."""
         try:
             from interfaz.partida_multijugador import VistaPartida
             from multijugador.partida_local import ClienteCampanaLocal
@@ -483,9 +489,10 @@ class MenuInicio:
             apariencia = self._apariencia(rol)
             self.cliente, self.partida = self._cargar_con_barra(
                 f"Preparando {nombre_era} y tus compañeros…",
-                lambda: ClienteCampanaLocal(nombre, rol, dificultad, apariencia=apariencia, era=era),
+                lambda: ClienteCampanaLocal(nombre, rol, dificultad, apariencia=apariencia, era=era, demo=demo),
                 lambda cliente: VistaPartida(cliente.identificador, cliente.eventos.get_nowait(), self.audio))
             self.campana_local = True
+            self.vista_al_salir = vista_error  # "Volver al menú" regresa a donde se empezó
             self.identificador = self.cliente.identificador
             self.codigo_sala = "LOCAL"
             self.estado = self.partida.estado
@@ -519,22 +526,42 @@ class MenuInicio:
     def revisar_inactividad(self, ahora=None):
         """Modo feria: 120 s sin tocar nada avisa; 10 s más sin respuesta vuelve al menú.
 
-        Devuelve los segundos que quedan del aviso (o None si no hay aviso)."""
-        if not self.feria or self.vista != "partida" or self.partida is None:
+        En las demás vistas del menú (formularios, ajustes, ayuda) vuelve al menú principal
+        sin aviso. Devuelve los segundos que quedan del aviso (o None si no hay aviso)."""
+        if not self.feria:
             return None
         ahora = time.monotonic() if ahora is None else ahora
         quieto = ahora - self.ultima_actividad
         if quieto < INACTIVIDAD:
             return None
+        if self.vista != "partida" or self.partida is None:
+            # Una sala o una conexión en curso no se cortan solas (afectaría a otras personas).
+            if (self.vista != "principal" or self.pausa.activo) and self.vista != "sala" and not self.conectando:
+                self.volver_al_menu_feria(ahora)
+            return None
         restante = INACTIVIDAD + AVISO_INACTIVIDAD - quieto
         if restante > 0:
             return restante
+        self.volver_al_menu_feria(ahora)
+        return None
+
+    def volver_al_menu_feria(self, ahora=None):
+        """El siguiente visitante encuentra el menú limpio, con los ajustes del organizador."""
         self.pausa.cerrar()
         self.limpiar_conexion()  # cierra la campaña local: bots, cliente, servidor y música
         self.vista = "principal"
         self.mensaje, self.error = "", False
+        self.campos["nombre"] = ""
+        self.rol_solo, self.dificultad_solo = ROLES[0], "normal"
+        self.pausa.pestana_ayuda, self.pausa.pagina_ayuda = "controles", 0
+        pygame.key.stop_text_input()
+        modo_anterior = self.pausa.preferencias.get("modo_pantalla")
+        self.pausa.preferencias = preferencias_guardadas()
+        if self.audio:
+            self.pausa.aplicar_volumenes(self.audio)
+        if self.pausa.preferencias.get("modo_pantalla") != modo_anterior:
+            self.pantalla = self.pausa.crear_pantalla()
         self.registrar_actividad(ahora)
-        return None
 
     def _dibujar_aviso_inactividad(self, restante):
         velo = pygame.Surface((960, 720), pygame.SRCALPHA)
@@ -757,6 +784,8 @@ class MenuInicio:
         self.recibir()
         if self.intro is not None:
             self.intro.actualizar(segundos)
+            if self.campana_local and self.cliente is not None:
+                self.cliente.calentar(.008)  # la intro deja tiempo libre en cada cuadro
             if self.intro.terminada or self.vista != "partida":
                 self.intro = None
         if self.vista == "partida" and self.partida and self.cliente:

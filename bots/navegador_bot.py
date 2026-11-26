@@ -33,24 +33,31 @@ class NavegadorBot:
     def _distancia(a, b):
         return math.hypot(a[0] - b[0], a[1] - b[1])
 
-    def _arista_libre(self, actual, vecino, posicion, destino):
+    def _arista_libre(self, actual, vecino, posicion, destino, aristas=None):
         """``trayecto_libre`` entre dos puntos de la cuadrícula, recordado por mapa.
 
-        Las paredes no cambian; si cambian los bloqueos (p. ej., el puente), se olvida."""
-        colisiones = self.colisiones
-        firma = tuple(map(tuple, colisiones.bloqueos))
-        memoria = getattr(colisiones, "_aristas_bot", None)
-        if memoria is None or memoria[0] != firma:
-            memoria = (firma, {})
-            colisiones._aristas_bot = memoria
-        aristas = memoria[1]
+        Las paredes no cambian; cada estado de los bloqueos (p. ej., el puente) tiene su
+        propia memoria, compartida por todas las partidas del mismo mapa."""
+        if aristas is None:
+            aristas = self._memoria_aristas()
         clave = (actual, vecino)
         libre = aristas.get(clave)
         if libre is None:
             if len(aristas) > 400_000:
                 aristas.clear()
-            libre = aristas[clave] = colisiones.trayecto_libre(posicion, destino)
+            libre = aristas[clave] = self.colisiones.trayecto_libre(posicion, destino)
         return libre
+
+    def _memoria_aristas(self):
+        memoria = getattr(self.colisiones, "memoria_aristas", None)
+        if memoria is not None:
+            return memoria()
+        # Colisiones de prueba sin memoria compartida: una propia por bloqueos.
+        firma = tuple(map(tuple, self.colisiones.bloqueos))
+        propia = getattr(self.colisiones, "_aristas_bot", None)
+        if propia is None or propia[0] != firma:
+            propia = self.colisiones._aristas_bot = (firma, {})
+        return propia[1]
 
     def buscar_ruta(self, origen, destino, radio=None):
         radio = self.RADIO_INTERACCION if radio is None else radio
@@ -73,6 +80,7 @@ class NavegadorBot:
             (-1, -1, 1.4142), (-1, 1, 1.4142),
             (1, -1, 1.4142), (1, 1, 1.4142),
         )
+        aristas = self._memoria_aristas()  # una vez por búsqueda, no por arista
 
         while pendientes:
             _, actual = heapq.heappop(pendientes)
@@ -90,7 +98,7 @@ class NavegadorBot:
                 px, py = self._posicion(vecino)
                 if self.colisiones.bloqueado(px, py):
                     continue
-                if not self._arista_libre(actual, vecino, posicion, (px, py)):
+                if not self._arista_libre(actual, vecino, posicion, (px, py), aristas):
                     continue
                 if dx and dy and (
                     self.colisiones.bloqueado(px, self._posicion(actual)[1])

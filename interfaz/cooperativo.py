@@ -620,7 +620,7 @@ class PanelCooperativo:
             rol = next((j["rol"] for j in self.vista.estado.get("mundo", {}).get("jugadores", []) if j["id"] == self.vista.identificador), None)
             dibujar_icono(superficie, self.vista.arte.poder_grande.get(rol), (750, 205))
             self.texto_lineas(superficie, self.privado.get("descripcion_habilidad", ""), 165, 255, 630)
-            self.texto_lineas(superficie, "Puedes usarlo una vez por misterio.", 165, 380, 630, color=VERDE)
+            self.texto_lineas(superficie, "Puedes usarlo una vez por caso.", 165, 380, 630, color=VERDE)
             self.boton(superficie, "habilidad", "Usar mi poder", 480, 495, 430, not self.privado.get("habilidad_usada"))
         elif self.modo == "resultado":
             resultado = self.caso.get("resultado") or {}

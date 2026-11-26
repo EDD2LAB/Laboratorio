@@ -195,11 +195,13 @@ class Bots(unittest.TestCase):
         self.assertFalse(any(i.startswith("bot_") and a == "futuro_resolver" for i, a in vistas), vistas[-5:])
         self.assertEqual(m.tareas, {})
 
-    def test_sin_personas_conectadas_los_bots_resuelven_con_los_mismos_mensajes(self):
+    def test_sin_personas_en_la_partida_los_bots_resuelven_con_los_mismos_mensajes(self):
+        # Revisión feria: quien solo perdió la conexión sigue en la partida (los bots lo
+        # esperan); cuando termina su gracia y sale, los bots juegan solos.
         p = partida(1, bots=True)
         m = a_ciudad_nucleo(p)
         gestor = GestorBots(p, {"0"})
-        p.conectados.discard("0")
+        p.quitar("0")
         vistas = self.recorrer(p, gestor, m)
         self.assertTrue(any(i.startswith("bot_") and a == "futuro_resolver" for i, a in vistas), vistas[-5:])
         self.assertTrue(m.tareas)

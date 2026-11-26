@@ -40,7 +40,7 @@ def datos_votacion(contexto, jugadores, identificador, dimension="la_copa"):
         return "Falta elegir: " + visibles + (" y otra persona." if len(nombres) > 2 else ".")
     pendientes = contexto.get("votantes", 0) - contexto.get("votos_emitidos", 0)
     if pendientes > 0:
-        return f"Faltan {pendientes} personas por elegir."
+        return "Falta 1 persona por elegir." if pendientes == 1 else f"Faltan {pendientes} personas por elegir."
     return "Elijan juntos usando sus pistas."
 
 
@@ -49,7 +49,7 @@ def aviso_analisis(contexto):
     if contexto.get("completada") or not analisis or analisis.get("concluido"):
         return ""
     faltan = max(0, analisis.get("minimo", 0) - len(analisis.get("halladas", [])))
-    return f"Antes de decidir: Analizar, faltan {faltan} marcas."
+    return f"Antes de decidir: Analizar, {'falta 1 marca' if faltan == 1 else f'faltan {faltan} marcas'}."
 
 
 AVISO_FINAL = "¡Hora de acabar con el reinado de NÚCLEO!"
@@ -153,7 +153,7 @@ def tarea_actual(vista):
                 logro = objetivo.get("pista")
         elif analisis and not analisis.get("concluido"):
             faltan = max(0, analisis.get("minimo", 0) - len(analisis.get("halladas", [])))
-            titulo, tecla = f"Abre C: encuentra {faltan} marcas en Analizar", "C"
+            titulo, tecla = f"Abre C: encuentra {faltan} {'marca' if faltan == 1 else 'marcas'} en Analizar", "C"
             objetivo = None  # no enviar a votar mientras la tarea es analizar
         else:
             titulo = "Ve a la pantalla pública y elige en C"

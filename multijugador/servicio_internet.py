@@ -263,9 +263,28 @@ class Manejador(BaseHTTPRequestHandler):
         pass
 
 
+def calentar_mapas():
+    """Precalienta la memoria de colisiones de los tres exteriores (unos 10 s de CPU).
+
+    La memoria se comparte entre todas las salas: así la primera ruta de los bots de
+    relleno no congela el bucle de todas las salas. Corre en un hilo al arrancar para
+    no alargar el arranque en frío de Render."""
+    from logica.zonas_caminables import calentar_todo
+    from .movimiento import ColisionesMapa
+    from .dimensiones_red import FUTURO, PRESENTE, cargar_datos, spawn_presente
+    inicio = time.monotonic()
+    copa = ColisionesMapa()
+    calentar_todo(copa, copa.inicio_libre(415, 390))
+    for dimension in (PRESENTE, FUTURO):
+        mapa = ColisionesMapa(cargar_datos(dimension))
+        calentar_todo(mapa, mapa.inicio_libre(*spawn_presente(mapa.datos)))
+    print(f"[Servidor] Mapas precalentados en {time.monotonic() - inicio:.1f} s", flush=True)
+
+
 def main():
     from aiohttp import web
     from .tiempo_real import crear_app
+    threading.Thread(target=calentar_mapas, name="calentar-mapas", daemon=True).start()
     web.run_app(crear_app(), host="0.0.0.0", port=int(os.environ.get("PORT", "10000")), access_log=None)
 
 

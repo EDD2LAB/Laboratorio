@@ -1,6 +1,6 @@
 # Campaña cooperativa multijugador
 
-## Estado actual: protocolo 18
+## Estado actual: protocolo 25
 
 Salas por código desde distintas PC y redes, mediante el servicio HTTPS de
 `configuracion.json`. No exige abrir puertos en los routers de los jugadores.
@@ -20,9 +20,10 @@ humanos de la dimensión aceptan; los bots acompañan y se conserva el progreso.
 Kael y Tarek son las apariencias por defecto; Mira y Luma son alternativas.
 En La Copa, el personaje elegido no se duplica como NPC.
 
-El expediente AVL compartido registra ocho casos, permite inserciones guiadas
-y consulta de pruebas y fichas legales. El informe incluye el recorrido inorden
-y se exporta a `informes/`. Las normas se revisan con el profesor.
+El expediente AVL compartido registra los seis casos, permite inserciones guiadas
+y consulta de pruebas y fichas legales. Al ganar, los casos que nadie ordenó entran
+solos al árbol. El informe incluye el recorrido inorden y se exporta a `informes/`.
+Las normas las revisa la profesora.
 
 ## Red y límites actuales
 
@@ -41,7 +42,11 @@ y se exporta a `informes/`. Las normas se revisan con el profesor.
   promedio móvil. HTTP limita las consultas por sesión (300/min); crear y
   unirse tienen un límite independiente por IP (60/min). Los límites responden
   429 con Retry-After. Consultar `../docs/red_estabilidad.md`.
-- Cinco interiores del Futuro y diez consultas opcionales implementados localmente. Pendientes: geometría exterior nueva del Futuro y demás etapas de `../docs/etapas.md`.
+- Ciudad Núcleo usa el mapa definitivo con paredes propias de exterior e interiores (`../docs/futuro.md`).
+- Bots y desconexiones: mientras una persona siga en la partida (sus 120 s de gracia),
+  los bots no deciden por ella aunque haya perdido la conexión. Quien se va suelta lo
+  que llevaba (cesta, objeto del encargo o la llave de Ciudad Núcleo).
+- Una sala que falla se cierra sola con un aviso; las demás siguen.
 
 ## Ejecutar en desarrollo
 
@@ -68,8 +73,10 @@ movimiento que ofrece el menú actual.
 2. Abrir `la-copa-salas`: **Manual Deploy → Deploy latest commit**.
 3. Esperar a **Deploy succeeded | Live**.
 4. Consultar `https://la-copa-salas.onrender.com/health`: comprobar `ok`,
-   `protocolo: 18`, `casos: 8`, tres entradas de `eras` (4, 3 y 1 casos), y
-   que `build` corresponda al commit publicado.
+   `protocolo: 25`, `casos: 6`, tres entradas de `eras` (2, 3 y 1 casos), y
+   que `build` corresponda al commit publicado. Comprobar también la Feria de
+   los Ecos: `https://la-copa-salas.onrender.com/feria/ZZZZZZ/ronda` debe
+   responder 404 "Esta sesión de feria ya terminó.".
 5. Actualizar las PC y abrir una sala nueva. No desplegar durante una partida.
 
 `render.yaml` conserva una instancia gratuita, Docker y despliegue manual.

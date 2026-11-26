@@ -246,7 +246,7 @@ def _menu(panel, superficie, contexto, inventario):
         filas.insert(0, ("final_cooperativo", "Final cooperativo"))
     if panel.dimension == "presente":
         filas.append(("analizar", "Analizar"))
-    relleno = "CiudadNucleo" if panel.dimension == "futuro" else "DistritoConecta"
+    relleno = "#CiudadNúcleo" if panel.dimension == "futuro" else "#DistritoConecta"
     filas += [("pista:" + str(i), pista["titulo"].split(" · ")[0]) for i, pista in enumerate(inventario)]
     transparente = pygame.Surface((FILA_ANCHO, FILA_ALTO), pygame.SRCALPHA)
     for i in range(FILAS):
@@ -325,14 +325,19 @@ def _pistas(panel, superficie, contexto, arte):
     _boton(panel, superficie, "caldero", "Revisar antes de decidir" if aviso else "Decidir qué hacer", (338, ACCIONES_Y), activo=completas)
 
 
+# Claves del árbol de clasificación (sin tildes) -> nombre visible.
+CATEGORIAS_VISIBLES = {"Suplantacion": "Suplantación", "Contenido autentico": "Contenido auténtico"}
+
+
 def falta_para_decidir(panel, contexto):
     if contexto.get("pistas", 0) < contexto.get("total_pistas", 3):
         return "Reúnan las pistas de este caso."
-    return "" if panel.vista.cerca_id(panel.dimension + ":pantalla") else "Acércate a la pantalla pública para elegir."
+    pantalla = "la pantalla central" if panel.dimension == "futuro" else "la pantalla pública"
+    return "" if panel.vista.cerca_id(panel.dimension + ":pantalla") else "Acércate a " + pantalla + " para elegir."
 
 
 def _decidir(panel, superficie, contexto, arte):
-    _perfil(panel, superficie, "Publicación viral")
+    _perfil(panel, superficie, "NÚCLEO tomó el control" if panel.dimension == "futuro" else "Publicación viral")
     _publicacion(superficie, contexto, arte, panel)
     for i, avatar in enumerate(arte.avatares):  # cuentas distintas que repiten lo mismo
         superficie.blit(avatar, (300 + i * 40, 414))
@@ -432,7 +437,8 @@ def _clasificado(panel, superficie, contexto, arte):
                FAVORABLE if propia["correcta"] else DESFAVORABLE)
     y = _texto(panel, superficie, "CORRECTA" if propia["correcta"] else "INCORRECTA", TEXTO_X, y + 2, panel.pequena,
                FAVORABLE if propia["correcta"] else DESFAVORABLE)
-    y = _texto(panel, superficie, "En realidad era: " + str(propia["categoria"][-1]), TEXTO_X, y + 6, panel.pequena, TINTA)
+    categoria = str(propia["categoria"][-1])
+    y = _texto(panel, superficie, "En realidad era: " + CATEGORIAS_VISIBLES.get(categoria, categoria), TEXTO_X, y + 6, panel.pequena, TINTA)
     _texto(panel, superficie, (contexto.get("resultado") or {}).get("texto", ""), TEXTO_X, y + 6)
     sabiduria = propia.get("efectos", {}).get("sabiduria", 0)
     etiqueta = ETIQUETAS.get(panel.dimension, ETIQUETAS["presente"])["sabiduria"]

@@ -11,6 +11,9 @@ from nucleo.rutas import RAIZ
 
 SEGUNDOS_POR_NODO = .6
 CIERRE = "Lo que empezó como un rumor cambió a toda una comunidad."
+# Junto a las penas (pendiente de revisión de la profesora).
+NOTA_MENORES = ("Estas penas son para adultos. Los menores de 14 años no responden penalmente; de 14 a 18 aplica "
+                "el Sistema de Responsabilidad Penal para Adolescentes (Ley 1098 de 2006).")
 ORO = (237, 185, 87)
 CREMA = (255, 243, 210)
 TINTA = (61, 37, 25)
@@ -68,6 +71,8 @@ def exportar(datos, carpeta=None, ahora=None):
     final = datos.get("final_cooperativo") or {}
     if final.get("fase") == "victoria":
         lineas.extend(["FINAL COOPERATIVO: CIUDAD RECUPERADA", "Los cuatro roles devolvieron la supervisión de NÚCLEO a las personas.", ""])
+    if any(fila.get("pena") for fila in datos["casos"]):
+        lineas.extend([NOTA_MENORES, ""])
     lineas.append(CIERRE)
     ruta.write_text("\n".join(lineas) + "\n", encoding="utf-8")
     return ruta
@@ -146,6 +151,8 @@ def _contenido_reporte(panel, datos, arte):
                 color = GRIS if not fila["resuelto"] else TINTA
                 y = panel.texto_lineas(lienzo, texto, x, y, TEXTO_REPORTE.w - x, panel.pequena, color)
             y += 2
+        if any(fila.get("pena") for fila in datos["casos"]):
+            y = panel.texto_lineas(lienzo, NOTA_MENORES, 0, y + 6, TEXTO_REPORTE.w, panel.pequena, TINTA)
         arte.reporte, arte.reporte_de = lienzo.subsurface((0, 0, TEXTO_REPORTE.w, max(1, y))).copy(), datos
     return arte.reporte
 

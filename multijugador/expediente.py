@@ -95,6 +95,14 @@ class ExpedientePartida:
             return {"mensaje": "¡Caso guardado! El árbol se equilibra para encontrarlo fácilmente."}
         return {"mensaje": "¡Bien! Ahora compara con el siguiente caso."}
 
+    def completar(self):
+        """Al ganar: los casos que nadie ordenó con T entran al árbol, en orden y con sus
+        rotaciones, para que el informe final y su recorrido inorden muestren los seis."""
+        while self.pendientes:
+            self.arbol.insertar(self.pendientes.pop(0))
+            self.revision += 1
+        self.paso = 0
+
     def leer(self, identificador):
         if type(identificador) is not str:
             raise ValueError("Elige un caso registrado.")
