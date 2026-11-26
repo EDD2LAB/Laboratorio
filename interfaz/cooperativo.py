@@ -842,7 +842,7 @@ class PanelCooperativo:
             if clave == "informe_cerrar":
                 self.modo = None
             elif clave == "informe_exportar":
-                self.informe_exportado = str(informe_final.exportar(self.informe))
+                self.informe_exportado = informe_final.exportar_seguro(self.informe)
             elif clave == "expediente_cerrar":
                 self.modo = None
             elif clave == "expediente_prueba":

@@ -344,6 +344,10 @@ def jugar_desde_menu(lienzo, audio=None, cuadros=0):
             cuadro += 1
             if cuadros and cuadro >= cuadros:
                 return None
+    except Exception as error:  # noqa: BLE001 - en la feria, un fallo aquí vuelve al menú
+        from nucleo import registro
+        registro.registrar_error("Error en «Ver la batalla final»", error)
+        return None
     finally:
         if vista.audio and vista.musica:
             vista.audio.detener_musica()

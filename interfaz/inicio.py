@@ -44,6 +44,7 @@ class MenuInicio:
         self.mouse = (-1, -1)
         self.vista = "principal"
         self.partida = None
+        self._velo = None  # velo del menú, creado una sola vez
         self.pausa = MenuPausa(self)
         self.audio = self._crear_audio()
         self._musica_menu()
@@ -160,6 +161,8 @@ class MenuInicio:
         finally:
             recursos.avisar_cada_carga(None)
         self.mostrar_carga(detalle, 1.0)
+        # Los clics y teclas impacientes de la carga no deben saltarse la intro.
+        pygame.event.clear((pygame.MOUSEBUTTONDOWN, pygame.MOUSEBUTTONUP, pygame.KEYDOWN, pygame.KEYUP, pygame.TEXTINPUT))
         return resultado[0] if resultado else None, vista
 
     def _musica_menu(self):
@@ -544,11 +547,16 @@ class MenuInicio:
 
     def dibujar(self):
         self.botones, self.areas_campos = {}, {}
-        self.fondo.dibujar(self.lienzo, pygame.time.get_ticks())
-        velo = pygame.Surface((960, 720), pygame.SRCALPHA)
-        velo.fill((4, 12, 20, 95))
-        self.lienzo.blit(velo, (0, 0))
+        self._vista_dibujada = self.vista
+        if not (self.vista == "partida" and self.partida):  # la partida y la intro cubren todo el lienzo
+            self.fondo.dibujar(self.lienzo, pygame.time.get_ticks())
+            if self._velo is None:
+                self._velo = pygame.Surface((960, 720), pygame.SRCALPHA)
+                self._velo.fill((4, 12, 20, 95))
+            self.lienzo.blit(self._velo, (0, 0))
         if self.vista == "principal":
+            if self.mensaje:  # p. ej., tras recuperarse de un error
+                self.parrafo(self.mensaje, pygame.Rect(250, 668, 470, 40), 14, (255, 161, 145) if self.error else CREMA)
             self.panel(pygame.Rect(240, 70, 480, 590))
             self.logo.dibujar(self.lienzo, CENTRO_LOGO, pygame.time.get_ticks())
             self.texto("TIMELESS GLITCH", 480, 172, 44, ORO, True)
@@ -705,125 +713,171 @@ class MenuInicio:
 
     def ejecutar(self):
         reloj = pygame.time.Clock()
+        fallos = []  # instantes de los últimos errores recuperados
         try:
             while True:
                 segundos = reloj.tick(60) / 1000
-                # Pygame 2 redimensiona la superficie al maximizar o cambiar el tamaño.
-                self.pantalla = pygame.display.get_surface() or self.pantalla
-                tamano = self.pantalla.get_size()
-                self.mouse = a_lienzo(pygame.mouse.get_pos(), tamano)
-                self.recibir()
-                if self.intro is not None:
-                    self.intro.actualizar(segundos)
-                    if self.intro.terminada or self.vista != "partida":
-                        self.intro = None
-                # Preparar las áreas clicables antes de procesar la entrada.
-                if self.vista == "partida" and self.partida and self.cliente:
-                    # Durante la intro la persona no se mueve; en línea la partida sigue para los demás.
-                    self.partida.en_pausa = self.pausa.activo or self.intro is not None
-                    self.partida.actualizar(segundos, self.cliente)
-                    if self.campana_local and not self.pausa.activo and self.intro is None:  # la campaña local se detiene
-                        self.cliente.actualizar(segundos)
-                        self.recibir()
-                aviso_inactividad = self.revisar_inactividad()
-                self.dibujar()
-                for evento in pygame.event.get():
-                    if evento.type == pygame.QUIT:
-                        return "salir"
-                    if evento.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
-                        self.registrar_actividad()
-                        if aviso_inactividad is not None:
-                            aviso_inactividad = None  # esa tecla solo responde "sigo aquí"
-                            continue
-                    if self.intro is not None and self.vista == "partida":
-                        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F11:
-                            self.pausa.alternar_pantalla_completa()
-                        else:
-                            self.intro.manejar_evento(evento)  # la intro consume la entrada
-                        continue
-                    if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F1:
-                        self.pausa.abrir("ayuda_f1")
-                        continue
-                    if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F11:
-                        self.pausa.alternar_pantalla_completa()
-                        continue
-                    if self.pausa.activo and evento.type == pygame.KEYDOWN:
-                        resultado = self.pausa.tecla(evento.key)
-                        if resultado:
-                            return resultado
-                        continue
-                    if not self.pausa.activo and self.vista == "partida" and self.partida:
-                        posicion = a_lienzo(evento.pos, tamano) if hasattr(evento, "pos") else self.mouse
-                        if self.partida.manejar_evento(evento, posicion, self.cliente):
-                            if getattr(self.partida, "volver_menu", False):
-                                self.limpiar_conexion()
-                                self.vista = "principal"
-                            continue
-                        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
-                            self.pausa.abrir()  # Esc ya no saca de la partida: abre el menú
-                            continue
-                    if evento.type == pygame.VIDEORESIZE:
-                        pass  # la superficie se toma de pygame.display.get_surface()
-                    elif evento.type == pygame.TEXTINPUT and self.vista in ("formulario", "campana_rol") and not self.conectando:
-                        self.editor.insertar("nombre" if self.vista == "campana_rol" else self.foco, evento.text)
-                    elif evento.type == pygame.KEYDOWN:
-                        if evento.key == pygame.K_ESCAPE:
-                            if self.vista == "principal":
-                                if self.feria:
-                                    self.vista = "confirmar_salir"
-                                    continue
-                                return "salir"
-                            if self.vista == "confirmar_salir":
-                                self.vista = "principal"
-                                continue
-                            self.accionar("volver")
-                        elif self.vista == "sala" and self.campos["sala"]:
-                            self.editor.manejar_tecla(evento, "sala")
-                        elif self.vista in ("formulario", "campana_rol"):
-                            if not self.conectando and self.editor.manejar_tecla(
-                                    evento, "nombre" if self.vista == "campana_rol" else self.foco):
-                                pass
-                            elif evento.key == pygame.K_TAB:
-                                campos = list(self.areas_campos)
-                                self.foco = campos[(campos.index(self.foco) + 1) % len(campos)]
-                            elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                                self.conectar()
-                    elif evento.type == pygame.MOUSEMOTION and self.arrastrando in self.areas_campos and evento.buttons[0]:
-                        self.editor.colocar(self.arrastrando, self._indice_raton(self.arrastrando, a_lienzo(evento.pos, tamano)[0]), True)
-                    elif evento.type == pygame.MOUSEBUTTONUP and evento.button == 1:
-                        self.arrastrando = None
-                    elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
-                        pos = a_lienzo(evento.pos, tamano)
-                        for clave, rect in self.areas_campos.items():
-                            if rect.collidepoint(pos):
-                                self.foco = clave
-                                self.arrastrando = clave
-                                indice = self._indice_raton(clave, pos[0])
-                                if getattr(evento, "clicks", 1) >= 2:
-                                    self.editor.seleccionar_todo(clave)
-                                else:
-                                    self.editor.colocar(clave, indice)
-                        for clave, boton in list(self.botones.items()):
-                            if boton.fue_clickeado(pos):
-                                resultado = self.accionar(clave)
-                                if resultado:
-                                    return resultado
-                                break
-                self.dibujar()
-                activo = any(b.rect.collidepoint(self.mouse) and not b.desactivado for b in self.botones.values())
-                if self.vista == "partida" and self.partida and not self.pausa.activo:
-                    activo = activo or self.partida.cursor_interactivo(self.mouse)
                 try:
-                    pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if activo else pygame.SYSTEM_CURSOR_ARROW)
-                except pygame.error:
-                    pass
-                if aviso_inactividad is not None:
-                    self._dibujar_aviso_inactividad(aviso_inactividad)
-                presentar(self.pantalla, self.lienzo)  # 4:3 centrado, con bandas negras
-                pygame.display.flip()
+                    resultado = self.paso(segundos)
+                except Exception as error:  # noqa: BLE001 - en la feria nunca se cierra por un fallo
+                    ahora = time.monotonic()
+                    fallos[:] = [t for t in fallos if ahora - t < 10] + [ahora]
+                    if len(fallos) > 3:
+                        raise  # falla una y otra vez: juego.py lo registra y Feria.bat lo reabre
+                    self.recuperar(error)
+                    continue
+                if resultado:
+                    return resultado
         finally:
             pygame.key.stop_text_input()
             self.limpiar_conexion()
+
+    def recuperar(self, error):
+        """Registra un error inesperado y vuelve al menú principal sin cerrar el juego."""
+        from nucleo import registro
+        registro.registrar_error(f"Error recuperado (vista {self.vista!r})", error)
+        try:
+            self.pausa.cerrar()
+            self.intro = None
+            self.limpiar_conexion()
+        except Exception as otro:  # noqa: BLE001
+            registro.registrar_error("Error al limpiar tras un fallo", otro)
+            self.cliente = self.servidor = self.partida = None
+        self.vista = "principal"
+        self.mensaje, self.error = "Hubo un problema y volvimos al menú. Puedes empezar de nuevo.", True
+        self.registrar_actividad()
+        pygame.key.stop_text_input()
+
+    def paso(self, segundos):
+        """Un cuadro: red, lógica, entrada y un solo dibujo. Devuelve "salir" para cerrar."""
+        # Pygame 2 redimensiona la superficie al maximizar o cambiar el tamaño.
+        self.pantalla = pygame.display.get_surface() or self.pantalla
+        tamano = self.pantalla.get_size()
+        self.mouse = a_lienzo(pygame.mouse.get_pos(), tamano)
+        self.recibir()
+        if self.intro is not None:
+            self.intro.actualizar(segundos)
+            if self.intro.terminada or self.vista != "partida":
+                self.intro = None
+        if self.vista == "partida" and self.partida and self.cliente:
+            # Durante la intro la persona no se mueve; en línea la partida sigue para los demás.
+            self.partida.en_pausa = self.pausa.activo or self.intro is not None
+            self.partida.actualizar(segundos, self.cliente)
+            if self.campana_local and not self.pausa.activo and self.intro is None:  # la campaña local se detiene
+                self.cliente.actualizar(segundos)
+                self.recibir()
+        aviso_inactividad = self.revisar_inactividad()
+        # La entrada se prueba contra los botones del cuadro anterior: es lo que la persona vio.
+        resultado = self.procesar_eventos(tamano, aviso_inactividad is not None)
+        if resultado:
+            return resultado
+        aviso_inactividad = self.revisar_inactividad()
+        self.dibujar()
+        activo = any(b.rect.collidepoint(self.mouse) and not b.desactivado for b in self.botones.values())
+        if self.vista == "partida" and self.partida and not self.pausa.activo:
+            activo = activo or self.partida.cursor_interactivo(self.mouse)
+        try:
+            pygame.mouse.set_cursor(pygame.SYSTEM_CURSOR_HAND if activo else pygame.SYSTEM_CURSOR_ARROW)
+        except pygame.error:
+            pass
+        if aviso_inactividad is not None:
+            self._dibujar_aviso_inactividad(aviso_inactividad)
+        presentar(self.pantalla, self.lienzo)  # 4:3 centrado, con bandas negras
+        pygame.display.flip()
+        return None
+
+    def procesar_eventos(self, tamano, aviso_inactividad):
+        if self.vista != getattr(self, "_vista_dibujada", self.vista):
+            # La vista cambió desde el último dibujo (p. ej., llegó la sala): sus botones ya no valen.
+            self.botones, self.areas_campos = {}, {}
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                return "salir"
+            if evento.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
+                self.registrar_actividad()
+                if aviso_inactividad:
+                    aviso_inactividad = False  # esa tecla solo responde "sigo aquí"
+                    continue
+            if self.intro is not None and self.vista == "partida":
+                if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F11:
+                    self.pausa.alternar_pantalla_completa()
+                else:
+                    self.intro.manejar_evento(evento)  # la intro consume la entrada
+                continue
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F1:
+                self.pausa.abrir("ayuda_f1")
+                continue
+            if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F11:
+                self.pausa.alternar_pantalla_completa()
+                continue
+            if self.pausa.activo and evento.type == pygame.KEYDOWN:
+                resultado = self.pausa.tecla(evento.key)
+                if resultado:
+                    return resultado
+                continue
+            if not self.pausa.activo and self.vista == "partida" and self.partida:
+                posicion = a_lienzo(evento.pos, tamano) if hasattr(evento, "pos") else self.mouse
+                if self.partida.manejar_evento(evento, posicion, self.cliente):
+                    if getattr(self.partida, "volver_menu", False):
+                        self.limpiar_conexion()
+                        self.vista = "principal"
+                    continue
+                if evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+                    self.pausa.abrir()  # Esc ya no saca de la partida: abre el menú
+                    continue
+            if evento.type == pygame.VIDEORESIZE:
+                pass  # la superficie se toma de pygame.display.get_surface()
+            elif evento.type == pygame.TEXTINPUT and self.vista in ("formulario", "campana_rol") and not self.conectando:
+                self.editor.insertar("nombre" if self.vista == "campana_rol" else self.foco, evento.text)
+            elif evento.type == pygame.KEYDOWN:
+                if evento.key == pygame.K_ESCAPE:
+                    if self.vista == "principal":
+                        if self.feria:
+                            self.vista = "confirmar_salir"
+                            continue
+                        return "salir"
+                    if self.vista == "confirmar_salir":
+                        self.vista = "principal"
+                        continue
+                    self.accionar("volver")
+                elif self.vista == "sala" and self.campos["sala"]:
+                    self.editor.manejar_tecla(evento, "sala")
+                elif self.vista in ("formulario", "campana_rol"):
+                    if not self.conectando and self.editor.manejar_tecla(
+                            evento, "nombre" if self.vista == "campana_rol" else self.foco):
+                        pass
+                    elif evento.key == pygame.K_TAB:
+                        campos = list(self.areas_campos)
+                        if campos:
+                            self.foco = campos[(campos.index(self.foco) + 1) % len(campos)] if self.foco in campos else campos[0]
+                    elif evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                        self.conectar()
+            elif evento.type == pygame.MOUSEMOTION and self.arrastrando in self.areas_campos and evento.buttons[0]:
+                self.editor.colocar(self.arrastrando, self._indice_raton(self.arrastrando, a_lienzo(evento.pos, tamano)[0]), True)
+            elif evento.type == pygame.MOUSEBUTTONUP and evento.button == 1:
+                self.arrastrando = None
+            elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
+                pos = a_lienzo(evento.pos, tamano)
+                for clave, rect in self.areas_campos.items():
+                    if rect.collidepoint(pos):
+                        self.foco = clave
+                        self.arrastrando = clave
+                        indice = self._indice_raton(clave, pos[0])
+                        if getattr(evento, "clicks", 1) >= 2:
+                            self.editor.seleccionar_todo(clave)
+                        else:
+                            self.editor.colocar(clave, indice)
+                vista_antes = self.vista
+                for clave, boton in list(self.botones.items()):
+                    if boton.fue_clickeado(pos):
+                        resultado = self.accionar(clave)
+                        if resultado:
+                            return resultado
+                        break
+                if self.vista != vista_antes:
+                    # Los botones guardados son de la vista anterior: no reciben más clics de este cuadro.
+                    self.botones, self.areas_campos = {}, {}
+        return None
 
 
 def mostrar_menu_inicio():

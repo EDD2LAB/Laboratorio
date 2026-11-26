@@ -77,7 +77,14 @@ class ClienteCampanaLocal:
         )
         self._secuencia += 1
         self._partida.actualizar(self._ahora)
-        self._bots.actualizar(self._ahora, delta)
+        try:
+            self._bots.actualizar(self._ahora, delta)
+        except Exception:  # noqa: BLE001 - un fallo de los bots no debe cerrar la partida
+            # Los bots no son críticos: se salta su paso y se registra (pocas veces, sin inundar).
+            self._fallos_bots = getattr(self, "_fallos_bots", 0) + 1
+            if self._fallos_bots <= 5:
+                import traceback
+                print("[Bots] Paso omitido por un error:\n" + traceback.format_exc(), flush=True)
         self._publicar_estado()
 
     def _publicar_estado(self):

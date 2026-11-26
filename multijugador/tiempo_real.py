@@ -167,6 +167,23 @@ async def websocket(request):
     return ws
 
 
+SALA_AVERIADA = "La sala tuvo un problema y se cerró. Creen una sala nueva para seguir jugando."
+
+
+def _cerrar_sala_averiada(servicio, codigo, averiadas):
+    """Registra el error de una sala y la cierra solo a ella (las demás siguen)."""
+    import traceback
+    print("[Servidor] Sala", codigo, "cerrada por un error:\n" + traceback.format_exc(), flush=True)
+    for token, sesion in list(servicio.sesiones.items()):
+        if sesion.get("codigo") == codigo:
+            averiadas[token] = SALA_AVERIADA
+    try:
+        with servicio.lock:
+            servicio._eliminar_sala(codigo)
+    except Exception:  # noqa: BLE001
+        print("[Servidor] No se pudo cerrar la sala", codigo, flush=True)
+
+
 async def simulacion(app):
     servicio = app[SERVICIO]
     async def paso():
@@ -174,22 +191,31 @@ async def simulacion(app):
             inicio = asyncio.get_running_loop().time()
             servicio.limpiar()
             ahora = servicio.reloj()
-            for sala in list(servicio.salas.values()):
-                if sala.partida:
+            estados, averiadas = {}, {}
+            for codigo, sala in list(servicio.salas.items()):
+                if not sala.partida:
+                    continue
+                try:
                     sala.partida.actualizar(ahora)
                     sala.actualizar_bots(ahora)
                     sala._publicar()
-            # No esperar a la red dentro del reloj de simulación. Cada cliente
-            # tiene un escritor independiente y conserva solo el estado nuevo.
-            estados = {codigo: sala._estado() for codigo, sala in servicio.salas.items() if sala.partida}
+                    # No esperar a la red dentro del reloj de simulación. Cada cliente
+                    # tiene un escritor independiente y conserva solo el estado nuevo.
+                    estados[codigo] = sala._estado()
+                except Exception:  # noqa: BLE001 - una sala averiada no congela a las demás
+                    _cerrar_sala_averiada(servicio, codigo, averiadas)
             for token, cola in list(app[BUZONES].items()):
                 sesion = servicio.sesiones.get(token)
                 estado = estados.get(sesion["codigo"]) if sesion else None
                 if estado is None:
-                    estado = {"tipo": "desconectado", "mensaje": "El anfitrión cerró la sala."}
+                    estado = {"tipo": "desconectado", "mensaje": averiadas.get(token, "El anfitrión cerró la sala.")}
                 else:
-                    sala = servicio.salas[sesion["codigo"]]
-                    estado = {**estado, "mundo": {**estado["mundo"], "privado": sala.partida.mision.privado(sesion["id"])}}
+                    try:
+                        sala = servicio.salas[sesion["codigo"]]
+                        estado = {**estado, "mundo": {**estado["mundo"], "privado": sala.partida.mision.privado(sesion["id"])}}
+                    except Exception:  # noqa: BLE001
+                        _cerrar_sala_averiada(servicio, sesion["codigo"], averiadas)
+                        estado = {"tipo": "desconectado", "mensaje": averiadas.get(token, SALA_AVERIADA)}
                 cola.publicar(estado)
             duracion = asyncio.get_running_loop().time() - inicio
             app[METRICAS]["ticks"].append(duracion)
