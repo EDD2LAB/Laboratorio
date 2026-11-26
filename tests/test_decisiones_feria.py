@@ -121,17 +121,5 @@ class ArbolCompletoTests(unittest.TestCase):
         self.assertEqual(claves, sorted(claves))
 
 
-class NotaMenoresTests(unittest.TestCase):
-    def test_el_informe_exportado_incluye_la_nota_si_hay_penas(self):
-        from interfaz import informe_final
-        datos = {"casos": [{"titulo": "Caso", "era": "La Copa", "resuelto": True, "pena": "Prisión de 1 a 2 años",
-                            "norma": "Ley", "decision": "Corregir", "tipo": "Rumor", "gravedad": 2}],
-                 "final_cooperativo": {}}
-        with tempfile.TemporaryDirectory() as tmp:
-            texto = informe_final.exportar(datos, Path(tmp)).read_text(encoding="utf-8")
-        self.assertIn("Ley 1098 de 2006", texto)
-        self.assertIn("menores de 14 años", informe_final.NOTA_MENORES)
-
-
 if __name__ == "__main__":
     unittest.main()

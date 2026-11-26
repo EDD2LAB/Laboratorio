@@ -83,11 +83,8 @@ def lineas_detalle(panel, caso):
         for clave, titulo in (("ley", "Referencia del proyecto"), ("sancion", "Sanción registrada"), ("nota", "Nota")):
             if datos.get(clave):
                 partes.append((titulo + ": " + datos[clave], CREMA))
-        if datos.get("sancion"):
-            from interfaz.informe_final import NOTA_MENORES
-            partes.append((NOTA_MENORES, VERDE))
         if datos.get("ley"):
-            partes.append(("Contenido legal pendiente de revisión de la profesora.", ORO))
+            partes.append(("Resumen legal con fines educativos.", ORO))
     lineas = []
     for texto, color in partes:
         lineas += [(linea, color) for linea in envolver_texto(texto, panel.pequena, DETALLE.width - 12)]
