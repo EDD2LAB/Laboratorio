@@ -1,14 +1,16 @@
 # Timeless Glitch
 
 Juego educativo 2D para investigar información y decidir en equipo.
-Rama compartida: `multijugador`. Protocolo actual: **18**.
+Rama compartida: `multijugador`. Protocolo actual: **25**.
 
 ## Instalación en Windows / PowerShell
 
-Usar Python **3.12** de 64 bits, desde la carpeta del proyecto:
+Usar Python **3.14** de 64 bits (la versión con la que se prueba el juego y se
+arma el `.exe`), desde la carpeta del proyecto. El servidor de Render corre en
+Python 3.12 (Docker, `Dockerfile.multijugador`); su código es compatible con ambas.
 
 ```powershell
-py -3.12 -m venv .venv
+py -3.14 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe juego.py
@@ -27,11 +29,19 @@ del sistema. Tras la instalación, la campaña local con bots no necesita Intern
   configurado en `multijugador/configuracion.json`.
 - Roles exclusivos: Guardián, Mensajero, Habitante y Aspirante. Los puestos
   libres se completan con bots al iniciar.
-- Tres eras: La Copa (4 casos), Distrito Conecta (3) y Ciudad Núcleo (1 caso
-  con 4 tareas). Portales con aceptación del equipo.
+- Tres eras: La Copa (2 casos), Distrito Conecta (3) y Ciudad Núcleo (1 caso
+  con 4 tareas). Portales con aceptación del equipo. Final cooperativo con batalla.
 - Expediente AVL compartido, informe final y fichas legales. Arte y audio locales.
 - F1: controles visuales. El mapa muestra la tarea actual y señales de interacción;
   el celular avisa si falta analizar y las votaciones indican quién falta.
+- Modo feria (`TG_MODO_FERIA=1`, lo pone `Feria.bat`): Demo rápida (La Copa y la
+  batalla final), vuelta al menú por inactividad y Salir con confirmación. Guía del
+  día de la feria: [`herramientas/feria/LEEME_FERIA.txt`](herramientas/feria/LEEME_FERIA.txt).
+- Feria de los Ecos QR (botón del menú): votación desde el celular; ver
+  [`docs/modo_feria_qr.md`](docs/modo_feria_qr.md).
+- Ejecutable para la feria: `powershell -ExecutionPolicy Bypass -File herramientas\empaquetar.ps1`.
+- Los errores inesperados se guardan en `logs/errores.log` (junto al `.exe` o en la
+  raíz del proyecto) y el juego vuelve al menú en lugar de cerrarse.
 
 Todos deben usar una versión compatible con el servidor. Tras actualizar,
 cerrar y abrir el juego. Reiniciar el servidor pierde las salas en memoria.

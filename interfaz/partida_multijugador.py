@@ -61,6 +61,12 @@ def tecla_activa(teclas, *codigos):
     return False
 
 
+def atajo_secreto(evento):
+    """Ctrl y Shift pulsados a la vez (atajos del equipo: F2 y F3)."""
+    modificadores = getattr(evento, "mod", 0)
+    return bool(modificadores & pygame.KMOD_CTRL) and bool(modificadores & pygame.KMOD_SHIFT)
+
+
 def separar_frames(imagen, cantidad=8):
     """Usar los espacios transparentes para separar hojas de cuadros desiguales."""
     ocupadas = [imagen.subsurface((x, 0, 1, imagen.get_height())).get_bounding_rect().height > 0
@@ -242,6 +248,7 @@ class VistaPartida:
         self.efectos_combate = EfectosCombate()
         self.fondo =pygame.transform.scale(self.fondo_zoom, (960, 720))
         self.fuente = cargar_fuente(16)
+        self.fuente_ayuda = cargar_fuente(14)  # ayuda de teclas y detalles (J)
         self.boton_expediente = Boton("Casos · T", fuente=self.fuente, centro=(846, 626), tamano=(200, 36))
         self.etiquetas_jugadores = []
         self.titulo = cargar_fuente(20)
@@ -279,7 +286,8 @@ class VistaPartida:
         self.cesto_zoom = self.arte.cargar_cestos(ZOOM_COPA)
         self.flecha = FlechaGuia()
         self.adornos = AdornosMapa()
-        self.hud = HUDIndicadores(cargar_fuente(11), self.escenas.iconos_hud,
+        # Legible a 1–2 m de la pantalla (antes 11 px).
+        self.hud = HUDIndicadores(cargar_fuente(13), self.escenas.iconos_hud,
                                   negativos={k for k, v in POLARIDAD.items() if v == "malo"},
                                   colores_avisos=(COLOR_VERDE, COLOR_ROJO), etiquetar_avisos=True)
         from interfaz.aviso_legal import AvisoLegal
@@ -412,6 +420,23 @@ class VistaPartida:
             self.escenas_zoom[dimension] = self._escena_presente(DIMENSIONES[dimension], recursos, colisiones, dimension)
             self.celular = self.celular or ArteCelular()
         return self.mapas[dimension]
+
+    def precargar(self, orden=(FUTURO, PRESENTE)):
+        """Carga por adelantado una era que aún falte (una por llamada, ~0,3–0,5 s).
+
+        Se llama durante la intro, que es estática: así viajar o saltar al final no
+        congela la partida mientras se cargan el mapa, los personajes y el celular.
+        Devuelve True si cargó algo."""
+        fallidas = self.__dict__.setdefault("_precarga_fallida", set())
+        for dimension in orden:
+            if dimension not in self.mapas and dimension not in fallidas:
+                try:
+                    self._cargar_dimension(dimension)
+                except (ValueError, OSError, RuntimeError):
+                    fallidas.add(dimension)  # se vuelve a intentar al viajar
+                    continue
+                return True
+        return False
 
     @staticmethod
     def _escena_presente(configuracion, recursos, colisiones, dimension=PRESENTE):
@@ -933,10 +958,13 @@ class VistaPartida:
                     and self.animacion_pocion and self.animacion_pocion.datos["tiempo_transcurrido"] > .6:
                 self.animacion_pocion = None  # se puede saltar tras verla empezar
             return True
-        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F3:
+        # Atajos del equipo (depuración y salto al final): solo con Ctrl+Shift, para que
+        # un visitante no los pulse sin querer. No aparecen en la ayuda.
+        secreto = evento.type == pygame.KEYDOWN and atajo_secreto(evento)
+        if secreto and evento.key == pygame.K_F3:
             self.depurar = not self.depurar
             return True
-        if evento.type == pygame.KEYDOWN and evento.key == pygame.K_F2:
+        if secreto and evento.key == pygame.K_F2:
             # Atajo al final cooperativo: dos pulsaciones seguidas para no saltar sin querer.
             ahora = time.monotonic()
             if ahora - self._f2_pedido <= 3:
@@ -944,7 +972,7 @@ class VistaPartida:
                 cliente.actuar("saltar_al_final")
             else:
                 self._f2_pedido = ahora
-                self.panel.notificar("Pulsa F2 otra vez para saltar al final de Ciudad Núcleo.")
+                self.panel.notificar("Pulsa Ctrl+Shift+F2 otra vez para saltar al final de Ciudad Núcleo.")
             return True
         if evento.type == pygame.KEYDOWN and evento.key == pygame.K_h and not self.panel.activo:
             self.mostrar_hud = not self.mostrar_hud
@@ -1674,7 +1702,7 @@ class VistaPartida:
         if self.mostrar_hud:
             reservas.append(self.boton_expediente.rect)
             if self.mostrar_detalles:
-                reservas.extend((pygame.Rect(12, 48, 590, 112), pygame.Rect(13, 172, 226, 220)))
+                reservas.extend((pygame.Rect(12, 48, 590, 124), pygame.Rect(13, 172, 226, 220)))
         self.etiquetas_jugadores = colocar_etiquetas(etiquetas, pygame.Rect(8, 60, 944, 584), reservas)
         for elemento in self.etiquetas_jugadores:
             caja, color = elemento["rect"], elemento["color"]
@@ -1774,14 +1802,14 @@ class VistaPartida:
         if not self.mostrar_detalles:
             if not self.panel.activo:
                 self.hud.dibujar_avisos(superficie, 22, 70)
-                pista = self.hud.fuente.render("F1: controles · J: detalles · Esc: menú", True, (205, 214, 190))
+                pista = self.fuente_ayuda.render("F1: controles · J: detalles · Esc: menú", True, (205, 214, 190))
                 caja = pista.get_rect(bottomright=(946, 680))
                 self._pastilla(superficie, caja.inflate(12, 6), 90)
                 superficie.blit(pista, caja)
             return
         # Detalles (J): tarea completa, indicadores y teclas.
         nombre = DIMENSIONES_RED[self.dimension]["nombre"]
-        self._pastilla(superficie, pygame.Rect(12, 48, 590, 112), 165)
+        self._pastilla(superficie, pygame.Rect(12, 48, 590, 124), 165)
         self.panel.texto_lineas(superficie, detalle, 25, 56, 560, self.fuente)
         derecha = [f"{nombre} · Sala {codigo} · {len(self.jugadores)} aquí"]
         if self.dimension == LA_COPA:
@@ -1797,7 +1825,7 @@ class VistaPartida:
         if poder:
             derecha.append(f"Poder (Q): {poder['nombre']} · {'usado' if poder['usado'] else 'listo'}")
         for indice, linea in enumerate(derecha[:4]):
-            superficie.blit(self.hud.fuente.render(linea, True, (237, 185, 87)), (368, 112 + indice * 15))
+            superficie.blit(self.hud.fuente.render(linea, True, (237, 185, 87)), (368, 104 + indice * 16))
         if not self.panel.activo:
             if self.dimension == LA_COPA:
                 pygame.draw.rect(superficie, (126, 81, 45), self.boton_guia, border_radius=7)
@@ -1810,7 +1838,7 @@ class VistaPartida:
                 superficie.blit(texto, texto.get_rect(center=self.boton_guia.center))
             self.hud.dibujar(superficie, 18, 176)
             self._texto_pastilla(superficie, "Shift: correr | E: ayudar | I: pistas | M: tarea | T: casos | Q: poder | H: HUD | L: nombres",
-                                 self.hud.fuente, bottomleft=(22, 672))
+                                 self.fuente_ayuda, bottomleft=(22, 672))
 
     def _poder(self, privado, rol):
         """Nombre y estado del poder (Q) de la era actual; en Distrito Conecta no hay."""
@@ -1885,7 +1913,7 @@ class VistaPartida:
         if self.mostrar_hud:
             reservas.append(self.boton_expediente.rect)
             if self.mostrar_detalles:
-                reservas.extend((pygame.Rect(12, 48, 590, 112), pygame.Rect(13, 172, 226, 220)))
+                reservas.extend((pygame.Rect(12, 48, 590, 124), pygame.Rect(13, 172, 226, 220)))
         self.etiquetas_npc_actuales = colocar_etiquetas(elementos, pygame.Rect(8, 60, 944, 584), reservas)
         for etiqueta in self.etiquetas_npc_actuales:
             caja = etiqueta["rect"]

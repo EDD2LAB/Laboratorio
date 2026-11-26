@@ -223,3 +223,7 @@ informes/
 cache/
 # Notas y prompts de trabajo locales
 Claude outputs/
+# Registros de errores del juego (nucleo/registro.py)
+logs/
+# Entornos virtuales extra
+.venv*/

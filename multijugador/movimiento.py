@@ -24,6 +24,9 @@ LADO_CELDA = 32  # tamaño de las celdas del índice de paredes
 MAX_MEMORIA_COLISIONES = 300_000
 ORIENTACIONES = ("derecha", "abajo_derecha", "abajo", "abajo_izquierda",
                  "izquierda", "arriba_izquierda", "arriba", "arriba_derecha")
+# Memorias por firma de mapa (solo dependen de su geometría fija; ver ColisionesMapa).
+_MEMORIAS_FIJAS = {}
+_MEMORIAS_ARISTAS = {}
 
 
 def orientacion_de(dx, dy):
@@ -68,8 +71,21 @@ class ColisionesMapa:
                 self.npcs.append((round(objeto["x"] * ANCHO), round(objeto["y"] * ALTO),
                                   max(1, round(objeto["w"] * ANCHO)), max(1, round(objeto["h"] * ALTO))))
         self._celdas = self._indexar_paredes()
-        # El mapa no cambia: cada posición entera se calcula una sola vez.
-        self._memoria = {}
+        # El mapa no cambia: cada posición entera se calcula una sola vez, y la memoria
+        # se comparte entre todas las instancias del mismo mapa (misma firma): cada Demo
+        # nueva, la vista del cliente y el servidor local reutilizan lo ya calculado.
+        self._memoria = _MEMORIAS_FIJAS.setdefault(self.firma, {})
+
+    def memoria_aristas(self):
+        """Aristas libres del A* de los bots para los bloqueos actuales (compartidas por mapa)."""
+        firma = tuple(map(tuple, self.bloqueos))
+        por_bloqueos = _MEMORIAS_ARISTAS.setdefault(self.firma, {})
+        aristas = por_bloqueos.get(firma)
+        if aristas is None:
+            if len(por_bloqueos) >= 4:  # p. ej., La Copa con y sin el puente roto
+                por_bloqueos.pop(next(iter(por_bloqueos)))
+            aristas = por_bloqueos[firma] = {}
+        return aristas
 
     def _caja_pared(self, pared):
         """Rectángulo (x1, y1, x2, y2) fuera del cual la pared no puede tocar a nadie."""
@@ -277,6 +293,25 @@ class PartidaMovimiento:
         except (OSError, ValueError) as error:
             print("[Multijugador] Distrito Conecta no disponible:", error)
 
+    def mapas_para_calentar(self):
+        """(dimensión, colisiones, origen) de cada exterior, para precalentar su memoria."""
+        yield LA_COPA, self.colisiones, self.colisiones.inicio_libre(415, 390)
+        for dimension in (PRESENTE, FUTURO):
+            try:
+                mapa = self.colisiones_de(dimension)
+                yield dimension, mapa, mapa.inicio_libre(*spawn_presente(mapa.datos))
+            except (OSError, ValueError):
+                continue
+
+    def calentador(self, primero=None):
+        """Generador que precalienta los exteriores (``primero`` antes que los demás)."""
+        from logica.zonas_caminables import calentar
+        # Tras la era inicial, Ciudad Núcleo: la Demo rápida salta al final desde La Copa.
+        orden = [primero, FUTURO, PRESENTE, LA_COPA]
+        mapas = sorted(self.mapas_para_calentar(), key=lambda m: orden.index(m[0]))
+        for _, colisiones, origen in mapas:
+            yield from calentar(colisiones, origen)
+
     def _sincronizar_bloqueos(self):
         self.colisiones.bloqueos = [self.mision.puente.rect] if self.mision.puente.bloquea_paso else []
 
@@ -387,7 +422,7 @@ class PartidaMovimiento:
         """Acepta (o propone) viajar a ``destino``; viajan todos cuando aceptan todos."""
         jugador = self.jugadores[identificador]
         origen = jugador.get("dimension", LA_COPA)
-        if destino not in DIMENSIONES_RED or destino == origen:
+        if not isinstance(destino, str) or destino not in DIMENSIONES_RED or destino == origen:
             raise ValueError("Elige otra dimensión en el portal.")
         if not DIMENSIONES_RED[destino]["disponible"]:
             raise ValueError(DIMENSIONES_RED[destino]["nombre"] + " todavía está en construcción.")
@@ -455,8 +490,10 @@ class PartidaMovimiento:
         nombre = DIMENSIONES_RED[destino]["nombre"]
         self.mision._avisar(viajeros, "El equipo llegó a " + nombre + ". Los indicadores viajan con ustedes.", "logro")
 
-    def saltar_al_final(self, identificador):
-        """Atajo F2: da por resueltas las tres eras y lleva al equipo al final cooperativo."""
+    def saltar_al_final(self, identificador, aviso=None):
+        """Atajo F2: da por resueltas las tres eras y lleva al equipo al final cooperativo.
+
+        ``aviso``: texto para el equipo en lugar del del atajo (la Demo rápida de la feria)."""
         from .nucleo import CORRECTA, FIRMA, LLAVE, TERMINALES
         m = self.mision
         self.colisiones_de(PRESENTE)
@@ -487,7 +524,7 @@ class PartidaMovimiento:
         presentes = set(self.jugadores)
         futuro.votos = {i: CORRECTA for i in presentes}
         futuro.resolver(presentes)
-        m._avisar(list(self.jugadores), nombre_visible(self.jugadores[identificador], FUTURO) +
+        m._avisar(list(self.jugadores), aviso or nombre_visible(self.jugadores[identificador], FUTURO) +
                   " usó el atajo F2: ¡comienza el final en Ciudad Núcleo!", "logro")
         return {"mensaje": "¡Saltaron al final de Ciudad Núcleo!", "dimension": FUTURO}
 
@@ -550,11 +587,13 @@ class PartidaMovimiento:
         # Cada misión solo cuenta a quienes están en su dimensión.
         copa = self.presentes_en(LA_COPA)
         # En el Presente los bots solo acompañan: votan y deciden los humanos.
-        # Decide quien juega; un equipo sin personas decide por sí mismo.
-        sin_personas = not any(self._humano(i) for i in self.conectados)
+        # Decide quien juega; un equipo sin personas decide por sí mismo. Una persona que
+        # perdió la conexión sigue en la partida (120 s de gracia): los bots la esperan.
+        sin_personas = not any(self._humano(i) for i in self.jugadores)
         self.mision.presentes_presente = {i for i in self.presentes_en(PRESENTE) if sin_personas or self._humano(i)}
         self.mision.presentes_futuro = {i for i in self.presentes_en(FUTURO) if sin_personas or self._humano(i)}
         self.mision.participantes_final = self.presentes_en(FUTURO)
+        self.mision.conectados_partida = set(self.conectados)
         if self.mision.futuro is not None:
             self.mision.futuro.final.aventura.faltan = (["La Copa"] if self.mision.fase != "final" else []) + (["Distrito Conecta"] if not self.mision.presente or not self.mision.presente.fin else [])
             self.mision.futuro.final.actualizar(ahora - desde, self.jugadores,

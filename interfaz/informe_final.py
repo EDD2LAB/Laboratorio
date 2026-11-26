@@ -1,5 +1,6 @@
 """Informe final del expediente: recorrido inorden, línea de tiempo y reporte."""
 from datetime import datetime
+from pathlib import Path
 
 import pygame
 
@@ -70,6 +71,19 @@ def exportar(datos, carpeta=None, ahora=None):
     lineas.append(CIERRE)
     ruta.write_text("\n".join(lineas) + "\n", encoding="utf-8")
     return ruta
+
+
+def exportar_seguro(datos):
+    """Exporta y devuelve el texto para la pantalla; nunca cierra el juego si no se puede escribir."""
+    import os
+    import tempfile
+    otras = [Path(os.environ["LOCALAPPDATA"]) / "TimelessGlitch" / "informes"] if os.environ.get("LOCALAPPDATA") else []
+    for carpeta in [None, *otras, Path(tempfile.gettempdir()) / "TimelessGlitch" / "informes"]:
+        try:
+            return "Guardado en: " + str(exportar(datos, carpeta))
+        except OSError:
+            continue
+    return "No se pudo guardar el informe en este equipo."
 
 
 def posiciones_arbol(raiz):
@@ -221,7 +235,7 @@ def dibujar(panel, superficie):
             superficie.blit(arte.sello, arte.sello.get_rect(center=(90, 490)))
         panel.texto_lineas(superficie, CIERRE, 150, 462, 270, panel.fuente, ORO)
     if panel.informe_exportado:
-        panel.texto_lineas(superficie, "Guardado en: " + panel.informe_exportado, 30, 570, 400, panel.pequena, VERDE)
+        panel.texto_lineas(superficie, panel.informe_exportado, 30, 570, 400, panel.pequena, VERDE)
     for clave, texto, centro in (("informe_exportar", "Exportar a .txt", (130, 660)), ("informe_cerrar", "Cerrar", (330, 660))):
         if clave == "informe_cerrar" and panel.modo == "desenlace":
             continue

@@ -376,6 +376,10 @@ class FinalConBots(unittest.TestCase):
                     for campo, valores in f.opciones.items():
                         enviar("elegir", campo=campo, valor=next(v for v in valores if opcion_correcta(campo, v)))
                     enviar("autorizar")
+            if f.fase == "reintento":
+                # Revisión feria: con personas, reintentar la batalla lo decide la persona.
+                p.jugadores["aspirante"].update(x=punto["x"], y=punto["y"])
+                enviar("reintentar")
             if f.fase == "victoria":
                 break
         self.assertEqual(f.fase, "victoria", [(b.rol, b.ultimo_error) for b in gestor.bots.values()])

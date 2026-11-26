@@ -10,6 +10,16 @@ import urllib.request
 import uuid
 
 from .protocolo import VERSION
+
+ESPERA_DESPERTAR = 100  # segundos: el arranque en frío de Render tarda hasta un minuto
+
+
+class ServidorDespertando(ConnectionError):
+    """El alojamiento respondió, pero el servidor del juego aún no (502/503 o una página)."""
+
+
+class VersionDistinta(ValueError):
+    """El servidor usa otra versión del protocolo."""
 from .delta import DecodificadorEstado
 from .metricas_red import SondaPing
 
@@ -72,8 +82,11 @@ class ClienteInternet:
                 cuerpo = respuesta.read(65537)
         except urllib.error.HTTPError as error:
             try:
-                mensaje = json.loads(error.read(4096)).get("error", "El servidor rechazó la solicitud.")
+                with error:  # cierra la respuesta de error
+                    mensaje = json.loads(error.read(4096)).get("error", "El servidor rechazó la solicitud.")
             except (ValueError, AttributeError):
+                if error.code in (502, 503, 504):
+                    raise ServidorDespertando("El servidor está despertando. Intenta de nuevo en unos segundos.") from error
                 mensaje = "El servidor no pudo atender la solicitud."
             if error.code == 401:
                 raise PermissionError(mensaje) from error
@@ -82,7 +95,10 @@ class ClienteInternet:
             raise ValueError(mensaje) from error
         if len(cuerpo) > 65536:
             raise ValueError("Respuesta del servidor demasiado grande.")
-        valor = json.loads(cuerpo)
+        try:
+            valor = json.loads(cuerpo)
+        except ValueError as error:  # p. ej., una página del alojamiento mientras despierta
+            raise ServidorDespertando("El servidor está despertando. Intenta de nuevo en unos segundos.") from error
         if not isinstance(valor, dict):
             raise ValueError("Respuesta del servidor inválida.")
         return valor
@@ -154,7 +170,7 @@ class ClienteInternet:
                     recuperando_desde = time.monotonic()
                 if time.monotonic() - recuperando_desde >= VENTANA_RECONEXION:
                     detalle = f"HTTP {estado}" if estado else f"WS {codigo_ws}" if codigo_ws else f"{nombre}" + (f", código {codigo}" if codigo else "")
-                    raise ConnectionError(f"No se pudo recuperar la conexión ({detalle}). Vuelve a entrar a la sala.") from error
+                    raise ConnectionError(f"No se pudo recuperar la conexión ({detalle}). Pidan crear una sala nueva para seguir.") from error
                 self._evento({"tipo": "reconectando", "mensaje": f"Conexión interrumpida. Conservamos tu lugar; reconectando (intento {intento + 1})…"})
                 self._cerrado.wait(1 if intento == 0 else 2 if intento == 1 else 4)
                 intento += 1
@@ -247,9 +263,37 @@ class ClienteInternet:
                 self._cerrado.wait(2)
         return None
 
+    def _despertar(self):
+        """Render (plan gratuito) duerme sin uso: espera a /health con un aviso claro.
+
+        También avisa si el servidor usa otra versión del protocolo."""
+        inicio = time.monotonic()
+        while not self._cerrado.is_set():
+            try:
+                salud = self._peticion("/health", timeout=15)
+                protocolo = salud.get("protocolo")
+                if isinstance(protocolo, int) and protocolo != VERSION:
+                    raise VersionDistinta(
+                        f"El servidor usa la versión {protocolo} del juego y este juego la {VERSION}. "
+                        "Todos deben usar la misma versión (y el servidor, el último despliegue).")
+                return
+            except VersionDistinta:
+                raise
+            except (OSError, ValueError):
+                pass  # sigue despertando (o no hay red todavía)
+            transcurrido = time.monotonic() - inicio
+            if transcurrido >= ESPERA_DESPERTAR:
+                raise ConnectionError("El servidor no respondió en " + str(ESPERA_DESPERTAR) +
+                                      " s. Revisa la conexión a internet y vuelve a intentarlo.")
+            self._evento({"tipo": "aviso", "mensaje": f"Despertando el servidor, puede tardar un minuto… ({int(transcurrido)} s)"})
+            self._cerrado.wait(3)
+
     def _ejecutar(self):
         fallo = False
         try:
+            self._despertar()
+            if self._cerrado.is_set():
+                return
             respuesta = self._peticion("/v1/crear" if self._crear else "/v1/unirse", self._datos, timeout=60)
             self._token = respuesta["token"]
             self._evento({"tipo": "bienvenida", "id": respuesta["id"], "codigo": respuesta["codigo"]})

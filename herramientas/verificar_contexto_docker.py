@@ -49,7 +49,7 @@ from multijugador.servicio_internet import ServicioSalas
 from multijugador.tiempo_real import crear_app
 from multijugador.protocolo import VERSION, MAX_MENSAJE, codificar
 import multijugador.servicio_internet as modulo
-assert Path(modulo.__file__).resolve().is_relative_to(Path.cwd())
+assert Path(modulo.__file__).resolve().is_relative_to(Path.cwd().resolve())  # TEMP puede venir con nombre corto (SEBAST~1)
 assert 'pygame' not in sys.modules
 reloj = [0.0]
 s = ServicioSalas(lambda: reloj[0])
@@ -71,6 +71,10 @@ estado = sala._estado(jugadores[0]['id'])
 assert estado['fase'] == 'partida'
 assert len(estado['mundo']['jugadores']) == 4
 assert len(codificar(estado)) <= MAX_MENSAJE
+app = crear_app()  # registra también las rutas /feria (feria.web y lo que importa)
+rutas = {getattr(r.resource, 'canonical', '') for r in app.router.routes()}
+assert any(r.startswith('/feria') for r in rutas), rutas
+import feria.web, feria.sesion, feria.casos, feria.movil  # noqa: E401
 assert 'pygame' not in sys.modules
 print(json.dumps({'ok': True, 'protocolo': VERSION, 'humanos': 2, 'jugadores': 4,
                   'ticks': 200, 'casos': s.ejecutar('GET', '/health', {})['casos'],

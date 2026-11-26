@@ -30,7 +30,8 @@ def inventariar():
 
 # Sonidos que audio/audio_manager.py (SONIDOS_BATALLA) carga si existen.
 SONIDOS_CONECTADOS = {"rayo_aviso", "rayo_impacto", "mini_explosion", "mini_disparo", "mini_aparicion", "derribado",
-                      "levantado", "cambio_fase", "recoger_material", "fabricar"}
+                      "levantado", "cambio_fase", "recoger_material", "fabricar", "blaster_disparo", "mini_golpe",
+                      "senal_perdida"}
 FINALES = (("Imagenes/Finales/epilogo_futuro.png", "Viñeta de Ciudad Núcleo", "Mapa del Futuro oscurecido"),
            ("Imagenes/Finales/epilogo_presente.png", "Viñeta de Distrito Conecta", "Mapa del Presente oscurecido"),
            ("Imagenes/Finales/epilogo_copa.png", "Viñeta de La Copa", "Fondo de La Copa oscurecido"),
@@ -60,8 +61,8 @@ def esperados():
             "Fondo actual", "Imagenes/Fondos/Mapas/fondoMenuInicio.png")
     for rol in ("guardian", "mensajero", "habitante", "aspirante", "luma", "mira"):
         agregar(f"Imagenes/Fondos/Carga/carga_{rol}_8f.png", "Transición de portal", "Transición actual")
-    for n in range(1, 5):
-        agregar(f"Imagenes/Intro/vineta{n}.png", "Intro breve", "Texto resumido por implementar")
+    for n in range(1, 3):  # intro de dos viñetas (interfaz/intro.py)
+        agregar(f"Imagenes/Intro/vineta{n}.png", "Intro breve", "Se salta la viñeta", conectado=True)
     # interfaz/celular.py: la cápsula marca tu voto y es la imagen de la consecuencia.
     for nombre, alternativa in (("publicar", "colgar"), ("verificar", "Verificar"), ("reportar", "Denunciar"),
                                 ("ignorar", "ignorar")):

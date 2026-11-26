@@ -52,6 +52,10 @@ def modo_feria(preferencias=None):
 
 
 def guardar(preferencias):
+    if modo_feria(preferencias):
+        # En la feria, lo que cambie un visitante (volumen, intro, pantalla) vale solo hasta
+        # que el juego vuelve al menú por inactividad; el organizador ajusta sin modo feria.
+        return
     try:
         ARCHIVO.write_text(json.dumps(preferencias, ensure_ascii=False, indent=2), encoding="utf-8")
     except OSError as error:  # carpeta de solo lectura: se usa solo en esta sesión

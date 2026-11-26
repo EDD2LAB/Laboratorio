@@ -30,7 +30,9 @@ def planificar(bot, estado, jugadores, tarea):
             return accion(aventura["taller"], "fabricar")
         return dict(estado="ESPERANDO_EQUIPO", esperar=True)
     if fase in ("preparacion", "reintento"):
-        if fase == "preparacion" and humanos:
+        # Empezar y reintentar la batalla lo decide el equipo: con personas en la partida
+        # (aunque alguna haya perdido la conexión) el bot espera a que lo hagan ellas.
+        if any(j.get("controlador") != "bot" for j in jugadores):
             return dict(estado="ESPERANDO_EQUIPO", esperar=True)
         return accion(puntos["aspirante"], "iniciar" if fase == "preparacion" else "reintentar")
     hechos = final["hechos"]

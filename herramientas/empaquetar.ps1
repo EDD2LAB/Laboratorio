@@ -18,7 +18,7 @@ $Raiz = Split-Path -Parent $PSScriptRoot
 Set-Location $Raiz
 $Python = Join-Path $Raiz ".venv\Scripts\python.exe"
 if (-not (Test-Path $Python)) {
-    throw "No existe .venv. Crea el entorno: py -3.12 -m venv .venv e instala requirements.txt."
+    throw "No existe .venv. Crea el entorno: py -3.14 -m venv .venv e instala requirements.txt."
 }
 
 # 1. PyInstaller y Pillow solo en el .venv, con versiones fijas.
@@ -28,6 +28,10 @@ if ($LASTEXITCODE -ne 0) {
     & $Python -m pip install -r requirements-empaquetar.txt
     if ($LASTEXITCODE -ne 0) { throw "No se pudieron instalar las herramientas de empaquetado." }
 }
+
+# segno dibuja el QR de la Feria de los Ecos: sin él, el .exe saldría sin QR (PyInstaller solo avisa).
+& $Python -m pip show segno *> $null
+if ($LASTEXITCODE -ne 0) { throw "Falta segno en .venv: instala requirements.txt antes de armar el .exe." }
 
 # Icono: el PNG del juego convertido a .ico (varios tamaños, vecino más cercano).
 New-Item -ItemType Directory -Force "build" | Out-Null
@@ -74,6 +78,17 @@ $Interno = Join-Path $Juego "_internal"
 foreach ($Salida in $Juego, (Join-Path $Raiz "dist\diagnostico\TimelessGlitchDiag")) {
     $Originales = Join-Path $Salida "_internal\Imagenes\assets finales"
     if (Test-Path -LiteralPath $Originales) { Remove-Item -LiteralPath $Originales -Recurse -Force }
+}
+
+# Zonas caminables ya calculadas: sin ellas, la primera campaña del .exe tarda unos 9 s en
+# crearse. Se calculan aquí (una campaña por era) y viajan en _internal\cache.
+& $Python -c "from multijugador.partida_local import ClienteCampanaLocal as C; [C('Cache', 'guardian', era=e) for e in ('la_copa', 'presente', 'futuro')]"
+if ($LASTEXITCODE -ne 0) { throw "No se pudieron calcular las zonas caminables." }
+foreach ($Salida in $Juego, (Join-Path $Raiz "dist\diagnostico\TimelessGlitchDiag")) {
+    if (Test-Path -LiteralPath (Join-Path $Salida "_internal")) {
+        New-Item -ItemType Directory -Force (Join-Path $Salida "_internal\cache") | Out-Null
+        Copy-Item -Recurse -Force (Join-Path $Raiz "cache\zonas_caminables") (Join-Path $Salida "_internal\cache\zonas_caminables")
+    }
 }
 
 # 3. Preferencias de feria (claves reales de nucleo/preferencias.py), UTF-8 sin BOM.

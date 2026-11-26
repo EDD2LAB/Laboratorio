@@ -23,6 +23,10 @@ ENCARGOS = (
 )
 
 
+def _faltan(cantidad):
+    return "Falta 1." if cantidad == 1 else "Faltan " + str(cantidad) + "."
+
+
 class EncargoSuministros:
     def __init__(self, ronda, objetivos, familias=()):
         self.config = ENCARGOS[ronda]
@@ -97,13 +101,13 @@ class EncargoSuministros:
         self.progreso += 1
         faltan = self.total_actividad - self.progreso
         return ("¡" + familia["persona"] + " recibió su cesta! " +
-                ("Faltan " + str(faltan) + ". Vuelve al cesto por otra." if faltan else "¡Repartieron todas las cestas!"))
+                (_faltan(faltan) + " Vuelve al cesto por otra." if faltan else "¡Repartieron todas las cestas!"))
 
     def instruccion_reparto(self, jugador):
         faltan = self.total_actividad - self.progreso
         if jugador in self.cestas:
-            return "Llevas una cesta. Camina hasta una familia marcada y pulsa E. Faltan " + str(faltan) + "."
-        return "Toma una cesta en el cesto de la aldea (E) y llévala a una familia. Faltan " + str(faltan) + "."
+            return "Llevas una cesta. Camina hasta una familia marcada y pulsa E. " + _faltan(faltan)
+        return "Toma una cesta en el cesto de la aldea (E) y llévala a una familia. " + _faltan(faltan)
 
     @property
     def completo(self):
@@ -112,6 +116,8 @@ class EncargoSuministros:
     def revisar_ayudante(self, presentes, jugadores):
         import math
         self.cestas &= set(presentes)  # quien se fue suelta su cesta: otra persona puede llevarla
+        for jugador in [i for i in self.cargas if i not in presentes]:
+            self.cargas.pop(jugador)  # y también el objeto del encargo (cada uno es único)
         j = jugadores.get(self.ayudante)
         if not j or self.ayudante not in presentes or math.hypot(j["x"]-self.destino["x"], j["y"]-self.destino["y"]) > 68:
             self.ayudante = None

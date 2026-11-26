@@ -507,7 +507,7 @@ class PanelCooperativo:
                 self.retrato(superficie, "guía")
                 self.texto_lineas(superficie, "¡Hola, detectives! La aldea necesita su ayuda.", 290, 180, 495)
                 self.texto_lineas(superficie, "Aprendamos a caminar, hablar y llevar un farol. Será una misión corta, sin reloj.", 290, 265, 495)
-                self.boton(superficie, "iniciar_tutorial", "Aprender jugando", 480, 420, 430)
+                self.boton(superficie, "iniciar_tutorial", "Aprender jugando · Enter", 480, 420, 430)
                 dibujar_carga(superficie, "farol", (735, 420), 34)
                 self.boton(superficie, "saltar_tutorial", "Ya sé jugar", 480, 480, 330)
             elif self.caso.get("fase") == "preparacion":
@@ -620,7 +620,7 @@ class PanelCooperativo:
             rol = next((j["rol"] for j in self.vista.estado.get("mundo", {}).get("jugadores", []) if j["id"] == self.vista.identificador), None)
             dibujar_icono(superficie, self.vista.arte.poder_grande.get(rol), (750, 205))
             self.texto_lineas(superficie, self.privado.get("descripcion_habilidad", ""), 165, 255, 630)
-            self.texto_lineas(superficie, "Puedes usarlo una vez por misterio.", 165, 380, 630, color=VERDE)
+            self.texto_lineas(superficie, "Puedes usarlo una vez por caso.", 165, 380, 630, color=VERDE)
             self.boton(superficie, "habilidad", "Usar mi poder", 480, 495, 430, not self.privado.get("habilidad_usada"))
         elif self.modo == "resultado":
             resultado = self.caso.get("resultado") or {}
@@ -799,6 +799,11 @@ class PanelCooperativo:
         if evento.type == pygame.KEYDOWN:
             if self.modo == "analizar" and self.dimension == "presente" and analisis_manipulado.tecla(self, evento.key, cliente):
                 return True
+            if (self.modo == "introduccion" and evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_e, pygame.K_SPACE)
+                    and self.privado.get("tutorial", {}).get("estado") == "pendiente" and self.caso.get("ronda", 0) == 0):
+                cliente.actuar("iniciar_tutorial")  # el panel inicial también responde al teclado
+                self.modo = None
+                return True
             if evento.key == pygame.K_t:
                 self.modo = None if self.modo == "expediente" else "expediente"
                 return True
@@ -842,7 +847,7 @@ class PanelCooperativo:
             if clave == "informe_cerrar":
                 self.modo = None
             elif clave == "informe_exportar":
-                self.informe_exportado = str(informe_final.exportar(self.informe))
+                self.informe_exportado = informe_final.exportar_seguro(self.informe)
             elif clave == "expediente_cerrar":
                 self.modo = None
             elif clave == "expediente_prueba":

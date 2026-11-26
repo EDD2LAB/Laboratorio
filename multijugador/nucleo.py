@@ -239,9 +239,18 @@ class MisionNucleo:
     def posiciones_pulsos(self):
         return [posicion_en_ruta(ruta, self.reloj * VELOCIDAD_PULSO) for ruta in self.rutas_pulso]
 
-    def actualizar(self, segundos, jugadores):
-        """Los pulsos recorren sus rutas; si tocan al portador, la llave vuelve al Corredor."""
+    def actualizar(self, segundos, jugadores, conectados=None):
+        """Los pulsos recorren sus rutas; si tocan al portador, la llave vuelve al Corredor.
+
+        Si quien la lleva sale de la sala o pierde la conexión, también vuelve: si no, nadie
+        más podría usar la terminal y el equipo quedaría atascado."""
         self.reloj += max(0, min(segundos, 1))
+        if (self.portador and "llave" not in self.tareas
+                and (self.portador not in jugadores or (conectados is not None and self.portador not in conectados))):
+            self.halladas.pop(LLAVE)
+            avisados = [i for i in jugadores if conectados is None or i in conectados]
+            self.avisar(avisados, "Quien llevaba la llave de supervisión se fue. La llave volvió al Corredor de Datos.", "info")
+            return
         portador = jugadores.get(self.portador) if self.portador else None
         if portador is None or portador.get("dimension") != "futuro" or portador.get("interior") or "llave" in self.tareas:
             return
@@ -290,7 +299,7 @@ class MisionNucleo:
                 return {"mensaje": "Pueden volver a Distrito Conecta cuando quieran.", "vista": "portal"}
             if not self.tareas_listas:
                 faltan = len(TERMINALES) - len(self.tareas)
-                return {"mensaje": f"NÚCLEO no acepta órdenes: faltan {faltan} terminales.", "titulo": "Pantalla central", "vista": "fuente"}
+                return {"mensaje": "NÚCLEO no acepta órdenes: " + ("falta 1 terminal." if faltan == 1 else f"faltan {faltan} terminales."), "titulo": "Pantalla central", "vista": "fuente"}
             aviso = "Elijan juntos qué hacer con NÚCLEO." if FIRMA in self.halladas else "Para reconfigurarlo hace falta hablar antes con el Representante Humano."
             return {"mensaje": aviso, "vista": "caldero"}
         tarea = objetivo["tarea"]
@@ -339,7 +348,7 @@ class MisionNucleo:
         if self.completada:
             raise ValueError("NÚCLEO ya tiene una decisión.")
         if not self.tareas_listas:
-            raise ValueError("Completen las tres terminales antes de decidir.")
+            raise ValueError("Completen todas las terminales antes de decidir.")
         if opcion not in OPCIONES:
             raise ValueError("Decisión inválida.")
         if opcion == CORRECTA and FIRMA not in self.halladas:

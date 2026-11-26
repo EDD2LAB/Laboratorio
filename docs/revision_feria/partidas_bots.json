@@ -1,0 +1,82 @@
+[
+  {
+    "semilla": 1,
+    "dificultad": "normal",
+    "completa": true,
+    "hitos_s_simulados": {
+      "la_copa": 62.8,
+      "distrito_conecta": 131.1,
+      "ciudad_nucleo": 155.9,
+      "victoria": 227.9,
+      "informe": 272.9
+    },
+    "segundos_reales": 17.2,
+    "peor_paso_ms": 888.6,
+    "arbol_avl": 6,
+    "pendientes_avl": 0
+  },
+  {
+    "semilla": 2,
+    "dificultad": "normal",
+    "completa": true,
+    "hitos_s_simulados": {
+      "la_copa": 62.8,
+      "distrito_conecta": 131.1,
+      "ciudad_nucleo": 155.9,
+      "victoria": 227.9,
+      "informe": 272.9
+    },
+    "segundos_reales": 10.1,
+    "peor_paso_ms": 48.4,
+    "arbol_avl": 6,
+    "pendientes_avl": 0
+  },
+  {
+    "semilla": 3,
+    "dificultad": "normal",
+    "completa": true,
+    "hitos_s_simulados": {
+      "la_copa": 62.8,
+      "distrito_conecta": 131.1,
+      "ciudad_nucleo": 155.9,
+      "victoria": 227.9,
+      "informe": 272.9
+    },
+    "segundos_reales": 10.3,
+    "peor_paso_ms": 48.3,
+    "arbol_avl": 6,
+    "pendientes_avl": 0
+  },
+  {
+    "semilla": 4,
+    "dificultad": "normal",
+    "completa": true,
+    "hitos_s_simulados": {
+      "la_copa": 62.8,
+      "distrito_conecta": 131.1,
+      "ciudad_nucleo": 155.9,
+      "victoria": 227.9,
+      "informe": 272.9
+    },
+    "segundos_reales": 10.3,
+    "peor_paso_ms": 48.4,
+    "arbol_avl": 6,
+    "pendientes_avl": 0
+  },
+  {
+    "semilla": 5,
+    "dificultad": "normal",
+    "completa": true,
+    "hitos_s_simulados": {
+      "la_copa": 62.4,
+      "distrito_conecta": 122.3,
+      "ciudad_nucleo": 142.7,
+      "victoria": 222.1,
+      "informe": 267.1
+    },
+    "segundos_reales": 11.3,
+    "peor_paso_ms": 1028.4,
+    "arbol_avl": 6,
+    "pendientes_avl": 0
+  }
+]

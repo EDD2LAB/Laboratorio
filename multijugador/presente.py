@@ -252,7 +252,7 @@ class MisionPresente:
         pistas = self.evento["pistas"]
         if len(self.halladas) < len(pistas):
             faltan = len(pistas) - len(self.halladas)
-            return {"mensaje": f"Investiguen antes de decidir: faltan {faltan} pistas.", "vista": "fuente",
+            return {"mensaje": "Investiguen antes de decidir: " + ("falta 1 pista." if faltan == 1 else f"faltan {faltan} pistas."), "vista": "fuente",
                     "titulo": "Pantalla pública"}
         if self.fin:
             return {"mensaje": "¡Resolvieron los tres casos de Distrito Conecta!", "vista": "portal"}

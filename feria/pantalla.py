@@ -7,6 +7,7 @@ partidas, no usa la campaña, el expediente ni las preferencias.
 import math
 import threading
 import time
+from pathlib import Path
 
 import pygame
 
@@ -310,20 +311,24 @@ def jugar_desde_menu(lienzo, audio=None, cuadros=0, servidor=None, al_dibujar=No
     try:
         return _jugar(lienzo, cuadros, servidor, al_dibujar)
     except Exception as error:  # noqa: BLE001 — el juego sigue aunque la feria falle
-        _anotar_error()
-        return _error_red(lienzo, f"{type(error).__name__}: {error}")
+        ruta = _anotar_error()
+        return _error_red(lienzo, f"{type(error).__name__}: {error}", ruta)
 
 
 def _anotar_error():
+    """Anota el error y devuelve dónde quedó (None si no se pudo escribir)."""
     import traceback
+    from nucleo import registro as registro_juego
     from nucleo.rutas import RAIZ
+    ruta = registro_juego.registrar_error("Error en la Feria de los Ecos")  # logs/errores.log del juego
     try:
         carpeta = RAIZ / "cache"
         carpeta.mkdir(exist_ok=True)
         with open(carpeta / "feria_error.log", "a", encoding="utf-8") as registro:
             registro.write(time.strftime("%Y-%m-%d %H:%M:%S ") + traceback.format_exc() + "\n")
+        return ruta or carpeta / "feria_error.log"
     except OSError:
-        pass
+        return ruta
 
 
 def _jugar(lienzo, cuadros, servidor, al_dibujar):
@@ -375,18 +380,26 @@ def _conectar_remoto(lienzo, base, limite=90):
     resultado = {}
 
     def intentar():
-        inicio = time.monotonic()
+        inicio, sin_red = time.monotonic(), 0
         while time.monotonic() - inicio < limite and not resultado.get("cancelada"):
             try:
-                resultado["sesion"] = SesionRemota.crear(base)
+                sesion = SesionRemota.crear(base)
+                if resultado.get("cancelada"):
+                    sesion.terminar(0)  # se canceló mientras se creaba: no dejarla viva en Render
+                    return
+                resultado["sesion"] = sesion
                 return
             except urllib.error.HTTPError as error:
+                sin_red = 0  # Render responde (quizá despertando): vale la pena esperar
                 if error.code in (404, 405):   # Render responde pero aún no tiene la feria desplegada
                     resultado["aviso"] = "El servidor de internet aún no tiene la feria: votos solo por la red local."
                     break
                 time.sleep(3)
             except Exception as error:  # noqa: BLE001 — sin internet, DNS, servidor dormido…
                 resultado["error"] = f"{type(error).__name__}: {error}"
+                sin_red += 1
+                if sin_red >= 3:  # ninguna respuesta HTTP: no hay internet, se pasa a la red local
+                    break
                 time.sleep(3)
         resultado["fin"] = True
     hilo = threading.Thread(target=intentar, name="feria-conectar", daemon=True)
@@ -468,7 +481,7 @@ def _bucle(lienzo, pantalla_feria, cuadros, al_dibujar):
             return None
 
 
-def _error_red(lienzo, mensaje):
+def _error_red(lienzo, mensaje, registro=None):
     """Si no se pudo abrir el servidor, se explica y se vuelve al menú con una tecla."""
     from interfaz.presentacion_pantalla import presentar
     fuente, titulo = cargar_fuente(18), cargar_fuente(32)
@@ -487,7 +500,9 @@ def _error_red(lienzo, mensaje):
         for linea in envolver_texto(mensaje, fuente, 720)[:5]:
             lienzo.blit(fuente.render(linea, True, CREMA), (120, y))
             y += 28
-        lienzo.blit(fuente.render("El detalle queda en cache/feria_error.log.", True, CREMA), (120, y + 14))
+        if registro is not None:  # solo si de verdad se anotó (no con «puerto ocupado» ni «falta segno»)
+            detalle = Path(registro)
+            lienzo.blit(fuente.render(f"El detalle quedó en {detalle.parent.name}/{detalle.name}.", True, CREMA), (120, y + 14))
         lienzo.blit(fuente.render("Pulsa cualquier tecla para volver al menú.", True, CREMA), (120, y + 54))
         pantalla = pygame.display.get_surface()
         if pantalla is not None:

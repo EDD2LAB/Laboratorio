@@ -58,6 +58,11 @@ def objetivo(vista, rol=None):
     return dict(punto, id="final:" + rol, nombre=nombre) if punto else None
 
 
+# Respuestas que pasan a la orden o prueba siguiente (Guardián y Aspirante).
+OPERACIONES_QUE_AVANZAN = ("comparar", "guardar", "autorizar")
+ESPERA_DOBLE_CLIC = .45  # segundos
+
+
 class PantallaFinal:
     def __init__(self, panel):
         self.panel = panel
@@ -65,6 +70,7 @@ class PantallaFinal:
         self.rol = (panel.vista.yo() or {}).get("rol", "guardian")
         self.manteniendo = False
         self.ultimo_envio = 0
+        self.ultimo_avance = 0.0  # un doble clic no debe responder también la orden siguiente
 
     def texto(self, superficie, texto, y, color=CREMA, x=110, ancho=740):
         return self.panel.texto_lineas(superficie, texto, x, y, ancho, self.panel.fuente, color)
@@ -264,6 +270,11 @@ class PantallaFinal:
             elif operacion == "informe":
                 cliente.actuar("pedir_informe")
             else:
+                if operacion in OPERACIONES_QUE_AVANZAN:
+                    ahora = time.monotonic()
+                    if ahora - self.ultimo_avance < ESPERA_DOBLE_CLIC:
+                        return True  # el segundo clic de un doble clic: la orden nueva aún no se vio
+                    self.ultimo_avance = ahora
                 datos = dict(operacion=operacion, rol=self.rol, ronda_final=estado(self.panel.vista).get("ronda"))
                 if operacion == "material":
                     datos["pieza"] = partes[1]

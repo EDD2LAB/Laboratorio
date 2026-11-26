@@ -5,6 +5,8 @@ TIMELESS GLITCH - GUIA PARA EL DIA DE LA FERIA
    - Copia la carpeta TimelessGlitch completa a C:\TimelessGlitch\
      (debe quedar C:\TimelessGlitch\TimelessGlitch.exe).
    - No hace falta instalar Python ni nada mas.
+   - La primera vez Windows puede mostrar "Windows protegio su PC" (SmartScreen):
+     pulsa "Mas informacion" > "Ejecutar de todas formas".
 
 2. PREPARAR LA PC (una vez, al llegar)
    - Abre PowerShell COMO ADMINISTRADOR y ejecuta:
@@ -12,7 +14,11 @@ TIMELESS GLITCH - GUIA PARA EL DIA DE LA FERIA
          powershell -ExecutionPolicy Bypass -File .\preparar_pc_feria.ps1
    - Desactiva los atajos de Shift x5 y similares, deja la pantalla siempre
      encendida, crea accesos directos a Feria.bat (escritorio e Inicio) y
-     permite el juego en el firewall para redes privadas.
+     permite el juego en el firewall para redes PRIVADAS.
+   - IMPORTANTE: la red Wi-Fi debe estar marcada como PRIVADA (Configuracion >
+     Red e Internet > Wi-Fi > la red > Perfil de red: Privada). Windows marca
+     Publica una red nueva y entonces los celulares no llegan a la PC
+     (Feria de los Ecos sin internet).
    - AL TERMINAR LA FERIA deja todo como estaba:
          powershell -ExecutionPolicy Bypass -File .\preparar_pc_feria.ps1 -Deshacer
 
@@ -22,23 +28,53 @@ TIMELESS GLITCH - GUIA PARA EL DIA DE LA FERIA
    - Cerrar Discord, Steam y OneDrive (tambien en la bandeja del sistema).
    - Poner de fondo de escritorio el logo del juego y ocultar los iconos
      (clic derecho en el escritorio > Ver > Mostrar iconos del escritorio).
+   - Audio: conecta los parlantes ANTES de abrir el juego (si se conectan
+     despues, cierra el juego con Esc > Salir; Feria.bat lo reabre con sonido).
+   - 10 minutos antes: abre en el navegador
+         https://la-copa-salas.onrender.com/health
+     para despertar el servidor (tarda hasta un minuto). Debe decir
+     "protocolo": 25. Ese dia NO despliegues nada en Render.
 
 4. JUGAR
    - Abre "Timeless Glitch - Feria" (Feria.bat). El juego arranca en modo feria:
-     * "Demo rapida" empieza una campana con bots al instante.
+     * "Demo rapida": La Copa con bots y, al resolverla, la batalla final de
+       Ciudad Nucleo (unos 10-15 minutos). La primera Demo tras abrir el juego
+       tarda unos segundos mas en cargar.
      * "Ver la batalla final" muestra el combate final; Esc vuelve al menu.
      * Si nadie toca nada 2 minutos, pregunta "Sigues ahi?" y a los 10 s
-       vuelve solo al menu.
+       vuelve solo al menu. En los demas menus vuelve sin preguntar.
+     * Lo que un visitante cambie en Ajustes (volumen, pantalla, intro) se
+       olvida al volver al menu por inactividad. Para cambiar los ajustes de
+       verdad, abre TimelessGlitch.exe directamente (sin Feria.bat).
      * Si alguien cierra el juego, Feria.bat lo vuelve a abrir en 2 segundos.
-   - Sin internet: usa "Campana con bots" o "Demo rapida".
-   - Varias PC: usa Multijugador por LAN con un router propio (no la red de la feria).
+   - Sin internet: usa "Demo rapida" o "Campana con bots".
+   - Multijugador entre varias PC NECESITA INTERNET (usa el servidor de Render).
+     Sin internet no hay multijugador.
 
-5. SALIR DE VERDAD
+5. FERIA DE LOS ECOS QR (segundo boton del menu)
+   - Los visitantes votan desde su celular escaneando el QR de la pantalla.
+   - CON internet: los votos van por Render. Abre /health (punto 3) antes.
+   - SIN internet: el juego usa un servidor propio en la PC (puerto 8080).
+     Los celulares deben estar en la MISMA red Wi-Fi que la PC, la red debe
+     estar como PRIVADA (punto 2) y el firewall debe permitir el juego.
+     Si se queda en "Conectando..." pulsa L para pasar al modo local sin
+     esperar. Si el QR muestra una IP que no es la de la Wi-Fi, pulsa I para
+     cambiar de IP.
+   - Teclas: Espacio o Enter muestra el resultado, N abre una nueva ronda,
+     Esc vuelve al menu.
+
+6. SALIR DE VERDAD
    - Primero cierra la ventana negra "Timeless Glitch - Feria".
    - Despues cierra el juego (Esc en el menu > Salir > Si, cerrar).
    - Si cierras primero el juego, Feria.bat lo reabre.
 
-6. CONTROLES (para imprimir junto al teclado)
+7. SI ALGO FALLA
+   - Si hay un error, el juego vuelve solo al menu principal. Si se cierra,
+     Feria.bat lo reabre.
+   - Los errores quedan en C:\TimelessGlitch\logs\errores.log (y lo que el
+     juego imprime, en logs\juego.log). Copia esa carpeta y pasasela al equipo.
+
+8. CONTROLES (para imprimir junto al teclado)
    Flechas / WASD ... Caminar (con Shift: correr)
    E ............... Hablar, ayudar o usar lo que tienes cerca
    Tab ............. Cambiar entre objetivos cercanos
@@ -53,5 +89,4 @@ TIMELESS GLITCH - GUIA PARA EL DIA DE LA FERIA
    H ............... Ocultar o mostrar el HUD
    L ............... Ocultar o mostrar los nombres
    F1 .............. Ayuda y controles
-   F11 ............. Pantalla completa
    Esc ............. Cerrar ventanas / menu

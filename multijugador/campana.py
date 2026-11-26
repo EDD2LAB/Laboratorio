@@ -83,6 +83,7 @@ class CampanaCopa(MisionPuente):
         from .exploracion import ExploracionInteriores
         self.exploracion = ExploracionInteriores()
         self.participantes_final = set()
+        self.conectados_partida = None  # lo actualiza PartidaMovimiento (None: no se sabe)
         self.ronda = 0
         self.metadatos_pruebas = self._metadatos(self.pruebas)
         self.resumen = []
@@ -486,8 +487,10 @@ class CampanaCopa(MisionPuente):
             self.presente.resolver(self.presentes_presente)
         if self.futuro is not None:
             self.futuro.resolver(self.presentes_futuro)
-            self.futuro.actualizar(segundos, self.jugadores)
+            self.futuro.actualizar(segundos, self.jugadores, self.conectados_partida)
         self.acompanante.actualizar(self)
+        if self.futuro is not None and self.futuro.final.fase == "victoria" and self.expediente.pendientes:
+            self.expediente.completar()  # el informe final muestra el árbol completo
         if self.encargo:
             self.encargo.revisar_ayudante(presentes, self.jugadores)
         if self.fase != "investigacion" or len(presentes) < 2:
@@ -506,8 +509,9 @@ class CampanaCopa(MisionPuente):
             self._avisar(presentes, "¡Todos tienen dos pistas! Ganaron una estrella por ayudarse.")
 
     def resolver(self, presentes):
+        decisores = self.decisores(presentes)
         if (self.fase == "preparacion" and len(presentes) >= 2 and self.encargo.completo
-                and self.decisores(presentes).issubset(self.preparados)):
+                and decisores and decisores.issubset(self.preparados)):
             self._siguiente()
             return
         puente = self.estado_puente

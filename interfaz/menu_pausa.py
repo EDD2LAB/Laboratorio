@@ -40,7 +40,8 @@ CONTROLES = (
     ("L", "Ocultar o mostrar los nombres"),
     ("F11", "Alternar pantalla completa"),
     ("Esc", "Cerrar ventanas / abrir este menú"),
-    ("C", "Celular en Presente y Futuro"),
+    ("C", "Celular en Distrito Conecta y Ciudad Núcleo"),
+    ("F", "Disparar el bláster (batalla final)"),
     ("F3", "FPS, conexión y bots"),
 )
 
@@ -417,8 +418,8 @@ class MenuPausa:
         menu = self.menu
         tarjetas = (("WASD", "Caminar", "Flechas también"), ("E", "Hablar / usar", "Junto a la señal"),
                     ("SHIFT", "Correr", "Mientras caminas"), ("I", "Leer y compartir", "Tus pistas"),
-                    ("C", "Abrir el celular", "Presente y Futuro"), ("Q", "Usar tu poder", "La Copa y Ciudad Núcleo"),
-                    ("T", "Libro de casos", "Lo que descubrieron"), ("ESC", "Cerrar / pausa", "F1: ayuda · F2 F2: ir al final"))
+                    ("C", "Abrir el celular", "Distrito Conecta y Ciudad Núcleo"), ("Q", "Usar tu poder", "La Copa y Ciudad Núcleo"),
+                    ("T", "Libro de casos", "Lo que descubrieron"), ("ESC", "Cerrar / pausa", "F1: ayuda"))
         for i, (tecla, nombre, detalle) in enumerate(tarjetas):
             rect = pygame.Rect(125 + i % 2 * 365, 165 + i // 2 * 96, 345, 84)
             pygame.draw.rect(menu.lienzo, (23, 50, 38), rect, border_radius=9)
@@ -436,6 +437,7 @@ class MenuPausa:
         menu.panel(pygame.Rect(250, 170, 460, 380))
         menu.texto("¿Quieres salir?", 480, 200, 32, ORO, True)
         detalle = ("Se perderá el progreso de esta campaña." if menu.campana_local else
+                   "Eres el anfitrión: la sala se cerrará para todos." if menu.anfitrion else
                    "Saldrás de la sala; tus compañeros podrán seguir.")
         menu.parrafo(detalle, pygame.Rect(290, 255, 380, 50), 16, ROJO)
         self._boton("salir_partida", "Sí, volver al menú", (480, 340), 320)

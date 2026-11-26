@@ -19,6 +19,7 @@ from .partida_local import ClienteCampanaLocal
 from bots.gestor_bots import GestorBots
 
 GRACIA_PARTIDA = 120
+MARGEN_CORTE = 5.0  # s: un microcorte no suelta lo que la persona llevaba
 
 
 class DemasiadasSolicitudes(ValueError):
@@ -35,6 +36,7 @@ class SalaInternet(ServidorSala):
         self.bots = None
         self._reloj_bots = None
         self.rellenar_con_bots = True  # roles libres -> bots al iniciar
+        self.cortes = {}  # id -> instante en que se cortó su conexión (ver MARGEN_CORTE)
 
     def _accion(self, identificador, mensaje):
         super()._accion(identificador, mensaje)
@@ -65,6 +67,39 @@ class SalaInternet(ServidorSala):
     def _publicar(self):
         # Los clientes consultan el estado; no acumular copias en colas TCP.
         self._revision += 1
+
+    def cubrir_con_bot(self, identificador):
+        """Quien se va deja su personaje a un bot (mismo id: casos, pistas y rol siguen).
+
+        Devuelve False si no se pudo (sin partida o sin relleno de bots)."""
+        if not self.partida or not self.rellenar_con_bots or identificador not in self.partida.jugadores:
+            return False
+        jugador = self.partida.jugadores[identificador]
+        jugador["nombre"] = ClienteCampanaLocal._nombre_bot(jugador["rol"])
+        self.partida.controles.pop(identificador, None)
+        self.partida.conectados.add(identificador)
+        self.cortes.pop(identificador, None)
+        if self.bots is None:
+            humanos = {i for i, j in self.partida.jugadores.items() if i != identificador and j.get("controlador") != "bot"}
+            self.bots = GestorBots(self.partida, humanos)
+            self._reloj_bots = self.reloj()
+        else:
+            self.bots.agregar(identificador)
+        return True
+
+    def marcar_corte(self, identificador, ahora):
+        """La conexión de alguien se cortó: su personaje se detiene ya, pero sigue
+        «conectado» unos segundos por si vuelve (no suelta lo que llevaba)."""
+        if self.partida and identificador in self.partida.jugadores:
+            self.partida.controles.pop(identificador, None)
+            self.cortes[identificador] = ahora
+
+    def revisar_cortes(self, ahora):
+        for identificador, desde in list(self.cortes.items()):
+            if ahora - desde >= MARGEN_CORTE:
+                del self.cortes[identificador]
+                if self.partida:
+                    self.partida.conectados.discard(identificador)
 
     def actualizar_bots(self, ahora):
         """Un paso de los bots de relleno (lo llama la simulación del servidor)."""
@@ -132,16 +167,20 @@ class ServicioSalas:
         if jugador and jugador["jugador"]["anfitrion"]:
             candidatos = [s for s in self.sesiones.values() if s["codigo"] == codigo
                           and self.reloj() - s["ultima"] <= GRACIA_PARTIDA]
-            if por_caducidad and sala.partida and candidatos:
+            if sala.partida and candidatos:
+                # Durante la partida la sala pasa a otra persona (también si el anfitrión
+                # sale a propósito) y un bot sigue con su personaje.
                 nuevo = max(candidatos, key=lambda s: s["ultima"])
                 sala._sesiones[nuevo["id"]]["jugador"]["anfitrion"] = True
-                sala.partida.quitar(sesion["id"])
+                if not sala.cubrir_con_bot(sesion["id"]):
+                    sala.partida.quitar(sesion["id"])
                 sala._publicar()
             else:
                 self._eliminar_sala(codigo)
         else:
             if sala.partida:
-                sala.partida.quitar(sesion["id"])
+                if not sala.cubrir_con_bot(sesion["id"]):
+                    sala.partida.quitar(sesion["id"])
             else:
                 sala._iniciada = False
             sala._publicar()
@@ -263,9 +302,28 @@ class Manejador(BaseHTTPRequestHandler):
         pass
 
 
+def calentar_mapas():
+    """Precalienta la memoria de colisiones de los tres exteriores (unos 10 s de CPU).
+
+    La memoria se comparte entre todas las salas: así la primera ruta de los bots de
+    relleno no congela el bucle de todas las salas. Corre en un hilo al arrancar para
+    no alargar el arranque en frío de Render."""
+    from logica.zonas_caminables import calentar_todo
+    from .movimiento import ColisionesMapa
+    from .dimensiones_red import FUTURO, PRESENTE, cargar_datos, spawn_presente
+    inicio = time.monotonic()
+    copa = ColisionesMapa()
+    calentar_todo(copa, copa.inicio_libre(415, 390))
+    for dimension in (PRESENTE, FUTURO):
+        mapa = ColisionesMapa(cargar_datos(dimension))
+        calentar_todo(mapa, mapa.inicio_libre(*spawn_presente(mapa.datos)))
+    print(f"[Servidor] Mapas precalentados en {time.monotonic() - inicio:.1f} s", flush=True)
+
+
 def main():
     from aiohttp import web
     from .tiempo_real import crear_app
+    threading.Thread(target=calentar_mapas, name="calentar-mapas", daemon=True).start()
     web.run_app(crear_app(), host="0.0.0.0", port=int(os.environ.get("PORT", "10000")), access_log=None)
 
 

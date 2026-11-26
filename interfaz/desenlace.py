@@ -118,7 +118,7 @@ class Desenlace:
             if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 b = p.botones.get("informe_exportar")
                 if b and b.fue_clickeado(posicion):
-                    p.informe_exportado = str(informe_final.exportar(p.informe))
+                    p.informe_exportado = informe_final.exportar_seguro(p.informe)
                     return True
         avanzar = evento.type == pygame.KEYDOWN and evento.key in (pygame.K_e, pygame.K_SPACE)
         if evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
