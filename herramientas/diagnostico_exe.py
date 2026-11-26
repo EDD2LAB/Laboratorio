@@ -90,9 +90,55 @@ def main():
     menu.vista = "principal"
     menu.dibujar()
     paso("vuelta al menú de inicio")
+    revisar_feria(menu)
     pygame.quit()
     paso("OK")
     return 0
+
+
+def revisar_feria(menu):
+    """Modo feria: Demo rápida, regreso por inactividad, F2 secreto, registro y Feria QR local."""
+    import pygame
+    from interfaz.inicio import AVISO_INACTIVIDAD, INACTIVIDAD
+    from interfaz.partida_multijugador import atajo_secreto
+    from nucleo import registro
+    menu.feria = True
+    menu.accionar("demo_rapida")
+    if menu.vista != "partida" or not getattr(menu.cliente, "demo", False):
+        raise RuntimeError("La Demo rápida no empezó: " + menu.mensaje)
+    menu.intro = None
+    for _ in range(10):
+        menu.paso(1 / 30)
+    paso("Demo rápida en marcha (La Copa y luego la batalla final)")
+    ahora = time.monotonic()
+    menu.registrar_actividad(ahora - INACTIVIDAD - 1)
+    if menu.revisar_inactividad(ahora) is None:
+        raise RuntimeError("No apareció el aviso «¿Sigues ahí?»")
+    menu.revisar_inactividad(ahora + AVISO_INACTIVIDAD + 1)
+    if menu.vista != "principal" or menu.partida is not None:
+        raise RuntimeError("La inactividad no volvió al menú principal")
+    paso("inactividad simulada: aviso y vuelta al menú principal")
+    tecla = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F2, mod=0)
+    secreta = pygame.event.Event(pygame.KEYDOWN, key=pygame.K_F2, mod=pygame.KMOD_LCTRL | pygame.KMOD_LSHIFT)
+    if atajo_secreto(tecla) or not atajo_secreto(secreta):
+        raise RuntimeError("F2 no exige Ctrl+Shift")
+    paso("F2 solo con Ctrl+Shift")
+    carpeta = registro.carpeta()
+    if carpeta is None:
+        raise RuntimeError("No hay carpeta de registros escribible")
+    paso(f"registro de errores en {carpeta}")
+    from feria.qr import segno_disponible, superficie_qr
+    from feria.web import ServidorFeriaLocal
+    if not segno_disponible():
+        raise RuntimeError("Falta segno: la Feria de los Ecos no podría dibujar el QR")
+    servidor = ServidorFeriaLocal().iniciar()
+    try:
+        sesion = servidor.registro.crear()
+        url = servidor.url(sesion.codigo_sesion, "127.0.0.1")
+        superficie_qr(url, 200)
+        paso(f"Feria de los Ecos sin internet: servidor local y QR ({url})")
+    finally:
+        servidor.detener()
 
 
 if __name__ == "__main__":

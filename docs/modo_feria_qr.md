@@ -255,8 +255,10 @@ cambian las salas ni el protocolo). Al entrar a la feria la pantalla crea su
 sesión allí (`POST /feria/nueva`) y la controla con una clave que solo ella
 conoce (`/estado` y `/control`); los celulares abren
 `https://la-copa-salas.onrender.com/feria/CÓDIGO` con sus datos móviles, sin
-entrar a ninguna Wi-Fi. Si Render estaba dormido, la pantalla espera hasta 90 s;
-con **L** (o si no hay internet) usa el servidor local de antes. Una sesión de
+entrar a ninguna Wi-Fi. Si Render estaba dormido (responde, pero aún no atiende),
+la pantalla espera hasta 90 s; si no hay internet (tres intentos seguidos sin
+ninguna respuesta HTTP, unos 6 s) o con **L**, usa el servidor local de antes.
+Una sesión que llega a crearse después de cancelar con Esc o L se termina sola. Una sesión de
 internet se borra al salir con Esc o tras 10 minutos sin su pantalla.
 `COPA_FERIA_SERVIDOR` elige otro servidor (vacía: solo red local). Hace falta
 desplegar Render a mano para que tenga estas rutas.
