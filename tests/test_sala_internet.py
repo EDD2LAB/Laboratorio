@@ -109,7 +109,8 @@ class PruebasHTTP(unittest.TestCase):
         try:
             host = ClienteInternet(url, "Host", crear=True)
             clientes.append(host)
-            codigo = esperar(host, lambda e: e["tipo"] == "bienvenida")["codigo"]
+            bienvenida = esperar(host, lambda e: e["tipo"] == "bienvenida")
+            codigo, host_id = bienvenida["codigo"], bienvenida["id"]
             otro = ClienteInternet(url, "Invitado", codigo=codigo)
             clientes.append(otro)
             esperar(otro, lambda e: e["tipo"] == "bienvenida")
@@ -141,7 +142,9 @@ class PruebasHTTP(unittest.TestCase):
             recuperado = esperar(host, lambda e: e["tipo"] == "estado" and any(j["seq"] > seq for j in e["mundo"]["jugadores"]))
             self.assertEqual({j["id"] for j in recuperado["mundo"]["jugadores"]}, {j["id"] for j in previo["mundo"]["jugadores"]})
             host.cerrar()
-            esperar(otro, lambda e: e["tipo"] == "desconectado")
+            # Revisión feria: en partida, la sala pasa a la otra persona en vez de cerrarse.
+            esperar(otro, lambda e: e["tipo"] == "estado" and any(
+                j["anfitrion"] and j["id"] != host_id for j in e.get("jugadores", [])))
         finally:
             for cliente in clientes:
                 cliente.cerrar()

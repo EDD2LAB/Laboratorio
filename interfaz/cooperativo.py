@@ -507,7 +507,7 @@ class PanelCooperativo:
                 self.retrato(superficie, "guía")
                 self.texto_lineas(superficie, "¡Hola, detectives! La aldea necesita su ayuda.", 290, 180, 495)
                 self.texto_lineas(superficie, "Aprendamos a caminar, hablar y llevar un farol. Será una misión corta, sin reloj.", 290, 265, 495)
-                self.boton(superficie, "iniciar_tutorial", "Aprender jugando", 480, 420, 430)
+                self.boton(superficie, "iniciar_tutorial", "Aprender jugando · Enter", 480, 420, 430)
                 dibujar_carga(superficie, "farol", (735, 420), 34)
                 self.boton(superficie, "saltar_tutorial", "Ya sé jugar", 480, 480, 330)
             elif self.caso.get("fase") == "preparacion":
@@ -798,6 +798,11 @@ class PanelCooperativo:
             return True
         if evento.type == pygame.KEYDOWN:
             if self.modo == "analizar" and self.dimension == "presente" and analisis_manipulado.tecla(self, evento.key, cliente):
+                return True
+            if (self.modo == "introduccion" and evento.key in (pygame.K_RETURN, pygame.K_KP_ENTER, pygame.K_e, pygame.K_SPACE)
+                    and self.privado.get("tutorial", {}).get("estado") == "pendiente" and self.caso.get("ronda", 0) == 0):
+                cliente.actuar("iniciar_tutorial")  # el panel inicial también responde al teclado
+                self.modo = None
                 return True
             if evento.key == pygame.K_t:
                 self.modo = None if self.modo == "expediente" else "expediente"

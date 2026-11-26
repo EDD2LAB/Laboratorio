@@ -83,6 +83,7 @@ async def websocket(request):
     cola = Buzon()
     request.app[BUZONES][token] = cola
     sala.partida.conectados.add(sesion["id"])
+    getattr(sala, "cortes", {}).pop(sesion["id"], None)  # volvió dentro del margen
     codificador = CodificadorEstado(sesion["id"])  # nueva conexión: empieza con un snapshot
     async def escribir():
         metricas = request.app[METRICAS]
@@ -165,8 +166,11 @@ async def websocket(request):
         if actual and token not in request.app[CONEXIONES]:
             sala = servicio.salas.get(actual["codigo"])
             if sala and sala.partida:
-                sala.partida.controles.pop(actual["id"], None)
-                sala.partida.conectados.discard(actual["id"])
+                if hasattr(sala, "marcar_corte"):
+                    sala.marcar_corte(actual["id"], servicio.reloj())  # se suelta tras unos segundos
+                else:
+                    sala.partida.controles.pop(actual["id"], None)
+                    sala.partida.conectados.discard(actual["id"])
     return ws
 
 
@@ -199,6 +203,8 @@ async def simulacion(app):
                 if not sala.partida:
                     continue
                 try:
+                    if hasattr(sala, "revisar_cortes"):
+                        sala.revisar_cortes(ahora)
                     sala.partida.actualizar(ahora)
                     sala.actualizar_bots(ahora)
                     sala._publicar()

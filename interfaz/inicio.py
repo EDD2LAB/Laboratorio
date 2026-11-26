@@ -515,6 +515,7 @@ class MenuInicio:
             return
         from interfaz.intro import Intro
         self.intro = Intro.crear(feria=self.feria)
+        self._cuadros_intro = 0
         if sala:
             self.salas_con_intro.add(sala)
 
@@ -528,8 +529,8 @@ class MenuInicio:
 
         En las demás vistas del menú (formularios, ajustes, ayuda) vuelve al menú principal
         sin aviso. Devuelve los segundos que quedan del aviso (o None si no hay aviso)."""
-        if not self.feria:
-            return None
+        if not self.feria or (self.vista == "partida" and not self.campana_local):
+            return None  # una sala en línea nunca se cierra sola: afectaría a otras personas
         ahora = time.monotonic() if ahora is None else ahora
         quieto = ahora - self.ultima_actividad
         if quieto < INACTIVIDAD:
@@ -786,6 +787,9 @@ class MenuInicio:
             self.intro.actualizar(segundos)
             if self.campana_local and self.cliente is not None:
                 self.cliente.calentar(.008)  # la intro deja tiempo libre en cada cuadro
+            self._cuadros_intro = getattr(self, "_cuadros_intro", 0) + 1
+            if self.partida is not None and self._cuadros_intro > 30 and self._cuadros_intro % 10 == 0:
+                self.partida.precargar()  # las otras eras, para que viajar no congele la partida
             if self.intro.terminada or self.vista != "partida":
                 self.intro = None
         if self.vista == "partida" and self.partida and self.cliente:
@@ -821,7 +825,17 @@ class MenuInicio:
             self.botones, self.areas_campos = {}, {}
         for evento in pygame.event.get():
             if evento.type == pygame.QUIT:
-                return "salir"
+                if not self.feria:
+                    return "salir"
+                # En la feria, la X o Alt+F4 piden confirmación como Esc (el siguiente visitante
+                # no ve el escritorio). En la partida se abre el menú de pausa, que tiene "Cerrar el juego".
+                self.registrar_actividad()
+                if self.vista == "partida" and self.partida:
+                    self.pausa.abrir()
+                elif self.vista != "confirmar_salir":
+                    self.pausa.cerrar()
+                    self.vista = "confirmar_salir"
+                continue
             if evento.type in (pygame.KEYDOWN, pygame.MOUSEBUTTONDOWN):
                 self.registrar_actividad()
                 if aviso_inactividad:

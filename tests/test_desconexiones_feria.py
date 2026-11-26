@@ -80,5 +80,70 @@ class BotsEsperanALasPersonasTests(unittest.TestCase):
         self.assertEqual(partida.mision.decisores(partida.conectados), {"p1"})
 
 
+
+class SalaEnLineaTests(unittest.TestCase):
+    """Bots que cubren a quien se va, anfitrión que sale y microcortes (servidor)."""
+
+    def _sala_iniciada(self, personas=2):
+        from multijugador.protocolo import VERSION
+        from multijugador.servicio_internet import ServicioSalas
+        reloj = [0.0]
+        servicio = ServicioSalas(lambda: reloj[0])
+        sesiones = []
+        for i in range(personas):
+            datos = {"version": VERSION, "nombre": "Persona" + str(i)}
+            if i:
+                datos["codigo"] = sesiones[0]["codigo"]
+            sesion = servicio.ejecutar("POST", "/v1/crear" if not i else "/v1/unirse", datos)
+            sesiones.append(sesion)
+            for accion in ({"tipo": "rol", "rol": ROLES[i]}, {"tipo": "listo", "listo": True}):
+                servicio.ejecutar("POST", "/v1/accion", accion, sesion["token"])
+        servicio.ejecutar("POST", "/v1/accion", {"tipo": "iniciar"}, sesiones[0]["token"])
+        return servicio, servicio.salas[sesiones[0]["codigo"]], sesiones, reloj
+
+    def test_quien_sale_deja_su_personaje_a_un_bot(self):
+        servicio, sala, sesiones, _ = self._sala_iniciada()
+        persona = sesiones[1]["id"]
+        servicio.ejecutar("POST", "/v1/salir", {}, sesiones[1]["token"])
+        jugador = sala.partida.jugadores[persona]
+        self.assertEqual(jugador["controlador"], "bot")
+        self.assertIn(persona, sala.bots.bots)
+        self.assertIn(persona, sala.partida.conectados)
+        self.assertEqual(len(sala.partida.jugadores), 4)
+
+    def test_si_sale_el_anfitrion_la_sala_pasa_a_otra_persona(self):
+        servicio, sala, sesiones, _ = self._sala_iniciada()
+        servicio.ejecutar("POST", "/v1/salir", {}, sesiones[0]["token"])
+        self.assertIn(sesiones[0]["codigo"], servicio.salas)
+        self.assertTrue(sala._sesiones[sesiones[1]["id"]]["jugador"]["anfitrion"])
+        self.assertEqual(sala.partida.jugadores[sesiones[0]["id"]]["controlador"], "bot")
+
+    def test_un_microcorte_no_suelta_lo_que_se_lleva(self):
+        _, sala, sesiones, reloj = self._sala_iniciada()
+        persona = sesiones[1]["id"]
+        sala.marcar_corte(persona, reloj[0])
+        sala.revisar_cortes(reloj[0] + 3)
+        self.assertIn(persona, sala.partida.conectados)  # volvió a tiempo: nada cambia
+        sala.revisar_cortes(reloj[0] + 6)
+        self.assertNotIn(persona, sala.partida.conectados)
+
+
+class BotsEnElFinalTests(unittest.TestCase):
+    def test_con_personas_el_bot_no_reintenta_la_batalla(self):
+        from bots.final_cooperativo import planificar
+
+        class Bot:
+            posicion = {"dimension": "futuro", "x": 0, "y": 0}
+            rol, identificador = "aspirante", "bot_aspirante"
+
+        estado = {"caso": {"futuro": {"desafio_final": {
+            "fase": "reintento", "puntos": {"aspirante": {"x": 1, "y": 1}}, "ronda": 1, "aventura": {}}}}}
+        jugadores = [{"id": "p0", "controlador": "humano", "conectado": False}, {"id": "bot_aspirante", "controlador": "bot"}]
+        plan = planificar(Bot(), estado, jugadores, lambda *a, **k: dict(a=a, k=k))
+        self.assertTrue(plan.get("esperar"))
+        plan = planificar(Bot(), estado, jugadores[1:], lambda estado, destino, accion, **k: {"accion": accion, **k})
+        self.assertEqual(plan.get("operacion"), "reintentar")
+
+
 if __name__ == "__main__":
     unittest.main()

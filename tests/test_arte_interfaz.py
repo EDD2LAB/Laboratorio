@@ -170,7 +170,8 @@ class ZoomYHudDeLaCopa(unittest.TestCase):
             self.vista._dibujar_hud(fondo, "LOCAL", self.vista.estado["mundo"]["caso"],
                                     self.vista.estado["mundo"]["privado"], {"titulo": "Busca tu pista"})
         area = sum(llamada.args[1].width * llamada.args[1].height for llamada in pastilla.call_args_list)
-        self.assertLess(area, 960 * 720 * .05)
+        # Revisión feria: la ayuda de teclas creció de 11 a 14 px para leerse a 1–2 m (sigue en una esquina).
+        self.assertLess(area, 960 * 720 * .055)
 
     def test_menos_luciernagas(self):
         self.assertLessEqual(len(self.vista.particulas.luciernagas), 5)

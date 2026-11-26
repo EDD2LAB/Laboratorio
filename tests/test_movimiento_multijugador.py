@@ -137,10 +137,17 @@ class PruebasWebSocket(unittest.IsolatedAsyncioTestCase):
                     recuperado = await estado(sockets[1], lambda e: any(j.get("seq") == 50 for j in e.get("mundo", {}).get("jugadores", [])))
                     self.assertEqual(len(recuperado["mundo"]["jugadores"]), 4)
                     await post("/v1/salir", {}, jugadores[1]["token"])
-                    restante = await estado(sockets[0], lambda e: len(e.get("mundo", {}).get("jugadores", [])) == 3)
+                    # Revisión feria: quien sale deja su personaje a un bot (mismo id, sigue en el mapa).
+                    def cubierto(e, i):
+                        return any(j["id"] == jugadores[i]["id"] and j.get("controlador") == "bot"
+                                   for j in e.get("mundo", {}).get("jugadores", []))
+                    restante = await estado(sockets[0], lambda e: cubierto(e, 1))
                     self.assertTrue(restante["iniciada"])
+                    self.assertEqual(len(restante["mundo"]["jugadores"]), 4)
+                    # Si sale el anfitrión durante la partida, la sala pasa a otra persona.
                     await post("/v1/salir", {}, jugadores[0]["token"])
-                    await estado(sockets[2], lambda e: e.get("tipo") == "desconectado")
+                    sigue = await estado(sockets[2], lambda e: cubierto(e, 0))
+                    self.assertTrue(any(j["anfitrion"] for j in sigue["jugadores"]))
                 finally:
                     for ws in sockets:
                         await ws.close()

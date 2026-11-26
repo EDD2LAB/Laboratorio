@@ -142,5 +142,21 @@ def calentar_todo(colisiones, origen, paso=8):
 
 
 def ancla(puntos, deseado, ocupados=(), separacion=18):
-    candidatos = (p for p in puntos if all(math.dist(p, o) >= separacion for o in ocupados))
-    return min(candidatos, key=lambda p: (math.dist(p, deseado), p))
+    """El punto libre más cercano a ``deseado`` (mismo resultado que un ``min`` sobre todos).
+
+    Poda con la distancia al cuadrado, que es barata, y solo calcula la clave exacta
+    (``math.dist``) para los puntos que pueden ganar: así cuesta unos ms y no decenas."""
+    dx, dy = deseado
+    mejor, mejor_cuadrado = None, math.inf
+    for p in puntos:
+        cuadrado = (p[0] - dx) ** 2 + (p[1] - dy) ** 2
+        if cuadrado > mejor_cuadrado * (1 + 1e-9) + 1e-9:
+            continue  # claramente más lejos que el mejor: no puede ganar
+        if not all(math.dist(p, o) >= separacion for o in ocupados):
+            continue
+        clave = (math.dist(p, deseado), p)
+        if mejor is None or clave < mejor:
+            mejor, mejor_cuadrado = clave, cuadrado
+    if mejor is None:
+        raise ValueError("min() iterable argument is empty")
+    return mejor[1]

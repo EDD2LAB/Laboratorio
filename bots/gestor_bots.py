@@ -39,6 +39,8 @@ class GestorBots:
             raise ValueError("Dificultad de bots no válida.")
         humanos = ({identificador_humano} if isinstance(identificador_humano, str)
                    else set(identificador_humano))
+        if not isinstance(identificador_humano, str):
+            identificador_humano = humanos  # el mismo conjunto: agregar() lo actualiza
         jugadores = list(partida.jugadores.values())
         roles = [jugador["rol"] for jugador in jugadores]
         if len(roles) != len(set(roles)):
@@ -63,6 +65,20 @@ class GestorBots:
         self.identificador_humano = identificador_humano
         self.dificultad = dificultad
         self._clave_caso = None
+
+    def agregar(self, identificador):
+        """Un bot toma el personaje de una persona que se fue (mismo id: su progreso sigue)."""
+        jugador = self.partida.jugadores.get(identificador)
+        if jugador is None or identificador in self.bots:
+            return
+        jugador["controlador"] = "bot"
+        self.memoria.roles_humanos = {r: i for r, i in self.memoria.roles_humanos.items() if i != identificador}
+        self.memoria.roles_bots[jugador["rol"]] = identificador
+        bot = BotCooperativo(jugador, self.partida, self.partida.colisiones, self.planificador, self.memoria, self.dificultad)
+        bot.reemplaza_humano = True
+        self.bots[identificador] = bot
+        if isinstance(self.identificador_humano, set):
+            self.identificador_humano.discard(identificador)
 
     def actualizar(self, ahora, segundos):
         caso = self.partida.mision.publico(self.partida.conectados)
@@ -91,10 +107,12 @@ class GestorBots:
         # Una ruta nueva por actualización: si varios bots cambian de destino a
         # la vez se reparten el cálculo en cuadros seguidos y no hay tirón.
         NavegadorBot.rutas_disponibles = 1
+        zonas_disponibles = 1  # el sitio de espera de cada bot, también de a uno por cuadro
         for identificador, bot in self.bots.items():
             estado = estado_por_bot[identificador]
             estado["caso"] = estado_publico
-            self._zona_de_casa(bot, estado)
+            if zonas_disponibles and self._zona_de_casa(bot, estado):
+                zonas_disponibles -= 1
             bot.actualizar(ahora, segundos, estado, jugadores)
         NavegadorBot.rutas_disponibles = math.inf
         self._separar_bots(segundos, self._interactuables(estado_publico))
@@ -111,7 +129,7 @@ class GestorBots:
         """En Distrito Conecta y Ciudad Núcleo cada bot espera frente a su edificio, no en el portal."""
         dimension = bot.posicion.get("dimension", "la_copa")
         if dimension not in CASAS or dimension in bot.zonas or bot.rol not in CASAS[dimension]:
-            return
+            return False
         try:
             colisiones = self.partida.colisiones_de(dimension)
         except (AttributeError, OSError, ValueError):
@@ -138,6 +156,7 @@ class GestorBots:
         except ValueError:
             return
         bot.zonas[dimension] = {"id": "zona", "x": round(x), "y": round(y), "apartada": True}
+        return True
 
     def _separar_bots(self, segundos, interactuables=None):
         """Los bots en reposo dejan espacio sin empujar humanos ni atravesar paredes.
