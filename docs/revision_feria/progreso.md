@@ -45,4 +45,17 @@ Si la sesión se corta, retomar desde aquí.
 
 ## Fase 2: correcciones
 
-(pendiente)
+- [x] `c219df1` Robustez: registro de errores, un solo dibujo por cuadro, recuperación al menú.
+- [x] `89a8f68` Bots sin congelones, desconexiones, Demo rápida y decisiones 1–8, textos, red, docs, kit.
+- [x] `6b16f42` Tercera tanda (decisiones 9–12) y salto al final sin tirón.
+- [x] Pruebas nuevas: propiedades AVL y campaña completa con 4 bots (`tests/test_humo_campana.py`);
+      herramienta `herramientas/partida_bots.py`.
+
+Pendiente de decisión (para el informe): G2 aviso "pendiente de revisión", G12 crédito de la fuente,
+H5/M6 excluir del `.exe` imágenes sin uso, H6 jingles en bucle, H7/H8 volúmenes, A8 estrellas,
+B4 pista sin pedir, C8 multijugador sin internet, E10/H2 smoothscale, L9 archivos históricos, M5 robocopy.
+No se hará (riesgo): H1 smoothscale de la poción (vive en `un_jugador/`, que no se toca).
+
+## Fase 3: verificación final
+
+(en curso)
